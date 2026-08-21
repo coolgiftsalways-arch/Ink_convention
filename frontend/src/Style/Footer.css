@@ -1,0 +1,31 @@
+/* Custom Footer Styles */
+footer {
+     text-rendering: optimizeLegibility;
+     -webkit-font-smoothing: antialiased;
+}
+
+.footer-link {
+     position: relative;
+     display: inline-block;
+     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease-in-out;
+}
+
+.footer-link:hover {
+     transform: translateX(4px);
+     color: #ffffff;
+}
+
+.footer-link::after {
+     content: '';
+     position: absolute;
+     width: 0;
+     height: 1px;
+     bottom: -2px;
+     left: 0;
+     background-color: #a855f7;
+     transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.footer-link:hover::after {
+     width: 100%;
+}

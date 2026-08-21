@@ -1,0 +1,23 @@
+
+
+/* Custom Awwwards Style Enhancements */
+.select-none {
+     user-select: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+.hero-font {
+     text-rendering: optimizeLegibility;
+}
+
+/* Full Screen Hero Layout Fix */
+.hero-fullscreen {
+     height: 100vh;
+     min-height: 650px;
+     display: flex;
+     flex-direction: column;
+     justify-content: space-between;
+}

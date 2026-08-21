@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f8fafc;
+    /* Soft Light Slate Background */
+    color: #0f172a;
+    /* Deep Slate Text for high contrast & readability */
+  }
+}
+
+/* Custom Light Mode Glow & Hover Effects */
+.navbar-light-glow {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.nav-link-hover {
+  position: relative;
+}
+
+.nav-link-hover::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -4px;
+  left: 0;
+  background-color: #2563eb;
+  transition: width 0.3s ease-in-out;
+}
+
+.nav-link-hover:hover::after {
+  width: 100%;
+}

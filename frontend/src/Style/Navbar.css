@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Sekuya&display=swap');
+
+/* Navbar Base & Glassmorphism Scroll Effect */
+.navbar-glow {
+     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+     font-family: "Sekuya", system-ui;
+}
+
+.glass-nav {
+     background: rgba(0, 0, 0, 0.75);
+     backdrop-filter: blur(16px);
+     -webkit-backdrop-filter: blur(16px);
+     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+     font-family: "Sekuya", system-ui;
+}
+
+/* Custom Animated Underline Hover Effect for Links */
+.nav-link-hover {
+     position: relative;
+     font-family: "Sekuya", system-ui;
+}
+
+.nav-link-hover::after {
+     content: '';
+     position: absolute;
+     width: 0;
+     height: 2px;
+     bottom: -4px;
+     left: 0;
+     background-color: #ffffff;
+     transition: width 0.3s ease-in-out;
+}
+
+.nav-link-hover:hover::after {
+     width: 100%;
+}

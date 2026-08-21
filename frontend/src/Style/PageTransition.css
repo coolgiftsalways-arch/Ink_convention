@@ -1,0 +1,28 @@
+/* Split Screen Transition Overlay */
+.transition-overlay {
+     position: fixed;
+     inset: 0;
+     z-index: 9999;
+     pointer-events: none;
+     display: flex;
+}
+
+.transition-col {
+     flex: 1;
+     height: 100%;
+     transform: translateY(-100%);
+}
+
+.transition-col-left {
+     background-color: #000000;
+}
+
+.transition-col-right {
+     background-color: #ffffff;
+}
+
+/* Dynamic Logo Color Inversion */
+.logo-text {
+     mix-blend-mode: difference;
+     color: #ffffff;
+}
