@@ -19,9 +19,10 @@ import Home from "./pages/Home";
 import About from "./pages/About";
 import Gallery from "./pages/Gallery";
 import HallOfFame from "./pages/Halloffam";
+import Artists from "./pages/Artists"; // <--- IMPORTED YOUR NEW ARTIST DIRECTORY PAGE
 import Upload from "./pages/Upload";
 import TOP from "./pages/TOP";
-import Payment from "./components/Payment"; // <--- IMPORT YOUR NEW PAYMENT COMPONENT HERE
+import Payment from "./components/Payment";
 
 // Admin
 import Dashboard from "./admin/Dashboard";
@@ -33,12 +34,10 @@ import "./Style/PageTransition.css";
 
 function Layout() {
   const location = useLocation();
-  // Only exclude Navbar and Footer on the Admin Dashboard now
   const isExcludedNavFooter = location.pathname === "/admin/dashboard";
 
   return (
     <div className="min-h-screen bg-[#08080a] text-white flex flex-col justify-between selection:bg-[#a855f7] selection:text-white">
-      {/* Navbar will now show on Upload page, but stay hidden on Dashboard */}
       {!isExcludedNavFooter && <Navbar />}
 
       <div className="flex-grow w-full">
@@ -83,6 +82,15 @@ function Layout() {
               </PageTransition>
             }
           />
+          {/* ---> ADDED THE ROUTE FOR THE ARTIST DIRECTORY PAGE HERE <--- */}
+          <Route
+            path="/artists"
+            element={
+              <PageTransition>
+                <Artists />
+              </PageTransition>
+            }
+          />
           <Route
             path="/top"
             element={
@@ -107,8 +115,6 @@ function Layout() {
               </PageTransition>
             }
           />
-
-          {/* ---> ADDED THE ROUTE FOR YOUR PAYMENT PAGE HERE <--- */}
           <Route
             path="/payment"
             element={
@@ -117,7 +123,6 @@ function Layout() {
               </PageTransition>
             }
           />
-
           <Route
             path="/admin/dashboard"
             element={
@@ -129,7 +134,6 @@ function Layout() {
         </Routes>
       </div>
 
-      {/* Footer will now show on Upload page, but stay hidden on Dashboard */}
       {!isExcludedNavFooter && <Footer />}
     </div>
   );

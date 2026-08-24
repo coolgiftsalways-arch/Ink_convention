@@ -85,6 +85,12 @@ function Navbar() {
               Gallery
             </Link>
             <Link
+              to="/artists"
+              className="nav-link-hover text-gray-300 hover:text-white transition"
+            >
+              Artists
+            </Link>
+            <Link
               to="/hall-of-fame"
               className="nav-link-hover text-gray-300 hover:text-white transition"
             >
@@ -92,7 +98,7 @@ function Navbar() {
             </Link>
           </div>
 
-          {/* Desktop Right Social Icons - CHANGED to hidden on mobile (hidden md:flex) */}
+          {/* Desktop Right Social Icons */}
           <div className="hidden md:flex items-center space-x-3 pt-2">
             {/* WhatsApp SVG */}
             <a
@@ -218,12 +224,20 @@ function Navbar() {
               <span className="text-xs font-mono text-gray-500">04</span>
             </Link>
             <Link
+              to="/artists"
+              onClick={closeMenu}
+              className="text-white hover:text-[#a855f7] transition flex items-center justify-between"
+            >
+              <span>Artists</span>
+              <span className="text-xs font-mono text-gray-500">05</span>
+            </Link>
+            <Link
               to="/hall-of-fame"
               onClick={closeMenu}
               className="text-white hover:text-[#a855f7] transition flex items-center justify-between"
             >
               <span>Hall Of Fame</span>
-              <span className="text-xs font-mono text-gray-500">05</span>
+              <span className="text-xs font-mono text-gray-500">06</span>
             </Link>
           </div>
           <div className="pt-4 border-t border-white/10 flex items-center justify-between">

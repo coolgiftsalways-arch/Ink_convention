@@ -13,10 +13,9 @@ import {
   LogOut,
   Mail,
   KeyRound,
-  Home,
-  MapPin,
-  Compass,
   Maximize2,
+  Trophy,
+  CreditCard,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -127,18 +126,18 @@ function Dashboard() {
     }
 
     let csvContent =
-      "ID,First Name,Last Name,Username,Phone Number,Gmail,Address 1,Address 2,City,State,Images Count,Videos Count,Timestamp\n";
+      "Entry ID,First Name,Last Name,Professional Name,Category,Package,Gmail,Phone,City,State,Images Count,Videos Count,Timestamp\n";
 
     submissions.forEach((item) => {
       const row = [
-        item._id,
+        item.entryId || "",
         `"${item.firstName || ""}"`,
         `"${item.lastName || ""}"`,
-        `"${item.username || ""}"`,
-        `"${item.delayNumber || ""}"`,
+        `"${item.professionalName || ""}"`,
+        `"${item.category || ""}"`,
+        `"${item.entryPackage || ""}"`,
         `"${item.gmail || ""}"`,
-        `"${item.address1 || ""}"`,
-        `"${item.address2 || ""}"`,
+        `"${item.phone || ""}"`,
         `"${item.city || ""}"`,
         `"${item.state || ""}"`,
         item.images?.length || 0,
@@ -154,7 +153,7 @@ function Dashboard() {
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `client_registry_${new Date().toISOString().slice(0, 10)}.csv`,
+      `competition_entries_${new Date().toISOString().slice(0, 10)}.csv`,
     );
     document.body.appendChild(link);
     link.click();
@@ -176,7 +175,7 @@ function Dashboard() {
               Dashboard Login<span className="text-[#a855f7]">.</span>
             </h1>
             <p className="text-gray-400 text-xs font-mono">
-              Enter your credentials to access live telemetry.
+              Enter your credentials to access competition telemetry.
             </p>
           </div>
 
@@ -240,7 +239,7 @@ function Dashboard() {
   if (loading) {
     return (
       <div className="w-full min-h-screen bg-[#08080a] text-white flex items-center justify-center font-mono text-sm">
-        Loading live telemetry nodes...
+        Loading competition telemetry nodes...
       </div>
     );
   }
@@ -265,10 +264,10 @@ function Dashboard() {
         <div className="space-y-8">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-mono uppercase tracking-widest">
-              <Lock size={10} /> Private Access Only
+              <Lock size={10} /> Private Control
             </div>
             <h2 className="text-xl font-black tracking-tighter text-white">
-              ADMIN CONTROL<span className="text-[#a855f7]">.</span>
+              ADMIN PANEL<span className="text-[#a855f7]">.</span>
             </h2>
           </div>
 
@@ -277,7 +276,7 @@ function Dashboard() {
               href="#dashboard"
               className="flex items-center gap-3 px-4 py-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-[#a855f7] font-bold"
             >
-              <LayoutDashboard size={16} /> Dashboard
+              <LayoutDashboard size={16} /> Submissions
             </a>
           </nav>
         </div>
@@ -292,11 +291,11 @@ function Dashboard() {
 
           <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-2 font-mono text-[10px] text-gray-400">
             <div className="flex items-center justify-between">
-              <span>CLIENT SECURITY:</span>
-              <span className="text-emerald-400">ACTIVE</span>
+              <span>SYSTEM STATUS:</span>
+              <span className="text-emerald-400">ONLINE</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>TOTAL RECORDS:</span>
+              <span>TOTAL ENTRIES:</span>
               <span className="text-[#a855f7]">{submissions.length}</span>
             </div>
           </div>
@@ -309,14 +308,14 @@ function Dashboard() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-8">
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-[#a855f7] text-xs font-mono uppercase tracking-widest">
-                <LayoutDashboard size={14} /> Client & Admin Registry
+                <Trophy size={14} /> Ink Convention 2026 Registry
               </div>
               <h1 className="text-4xl sm:text-6xl font-black tracking-tighter text-white">
-                Secure Dashboard.
+                Admin Dashboard<span className="text-[#a855f7]">.</span>
               </h1>
               <p className="text-gray-400 text-sm sm:text-base font-light max-w-2xl leading-relaxed">
-                Live database management view. Click on any user card to inspect
-                full details and media assets.
+                Review competition submissions, inspect purchased packages, and
+                manage participant media files.
               </p>
             </div>
 
@@ -325,7 +324,7 @@ function Dashboard() {
                 onClick={handleExportToExcel}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-600 text-white font-mono text-xs font-bold uppercase tracking-widest hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/40 cursor-pointer"
               >
-                <FileSpreadsheet size={16} /> Convert to Excel (CSV)
+                <FileSpreadsheet size={16} /> Export to CSV
               </button>
             </div>
           </div>
@@ -334,7 +333,7 @@ function Dashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-[#0b0b0f] border border-white/10 rounded-2xl p-6 space-y-1">
               <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">
-                Total Profiles
+                Total Entries
               </p>
               <p className="text-3xl font-black text-white">
                 {submissions.length}
@@ -342,7 +341,7 @@ function Dashboard() {
             </div>
             <div className="bg-[#0b0b0f] border border-white/10 rounded-2xl p-6 space-y-1">
               <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">
-                Media Nodes
+                Media Assets
               </p>
               <p className="text-3xl font-black text-[#a855f7]">
                 {submissions.reduce(
@@ -357,23 +356,23 @@ function Dashboard() {
             </div>
             <div className="bg-[#0b0b0f] border border-white/10 rounded-2xl p-6 space-y-1">
               <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">
-                Visibility
+                Security
               </p>
-              <p className="text-3xl font-black text-red-400">PRIVATE</p>
+              <p className="text-3xl font-black text-red-400">SECURE</p>
             </div>
             <div className="bg-[#0b0b0f] border border-white/10 rounded-2xl p-6 space-y-1">
               <p className="text-xs font-mono text-gray-400 uppercase tracking-widest">
-                System Sync
+                Server Link
               </p>
-              <p className="text-3xl font-black text-white">100% LIVE</p>
+              <p className="text-3xl font-black text-white">LIVE</p>
             </div>
           </div>
 
           {/* CARDS GRID */}
           <div className="space-y-6">
             <div className="flex items-center justify-between px-2 font-mono text-xs text-gray-500 uppercase tracking-widest">
-              <span>Client Records ({submissions.length})</span>
-              <span>Click card to view details</span>
+              <span>Competition Submissions ({submissions.length})</span>
+              <span>Click card to inspect package details</span>
             </div>
 
             {submissions.length === 0 ? (
@@ -382,13 +381,13 @@ function Dashboard() {
                   <LayoutDashboard size={32} />
                 </div>
                 <h3 className="text-xl font-bold text-white">
-                  No Client Records Found
+                  No Entries Found
                 </h3>
                 <Link
-                  to="/Upload"
+                  to="/upload"
                   className="inline-block px-6 py-2.5 rounded-xl bg-[#a855f7] text-white font-mono text-xs uppercase tracking-widest hover:opacity-90 transition"
                 >
-                  Go to Upload Form
+                  Go to Submission Form
                 </Link>
               </div>
             ) : (
@@ -405,12 +404,13 @@ function Dashboard() {
                     <div className="flex items-start justify-between gap-3 relative z-10">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-[#a855f7] text-[10px] font-mono font-semibold bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <AtSign size={10} /> {item.username}
+                          <span className="text-[#a855f7] text-[10px] font-mono font-semibold bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                            {item.entryId || "INK-ENTRY"}
                           </span>
                         </div>
                         <h3 className="text-xl font-black text-white group-hover:text-[#a855f7] transition duration-300 truncate">
-                          {item.firstName} {item.lastName}
+                          {item.professionalName ||
+                            `${item.firstName} ${item.lastName}`}
                         </h3>
                       </div>
 
@@ -425,22 +425,23 @@ function Dashboard() {
                       </div>
                     </div>
 
-                    {/* Brief Grid */}
+                    {/* Package & Category Card Info */}
                     <div className="grid grid-cols-2 gap-2 bg-black/40 border border-white/5 rounded-2xl p-3 text-[11px] font-mono relative z-10">
                       <div className="truncate">
                         <span className="text-gray-500 uppercase text-[9px] block">
-                          Gmail
+                          Category
                         </span>
-                        <span className="text-gray-200 truncate">
-                          {item.gmail}
+                        <span className="text-gray-200 truncate font-bold">
+                          {item.category || "N/A"}
                         </span>
                       </div>
                       <div className="truncate">
-                        <span className="text-gray-500 uppercase text-[9px] block">
-                          City
+                        <span className="text-gray-500 uppercase text-[9px] block flex items-center gap-1">
+                          <CreditCard size={10} className="text-[#a855f7]" />{" "}
+                          Package Taken
                         </span>
-                        <span className="text-gray-200 truncate">
-                          {item.city}
+                        <span className="text-[#a855f7] font-black uppercase truncate text-xs">
+                          {item.entryPackage || "N/A"}
                         </span>
                       </div>
                     </div>
@@ -448,7 +449,7 @@ function Dashboard() {
                     {/* Footer cue */}
                     <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-purple-400">
                       <span className="flex items-center gap-1">
-                        <Maximize2 size={12} /> Click to expand details
+                        <Maximize2 size={12} /> View full details
                       </span>
                       <span className="text-gray-500">
                         {item.images?.length || 0} imgs /{" "}
@@ -464,22 +465,23 @@ function Dashboard() {
       </main>
 
       {/* ========================================== */}
-      {/* EXPANDED FULL-SCREEN USER DETAIL MODAL     */}
+      {/* EXPANDED FULL-SCREEN DETAIL MODAL          */}
       {/* ========================================== */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
           <div className="relative w-full max-w-4xl bg-[#0b0b0f] border border-[#a855f7]/50 rounded-3xl p-6 sm:p-10 space-y-8 shadow-[0_0_50px_rgba(168,85,247,0.2)] my-auto max-h-[85vh] flex flex-col">
-            {/* Modal Header (Sticky on scroll) */}
+            {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-white/10 pb-6 pr-12 flex-shrink-0">
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-[#a855f7] text-xs font-mono uppercase tracking-widest">
-                  <AtSign size={12} /> {selectedUser.username}
+                  {selectedUser.entryId || "INK CONVENTION ENTRY"}
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-black text-white">
-                  {selectedUser.firstName} {selectedUser.lastName}
+                  {selectedUser.professionalName ||
+                    `${selectedUser.firstName} ${selectedUser.lastName}`}
                 </h2>
                 <p className="text-xs font-mono text-gray-500 flex items-center gap-1">
-                  <Clock size={12} /> Registered on:{" "}
+                  <Clock size={12} /> Submitted on:{" "}
                   {new Date(selectedUser.createdAt).toLocaleString()}
                 </p>
               </div>
@@ -492,9 +494,36 @@ function Dashboard() {
             </div>
 
             {/* Scrollable Content Container */}
-            <div className="space-y-8 overflow-y-auto pr-2 custom-scrollbar">
-              {/* Detailed Info Grid */}
+            <div className="space-y-8 overflow-y-auto pr-2">
+              {/* Highlighted Package Details Banner */}
+              <div className="bg-gradient-to-r from-[#140a24] to-[#0b0b0f] border border-[#a855f7]/40 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-mono">
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-400 uppercase tracking-widest block flex items-center gap-1.5">
+                    <CreditCard size={14} className="text-[#a855f7]" /> Package
+                    Purchased by User
+                  </span>
+                  <span className="text-2xl font-black text-[#a855f7] uppercase">
+                    {selectedUser.entryPackage || "Standard Entry"}
+                  </span>
+                </div>
+                <div className="bg-purple-500/10 border border-purple-500/20 px-4 py-2 rounded-xl text-xs text-purple-300">
+                  Category:{" "}
+                  <strong className="text-white">
+                    {selectedUser.category}
+                  </strong>
+                </div>
+              </div>
+
+              {/* General Details Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-black/40 border border-white/5 rounded-2xl p-6 font-mono text-sm">
+                <div className="space-y-1">
+                  <span className="text-gray-500 text-xs uppercase tracking-wider block">
+                    Full Name
+                  </span>
+                  <span className="text-gray-200">
+                    {selectedUser.firstName} {selectedUser.lastName}
+                  </span>
+                </div>
                 <div className="space-y-1">
                   <span className="text-gray-500 text-xs uppercase tracking-wider block">
                     Email Address
@@ -503,41 +532,42 @@ function Dashboard() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-gray-500 text-xs uppercase tracking-wider block">
-                    Phone / WhatsApp Number
+                    Phone Number
+                  </span>
+                  <span className="text-gray-200">{selectedUser.phone}</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-gray-500 text-xs uppercase tracking-wider block">
+                    Location
                   </span>
                   <span className="text-gray-200">
-                    {selectedUser.delayNumber}
+                    {selectedUser.city}, {selectedUser.state} (
+                    {selectedUser.country || "India"})
                   </span>
                 </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <span className="text-gray-500 text-xs uppercase tracking-wider block flex items-center gap-1">
-                    <Home size={14} className="text-[#a855f7]" /> Address
-                    Information
-                  </span>
-                  <span className="text-gray-200 block">
-                    {selectedUser.address1}
-                  </span>
-                  {selectedUser.address2 && (
-                    <span className="text-gray-400 block text-xs">
-                      {selectedUser.address2}
+                {selectedUser.tattooTitle && (
+                  <div className="space-y-1 sm:col-span-2">
+                    <span className="text-gray-500 text-xs uppercase tracking-wider block">
+                      Tattoo Title
                     </span>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <span className="text-gray-500 text-xs uppercase tracking-wider block flex items-center gap-1">
-                    <MapPin size={14} className="text-[#a855f7]" /> City
-                  </span>
-                  <span className="text-gray-200">{selectedUser.city}</span>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-gray-500 text-xs uppercase tracking-wider block flex items-center gap-1">
-                    <Compass size={14} className="text-[#a855f7]" /> State
-                  </span>
-                  <span className="text-gray-200">{selectedUser.state}</span>
-                </div>
+                    <span className="text-white font-bold">
+                      {selectedUser.tattooTitle}
+                    </span>
+                  </div>
+                )}
+                {selectedUser.description && (
+                  <div className="space-y-1 sm:col-span-2">
+                    <span className="text-gray-500 text-xs uppercase tracking-wider block">
+                      Tattoo Description / Concept
+                    </span>
+                    <span className="text-gray-300 text-xs leading-relaxed block bg-white/5 p-3 rounded-xl border border-white/5">
+                      {selectedUser.description}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Expanded Media Assets Section */}
+              {/* Uploaded Media Assets Section */}
               <div className="space-y-6 pt-2">
                 {/* Images Section */}
                 <div className="space-y-3">
@@ -557,7 +587,7 @@ function Dashboard() {
                         >
                           <img
                             src={`https://api.inkconvention.com/${imgPath.replace(/\\/g, "/")}`}
-                            alt="Expanded View"
+                            alt="Tattoo Entry"
                             className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                           />
                         </a>
@@ -588,7 +618,7 @@ function Dashboard() {
                       ))
                     ) : (
                       <p className="text-xs text-gray-500 font-mono">
-                        No videos uploaded for this entry.
+                        No process videos uploaded for this entry.
                       </p>
                     )}
                   </div>
@@ -596,13 +626,13 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Modal Footer Controls (Sticky on bottom) */}
+            {/* Modal Footer Controls */}
             <div className="pt-4 border-t border-white/10 flex items-center justify-between flex-shrink-0">
               <button
                 onClick={(e) => handleDelete(e, selectedUser._id)}
                 className="px-6 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white font-mono text-xs uppercase tracking-widest transition cursor-pointer"
               >
-                Delete User Record
+                Delete Entry
               </button>
               <button
                 onClick={() => setSelectedUser(null)}
