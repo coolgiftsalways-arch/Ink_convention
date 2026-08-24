@@ -20,7 +20,8 @@ import About from "./pages/About";
 import Gallery from "./pages/Gallery";
 import HallOfFame from "./pages/Halloffam";
 import Upload from "./pages/Upload";
-import TOP from "./pages/TOP"; // <--- 1. IMPORT YOUR NEW TOP COMPONENT HERE
+import TOP from "./pages/TOP";
+import Payment from "./components/Payment"; // <--- IMPORT YOUR NEW PAYMENT COMPONENT HERE
 
 // Admin
 import Dashboard from "./admin/Dashboard";
@@ -82,7 +83,6 @@ function Layout() {
               </PageTransition>
             }
           />
-          {/* 2. ADD THE ROUTE FOR YOUR TOP PAGE HERE */}
           <Route
             path="/top"
             element={
@@ -107,6 +107,17 @@ function Layout() {
               </PageTransition>
             }
           />
+
+          {/* ---> ADDED THE ROUTE FOR YOUR PAYMENT PAGE HERE <--- */}
+          <Route
+            path="/payment"
+            element={
+              <PageTransition>
+                <Payment />
+              </PageTransition>
+            }
+          />
+
           <Route
             path="/admin/dashboard"
             element={
