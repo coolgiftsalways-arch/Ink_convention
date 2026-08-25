@@ -174,7 +174,7 @@ function Upload() {
 
       // STEP 1: Create Razorpay order from backend
       const orderResponse = await fetch(
-        "http://localhost:5000/api/payment/create-order",
+        `${import.meta.env.VITE_API_URL}/api/payment/create-order`,
         {
           method: "POST",
           headers: {
@@ -231,7 +231,7 @@ function Upload() {
           try {
             // STEP 3: Verify payment on backend
             const verifyResponse = await fetch(
-              "http://localhost:5000/api/payment/verify",
+              `${import.meta.env.VITE_API_URL}/api/payment/verify`,
               {
                 method: "POST",
                 headers: {
@@ -279,7 +279,7 @@ function Upload() {
             );
 
             const submitResponse = await fetch(
-              "http://localhost:5000/api/signup",
+              `${import.meta.env.VITE_API_URL}/api/signup`,
               {
                 method: "POST",
                 body: data,
