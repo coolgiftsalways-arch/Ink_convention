@@ -11,7 +11,7 @@ const fs = require("fs");
 const nodemailer = require("nodemailer");
 const paymentRoutes = require("./routes/payment");
 
-const User = require("./models/user");
+const User = require("./models/User");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
