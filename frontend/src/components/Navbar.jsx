@@ -1,16 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react"; // <-- Added ChevronDown here
 import gsap from "gsap";
 import "../Style/Navbar.css";
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // ---> NEW STATE FOR MOBILE EXPO DROPDOWN <---
+  const [isMobileExpoOpen, setIsMobileExpoOpen] = useState(false);
+
   const mobileMenuRef = useRef(null);
 
   const toggleMenu = () => setIsOpen(!isOpen);
-  const closeMenu = () => setIsOpen(false);
+
+  // Close menu and reset the mobile dropdown state
+  const closeMenu = () => {
+    setIsOpen(false);
+    setIsMobileExpoOpen(false);
+  };
 
   // Handle scroll detection to toggle navbar background state
   useEffect(() => {
@@ -72,12 +81,44 @@ function Navbar() {
             >
               About
             </Link>
-            <Link
-              to="/Upload"
-              className="nav-link-hover text-gray-300 hover:text-white transition"
-            >
-              Expo 2026
-            </Link>
+
+            {/* ==============================================
+                DESKTOP EXPO 2026 DROPDOWN
+            ============================================== */}
+            <div className="relative group py-4">
+              <button className="nav-link-hover flex items-center gap-1 text-gray-300 hover:text-white transition cursor-pointer">
+                Expo 2026{" "}
+                <ChevronDown
+                  size={14}
+                  className="group-hover:rotate-180 transition-transform duration-300"
+                />
+              </button>
+
+              {/* Dropdown Menu Container */}
+              <div className="absolute top-[80%] left-0 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 w-48">
+                <div className="bg-[#0b0b0f] border border-white/10 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+                  <Link
+                    to="/upcoming"
+                    className="px-5 py-3 text-gray-400 hover:text-white hover:bg-white/5 border-b border-white/5 transition"
+                  >
+                    Upcoming
+                  </Link>
+                  <Link
+                    to="/client-login"
+                    className="px-5 py-3 text-gray-400 hover:text-white hover:bg-white/5 border-b border-white/5 transition"
+                  >
+                    Client
+                  </Link>
+                  <Link
+                    to="/Upload"
+                    className="px-5 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition"
+                  >
+                    Expo 2026 Form
+                  </Link>
+                </div>
+              </div>
+            </div>
+
             <Link
               to="/gallery"
               className="nav-link-hover text-gray-300 hover:text-white transition"
@@ -90,13 +131,6 @@ function Navbar() {
             >
               Artists
             </Link>
-            {/* Added Upcoming Link Here */}
-            <Link
-              to="/upcoming"
-              className="nav-link-hover text-gray-300 hover:text-white transition"
-            >
-              Upcoming
-            </Link>
             <Link
               to="/hall-of-fame"
               className="nav-link-hover text-gray-300 hover:text-white transition"
@@ -104,12 +138,6 @@ function Navbar() {
               Hall Of Fame
             </Link>
           </div>
-          <Link
-            to="/client-login"
-            className="nav-link-hover text-gray-300 hover:text-white transition"
-          >
-            Client
-          </Link>
 
           {/* Desktop Right Social Icons */}
           <div className="hidden md:flex items-center space-x-3 pt-2">
@@ -135,7 +163,6 @@ function Navbar() {
                 <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
               </svg>
             </a>
-
             {/* Instagram SVG */}
             <a
               href="https://www.instagram.com/ink.convention__?igsi=MXV1bDZ1NXNqcXhxMQ=="
@@ -160,7 +187,6 @@ function Navbar() {
                 <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
               </svg>
             </a>
-
             {/* Gmail / Mail SVG */}
             <a
               href="mailto:ink.convention.expo@gmail.com"
@@ -197,13 +223,15 @@ function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Screen Dropdown Menu */}
+      {/* ==============================================
+          MOBILE SCREEN DROPDOWN MENU
+      ============================================== */}
       {isOpen && (
         <div
           ref={mobileMenuRef}
           className="md:hidden absolute inset-x-0 top-full bg-[#000000] border-b border-white/10 px-6 py-6 space-y-4 shadow-2xl z-50 flex flex-col text-white max-h-[85vh] overflow-y-auto"
         >
-          <div className="flex flex-col space-y-3 text-xl font-bold tracking-tight">
+          <div className="flex flex-col space-y-4 text-xl font-bold tracking-tight">
             <Link
               to="/"
               onClick={closeMenu}
@@ -220,14 +248,59 @@ function Navbar() {
               <span>About</span>
               <span className="text-xs font-mono text-gray-500">02</span>
             </Link>
-            <Link
-              to="/Upload"
-              onClick={closeMenu}
-              className="text-white hover:text-[#a855f7] transition flex items-center justify-between"
-            >
-              <span>Expo 2026</span>
-              <span className="text-xs font-mono text-gray-500">03</span>
-            </Link>
+
+            {/* ---> MOBILE EXPO 2026 ACCORDION <--- */}
+            <div className="flex flex-col">
+              <button
+                onClick={() => setIsMobileExpoOpen(!isMobileExpoOpen)}
+                className="text-white hover:text-[#a855f7] transition flex items-center justify-between w-full text-left"
+              >
+                <span className="flex items-center gap-2">
+                  Expo 2026
+                  <ChevronDown
+                    size={18}
+                    className={`transition-transform duration-300 ${
+                      isMobileExpoOpen
+                        ? "rotate-180 text-[#a855f7]"
+                        : "text-gray-500"
+                    }`}
+                  />
+                </span>
+                <span className="text-xs font-mono text-gray-500">03</span>
+              </button>
+
+              {/* Nested Mobile Links */}
+              <div
+                className={`flex flex-col ml-2 pl-4 border-l border-white/10 overflow-hidden transition-all duration-300 ease-in-out ${
+                  isMobileExpoOpen
+                    ? "max-h-48 mt-4 space-y-4 opacity-100"
+                    : "max-h-0 opacity-0"
+                }`}
+              >
+                <Link
+                  to="/upcoming"
+                  onClick={closeMenu}
+                  className="text-gray-400 hover:text-[#a855f7] transition text-lg"
+                >
+                  Upcoming
+                </Link>
+                <Link
+                  to="/client-login"
+                  onClick={closeMenu}
+                  className="text-gray-400 hover:text-[#a855f7] transition text-lg"
+                >
+                  Client
+                </Link>
+                <Link
+                  to="/Upload"
+                  onClick={closeMenu}
+                  className="text-gray-400 hover:text-[#a855f7] transition text-lg"
+                >
+                  Expo 2026 Form
+                </Link>
+              </div>
+            </div>
+
             <Link
               to="/gallery"
               onClick={closeMenu}
@@ -244,35 +317,17 @@ function Navbar() {
               <span>Artists</span>
               <span className="text-xs font-mono text-gray-500">05</span>
             </Link>
-            {/* Added Upcoming Link Here (Number 06) */}
-            <Link
-              to="/upcoming"
-              onClick={closeMenu}
-              className="text-white hover:text-[#a855f7] transition flex items-center justify-between"
-            >
-              <span>Upcoming</span>
-              <span className="text-xs font-mono text-gray-500">06</span>
-            </Link>
-            {/* Shifted Hall of Fame to Number 07 */}
             <Link
               to="/hall-of-fame"
               onClick={closeMenu}
               className="text-white hover:text-[#a855f7] transition flex items-center justify-between"
             >
               <span>Hall Of Fame</span>
-              <span className="text-xs font-mono text-gray-500">07</span>
+              <span className="text-xs font-mono text-gray-500">06</span>
             </Link>
           </div>
-          <Link
-            to="/client-login"
-            onClick={closeMenu}
-            className="text-white hover:text-[#a855f7] transition flex items-center justify-between"
-          >
-            <span>Client</span>
-            <span className="text-xs font-mono text-gray-500">07</span>
-          </Link>
 
-          <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+          <div className="pt-4 border-t border-white/10 flex items-center justify-between mt-2">
             <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">
               Connect
             </span>

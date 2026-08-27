@@ -17,8 +17,6 @@ import {
 import { Link } from "react-router-dom";
 import "../Style/Home.css";
 
-
-
 const CATEGORIES = [
   "Black & Grey",
   "Realism",
@@ -241,9 +239,7 @@ function Upload() {
                 },
                 body: JSON.stringify({
                   razorpay_order_id: paymentResponse.razorpay_order_id,
-
                   razorpay_payment_id: paymentResponse.razorpay_payment_id,
-
                   razorpay_signature: paymentResponse.razorpay_signature,
                 }),
               },
@@ -274,7 +270,6 @@ function Upload() {
 
             // Store Razorpay payment details with the submission
             data.append("razorpay_order_id", paymentResponse.razorpay_order_id);
-
             data.append(
               "razorpay_payment_id",
               paymentResponse.razorpay_payment_id,
@@ -300,7 +295,6 @@ function Upload() {
             window.scrollTo(0, 0);
           } catch (error) {
             console.error("Post-payment submission error:", error);
-
             alert(
               "Payment was successful, but entry submission failed. Please contact support with your payment ID.",
             );
@@ -320,20 +314,16 @@ function Upload() {
 
       razorpay.on("payment.failed", function (response) {
         console.error("Razorpay payment failed:", response.error);
-
         alert(
           response.error?.description || "Payment failed. Please try again.",
         );
-
         setIsProcessing(false);
       });
 
       razorpay.open();
     } catch (error) {
       console.error("Payment initialization error:", error);
-
       alert(error.message || "Unable to start payment. Please try again.");
-
       setIsProcessing(false);
     }
   };
@@ -439,23 +429,59 @@ function Upload() {
               <h2 className="text-2xl font-black text-white uppercase tracking-tight">
                 CHOOSE YOUR CATEGORY
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {CATEGORIES.map((cat) => (
-                  <div
-                    key={cat}
-                    onClick={() => setFormData({ ...formData, category: cat })}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all duration-300 ${formData.category === cat ? "bg-[#a855f7]/20 border-[#a855f7]" : "bg-[#0b0b0f] border-white/5 hover:border-white/20"}`}
-                  >
-                    <h4
-                      className={`font-bold ${formData.category === cat ? "text-[#a855f7]" : "text-white"}`}
+              {/* Category Grid updates dynamically to hide unselected items */}
+              <div
+                className={`grid gap-4 ${
+                  formData.category
+                    ? "grid-cols-1 md:grid-cols-2" // When selected, it centers nicer
+                    : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3" // Show all
+                }`}
+              >
+                {CATEGORIES.map((cat) => {
+                  // Hide unselected categories
+                  if (formData.category && formData.category !== cat)
+                    return null;
+
+                  return (
+                    <div
+                      key={cat}
+                      // If already selected, clicking it clears the selection so they can change it
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          category: formData.category === cat ? "" : cat,
+                        })
+                      }
+                      className={`p-4 rounded-xl border cursor-pointer transition-all duration-300 ${
+                        formData.category === cat
+                          ? "bg-[#a855f7]/10 border-[#a855f7] shadow-[0_0_15px_rgba(168,85,247,0.1)]"
+                          : "bg-[#0b0b0f] border-white/5 hover:border-white/20"
+                      }`}
                     >
-                      {cat}
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-1 font-mono">
-                      Professional Category
-                    </p>
-                  </div>
-                ))}
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4
+                            className={`font-bold ${
+                              formData.category === cat
+                                ? "text-[#a855f7]"
+                                : "text-white"
+                            }`}
+                          >
+                            {cat}
+                          </h4>
+                          <p className="text-xs text-gray-500 mt-1 font-mono">
+                            Professional Category
+                          </p>
+                        </div>
+                        {formData.category === cat && (
+                          <span className="text-[10px] font-bold text-[#a855f7] border border-[#a855f7]/30 bg-[#a855f7]/10 px-3 py-1 rounded-full uppercase tracking-wider">
+                            Change
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -463,34 +489,59 @@ function Upload() {
               <h2 className="text-2xl font-black text-white uppercase tracking-tight">
                 SELECT ENTRY PACKAGE
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {PACKAGES.map((pkg) => (
-                  <div
-                    key={pkg.id}
-                    onClick={() =>
-                      setFormData({ ...formData, entryPackage: pkg.id })
-                    }
-                    className={`p-6 rounded-2xl border relative cursor-pointer transition-all duration-300 flex flex-col ${formData.entryPackage === pkg.id ? "bg-gradient-to-b from-[#140a24] to-[#0b0b0f] border-[#a855f7] shadow-[0_0_30px_rgba(168,85,247,0.15)]" : "bg-[#0b0b0f] border-white/5 hover:border-white/20"}`}
-                  >
-                    {formData.entryPackage === pkg.id && (
-                      <div className="absolute top-4 right-4 text-[#a855f7]">
-                        <CheckCircle2 size={20} />
-                      </div>
-                    )}
-                    <h4 className="text-sm font-bold text-white tracking-widest">
-                      {pkg.name}
-                    </h4>
-                    <p className="text-2xl font-black text-[#a855f7] mt-2 mb-4">
-                      ₹{pkg.price}
-                    </p>
-                    <p className="text-sm font-semibold text-gray-300 mb-4">
-                      {pkg.subs}
-                    </p>
-                    <p className="text-xs text-gray-500 whitespace-pre-line font-mono mt-auto pt-4 border-t border-white/5">
-                      {pkg.details}
-                    </p>
-                  </div>
-                ))}
+              {/* Package Grid updates dynamically to hide unselected items */}
+              <div
+                className={`grid gap-6 ${
+                  formData.entryPackage
+                    ? "grid-cols-1 md:grid-cols-2" // When selected, it shrinks to look centered/clean
+                    : "grid-cols-1 md:grid-cols-3" // Show all
+                }`}
+              >
+                {PACKAGES.map((pkg) => {
+                  // Hide unselected packages
+                  if (formData.entryPackage && formData.entryPackage !== pkg.id)
+                    return null;
+
+                  return (
+                    <div
+                      key={pkg.id}
+                      // If already selected, clicking it clears the selection
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          entryPackage:
+                            formData.entryPackage === pkg.id ? "" : pkg.id,
+                        })
+                      }
+                      className={`p-6 rounded-2xl border relative cursor-pointer transition-all duration-300 flex flex-col ${
+                        formData.entryPackage === pkg.id
+                          ? "bg-gradient-to-b from-[#140a24] to-[#0b0b0f] border-[#a855f7] shadow-[0_0_30px_rgba(168,85,247,0.15)]"
+                          : "bg-[#0b0b0f] border-white/5 hover:border-white/20"
+                      }`}
+                    >
+                      {formData.entryPackage === pkg.id && (
+                        <div className="absolute top-4 right-4 flex items-center gap-2 text-[#a855f7]">
+                          <span className="text-[10px] font-bold border border-[#a855f7]/30 bg-[#a855f7]/10 px-3 py-1 rounded-full uppercase tracking-wider">
+                            Change
+                          </span>
+                          <CheckCircle2 size={20} />
+                        </div>
+                      )}
+                      <h4 className="text-sm font-bold text-white tracking-widest">
+                        {pkg.name}
+                      </h4>
+                      <p className="text-2xl font-black text-[#a855f7] mt-2 mb-4">
+                        ₹{pkg.price}
+                      </p>
+                      <p className="text-sm font-semibold text-gray-300 mb-4">
+                        {pkg.subs}
+                      </p>
+                      <p className="text-xs text-gray-500 whitespace-pre-line font-mono mt-auto pt-4 border-t border-white/5">
+                        {pkg.details}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

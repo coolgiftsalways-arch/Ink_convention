@@ -1,4 +1,5 @@
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // <-- Imported Link for navigation
 import {
   Calendar,
   MapPin,
@@ -16,9 +17,6 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 import mumbai from "../assets/mumbai.png";
 import pune from "../assets/pune.png";
 
-
-
-
 gsap.registerPlugin(ScrollTrigger);
 
 // --- MOCK DATA ---
@@ -31,7 +29,7 @@ const eventsData = [
     date: "15 - 17 Nov, 2025",
     venue: "NESCO Center,\nGoregaon, Mumbai",
     desc: "The biggest tattoo convention is hitting Mumbai! Join us for an incredible weekend of art, music, and tattoo culture.",
-    image:mumbai,
+    image: mumbai,
   },
   {
     id: 2,
@@ -41,8 +39,7 @@ const eventsData = [
     date: "05 - 07 Dec, 2025",
     venue: "Deccan College Ground,\nPune, Maharashtra",
     desc: "Pune gets ready to be inked! Discover top artists from around the country in a massive 3-day showdown.",
-    image:
-      pune,
+    image: pune,
   },
   {
     id: 3,
@@ -101,9 +98,25 @@ export default function Upcomeing() {
     };
   }, []);
 
+  // ---> FUNCTION TO HANDLE NATIVE MOBILE SHARING <---
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Ink Convention 2026 - ${selectedEvent.city}`,
+          text: selectedEvent.desc,
+          url: window.location.href, // Shares the current page URL
+        });
+      } catch (error) {
+        console.log("Error sharing:", error);
+      }
+    } else {
+      alert("Sharing is not supported on this browser. Copy the URL instead!");
+    }
+  };
+
   return (
     <div className="bg-[#0a0a0c] text-white font-sans selection:bg-purple-500/30">
-      {/* ADDED mb-24 and pb-20 here: This creates a solid block of empty space above the footer! */}
       <div className="min-h-screen px-8 pb-20 mb-24 pt-32 flex gap-12 relative max-w-7xl mx-auto items-start">
         {/* ================= LEFT SIDE: SCROLLABLE GRID ================= */}
         <div className="flex-1">
@@ -163,7 +176,6 @@ export default function Upcomeing() {
         </div>
 
         {/* ================= RIGHT SIDE: STICKY DETAILS PANEL ================= */}
-        {/* Adjusted z-index and spacing so it locks into place nicely above the footer */}
         <div className="w-[450px] shrink-0 hidden lg:block sticky top-32 h-[calc(100vh-10rem)] z-10">
           <div className="bg-[#121215] border border-gray-800 rounded-2xl p-6 h-full flex flex-col shadow-2xl">
             <div className="flex justify-between items-center mb-6">
@@ -262,11 +274,28 @@ export default function Upcomeing() {
                     </div>
                   </div>
 
-                  <div className="flex gap-4 mt-8 pt-6">
-                    <button className="flex-1 bg-[#9333ea] hover:bg-[#a855f7] text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm">
-                      GET EVENT UPDATES
-                    </button>
-                    <button className="flex-1 border border-gray-700 hover:border-gray-500 text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm flex items-center justify-center gap-2">
+                  {/* ---> NEW UPDATED 3 BUTTON LAYOUT <--- */}
+                  <div className="flex flex-col gap-3 mt-8 pt-6">
+                    {/* Top Row: Form Links */}
+                    <div className="flex gap-3">
+                      <Link
+                        to="/Upload"
+                        className="flex-1 bg-[#9333ea] hover:bg-[#a855f7] text-white font-bold py-3 px-2 rounded-xl transition-colors text-xs text-center flex items-center justify-center"
+                      >
+                        EXPO 2026 FORM
+                      </Link>
+                      <Link
+                        to="/client-login"
+                        className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-2 rounded-xl transition-colors text-xs text-center flex items-center justify-center"
+                      >
+                        CLIENT FORM
+                      </Link>
+                    </div>
+                    {/* Bottom Row: Share Action */}
+                    <button
+                      onClick={handleShare}
+                      className="w-full border border-gray-700 hover:border-gray-500 text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
                       <Share2 size={16} /> SHARE EVENT
                     </button>
                   </div>
