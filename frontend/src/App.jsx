@@ -8,6 +8,7 @@ import {
 import Lenis from "lenis";
 import gsap from "gsap";
 
+
 // Components
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -19,9 +20,11 @@ import Home from "./pages/Home";
 import About from "./pages/About";
 import Gallery from "./pages/Gallery";
 import HallOfFame from "./pages/Halloffam";
-import Artists from "./pages/Artists"; // <--- IMPORTED YOUR NEW ARTIST DIRECTORY PAGE
+import Artists from "./pages/Artists";
 import Upload from "./pages/Upload";
 import TOP from "./pages/TOP";
+// ---> IMPORTED YOUR NEW UPCOMING EVENTS PAGE HERE <---
+import Upcoming from "./pages/Upcomeing";
 import Payment from "./components/Payment";
 import ClientLogin from "./pages/ClientLogin";
 
@@ -83,7 +86,6 @@ function Layout() {
               </PageTransition>
             }
           />
-          {/* ---> ADDED THE ROUTE FOR THE ARTIST DIRECTORY PAGE HERE <--- */}
           <Route
             path="/artists"
             element={
@@ -97,6 +99,15 @@ function Layout() {
             element={
               <PageTransition>
                 <TOP />
+              </PageTransition>
+            }
+          />
+          {/* ---> ADDED THE ROUTE FOR THE UPCOMING EVENTS PAGE HERE <--- */}
+          <Route
+            path="/upcoming"
+            element={
+              <PageTransition>
+                <Upcoming />
               </PageTransition>
             }
           />

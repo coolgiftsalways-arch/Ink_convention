@@ -17,6 +17,8 @@ import {
 import { Link } from "react-router-dom";
 import "../Style/Home.css";
 
+
+
 const CATEGORIES = [
   "Black & Grey",
   "Realism",

@@ -90,6 +90,13 @@ function Navbar() {
             >
               Artists
             </Link>
+            {/* Added Upcoming Link Here */}
+            <Link
+              to="/upcoming"
+              className="nav-link-hover text-gray-300 hover:text-white transition"
+            >
+              Upcoming
+            </Link>
             <Link
               to="/hall-of-fame"
               className="nav-link-hover text-gray-300 hover:text-white transition"
@@ -237,13 +244,23 @@ function Navbar() {
               <span>Artists</span>
               <span className="text-xs font-mono text-gray-500">05</span>
             </Link>
+            {/* Added Upcoming Link Here (Number 06) */}
+            <Link
+              to="/upcoming"
+              onClick={closeMenu}
+              className="text-white hover:text-[#a855f7] transition flex items-center justify-between"
+            >
+              <span>Upcoming</span>
+              <span className="text-xs font-mono text-gray-500">06</span>
+            </Link>
+            {/* Shifted Hall of Fame to Number 07 */}
             <Link
               to="/hall-of-fame"
               onClick={closeMenu}
               className="text-white hover:text-[#a855f7] transition flex items-center justify-between"
             >
               <span>Hall Of Fame</span>
-              <span className="text-xs font-mono text-gray-500">06</span>
+              <span className="text-xs font-mono text-gray-500">07</span>
             </Link>
           </div>
           <Link
