@@ -1,12 +1,12 @@
-import express from "express";
-import Client from "../models/Client.js";
+const express = require("express");
+const Client = require("../models/Client");
 
 const router = express.Router();
 
-/* =====================================================
-   CLIENT REGISTRATION
-   POST /api/clients
-===================================================== */
+// =====================================================
+// CLIENT REGISTRATION
+// POST /api/clients
+// =====================================================
 
 router.post("/", async (req, res) => {
   try {
@@ -47,18 +47,27 @@ router.post("/", async (req, res) => {
     }
 
     // -----------------------------------------------
+    // NORMALIZE DATA
+    // -----------------------------------------------
+
+    const cleanName = name.trim();
+    const cleanGmail = gmail.toLowerCase().trim();
+    const cleanPhone = phone.trim();
+    const cleanCity = city.trim();
+    const cleanState = state.trim();
+
+    // -----------------------------------------------
     // CHECK EXISTING CLIENT
     // -----------------------------------------------
 
     const existingClient = await Client.findOne({
-      gmail: gmail.toLowerCase().trim(),
+      gmail: cleanGmail,
     });
 
     if (existingClient) {
       return res.status(400).json({
         success: false,
-        message:
-          "A client with this email already exists.",
+        message: "A client with this email already exists.",
       });
     }
 
@@ -67,11 +76,11 @@ router.post("/", async (req, res) => {
     // -----------------------------------------------
 
     const newClient = new Client({
-      name: name.trim(),
-      gmail: gmail.toLowerCase().trim(),
-      phone: phone.trim(),
-      city: city.trim(),
-      state: state.trim(),
+      name: cleanName,
+      gmail: cleanGmail,
+      phone: cleanPhone,
+      city: cleanCity,
+      state: cleanState,
     });
 
     await newClient.save();
@@ -99,20 +108,17 @@ router.post("/", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message:
-        "Server error while registering client.",
+      message: "Server error while registering client.",
       error: error.message,
     });
   }
 });
 
 
-/* =====================================================
-   GET ALL CLIENTS
-   GET /api/clients
-
-   This is used by the ADMIN CLIENTS PAGE.
-===================================================== */
+// =====================================================
+// GET ALL CLIENTS
+// GET /api/clients
+// =====================================================
 
 router.get("/", async (req, res) => {
   try {
@@ -137,25 +143,22 @@ router.get("/", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message:
-        "Server error while fetching clients.",
+      message: "Server error while fetching clients.",
       error: error.message,
     });
   }
 });
 
 
-/* =====================================================
-   DELETE CLIENT
-   DELETE /api/clients/:id
-===================================================== */
+// =====================================================
+// DELETE CLIENT
+// DELETE /api/clients/:id
+// =====================================================
 
 router.delete("/:id", async (req, res) => {
   try {
     const deletedClient =
-      await Client.findByIdAndDelete(
-        req.params.id
-      );
+      await Client.findByIdAndDelete(req.params.id);
 
     if (!deletedClient) {
       return res.status(404).json({
@@ -171,8 +174,7 @@ router.delete("/:id", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message:
-        "Client deleted successfully.",
+      message: "Client deleted successfully.",
     });
 
   } catch (error) {
@@ -183,12 +185,15 @@ router.delete("/:id", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message:
-        "Server error while deleting client.",
+      message: "Server error while deleting client.",
       error: error.message,
     });
   }
 });
 
 
-export default router;
+// =====================================================
+// EXPORT ROUTER
+// =====================================================
+
+module.exports = router;
