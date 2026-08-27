@@ -23,6 +23,7 @@ import Artists from "./pages/Artists"; // <--- IMPORTED YOUR NEW ARTIST DIRECTOR
 import Upload from "./pages/Upload";
 import TOP from "./pages/TOP";
 import Payment from "./components/Payment";
+import ClientLogin from "./pages/ClientLogin";
 
 // Admin
 import Dashboard from "./admin/Dashboard";
@@ -128,6 +129,14 @@ function Layout() {
             element={
               <PageTransition>
                 <Dashboard />
+              </PageTransition>
+            }
+          />
+          <Route
+            path="/client-login"
+            element={
+              <PageTransition>
+                <ClientLogin />
               </PageTransition>
             }
           />

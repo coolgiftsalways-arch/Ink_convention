@@ -584,7 +584,7 @@ function Dashboard() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="h-32 rounded-2xl overflow-hidden bg-gray-900 border border-white/10 block group relative"
-                        >
+                        >  
                           <img
                             src={`https://api.inkconvention.com/${imgPath.replace(/\\/g, "/")}`}
                             alt="Tattoo Entry"

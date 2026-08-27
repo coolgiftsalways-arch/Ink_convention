@@ -97,6 +97,12 @@ function Navbar() {
               Hall Of Fame
             </Link>
           </div>
+          <Link
+            to="/client-login"
+            className="nav-link-hover text-gray-300 hover:text-white transition"
+          >
+            Client
+          </Link>
 
           {/* Desktop Right Social Icons */}
           <div className="hidden md:flex items-center space-x-3 pt-2">
@@ -240,6 +246,15 @@ function Navbar() {
               <span className="text-xs font-mono text-gray-500">06</span>
             </Link>
           </div>
+          <Link
+            to="/client-login"
+            onClick={closeMenu}
+            className="text-white hover:text-[#a855f7] transition flex items-center justify-between"
+          >
+            <span>Client</span>
+            <span className="text-xs font-mono text-gray-500">07</span>
+          </Link>
+
           <div className="pt-4 border-t border-white/10 flex items-center justify-between">
             <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">
               Connect
