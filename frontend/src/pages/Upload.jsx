@@ -20,9 +20,7 @@ import { Link } from "react-router-dom";
 
 import "../Style/Home.css";
 
-/* =====================================================
-   CATEGORIES
-===================================================== */
+
 
 const CATEGORIES = [
   "Black & Grey",
@@ -415,42 +413,25 @@ function Upload() {
           color: "#a855f7",
         },
 
-        /* =========================================
-           PAYMENT SUCCESS
-        ========================================== */
+        handler: async function (paymentResponse) {
+          try {
+            // STEP 3: Verify payment on backend
+            const verifyResponse = await fetch(
+              `${import.meta.env.VITE_API_URL}/api/payment/verify`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  razorpay_order_id: paymentResponse.razorpay_order_id,
 
-        handler:
-          async function (
-            paymentResponse
-          ) {
-            try {
-              /* =====================================
-                 VERIFY PAYMENT
-              ====================================== */
+                  razorpay_payment_id: paymentResponse.razorpay_payment_id,
 
-              const verifyResponse =
-                await fetch(
-                  `${import.meta.env.VITE_API_URL}/api/payment/verify`,
-                  {
-                    method: "POST",
-
-                    headers: {
-                      "Content-Type":
-                        "application/json",
-                    },
-
-                    body: JSON.stringify({
-                      razorpay_order_id:
-                        paymentResponse.razorpay_order_id,
-
-                      razorpay_payment_id:
-                        paymentResponse.razorpay_payment_id,
-
-                      razorpay_signature:
-                        paymentResponse.razorpay_signature,
-                    }),
-                  }
-                );
+                  razorpay_signature: paymentResponse.razorpay_signature,
+                }),
+              },
+            );
 
               const verifyData =
                 await verifyResponse.json();
@@ -494,26 +475,17 @@ function Upload() {
                  VIDEOS
               ====================================== */
 
-              videos.forEach((vid) => {
-                data.append(
-                  "videos",
-                  vid
-                );
-              });
+            videos.forEach((vid) => {
+              data.append("videos", vid);
+            });
 
-              /* =====================================
-                 PAYMENT DETAILS
-              ====================================== */
+            // Store Razorpay payment details with the submission
+            data.append("razorpay_order_id", paymentResponse.razorpay_order_id);
 
-              data.append(
-                "razorpay_order_id",
-                paymentResponse.razorpay_order_id
-              );
-
-              data.append(
-                "razorpay_payment_id",
-                paymentResponse.razorpay_payment_id
-              );
+            data.append(
+              "razorpay_payment_id",
+              paymentResponse.razorpay_payment_id,
+            );
 
               /* =====================================
                  SUBMIT ENTRY
@@ -532,42 +504,24 @@ function Upload() {
               const result =
                 await submitResponse.json();
 
-              if (!result.success) {
-                throw new Error(
-                  result.message ||
-                    "Entry submission failed."
-                );
-              }
-
-              /* =====================================
-                 SUCCESS
-              ====================================== */
-
-              setEntryId(
-                result.entryId
-              );
-
-              setStep(6);
-
-              window.scrollTo(
-                0,
-                0
-              );
-            } catch (error) {
-              console.error(
-                "Post-payment submission error:",
-                error
-              );
-
-              alert(
-                "Payment was successful, but entry submission failed. Please contact support with your payment ID."
-              );
-            } finally {
-              setIsProcessing(
-                false
-              );
+            if (!result.success) {
+              throw new Error(result.message || "Entry submission failed.");
             }
-          },
+
+            // STEP 5: Show successful entry
+            setEntryId(result.entryId);
+            setStep(6);
+            window.scrollTo(0, 0);
+          } catch (error) {
+            console.error("Post-payment submission error:", error);
+
+            alert(
+              "Payment was successful, but entry submission failed. Please contact support with your payment ID.",
+            );
+          } finally {
+            setIsProcessing(false);
+          }
+        },
 
         /* =========================================
            PAYMENT DISMISSED
@@ -596,41 +550,24 @@ function Upload() {
          PAYMENT FAILED
       ============================================= */
 
-      razorpay.on(
-        "payment.failed",
-        function (response) {
-          console.error(
-            "Razorpay payment failed:",
-            response.error
-          );
+      razorpay.on("payment.failed", function (response) {
+        console.error("Razorpay payment failed:", response.error);
 
-          alert(
-            response.error?.description ||
-              "Payment failed. Please try again."
-          );
+        alert(
+          response.error?.description || "Payment failed. Please try again.",
+        );
 
-          setIsProcessing(
-            false
-          );
-        }
-      );
+        setIsProcessing(false);
+      });
 
       razorpay.open();
 
     } catch (error) {
-      console.error(
-        "Payment initialization error:",
-        error
-      );
+      console.error("Payment initialization error:", error);
 
-      alert(
-        error.message ||
-          "Unable to start payment. Please try again."
-      );
+      alert(error.message || "Unable to start payment. Please try again.");
 
-      setIsProcessing(
-        false
-      );
+      setIsProcessing(false);
     }
   };
 
@@ -1140,722 +1077,72 @@ function Upload() {
         ================================================= */}
 
         {step === 1 && (
-          <div
-            className="
-              space-y-12
-              animate-fade-in
-            "
-          >
-
-            {/* =============================================
-                CATEGORY SECTION
-            ============================================== */}
-
-            <div
-              className="
-                space-y-5
-              "
-            >
-
-              {/* SECTION HEADER */}
-
-              <div
-                className="
-                  flex
-                  items-end
-                  justify-between
-                  gap-4
-                "
-              >
-
-                <div>
-
+          <div className="space-y-10 animate-fade-in">
+            <div className="space-y-4">
+              <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+                CHOOSE YOUR CATEGORY
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {CATEGORIES.map((cat) => (
                   <div
-                    className="
-                      flex
-                      items-center
-                      gap-3
-                      mb-2
-                    "
+                    key={cat}
+                    onClick={() => setFormData({ ...formData, category: cat })}
+                    className={`p-4 rounded-xl border cursor-pointer transition-all duration-300 ${formData.category === cat ? "bg-[#a855f7]/20 border-[#a855f7]" : "bg-[#0b0b0f] border-white/5 hover:border-white/20"}`}
                   >
-
-                    <span
-                      className="
-                        flex
-                        items-center
-                        justify-center
-                        w-8
-                        h-8
-                        rounded-full
-                        border
-                        border-[#a855f7]
-                        bg-[#a855f7]/10
-                        text-[#a855f7]
-                        font-mono
-                        text-xs
-                        font-bold
-                      "
+                    <h4
+                      className={`font-bold ${formData.category === cat ? "text-[#a855f7]" : "text-white"}`}
                     >
-                      01
-                    </span>
-
-                    <span
-                      className="
-                        text-[10px]
-                        font-mono
-                        uppercase
-                        tracking-[0.25em]
-                        text-[#a855f7]
-                      "
-                    >
-                      Competition
-                    </span>
-
+                      {cat}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1 font-mono">
+                      Professional Category
+                    </p>
                   </div>
-
-                  <h2
-                    className="
-                      text-2xl
-                      sm:text-3xl
-                      font-black
-                      text-white
-                      uppercase
-                      tracking-tight
-                    "
-                  >
-                    Choose Your Category
-                    <span className="text-[#a855f7]">
-                      .
-                    </span>
-                  </h2>
-
-                  <p
-                    className="
-                      mt-2
-                      text-sm
-                      text-gray-500
-                    "
-                  >
-                    Select the category that best
-                    represents your tattoo.
-                  </p>
-
-                </div>
-
-                {/* SELECTED STATUS */}
-
-                {formData.category && (
-                  <div
-                    className="
-                      hidden
-                      sm:flex
-                      items-center
-                      gap-2
-                      text-[10px]
-                      font-mono
-                      uppercase
-                      tracking-widest
-                      text-emerald-400
-                    "
-                  >
-
-                    <CheckCircle2
-                      size={14}
-                    />
-
-                    Category Selected
-
-                  </div>
-                )}
-
-              </div>
-
-              {/* =========================================
-                  CATEGORY GRID
-              ========================================== */}
-
-              <div
-                className="
-                  grid
-                  grid-cols-1
-                  sm:grid-cols-2
-                  md:grid-cols-3
-                  gap-4
-                "
-              >
-
-                {CATEGORIES.map(
-                  (cat) => {
-
-                    const selected =
-                      formData.category ===
-                      cat;
-
-                    return (
-                      <button
-                        type="button"
-                        key={cat}
-                        onClick={() =>
-                          setFormData(
-                            (prev) => ({
-                              ...prev,
-
-                              category:
-                                cat,
-                            })
-                          )
-                        }
-                        className={`
-                          group
-                          relative
-                          text-left
-                          p-5
-                          rounded-2xl
-                          border
-                          overflow-hidden
-                          cursor-pointer
-                          transition-all
-                          duration-300
-
-                          ${
-                            selected
-                              ? "bg-[#a855f7]/15 border-[#a855f7] shadow-[0_0_30px_rgba(168,85,247,0.15)] -translate-y-0.5"
-                              : "bg-[#0b0b0f] border-white/5 hover:border-[#a855f7]/40 hover:bg-[#a855f7]/5 hover:-translate-y-0.5"
-                          }
-                        `}
-                      >
-
-                        {/* CARD GLOW */}
-
-                        <div
-                          className={`
-                            absolute
-                            -top-16
-                            -right-16
-                            w-32
-                            h-32
-                            rounded-full
-                            bg-[#a855f7]/20
-                            blur-3xl
-                            transition-opacity
-                            duration-500
-
-                            ${
-                              selected
-                                ? "opacity-100"
-                                : "opacity-0 group-hover:opacity-100"
-                            }
-                          `}
-                        />
-
-                        {/* SELECTED CHECK */}
-
-                        {selected && (
-                          <div
-                            className="
-                              absolute
-                              top-4
-                              right-4
-                              z-20
-                            "
-                          >
-
-                            <div
-                              className="
-                                w-6
-                                h-6
-                                rounded-full
-                                bg-[#a855f7]
-                                flex
-                                items-center
-                                justify-center
-                                shadow-[0_0_15px_rgba(168,85,247,0.5)]
-                              "
-                            >
-
-                              <CheckCircle2
-                                size={14}
-                                className="text-white"
-                              />
-
-                            </div>
-
-                          </div>
-                        )}
-
-                        {/* CONTENT */}
-
-                        <div
-                          className="
-                            relative
-                            z-10
-                          "
-                        >
-
-                          <h4
-                            className={`
-                              text-base
-                              font-bold
-                              transition-colors
-                              duration-300
-                              pr-8
-
-                              ${
-                                selected
-                                  ? "text-[#c084fc]"
-                                  : "text-white group-hover:text-[#c084fc]"
-                              }
-                            `}
-                          >
-                            {cat}
-                          </h4>
-
-                          <p
-                            className="
-                              text-[10px]
-                              text-gray-500
-                              mt-2
-                              font-mono
-                              uppercase
-                              tracking-widest
-                            "
-                          >
-                            Professional Category
-                          </p>
-
-                        </div>
-
-                      </button>
-                    );
-                  }
-                )}
-
+                ))}
               </div>
 
             </div>
 
-            {/* =================================================
-                ENTRY PACKAGE
-                HIDDEN UNTIL CATEGORY IS SELECTED
-            ================================================= */}
-
-            {formData.category && (
-              <div
-                className="
-                  space-y-5
-                  pt-8
-                  border-t
-                  border-white/10
-                  animate-fade-in
-                "
-              >
-
-                {/* PACKAGE HEADER */}
-
-                <div
-                  className="
-                    flex
-                    items-end
-                    justify-between
-                    gap-4
-                  "
-                >
-
-                  <div>
-
-                    <div
-                      className="
-                        flex
-                        items-center
-                        gap-3
-                        mb-2
-                      "
-                    >
-
-                      <span
-                        className="
-                          flex
-                          items-center
-                          justify-center
-                          w-8
-                          h-8
-                          rounded-full
-                          border
-                          border-[#a855f7]
-                          bg-[#a855f7]/10
-                          text-[#a855f7]
-                          font-mono
-                          text-xs
-                          font-bold
-                        "
-                      >
-                        02
-                      </span>
-
-                      <span
-                        className="
-                          text-[10px]
-                          font-mono
-                          uppercase
-                          tracking-[0.25em]
-                          text-[#a855f7]
-                        "
-                      >
-                        Entry
-                      </span>
-
-                    </div>
-
-                    <h2
-                      className="
-                        text-2xl
-                        sm:text-3xl
-                        font-black
-                        text-white
-                        uppercase
-                        tracking-tight
-                      "
-                    >
-                      Select Entry Package
-                      <span className="text-[#a855f7]">
-                        .
-                      </span>
-                    </h2>
-
-                    <p
-                      className="
-                        mt-2
-                        text-sm
-                        text-gray-500
-                      "
-                    >
-                      Choose the participation package
-                      that works for you.
-                    </p>
-
-                  </div>
-
-                  {/* PACKAGE SELECTED */}
-
-                  {formData.entryPackage && (
-                    <div
-                      className="
-                        hidden
-                        sm:flex
-                        items-center
-                        gap-2
-                        text-[10px]
-                        font-mono
-                        uppercase
-                        tracking-widest
-                        text-emerald-400
-                      "
-                    >
-
-                      <CheckCircle2
-                        size={14}
-                      />
-
-                      Package Selected
-
-                    </div>
-                  )}
-
-                </div>
-
-                {/* =========================================
-                    PACKAGE CARDS
-                ========================================== */}
-
-                <div
-                  className="
-                    grid
-                    grid-cols-1
-                    md:grid-cols-3
-                    gap-5
-                  "
-                >
-
-                  {PACKAGES.map(
-                    (pkg) => {
-
-                      const selected =
-                        formData.entryPackage ===
-                        pkg.id;
-
-                      return (
-                        <button
-                          type="button"
-                          key={pkg.id}
-                          onClick={() =>
-                            setFormData(
-                              (prev) => ({
-                                ...prev,
-
-                                entryPackage:
-                                  pkg.id,
-                              })
-                            )
-                          }
-                          className={`
-                            group
-                            relative
-                            overflow-hidden
-                            text-left
-                            p-6
-                            rounded-2xl
-                            border
-                            cursor-pointer
-                            transition-all
-                            duration-300
-                            flex
-                            flex-col
-                            min-h-[230px]
-
-                            ${
-                              selected
-                                ? "bg-gradient-to-b from-[#180c29] to-[#0b0b0f] border-[#a855f7] shadow-[0_0_35px_rgba(168,85,247,0.18)] -translate-y-1"
-                                : "bg-[#0b0b0f] border-white/5 hover:border-[#a855f7]/40 hover:-translate-y-1"
-                            }
-                          `}
-                        >
-
-                          {/* GLOW */}
-
-                          <div
-                            className={`
-                              absolute
-                              -top-20
-                              -right-20
-                              w-40
-                              h-40
-                              rounded-full
-                              bg-[#a855f7]/15
-                              blur-3xl
-                              transition-opacity
-                              duration-500
-
-                              ${
-                                selected
-                                  ? "opacity-100"
-                                  : "opacity-0 group-hover:opacity-100"
-                              }
-                            `}
-                          />
-
-                          {/* SELECTED CHECK */}
-
-                          {selected && (
-                            <div
-                              className="
-                                absolute
-                                top-5
-                                right-5
-                                z-20
-                              "
-                            >
-
-                              <div
-                                className="
-                                  w-7
-                                  h-7
-                                  rounded-full
-                                  bg-[#a855f7]
-                                  flex
-                                  items-center
-                                  justify-center
-                                  shadow-[0_0_18px_rgba(168,85,247,0.5)]
-                                "
-                              >
-
-                                <CheckCircle2
-                                  size={15}
-                                  className="text-white"
-                                />
-
-                              </div>
-
-                            </div>
-                          )}
-
-                          {/* CONTENT */}
-
-                          <div
-                            className="
-                              relative
-                              z-10
-                              flex
-                              flex-col
-                              h-full
-                            "
-                          >
-
-                            <p
-                              className="
-                                text-[9px]
-                                font-mono
-                                uppercase
-                                tracking-[0.25em]
-                                text-[#a855f7]
-                                mb-3
-                              "
-                            >
-                              Participation
-                            </p>
-
-                            <h4
-                              className="
-                                text-sm
-                                font-bold
-                                text-white
-                                tracking-widest
-                                pr-8
-                              "
-                            >
-                              {pkg.name}
-                            </h4>
-
-                            <p
-                              className="
-                                text-3xl
-                                font-black
-                                text-[#a855f7]
-                                mt-3
-                              "
-                            >
-                              ₹{pkg.price}
-                            </p>
-
-                            <p
-                              className="
-                                text-sm
-                                font-semibold
-                                text-gray-300
-                                mt-4
-                              "
-                            >
-                              {pkg.subs}
-                            </p>
-
-                            <p
-                              className="
-                                text-xs
-                                text-gray-500
-                                whitespace-pre-line
-                                font-mono
-                                mt-auto
-                                pt-5
-                                border-t
-                                border-white/5
-                              "
-                            >
-                              {pkg.details}
-                            </p>
-
-                          </div>
-
-                        </button>
-                      );
+            <div className="space-y-4">
+              <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+                SELECT ENTRY PACKAGE
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {PACKAGES.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    onClick={() =>
+                      setFormData({ ...formData, entryPackage: pkg.id })
                     }
-                  )}
-
-                </div>
-
-                {/* =========================================
-                    PACKAGE HELPER
-                ========================================== */}
-
-                {!formData.entryPackage && (
-                  <div
-                    className="
-                      flex
-                      items-center
-                      gap-3
-                      px-4
-                      py-3
-                      rounded-xl
-                      bg-white/[0.02]
-                      border
-                      border-white/5
-                    "
+                    className={`p-6 rounded-2xl border relative cursor-pointer transition-all duration-300 flex flex-col ${formData.entryPackage === pkg.id ? "bg-gradient-to-b from-[#140a24] to-[#0b0b0f] border-[#a855f7] shadow-[0_0_30px_rgba(168,85,247,0.15)]" : "bg-[#0b0b0f] border-white/5 hover:border-white/20"}`}
                   >
-
-                    <Target
-                      size={15}
-                      className="
-                        text-[#a855f7]
-                        flex-shrink-0
-                      "
-                    />
-
-                    <p
-                      className="
-                        text-[10px]
-                        sm:text-xs
-                        font-mono
-                        uppercase
-                        tracking-widest
-                        text-gray-500
-                      "
-                    >
-                      Select a package to unlock
-                      the Artist step
+                    {formData.entryPackage === pkg.id && (
+                      <div className="absolute top-4 right-4 text-[#a855f7]">
+                        <CheckCircle2 size={20} />
+                      </div>
+                    )}
+                    <h4 className="text-sm font-bold text-white tracking-widest">
+                      {pkg.name}
+                    </h4>
+                    <p className="text-2xl font-black text-[#a855f7] mt-2 mb-4">
+                      ₹{pkg.price}
                     </p>
-
-                  </div>
-                )}
-
-                {/* =========================================
-                    PACKAGE COMPLETE MESSAGE
-                ========================================== */}
-
-                {formData.entryPackage && (
-                  <div
-                    className="
-                      flex
-                      items-center
-                      gap-3
-                      px-4
-                      py-3
-                      rounded-xl
-                      bg-emerald-400/[0.04]
-                      border
-                      border-emerald-400/10
-                      animate-fade-in
-                    "
-                  >
-
-                    <CheckCircle2
-                      size={15}
-                      className="
-                        text-emerald-400
-                        flex-shrink-0
-                      "
-                    />
-
-                    <p
-                      className="
-                        text-[10px]
-                        sm:text-xs
-                        font-mono
-                        uppercase
-                        tracking-widest
-                        text-emerald-400
-                      "
-                    >
-                      Competition complete — Artist
-                      is ready for the next step
+                    <p className="text-sm font-semibold text-gray-300 mb-4">
+                      {pkg.subs}
                     </p>
-
+                    <p className="text-xs text-gray-500 whitespace-pre-line font-mono mt-auto pt-4 border-t border-white/5">
+                      {pkg.details}
+                    </p>
                   </div>
-                )}
-
+                ))}
               </div>
-            )}
-
+            </div>
           </div>
         )}
 
+             
+
+          
         {/* =================================================
             STEP 2 — ARTIST PROFILE
         ================================================= */}

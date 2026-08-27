@@ -6,7 +6,6 @@ require("dotenv").config();
 
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -22,40 +21,44 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // =====================================================
-// CORS
+// NUCLEAR CORS CONFIGURATION (Overrides Hostinger Proxies)
 // =====================================================
 
-app.use(
-  cors({
-    origin: [
-      // Production
-      "https://brown-walrus-852933.hostingersite.com",
-      "https://inkconvention.com",
-      "https://www.inkconvention.com",
+const allowedOrigins = [
+  "https://brown-walrus-852933.hostingersite.com",
+  "https://inkconvention.com",
+  "https://www.inkconvention.com",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+];
 
-      // Local development
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://localhost:3000",
-    ],
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS",
-    ],
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
 
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-    ],
+  // Forcefully allow these methods and headers
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, Accept",
+  );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
 
-    credentials: true,
-  })
-);
+  // Intercept the Preflight (OPTIONS) request and immediately return success
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  next();
+});
 
 // =====================================================
 // BODY PARSERS
@@ -66,7 +69,7 @@ app.use(express.json());
 app.use(
   express.urlencoded({
     extended: true,
-  })
+  }),
 );
 
 // =====================================================
@@ -82,10 +85,7 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Serve uploaded files
-app.use(
-  "/uploads",
-  express.static(uploadDir)
-);
+app.use("/uploads", express.static(uploadDir));
 
 // =====================================================
 // MULTER
@@ -97,15 +97,9 @@ const storage = multer.diskStorage({
   },
 
   filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(
-      /\s+/g,
-      "-"
-    );
+    const safeName = file.originalname.replace(/\s+/g, "-");
 
-    cb(
-      null,
-      `${Date.now()}-${safeName}`
-    );
+    cb(null, `${Date.now()}-${safeName}`);
   },
 });
 
@@ -118,27 +112,17 @@ const upload = multer({
 // =====================================================
 
 if (!process.env.MONGO_URI) {
-  console.error(
-    "ERROR: MONGO_URI is missing from .env"
-  );
+  console.error("ERROR: MONGO_URI is missing from .env");
 } else {
   mongoose
-    .connect(
-      process.env.MONGO_URI,
-      {
-        serverSelectionTimeoutMS: 10000,
-      }
-    )
+    .connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 10000,
+    })
     .then(() => {
-      console.log(
-        "Successfully connected to MongoDB Atlas!"
-      );
+      console.log("Successfully connected to MongoDB Atlas!");
     })
     .catch((error) => {
-      console.error(
-        "MongoDB connection failed:",
-        error.message
-      );
+      console.error("MongoDB connection failed:", error.message);
     });
 }
 
@@ -159,14 +143,9 @@ const transporter = nodemailer.createTransport({
 
 transporter.verify((error) => {
   if (error) {
-    console.error(
-      "Hostinger SMTP connection failed:",
-      error.message
-    );
+    console.error("Hostinger SMTP connection failed:", error.message);
   } else {
-    console.log(
-      "Hostinger SMTP server is ready!"
-    );
+    console.log("Hostinger SMTP server is ready!");
   }
 });
 
@@ -175,60 +154,42 @@ transporter.verify((error) => {
 // =====================================================
 
 app.get("/", (req, res) => {
-  res
-    .status(200)
-    .send(
-      "Backend API is running successfully!"
-    );
+  res.status(200).send("Backend API is running successfully!");
 });
 
 // =====================================================
 // PAYMENT ROUTES
 // =====================================================
 
-app.use(
-  "/api/payment",
-  paymentRoutes
-);
+app.use("/api/payment", paymentRoutes);
 
 // =====================================================
 // CLIENT ROUTES
 // =====================================================
 
-app.use(
-  "/api/clients",
-  clientRoutes
-);
+app.use("/api/clients", clientRoutes);
 
 // =====================================================
 // ADMIN LOGIN
 // =====================================================
 
 app.post("/api/login", (req, res) => {
-  const {
-    gmail,
-    password,
-  } = req.body;
+  const { gmail, password } = req.body;
 
   if (
     gmail === process.env.ADMIN_EMAIL &&
     password === process.env.ADMIN_PASSWORD
   ) {
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Login successful!",
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Login successful!",
+    });
   }
 
-  return res
-    .status(401)
-    .json({
-      success: false,
-      message:
-        "Invalid email or password.",
-    });
+  return res.status(401).json({
+    success: false,
+    message: "Invalid email or password.",
+  });
 });
 
 // =====================================================
@@ -288,42 +249,30 @@ app.post(
         !city ||
         !description
       ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Please provide all required details.",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Please provide all required details.",
+        });
       }
 
       // Database check
-      if (
-        mongoose.connection.readyState !== 1
-      ) {
-        return res
-          .status(500)
-          .json({
-            success: false,
-            message:
-              "Database not connected yet.",
-          });
+      if (mongoose.connection.readyState !== 1) {
+        return res.status(500).json({
+          success: false,
+          message: "Database not connected yet.",
+        });
       }
 
       // Check duplicate user
-      const existingUser =
-        await User.findOne({
-          gmail,
-        });
+      const existingUser = await User.findOne({
+        gmail,
+      });
 
       if (existingUser) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "User with this email already exists!",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "User with this email already exists!",
+        });
       }
 
       // =================================================
@@ -331,12 +280,8 @@ app.post(
       // =================================================
 
       const imagePaths =
-        req.files &&
-        req.files.images
-          ? req.files.images.map(
-              (file) =>
-                `uploads/${file.filename}`
-            )
+        req.files && req.files.images
+          ? req.files.images.map((file) => `uploads/${file.filename}`)
           : [];
 
       // =================================================
@@ -344,43 +289,32 @@ app.post(
       // =================================================
 
       const videoPaths =
-        req.files &&
-        req.files.videos
-          ? req.files.videos.map(
-              (file) =>
-                `uploads/${file.filename}`
-            )
+        req.files && req.files.videos
+          ? req.files.videos.map((file) => `uploads/${file.filename}`)
           : [];
 
       // Require image
       if (imagePaths.length === 0) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Please upload at least 1 image of the tattoo.",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Please upload at least 1 image of the tattoo.",
+        });
       }
 
       // =================================================
       // ENTRY ID
       // =================================================
 
-      const generatedEntryId =
-        `INK26-${Math.floor(
-          100000 +
-            Math.random() *
-              900000
-        )}`;
+      const generatedEntryId = `INK26-${Math.floor(
+        100000 + Math.random() * 900000,
+      )}`;
 
       // =================================================
       // CREATE USER
       // =================================================
 
       const newUser = new User({
-        entryId:
-          generatedEntryId,
+        entryId: generatedEntryId,
 
         category,
 
@@ -390,70 +324,47 @@ app.post(
 
         lastName,
 
-        professionalName:
-          professionalName || "",
+        professionalName: professionalName || "",
 
         gmail,
 
         phone,
 
-        instagram:
-          instagram || "",
+        instagram: instagram || "",
 
-        studio:
-          studio || "",
+        studio: studio || "",
 
         city,
 
-        state:
-          state || "",
+        state: state || "",
 
-        country:
-          country || "India",
+        country: country || "India",
 
-        primaryStyle:
-          primaryStyle || "",
+        primaryStyle: primaryStyle || "",
 
-        experience:
-          experience || "",
+        experience: experience || "",
 
-        tattooTitle:
-          tattooTitle || "",
+        tattooTitle: tattooTitle || "",
 
         description,
 
-        placement:
-          placement || "",
+        placement: placement || "",
 
-        size:
-          size || "",
+        size: size || "",
 
-        isOriginal:
-          isOriginal || "",
+        isOriginal: isOriginal || "",
 
         declarationOriginal:
-          declarationOriginal ===
-            "true" ||
-          declarationOriginal ===
-            true,
+          declarationOriginal === "true" || declarationOriginal === true,
 
         declarationConsent:
-          declarationConsent ===
-            "true" ||
-          declarationConsent ===
-            true,
+          declarationConsent === "true" || declarationConsent === true,
 
-        termsAccepted:
-          termsAccepted ===
-            "true" ||
-          termsAccepted ===
-            true,
+        termsAccepted: termsAccepted === "true" || termsAccepted === true,
 
-        images:
-          imagePaths,
+        images: imagePaths,
 
-        videos:
-          videoPaths,
+        videos: videoPaths,
       });
 
       await newUser.save();
@@ -470,8 +381,7 @@ app.post(
 
           to: gmail,
 
-          subject:
-            "Registration & Entry Successful - Ink Convention",
+          subject: "Registration & Entry Successful - Ink Convention",
 
           html: `
             <div
@@ -496,104 +406,69 @@ app.post(
           `,
         };
 
-        await transporter.sendMail(
-          mailOptions
-        );
+        await transporter.sendMail(mailOptions);
 
         emailSent = true;
-
       } catch (emailError) {
-        console.error(
-          "Email dispatch failed:",
-          emailError.message
-        );
+        console.error("Email dispatch failed:", emailError.message);
       }
 
       // =================================================
       // RESPONSE
       // =================================================
 
-      return res
-        .status(201)
-        .json({
-          success: true,
+      return res.status(201).json({
+        success: true,
 
-          message:
-            "User registered successfully!",
+        message: "User registered successfully!",
 
-          entryId:
-            generatedEntryId,
+        entryId: generatedEntryId,
 
-          emailSent,
+        emailSent,
 
-          user:
-            newUser,
-        });
-
+        user: newUser,
+      });
     } catch (error) {
+      console.error("Signup error:", error);
 
-      console.error(
-        "Signup error:",
-        error
-      );
+      return res.status(500).json({
+        success: false,
 
-      return res
-        .status(500)
-        .json({
-          success: false,
+        message: "Server error while registering user.",
 
-          message:
-            "Server error while registering user.",
-
-          error:
-            error.message,
-        });
+        error: error.message,
+      });
     }
-  }
+  },
 );
 
 // =====================================================
 // GET ALL ARTIST ENTRIES
 // =====================================================
 
-app.get(
-  "/api/admin/users",
-  async (req, res) => {
-    try {
+app.get("/api/admin/users", async (req, res) => {
+  try {
+    const users = await User.find().sort({
+      createdAt: -1,
+    });
 
-      const users =
-        await User.find()
-          .sort({
-            createdAt: -1,
-          });
+    res.status(200).json({
+      success: true,
 
-      res
-        .status(200)
-        .json({
-          success: true,
+      count: users.length,
 
-          count:
-            users.length,
+      users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
 
-          users,
-        });
+      message: "Server error while fetching users.",
 
-    } catch (error) {
-
-      res
-        .status(500)
-        .json({
-          success: false,
-
-          message:
-            "Server error while fetching users.",
-
-          error:
-            error.message,
-        });
-    }
+      error: error.message,
+    });
   }
-);
+});
 
 // =====================================================
 // UPDATE ARTIST STATUS
@@ -604,59 +479,43 @@ app.patch(
 
   async (req, res) => {
     try {
+      const { status } = req.body;
 
-      const {
-        status,
-      } = req.body;
+      const updatedUser = await User.findByIdAndUpdate(
+        req.params.id,
 
-      const updatedUser =
-        await User.findByIdAndUpdate(
-          req.params.id,
+        {
+          status,
+        },
 
-          {
-            status,
-          },
-
-          {
-            new: true,
-          }
-        );
+        {
+          new: true,
+        },
+      );
 
       if (!updatedUser) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-
-            message:
-              "User not found.",
-          });
-      }
-
-      res
-        .status(200)
-        .json({
-          success: true,
-
-          updated:
-            updatedUser,
-        });
-
-    } catch (error) {
-
-      res
-        .status(500)
-        .json({
+        return res.status(404).json({
           success: false,
 
-          message:
-            "Server error while updating status.",
-
-          error:
-            error.message,
+          message: "User not found.",
         });
+      }
+
+      res.status(200).json({
+        success: true,
+
+        updated: updatedUser,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+
+        message: "Server error while updating status.",
+
+        error: error.message,
+      });
     }
-  }
+  },
 );
 
 // =====================================================
@@ -668,58 +527,37 @@ app.delete(
 
   async (req, res) => {
     try {
-
-      const deletedUser =
-        await User.findByIdAndDelete(
-          req.params.id
-        );
+      const deletedUser = await User.findByIdAndDelete(req.params.id);
 
       if (!deletedUser) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-
-            message:
-              "User not found.",
-          });
-      }
-
-      res
-        .status(200)
-        .json({
-          success: true,
-
-          message:
-            "User deleted successfully.",
-        });
-
-    } catch (error) {
-
-      res
-        .status(500)
-        .json({
+        return res.status(404).json({
           success: false,
 
-          message:
-            "Server error while deleting user.",
-
-          error:
-            error.message,
+          message: "User not found.",
         });
+      }
+
+      res.status(200).json({
+        success: true,
+
+        message: "User deleted successfully.",
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+
+        message: "Server error while deleting user.",
+
+        error: error.message,
+      });
     }
-  }
+  },
 );
 
 // =====================================================
 // START SERVER
 // =====================================================
 
-app.listen(
-  PORT,
-  () => {
-    console.log(
-      `Server is running on port ${PORT}`
-    );
-  }
-);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
