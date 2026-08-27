@@ -103,12 +103,7 @@ function Navbar() {
                   >
                     Upcoming
                   </Link>
-                  <Link
-                    to="/client-login"
-                    className="px-5 py-3 text-gray-400 hover:text-white hover:bg-white/5 border-b border-white/5 transition"
-                  >
-                    Client
-                  </Link>
+                 
                   <Link
                     to="/Upload"
                     className="px-5 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition"

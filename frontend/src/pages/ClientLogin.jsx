@@ -1,569 +1,357 @@
-import axios from "axios";
 import { useState } from "react";
-
 import {
+  Store,
+  CreditCard,
   User,
   Mail,
   Phone,
   MapPin,
-  ArrowRight,
+  CalendarDays,
   ShieldCheck,
   Sparkles,
-  CheckCircle2,
-  Circle,
+  ArrowRight,
 } from "lucide-react";
 
-export default function ClientLogin() {
+export default function StallBooking() {
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
-    gmail: "",
+    brandName: "",
+    fullName: "",
+    email: "",
     phone: "",
-    state: "",
     city: "",
+    duration: "1",
   });
 
-  const [submitted, setSubmitted] = useState(false);
-
-  // =====================================================
-  // HANDLE INPUT
-  // =====================================================
-
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-
-    if (submitted) {
-      setSubmitted(false);
-    }
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // =====================================================
-  // HANDLE PHONE
-  // =====================================================
-
-  const handlePhoneChange = (e) => {
-    const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-
-    setFormData({
-      ...formData,
-      phone: value,
-    });
-
-    if (submitted) {
-      setSubmitted(false);
-    }
-  };
-
-  // =====================================================
-  // SUBMIT
-  // =====================================================
-
-  const handleSubmit = async (e) => {
+  const handlePayment = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    console.log("Sending client data:", formData);
-
-    try {
-      const response = await axios({
-        method: "POST",
-        url: "http://localhost:5000/api/clients",
-        data: formData,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        timeout: 10000,
-      });
-
-      console.log("✅ Client registered successfully:", response.data);
-
-      if (response.data.success) {
-        setSubmitted(true);
-      }
-    } catch (error) {
-      console.error("❌ FULL ERROR:", error);
-      console.error("❌ ERROR MESSAGE:", error.message);
-      console.error("❌ ERROR RESPONSE:", error.response);
-      console.error("❌ ERROR REQUEST:", error.request);
-
-      alert(
-        error.response?.data?.message ||
-          "Unable to connect to the server. Please try again.",
-      );
-    }
+    // Simulate payment gateway integration
+    setTimeout(() => {
+      setLoading(false);
+      setSuccess(true);
+    }, 1500);
   };
 
   return (
-    <div className="relative min-h-screen bg-[#08080a] text-white overflow-hidden">
-      {/* =====================================================
-          BACKGROUND ATMOSPHERE
-      ===================================================== */}
-
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Main Purple Glow */}
-        <div className="absolute -top-72 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-[#a855f7]/10 blur-[150px]" />
-
-        {/* Left Glow */}
-        <div className="absolute top-[35%] -left-72 w-[500px] h-[500px] rounded-full bg-purple-900/10 blur-[140px]" />
-
-        {/* Right Glow */}
-        <div className="absolute bottom-0 -right-72 w-[500px] h-[500px] rounded-full bg-[#a855f7]/10 blur-[140px]" />
-
-        {/* Grid Background */}
-        <div
-          className="absolute inset-0 opacity-[0.035]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "70px 70px",
-          }}
-        />
-
-        {/* Vignette */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,#08080a_85%)]" />
-      </div>
-
-      {/* =====================================================
-          MAIN PAGE
-      ===================================================== */}
-
-      <main className="relative z-10 min-h-screen pt-32 pb-20 px-5 sm:px-8 lg:px-12">
-        <div className="max-w-7xl mx-auto">
-          {/* =================================================
-              TOP META
-          ================================================= */}
-
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-16">
-            <div className="flex items-center gap-3">
-              <span className="w-2 h-2 rounded-full bg-[#a855f7] shadow-[0_0_12px_#a855f7]" />
-
-              <span className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.3em] text-gray-400">
-                Ink Convention 2026
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5">
-              <ShieldCheck size={13} className="text-emerald-400" />
-
-              <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-emerald-400">
-                Secure Registration
-              </span>
-            </div>
-          </div>
-
-          {/* =================================================
-              HERO + FORM
-          ================================================= */}
-
-          <div className="grid lg:grid-cols-[1fr_1.05fr] gap-14 lg:gap-24 items-center">
-            {/* =================================================
-                LEFT SIDE
-            ================================================= */}
-
-            <section>
-              <div className="flex items-center gap-3 mb-7">
-                <span className="w-12 h-px bg-[#a855f7]" />
-
-                <span className="font-mono text-[#a855f7] text-[10px] sm:text-xs uppercase tracking-[0.35em]">
-                  Client Access
-                </span>
-              </div>
-
-              <h1 className="text-[clamp(3rem,7vw,6.5rem)] font-black uppercase leading-[0.88] tracking-[-0.055em]">
-                JOIN
-                <br />
-                THE
-                <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-[#a855f7]">
-                  EXPERIENCE
-                </span>
-                <span className="text-[#a855f7]">.</span>
-              </h1>
-
-              <p className="mt-8 max-w-lg text-gray-400 text-sm sm:text-base leading-7">
-                Tell us a little about yourself and become part of the Ink
-                Convention 2026 experience. Your details help us connect you
-                with the right people, events and opportunities.
-              </p>
-
-              {/* Stats */}
-
-              <div className="grid grid-cols-3 max-w-lg mt-12 border-y border-white/10 py-6">
-                <div className="pr-4 border-r border-white/10">
-                  <p className="font-black text-xl sm:text-2xl">2026</p>
-
-                  <p className="font-mono text-[8px] sm:text-[9px] text-gray-500 uppercase tracking-widest mt-1">
-                    Edition
-                  </p>
-                </div>
-
-                <div className="px-4 border-r border-white/10">
-                  <p className="font-black text-xl sm:text-2xl">01</p>
-
-                  <p className="font-mono text-[8px] sm:text-[9px] text-gray-500 uppercase tracking-widest mt-1">
-                    Registration
-                  </p>
-                </div>
-
-                <div className="pl-4">
-                  <p className="font-black text-xl sm:text-2xl">∞</p>
-
-                  <p className="font-mono text-[8px] sm:text-[9px] text-gray-500 uppercase tracking-widest mt-1">
-                    Possibilities
-                  </p>
-                </div>
-              </div>
-
-              <div className="hidden lg:flex items-center gap-3 mt-8 text-gray-600">
-                <Sparkles size={13} />
-
-                <span className="font-mono text-[9px] uppercase tracking-[0.25em]">
-                  Where creativity meets culture
-                </span>
-              </div>
-            </section>
-
-            {/* =================================================
-                RIGHT SIDE FORM
-            ================================================= */}
-
-            <section>
-              <div className="relative">
-                <div className="absolute -inset-[1px] rounded-[2rem] bg-gradient-to-b from-[#a855f7]/30 via-transparent to-transparent blur-sm" />
-
-                <div className="relative rounded-[2rem] border border-white/10 bg-[#0b0b0f]/90 backdrop-blur-xl shadow-[0_30px_100px_rgba(0,0,0,0.55)] overflow-hidden">
-                  {/* =================================================
-                      CARD HEADER
-                  ================================================= */}
-
-                  <div className="px-6 sm:px-9 pt-7 pb-6 border-b border-white/10">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-mono text-[9px] text-[#a855f7] uppercase tracking-[0.3em] mb-2">
-                          Registration 01
-                        </p>
-
-                        <h2 className="text-2xl sm:text-3xl font-black tracking-tight uppercase">
-                          Your Details
-                          <span className="text-[#a855f7]">.</span>
-                        </h2>
-                      </div>
-
-                      <div className="w-11 h-11 rounded-xl border border-[#a855f7]/20 bg-[#a855f7]/5 flex items-center justify-center">
-                        <User size={18} className="text-[#a855f7]" />
-                      </div>
-                    </div>
-
-                    {/* ---> EDITED PROGRESS BAR (1 Single Line) <--- */}
-                    <div className="flex items-center gap-2 mt-4">
-                      <div className="h-1 flex-1 rounded-full bg-[#a855f7]" />
-                    </div>
-                  </div>
-
-                  {/* =================================================
-                      FORM
-                  ================================================= */}
-
-                  {!submitted ? (
-                    <form
-                      onSubmit={handleSubmit}
-                      className="p-6 sm:p-9 space-y-6"
-                    >
-                      {/* =================================================
-                          NAME
-                      ================================================= */}
-
-                      <div className="group">
-                        <label className="flex items-center justify-between mb-2.5">
-                          <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500 group-focus-within:text-[#a855f7] transition">
-                            <span className="text-[#a855f7]">01</span>
-                            Full Name
-                          </span>
-
-                          <span className="text-[9px] text-gray-700 font-mono">
-                            REQUIRED
-                          </span>
-                        </label>
-
-                        <div className="relative">
-                          <User
-                            size={16}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-[#a855f7] transition"
-                          />
-
-                          <input
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            placeholder="Your full name"
-                            required
-                            autoComplete="name"
-                            className="w-full h-14 pl-12 pr-4 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-700 text-sm outline-none transition-all duration-300 focus:border-[#a855f7]/60 focus:bg-[#a855f7]/[0.03] focus:shadow-[0_0_25px_rgba(168,85,247,0.08)]"
-                          />
-                        </div>
-                      </div>
-
-                      {/* =================================================
-                          GMAIL
-                      ================================================= */}
-
-                      <div className="group">
-                        <label className="flex items-center justify-between mb-2.5">
-                          <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500 group-focus-within:text-[#a855f7] transition">
-                            <span className="text-[#a855f7]">02</span>
-                            Gmail Address
-                          </span>
-
-                          <span className="text-[9px] text-gray-700 font-mono">
-                            REQUIRED
-                          </span>
-                        </label>
-
-                        <div className="relative">
-                          <Mail
-                            size={16}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-[#a855f7] transition"
-                          />
-
-                          <input
-                            type="email"
-                            name="gmail"
-                            value={formData.gmail}
-                            onChange={handleChange}
-                            placeholder="yourname@gmail.com"
-                            required
-                            autoComplete="email"
-                            className="w-full h-14 pl-12 pr-4 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-700 text-sm outline-none transition-all duration-300 focus:border-[#a855f7]/60 focus:bg-[#a855f7]/[0.03] focus:shadow-[0_0_25px_rgba(168,85,247,0.08)]"
-                          />
-                        </div>
-                      </div>
-
-                      {/* =================================================
-                          PHONE
-                      ================================================= */}
-
-                      <div className="group">
-                        <label className="flex items-center justify-between mb-2.5">
-                          <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500 group-focus-within:text-[#a855f7] transition">
-                            <span className="text-[#a855f7]">03</span>
-                            Phone Number
-                          </span>
-
-                          <span className="text-[9px] text-gray-700 font-mono">
-                            REQUIRED
-                          </span>
-                        </label>
-
-                        <div className="flex gap-2">
-                          <div className="w-[74px] h-14 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center font-mono text-xs text-gray-400 flex-shrink-0">
-                            +91
-                          </div>
-
-                          <div className="relative flex-1">
-                            <Phone
-                              size={16}
-                              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-[#a855f7] transition"
-                            />
-
-                            <input
-                              type="tel"
-                              name="phone"
-                              value={formData.phone}
-                              onChange={handlePhoneChange}
-                              placeholder="98765 43210"
-                              required
-                              inputMode="numeric"
-                              autoComplete="tel"
-                              minLength={10}
-                              maxLength={10}
-                              className="w-full h-14 pl-12 pr-4 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-700 text-sm outline-none transition-all duration-300 focus:border-[#a855f7]/60 focus:bg-[#a855f7]/[0.03] focus:shadow-[0_0_25px_rgba(168,85,247,0.08)]"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* =================================================
-                          STATE
-                      ================================================= */}
-
-                      <div className="group">
-                        <label className="flex items-center justify-between mb-2.5">
-                          <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500 group-focus-within:text-[#a855f7] transition">
-                            <span className="text-[#a855f7]">04</span>
-                            State
-                          </span>
-
-                          <span className="text-[9px] text-gray-700 font-mono">
-                            REQUIRED
-                          </span>
-                        </label>
-
-                        <div className="relative">
-                          <MapPin
-                            size={16}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-[#a855f7] transition"
-                          />
-
-                          <input
-                            type="text"
-                            name="state"
-                            value={formData.state}
-                            onChange={handleChange}
-                            placeholder="Maharashtra"
-                            required
-                            autoComplete="address-level1"
-                            className="w-full h-14 pl-12 pr-4 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-700 text-sm outline-none transition-all duration-300 focus:border-[#a855f7]/60 focus:bg-[#a855f7]/[0.03] focus:shadow-[0_0_25px_rgba(168,85,247,0.08)]"
-                          />
-                        </div>
-                      </div>
-
-                      {/* =================================================
-                          CITY
-                      ================================================= */}
-
-                      <div className="group">
-                        <label className="flex items-center justify-between mb-2.5">
-                          <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500 group-focus-within:text-[#a855f7] transition">
-                            <span className="text-[#a855f7]">05</span>
-                            City
-                          </span>
-
-                          <span className="text-[9px] text-gray-700 font-mono">
-                            REQUIRED
-                          </span>
-                        </label>
-
-                        <div className="relative">
-                          <MapPin
-                            size={16}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-[#a855f7] transition"
-                          />
-
-                          <input
-                            type="text"
-                            name="city"
-                            value={formData.city}
-                            onChange={handleChange}
-                            placeholder="Mumbai"
-                            required
-                            autoComplete="address-level2"
-                            className="w-full h-14 pl-12 pr-4 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-700 text-sm outline-none transition-all duration-300 focus:border-[#a855f7]/60 focus:bg-[#a855f7]/[0.03] focus:shadow-[0_0_25px_rgba(168,85,247,0.08)]"
-                          />
-                        </div>
-                      </div>
-
-                      {/* =================================================
-                          SUBMIT BUTTON
-                      ================================================= */}
-
-                      <button
-                        type="submit"
-                        className="group relative w-full h-14 mt-2 overflow-hidden rounded-xl bg-[#a855f7] text-white font-mono text-[10px] font-bold uppercase tracking-[0.25em] transition-all duration-300 hover:bg-[#9333ea] hover:shadow-[0_15px_40px_rgba(168,85,247,0.25)] active:scale-[0.98]"
-                      >
-                        <span className="absolute inset-0 -translate-x-full bg-white/10 skew-x-[-20deg] transition-transform duration-700 group-hover:translate-x-full" />
-
-                        <span className="relative flex items-center justify-center gap-3">
-                          Submit Details
-                          <ArrowRight
-                            size={16}
-                            className="transition-transform duration-300 group-hover:translate-x-1"
-                          />
-                        </span>
-                      </button>
-
-                      {/* Privacy */}
-
-                      <div className="flex items-start gap-2.5 pt-1">
-                        <ShieldCheck
-                          size={13}
-                          className="text-gray-600 mt-0.5 flex-shrink-0"
-                        />
-
-                        <p className="font-mono text-[8px] leading-4 text-gray-600 uppercase tracking-wider">
-                          Your information is collected solely for Ink
-                          Convention communication and event-related purposes.
-                        </p>
-                      </div>
-                    </form>
-                  ) : (
-                    /* =================================================
-                       SUCCESS STATE
-                    ================================================= */
-
-                    <div className="p-8 sm:p-12 min-h-[520px] flex flex-col items-center justify-center text-center">
-                      <div className="relative mb-8">
-                        <div className="absolute inset-0 rounded-full bg-[#a855f7]/20 blur-2xl" />
-
-                        <div className="relative w-20 h-20 rounded-full border border-[#a855f7]/40 bg-[#a855f7]/10 flex items-center justify-center">
-                          <CheckCircle2 size={38} className="text-[#a855f7]" />
-                        </div>
-                      </div>
-
-                      <p className="font-mono text-[9px] text-[#a855f7] uppercase tracking-[0.3em] mb-4">
-                        Registration Complete
-                      </p>
-
-                      <h3 className="text-3xl sm:text-4xl font-black uppercase tracking-tight">
-                        Welcome
-                        <span className="text-[#a855f7]">.</span>
-                      </h3>
-
-                      <p className="mt-4 max-w-sm text-gray-500 text-sm leading-6">
-                        Thank you,{" "}
-                        <span className="text-white font-medium">
-                          {formData.name}
-                        </span>
-                        . Your details have been recorded for Ink Convention
-                        2026.
-                      </p>
-
-                      <div className="mt-8 w-full max-w-sm p-4 rounded-xl bg-black/40 border border-white/10 text-left">
-                        <div className="flex items-center gap-3 mb-3">
-                          <Circle
-                            size={7}
-                            className="fill-emerald-400 text-emerald-400"
-                          />
-
-                          <span className="font-mono text-[9px] text-emerald-400 uppercase tracking-widest">
-                            Registration Received
-                          </span>
-                        </div>
-
-                        <p className="font-mono text-[10px] text-gray-600">
-                          We will contact you using the information provided.
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setSubmitted(false)}
-                        className="mt-7 font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500 hover:text-[#a855f7] transition cursor-pointer"
-                      >
-                        Submit another registration →
-                      </button>
-                    </div>
-                  )}
-
-                  {/* =================================================
-                      CARD FOOTER
-                  ================================================= */}
-
-                  <div className="px-6 sm:px-9 py-4 border-t border-white/5 bg-black/20 flex items-center justify-between">
-                    <span className="font-mono text-[8px] text-gray-700 uppercase tracking-widest">
-                      INK // CLIENT
-                    </span>
-
-                    <span className="font-mono text-[8px] text-gray-700 uppercase tracking-widest">
-                      2026
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
+    <div className="min-h-screen bg-[#08080a] text-white p-6 lg:p-12 font-sans selection:bg-[#a855f7] selection:text-white relative overflow-hidden">
+      {/* Background Ambient Glows */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#a855f7]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-purple-900/10 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* HEADER WITH TOP MARGIN */}
+      <header className="max-w-6xl mx-auto mt-8 lg:mt-12 mb-12 text-center lg:text-left relative z-10">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#a855f7]/10 border border-[#a855f7]/20 text-[#a855f7] text-xs font-bold tracking-widest uppercase mb-4 shadow-sm">
+          <Sparkles size={13} />
+          Exhibition Space
         </div>
+        <h1 className="text-4xl lg:text-6xl font-black tracking-tight mb-4">
+          Stall Bookings<span className="text-[#a855f7]">.</span>
+        </h1>
+        <p className="text-gray-400 max-w-2xl text-sm lg:text-base leading-relaxed">
+          Secure your booth space for the upcoming Ink Convention. Fill out your
+          brand details and complete the advance booking fee to lock in your
+          spot.
+        </p>
+      </header>
+
+      {/* MAIN CONTENT GRID */}
+      <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
+        {/* LEFT: BOOKING FORM */}
+        <section className="lg:col-span-7 bg-[#121218]/80 backdrop-blur-xl border border-[#2a2a35] rounded-3xl p-6 lg:p-10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute -top-24 -left-24 w-52 h-52 bg-[#a855f7]/10 rounded-full blur-[80px] pointer-events-none" />
+
+          <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#2a2a35]">
+            <div>
+              <h2 className="text-xl font-bold tracking-wide">
+                Registration Details
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Please provide accurate studio and contact info
+              </p>
+            </div>
+            <Store className="text-[#a855f7]" size={24} />
+          </div>
+
+          {success ? (
+            <div className="py-12 text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-2xl">
+                ✓
+              </div>
+              <h3 className="text-2xl font-bold">Booking Initiated!</h3>
+              <p className="text-gray-400 text-sm max-w-sm mx-auto">
+                Redirecting securely to complete your ₹1,499 advance payment for{" "}
+                <span className="text-white font-semibold">
+                  {formData.brandName}
+                </span>
+                .
+              </p>
+              <button
+                onClick={() => setSuccess(false)}
+                className="mt-4 px-6 py-2.5 rounded-xl bg-[#2a2a35] text-xs font-bold text-gray-300 hover:bg-[#3a3a48] transition"
+              >
+                Reset Form
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handlePayment} className="space-y-5">
+              {/* Brand Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                  Brand / Studio Name *
+                </label>
+                <div className="relative">
+                  <Store
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 transition-colors group-focus-within:text-[#a855f7]"
+                    size={16}
+                  />
+                  <input
+                    type="text"
+                    name="brandName"
+                    required
+                    value={formData.brandName}
+                    onChange={handleChange}
+                    className="w-full bg-[#0d0d12] border border-[#2a2a35] rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-gray-600 focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/20 outline-none transition-all"
+                    placeholder="e.g. Inked Masters Studio"
+                  />
+                </div>
+              </div>
+
+              {/* Full Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                  Full Name *
+                </label>
+                <div className="relative">
+                  <User
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 transition-colors"
+                    size={16}
+                  />
+                  <input
+                    type="text"
+                    name="fullName"
+                    required
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    className="w-full bg-[#0d0d12] border border-[#2a2a35] rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-gray-600 focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/20 outline-none transition-all"
+                    placeholder="John Doe"
+                  />
+                </div>
+              </div>
+
+              {/* Email & Phone Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                    Email Address *
+                  </label>
+                  <div className="relative">
+                    <Mail
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+                      size={16}
+                    />
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full bg-[#0d0d12] border border-[#2a2a35] rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-gray-600 focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/20 outline-none transition-all"
+                      placeholder="john@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                    Phone Number *
+                  </label>
+                  <div className="relative">
+                    <Phone
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+                      size={16}
+                    />
+                    <input
+                      type="tel"
+                      name="phone"
+                      required
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className="w-full bg-[#0d0d12] border border-[#2a2a35] rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-gray-600 focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/20 outline-none transition-all"
+                      placeholder="+91 98765 43210"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* City & Duration Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                    City / Location *
+                  </label>
+                  <div className="relative">
+                    <MapPin
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+                      size={16}
+                    />
+                    <input
+                      type="text"
+                      name="city"
+                      required
+                      value={formData.city}
+                      onChange={handleChange}
+                      className="w-full bg-[#0d0d12] border border-[#2a2a35] rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-gray-600 focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/20 outline-none transition-all"
+                      placeholder="Mumbai"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                    Stall Duration *
+                  </label>
+                  <div className="relative">
+                    <CalendarDays
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+                      size={16}
+                    />
+                    <select
+                      name="duration"
+                      value={formData.duration}
+                      onChange={handleChange}
+                      className="w-full bg-[#0d0d12] border border-[#2a2a35] rounded-xl py-3.5 pl-11 pr-4 text-sm text-white focus:border-[#a855f7] focus:ring-2 focus:ring-[#a855f7]/20 outline-none transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="1">1 Day Stall (₹4,999 total)</option>
+                      <option value="2">2 Days Stall (₹8,999 total)</option>
+                      <option value="3">3 Days Stall (₹12,499 total)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* PAY BUTTON */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full mt-8 bg-gradient-to-r from-[#a855f7] to-[#9333ea] hover:opacity-95 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-[#a855f7]/25 transition-all transform active:scale-[0.99] disabled:opacity-70 cursor-pointer"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <CreditCard size={18} />
+                    <span>Pay Advance Booking Fee (₹1,499)</span>
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center justify-center gap-2 text-xs text-gray-500 pt-2">
+                <ShieldCheck size={14} className="text-emerald-400" />
+                <span>Secure 256-bit encrypted gateway transaction</span>
+              </div>
+            </form>
+          )}
+        </section>
+
+        {/* RIGHT: PRICING TIERS */}
+        <aside className="lg:col-span-5 bg-white text-gray-900 rounded-3xl p-6 lg:p-8 shadow-2xl h-fit flex flex-col justify-between">
+          <div>
+            <div className="mb-6 border-b border-gray-100 pb-5">
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider uppercase">
+                Exhibition Space
+              </span>
+              <h2 className="text-2xl font-black mt-3 text-gray-900">
+                Stall Bookings
+              </h2>
+              <p className="text-gray-400 text-xs font-bold tracking-widest mt-1 uppercase">
+                Booth Rental Rates
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Advance Fee Highlight Box */}
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50/50 border border-orange-200/60 rounded-2xl p-5 shadow-sm">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-orange-600 bg-orange-100/80 px-2 py-0.5 rounded">
+                      Required Now
+                    </span>
+                    <h3 className="text-orange-900 font-black text-base mt-2">
+                      Advance Booking Fee
+                    </h3>
+                  </div>
+                  <span className="text-2xl font-black text-orange-600">
+                    ₹ 1,499
+                  </span>
+                </div>
+                <p className="text-orange-900/70 text-xs leading-relaxed mt-2 font-medium">
+                  Mandatory upfront payment to reserve stall space across all
+                  duration tiers.
+                </p>
+              </div>
+
+              {/* Pricing Tiers */}
+              <div className="bg-gray-50/80 border border-gray-100 rounded-2xl p-4 flex justify-between items-center transition hover:bg-gray-100/80">
+                <div>
+                  <span className="block font-bold text-gray-800 text-sm">
+                    1 Day Stall
+                  </span>
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    Single day exhibition pass
+                  </span>
+                </div>
+                <span className="text-lg font-black text-gray-900">
+                  ₹ 4,999
+                </span>
+              </div>
+
+              <div className="bg-gray-50/80 border border-gray-100 rounded-2xl p-4 flex justify-between items-center transition hover:bg-gray-100/80">
+                <div>
+                  <span className="block font-bold text-gray-800 text-sm">
+                    2 Days Stall
+                  </span>
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    Standard weekend layout
+                  </span>
+                </div>
+                <span className="text-lg font-black text-gray-900">
+                  ₹ 8,999
+                </span>
+              </div>
+
+              <div className="bg-gray-50/80 border border-gray-100 rounded-2xl p-4 flex justify-between items-center transition hover:bg-gray-100/80">
+                <div>
+                  <span className="block font-bold text-gray-800 text-sm">
+                    3 Days Stall
+                  </span>
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    Full convention access
+                  </span>
+                </div>
+                <span className="text-lg font-black text-gray-900">
+                  ₹ 12,499
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 pt-4 border-t border-gray-100 text-center">
+            <p className="text-[11px] text-gray-400 font-medium">
+              Need help with large setups? Contact support at{" "}
+              <span className="text-gray-700 font-bold">
+                support@inkconvention.com
+              </span>
+            </p>
+          </div>
+        </aside>
       </main>
     </div>
   );

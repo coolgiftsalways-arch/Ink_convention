@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // <-- Imported Link for navigation
+import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   Calendar,
   MapPin,
@@ -10,6 +10,8 @@ import {
   Users,
   Share2,
   Clock,
+  ArrowRight,
+  ArrowDown,
 } from "lucide-react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
@@ -69,9 +71,10 @@ const eventsData = [
 
 export default function Upcomeing() {
   const [selectedEvent, setSelectedEvent] = useState(eventsData[0]);
+  const bookCalloutRef = useRef(null);
 
   useEffect(() => {
-    // GSAP Animation: Animate event cards on scroll
+    // GSAP Card Scroll Animations
     const cards = gsap.utils.toArray(".event-card");
 
     cards.forEach((card, i) => {
@@ -93,19 +96,29 @@ export default function Upcomeing() {
       );
     });
 
+    // ---> NEVER-ENDING INFINITE GSAP FLOATING/PULSING ANIMATION <---
+    const anim = gsap.to(bookCalloutRef.current, {
+      y: -6,
+      scale: 1.02,
+      repeat: -1,
+      yoyo: true,
+      duration: 1.2,
+      ease: "power1.inOut",
+    });
+
     return () => {
       ScrollTrigger.getAll().forEach((t) => t.kill());
+      anim.kill();
     };
   }, []);
 
-  // ---> FUNCTION TO HANDLE NATIVE MOBILE SHARING <---
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
           title: `Ink Convention 2026 - ${selectedEvent.city}`,
           text: selectedEvent.desc,
-          url: window.location.href, // Shares the current page URL
+          url: window.location.href,
         });
       } catch (error) {
         console.log("Error sharing:", error);
@@ -129,7 +142,6 @@ export default function Upcomeing() {
               <span className="text-purple-500">next.</span>
             </h1>
 
-            {/* Scroll Down Indicator */}
             <div className="flex items-center gap-4 text-gray-400 mb-8">
               <div className="w-6 h-10 border-2 border-gray-700 rounded-full flex justify-center pt-2 bg-[#121215]">
                 <div className="w-1 h-2 bg-purple-500 rounded-full animate-bounce"></div>
@@ -177,7 +189,7 @@ export default function Upcomeing() {
 
         {/* ================= RIGHT SIDE: STICKY DETAILS PANEL ================= */}
         <div className="w-[450px] shrink-0 hidden lg:block sticky top-32 h-[calc(100vh-10rem)] z-10">
-          <div className="bg-[#121215] border border-gray-800 rounded-2xl p-6 h-full flex flex-col shadow-2xl">
+          <div className="bg-[#121215] border border-gray-800 rounded-2xl p-6 h-full flex flex-col shadow-2xl relative">
             <div className="flex justify-between items-center mb-6">
               <h4 className="text-purple-500 text-xs font-bold tracking-widest uppercase">
                 {selectedEvent?.status === "active"
@@ -274,30 +286,48 @@ export default function Upcomeing() {
                     </div>
                   </div>
 
-                  {/* ---> NEW UPDATED 3 BUTTON LAYOUT <--- */}
-                  <div className="flex flex-col gap-3 mt-8 pt-6">
-                    {/* Top Row: Form Links */}
-                    <div className="flex gap-3">
+                  {/* ---> INFINITE GSAP ANIMATED CALLOUT & BOOK YOUR STALL BUTTON <--- */}
+                  <div className="flex flex-col gap-3 mt-6 pt-2 relative">
+                    {/* GSAP Target Element: Massive Never-Ending Floating Neon Text */}
+                    <div ref={bookCalloutRef} className="text-center py-1">
+                      <div className="inline-flex items-center gap-2 text-amber-300 text-xs font-black tracking-widest uppercase drop-shadow-[0_0_15px_rgba(251,191,36,0.9)]">
+                        <ArrowDown size={16} className="text-amber-400" />
+                        <span>🚀 BOOK YOUR STALL NOW 🚀</span>
+                        <ArrowDown size={16} className="text-amber-400" />
+                      </div>
+                    </div>
+
+                    {/* Primary Highlighted BOOK YOUR STALL Button */}
+                    <Link
+                      to="/client-login"
+                      className="relative overflow-hidden group w-full bg-gradient-to-r from-[#a855f7] via-purple-600 to-[#9333ea] hover:opacity-95 text-white font-black py-4 px-4 rounded-xl transition-all text-sm text-center flex items-center justify-center gap-2 shadow-xl shadow-purple-500/40 ring-4 ring-purple-500/40"
+                    >
+                      {/* Shimmer Effect */}
+                      <div className="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-[300%] transition-transform duration-1000" />
+
+                      <Store size={18} className="animate-pulse" />
+                      <span>BOOK YOUR STALL</span>
+                      <ArrowRight
+                        size={16}
+                        className="group-hover:translate-x-1 transition-transform"
+                      />
+                    </Link>
+
+                    {/* Secondary Actions Row */}
+                    <div className="flex gap-3 mt-1">
                       <Link
                         to="/Upload"
-                        className="flex-1 bg-[#9333ea] hover:bg-[#a855f7] text-white font-bold py-3 px-2 rounded-xl transition-colors text-xs text-center flex items-center justify-center"
+                        className="flex-1 bg-white/5 hover:bg-white/10 border border-gray-800 text-gray-300 hover:text-white font-bold py-2.5 px-2 rounded-xl transition-colors text-xs text-center flex items-center justify-center"
                       >
                         EXPO 2026 FORM
                       </Link>
-                      <Link
-                        to="/client-login"
-                        className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-2 rounded-xl transition-colors text-xs text-center flex items-center justify-center"
+                      <button
+                        onClick={handleShare}
+                        className="flex-1 border border-gray-800 hover:border-gray-600 bg-transparent text-gray-400 hover:text-white font-bold py-2.5 px-2 rounded-xl transition-colors text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        CLIENT FORM
-                      </Link>
+                        <Share2 size={14} /> SHARE EVENT
+                      </button>
                     </div>
-                    {/* Bottom Row: Share Action */}
-                    <button
-                      onClick={handleShare}
-                      className="w-full border border-gray-700 hover:border-gray-500 text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Share2 size={16} /> SHARE EVENT
-                    </button>
                   </div>
                 </div>
               ) : (
