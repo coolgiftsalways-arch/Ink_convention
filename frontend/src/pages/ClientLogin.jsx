@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Store,
   CreditCard,
@@ -8,9 +8,10 @@ import {
   MapPin,
   CalendarDays,
   ShieldCheck,
-  Sparkles,
   ArrowRight,
+  ArrowDown,
 } from "lucide-react";
+import gsap from "gsap";
 
 export default function StallBooking() {
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,24 @@ export default function StallBooking() {
     city: "",
     duration: "1",
   });
+
+  const bookCalloutRef = useRef(null);
+
+  useEffect(() => {
+    // Never-ending infinite GSAP floating/pulsing animation
+    const anim = gsap.to(bookCalloutRef.current, {
+      y: -6,
+      scale: 1.02,
+      repeat: -1,
+      yoyo: true,
+      duration: 1.2,
+      ease: "power1.inOut",
+    });
+
+    return () => {
+      anim.kill();
+    };
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -45,19 +64,18 @@ export default function StallBooking() {
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#a855f7]/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-purple-900/10 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* HEADER WITH TOP MARGIN */}
+      {/* HEADER MATCHING YOUR REFERENCE IMAGE STYLE */}
       <header className="max-w-6xl mx-auto mt-8 lg:mt-12 mb-12 text-center lg:text-left relative z-10">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#a855f7]/10 border border-[#a855f7]/20 text-[#a855f7] text-xs font-bold tracking-widest uppercase mb-4 shadow-sm">
-          <Sparkles size={13} />
-          Exhibition Space
-        </div>
-        <h1 className="text-4xl lg:text-6xl font-black tracking-tight mb-4">
-          Stall Bookings<span className="text-[#a855f7]">.</span>
+        <p className="text-[#a855f7] font-semibold tracking-widest text-sm mb-4">
+          // EXHIBITION SPACE
+        </p>
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight uppercase mb-6 leading-[1.1]">
+          SECURE YOUR BOOTH SPACE <br />
+          AND <span className="text-[#a855f7]">BOOK YOUR STALL.</span>
         </h1>
         <p className="text-gray-400 max-w-2xl text-sm lg:text-base leading-relaxed">
-          Secure your booth space for the upcoming Ink Convention. Fill out your
-          brand details and complete the advance booking fee to lock in your
-          spot.
+          Fill out your brand details and complete the advance booking fee to
+          lock in your spot for the upcoming Ink Convention.
         </p>
       </header>
 
@@ -66,6 +84,15 @@ export default function StallBooking() {
         {/* LEFT: BOOKING FORM */}
         <section className="lg:col-span-7 bg-[#121218]/80 backdrop-blur-xl border border-[#2a2a35] rounded-3xl p-6 lg:p-10 shadow-2xl relative overflow-hidden group">
           <div className="absolute -top-24 -left-24 w-52 h-52 bg-[#a855f7]/10 rounded-full blur-[80px] pointer-events-none" />
+
+          {/* GSAP Never-Ending Animated Eye-Catching Callout */}
+          <div ref={bookCalloutRef} className="text-center mb-6 pt-2">
+            <div className="inline-flex items-center gap-2 text-amber-300 text-xs font-black tracking-widest uppercase drop-shadow-[0_0_15px_rgba(251,191,36,0.9)] bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-full">
+              <ArrowDown size={16} className="text-amber-400 animate-bounce" />
+              <span>🚀 BOOK YOUR STALL NOW 🚀</span>
+              <ArrowDown size={16} className="text-amber-400 animate-bounce" />
+            </div>
+          </div>
 
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#2a2a35]">
             <div>
