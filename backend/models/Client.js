@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const clientSchema = new mongoose.Schema(
   {
@@ -21,13 +21,13 @@ const clientSchema = new mongoose.Schema(
       trim: true,
     },
 
-    state: {
+    city: {
       type: String,
       required: true,
       trim: true,
     },
 
-    city: {
+    state: {
       type: String,
       required: true,
       trim: true,
@@ -38,4 +38,4 @@ const clientSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Client", clientSchema);
+export default mongoose.model("Client", clientSchema);

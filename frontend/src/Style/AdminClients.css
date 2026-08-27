@@ -1,0 +1,824 @@
+/* =========================================================
+   ADMIN CLIENTS PAGE
+   INK CONVENTION 2026
+========================================================= */
+
+.admin-clients-page {
+  min-height: 100vh;
+  width: 100%;
+  background: #08080a;
+  color: #fff;
+  overflow-x: hidden;
+}
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+.admin-clients-content {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 48px 48px 80px;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.clients-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 40px;
+  padding-bottom: 38px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.clients-header-left {
+  min-width: 0;
+}
+
+.clients-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 15px;
+  border-radius: 999px;
+
+  background: rgba(168, 85, 247, 0.08);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+
+  color: #a855f7;
+
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 600;
+
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.clients-title {
+  margin: 18px 0 0;
+
+  font-size: clamp(48px, 6vw, 82px);
+  line-height: 0.95;
+
+  font-weight: 900;
+  letter-spacing: -0.06em;
+}
+
+.clients-title span {
+  color: #a855f7;
+}
+
+.clients-description {
+  max-width: 760px;
+  margin-top: 18px;
+
+  color: #8d96a8;
+
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* =========================================================
+   REFRESH BUTTON
+========================================================= */
+
+.clients-refresh {
+  flex-shrink: 0;
+
+  height: 52px;
+  min-width: 150px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  padding: 0 22px;
+
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  color: #fff;
+
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 600;
+
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+
+  cursor: pointer;
+
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.clients-refresh:hover {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.4);
+
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 10px 35px rgba(168, 85, 247, 0.12);
+}
+
+.clients-refresh:active {
+  transform: translateY(0);
+}
+
+/* =========================================================
+   STATISTICS
+========================================================= */
+
+.clients-stats {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 18px;
+
+  margin-top: 32px;
+}
+
+.clients-stat-card {
+  position: relative;
+
+  min-height: 140px;
+
+  padding: 26px 28px;
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.025),
+      rgba(255, 255, 255, 0.008)
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  overflow: hidden;
+
+  transition:
+    border-color 0.3s ease,
+    transform 0.3s ease;
+}
+
+.clients-stat-card::after {
+  content: "";
+
+  position: absolute;
+
+  width: 150px;
+  height: 150px;
+
+  right: -70px;
+  top: -70px;
+
+  border-radius: 50%;
+
+  background: rgba(168, 85, 247, 0.07);
+
+  filter: blur(30px);
+
+  pointer-events: none;
+}
+
+.clients-stat-card:hover {
+  border-color: rgba(168, 85, 247, 0.25);
+  transform: translateY(-3px);
+}
+
+.clients-stat-label {
+  color: #687184;
+
+  font-family: monospace;
+  font-size: 10px;
+
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.clients-stat-number {
+  margin-top: 12px;
+
+  font-size: 42px;
+  line-height: 1;
+
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.clients-stat-active {
+  margin-top: 12px;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  color: #00d897;
+
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.clients-stat-active-dot {
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+
+  background: #00d897;
+
+  box-shadow:
+    0 0 12px rgba(0, 216, 151, 0.7);
+}
+
+.clients-stat-online {
+  margin-top: 12px;
+
+  color: #a855f7;
+
+  font-size: 28px;
+  font-weight: 900;
+}
+
+/* =========================================================
+   SEARCH AREA
+========================================================= */
+
+.clients-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-top: 34px;
+  margin-bottom: 26px;
+}
+
+.clients-search {
+  position: relative;
+
+  width: min(100%, 620px);
+}
+
+.clients-search-icon {
+  position: absolute;
+
+  left: 17px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  color: #606979;
+
+  pointer-events: none;
+}
+
+.clients-search-input {
+  width: 100%;
+
+  height: 54px;
+
+  padding:
+    0 18px 0 48px;
+
+  border-radius: 15px;
+
+  background: rgba(255, 255, 255, 0.025);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  outline: none;
+
+  color: #fff;
+
+  font-family: monospace;
+  font-size: 12px;
+
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.clients-search-input::placeholder {
+  color: #515968;
+}
+
+.clients-search-input:focus {
+  background: rgba(168, 85, 247, 0.025);
+
+  border-color: rgba(168, 85, 247, 0.45);
+
+  box-shadow:
+    0 0 0 3px rgba(168, 85, 247, 0.06);
+}
+
+/* =========================================================
+   SECTION TITLE
+========================================================= */
+
+.clients-section-header {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 18px;
+}
+
+.clients-section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  color: #a5adbc;
+
+  font-family: monospace;
+  font-size: 11px;
+
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.clients-section-title svg {
+  color: #a855f7;
+}
+
+.clients-live {
+  color: #414958;
+
+  font-family: monospace;
+  font-size: 9px;
+
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   CLIENT GRID
+========================================================= */
+
+.clients-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 18px;
+}
+
+/* =========================================================
+   CLIENT CARD
+========================================================= */
+
+.client-card {
+  position: relative;
+
+  padding: 23px;
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.025),
+      rgba(255, 255, 255, 0.008)
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  overflow: hidden;
+
+  transition:
+    transform 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.client-card:hover {
+  transform: translateY(-5px);
+
+  border-color: rgba(168, 85, 247, 0.32);
+
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.35),
+    0 0 35px rgba(168, 85, 247, 0.05);
+}
+
+/* =========================================================
+   CLIENT CARD TOP
+========================================================= */
+
+.client-card-header {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+}
+
+.client-profile {
+  display: flex;
+
+  align-items: center;
+
+  gap: 13px;
+
+  min-width: 0;
+}
+
+.client-avatar {
+  width: 46px;
+  height: 46px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 14px;
+
+  color: #a855f7;
+
+  background: rgba(168, 85, 247, 0.08);
+
+  border: 1px solid rgba(168, 85, 247, 0.2);
+
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+.client-card:hover .client-avatar {
+  color: #fff;
+
+  background: #a855f7;
+}
+
+.client-name-wrapper {
+  min-width: 0;
+}
+
+.client-name {
+  margin: 0;
+
+  color: #fff;
+
+  font-size: 16px;
+  font-weight: 800;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.client-type {
+  margin-top: 3px;
+
+  color: #555d6c;
+
+  font-family: monospace;
+  font-size: 8px;
+
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   DELETE
+========================================================= */
+
+.client-delete {
+  width: 38px;
+  height: 38px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  color: #ff5964;
+
+  background: rgba(255, 70, 80, 0.06);
+
+  border: 1px solid rgba(255, 70, 80, 0.16);
+
+  cursor: pointer;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.client-delete:hover {
+  color: #fff;
+
+  background: #ff4652;
+
+  transform: scale(1.05);
+}
+
+/* =========================================================
+   CLIENT DETAILS
+========================================================= */
+
+.client-details {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 9px;
+
+  margin-top: 20px;
+}
+
+.client-detail {
+  display: flex;
+
+  align-items: center;
+
+  gap: 11px;
+
+  min-width: 0;
+
+  padding: 11px 12px;
+
+  border-radius: 11px;
+
+  background: rgba(0, 0, 0, 0.22);
+
+  border: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.client-detail svg {
+  flex-shrink: 0;
+
+  color: #a855f7;
+}
+
+.client-detail span {
+  min-width: 0;
+
+  color: #aeb5c1;
+
+  font-size: 11px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   CLIENT FOOTER
+========================================================= */
+
+.client-card-footer {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-top: 18px;
+  padding-top: 14px;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.client-date {
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  color: #4f5868;
+
+  font-family: monospace;
+  font-size: 8px;
+
+  letter-spacing: 0.08em;
+}
+
+.client-status {
+  color: #00d897;
+
+  font-family: monospace;
+  font-size: 8px;
+
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.clients-empty {
+  padding: 90px 25px;
+
+  text-align: center;
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.02),
+      rgba(255, 255, 255, 0.006)
+    );
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.clients-empty-icon {
+  width: 64px;
+  height: 64px;
+
+  margin: 0 auto;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 18px;
+
+  color: #a855f7;
+
+  background: rgba(168, 85, 247, 0.08);
+
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.clients-empty-title {
+  margin-top: 20px;
+
+  font-size: 20px;
+
+  font-weight: 900;
+}
+
+.clients-empty-title span {
+  color: #a855f7;
+}
+
+.clients-empty-text {
+  margin-top: 7px;
+
+  color: #555e6e;
+
+  font-family: monospace;
+  font-size: 10px;
+
+  letter-spacing: 0.04em;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.clients-loading {
+  padding: 90px 25px;
+
+  text-align: center;
+
+  border-radius: 22px;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.clients-loading-text {
+  margin-top: 15px;
+
+  color: #596274;
+
+  font-family: monospace;
+  font-size: 10px;
+
+  letter-spacing: 0.15em;
+
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1200px) {
+
+  .admin-clients-content {
+    padding: 42px 32px 70px;
+  }
+
+  .clients-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+@media (max-width: 900px) {
+
+  .clients-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .clients-refresh {
+    width: 150px;
+  }
+
+  .clients-stats {
+    grid-template-columns:
+      1fr;
+  }
+
+}
+
+@media (max-width: 700px) {
+
+  .admin-clients-content {
+    padding: 30px 18px 60px;
+  }
+
+  .clients-title {
+    font-size: 52px;
+  }
+
+  .clients-description {
+    font-size: 13px;
+  }
+
+  .clients-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .clients-toolbar {
+    margin-top: 25px;
+  }
+
+  .clients-section-header {
+    align-items: flex-start;
+  }
+
+  .clients-live {
+    display: none;
+  }
+
+}
+
+@media (max-width: 480px) {
+
+  .admin-clients-content {
+    padding: 24px 14px 50px;
+  }
+
+  .clients-eyebrow {
+    font-size: 8px;
+  }
+
+  .clients-title {
+    font-size: 44px;
+  }
+
+  .clients-refresh {
+    width: 100%;
+  }
+
+  .clients-stat-card {
+    min-height: 120px;
+    padding: 22px;
+  }
+
+}
