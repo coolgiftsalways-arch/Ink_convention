@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
+
 import {
   Sparkles,
   X,
@@ -11,12 +11,16 @@ import {
   User,
   ChevronRight,
   Play,
-  Trophy,
-  Medal,
 } from "lucide-react";
+
+import { Link } from "react-router-dom";
+
 import "../Style/Gallery.css";
 
-// IMAGES
+/* =========================================================
+   PHOTOS
+========================================================= */
+
 import GAll1 from "../assets/gall1.jpg";
 import GAll3 from "../assets/gall3.jpg";
 import GAll4 from "../assets/gall4.jpg";
@@ -60,7 +64,10 @@ import GAll44 from "../assets/gall44.jpg";
 import GAll45 from "../assets/gall45.jpg";
 import GAll46 from "../assets/last.jpeg";
 
-// VIDEOS
+/* =========================================================
+   VIDEOS
+========================================================= */
+
 import VELL1 from "../assets/gall1.mp4";
 import VELL2 from "../assets/gall2.mp4";
 import VELL3 from "../assets/gall3.mp4";
@@ -74,9 +81,10 @@ import VELL10 from "../assets/gall10.mp4";
 import VELL11 from "../assets/gall11.mp4";
 import VELL12 from "../assets/gall12.mp4";
 
-// ==========================================
-// MOCK DATABASE GENERATION
-// ==========================================
+/* =========================================================
+   PHOTO DATA
+========================================================= */
+
 const photos = [
   { type: "photo", image: GAll1 },
   { type: "photo", image: GAll3 },
@@ -122,6 +130,10 @@ const photos = [
   { type: "photo", image: GAll46 },
 ];
 
+/* =========================================================
+   VIDEO DATA
+========================================================= */
+
 const videos = [
   { type: "video", image: VELL1 },
   { type: "video", image: VELL2 },
@@ -137,18 +149,11 @@ const videos = [
   { type: "video", image: VELL12 },
 ];
 
-// Mock Metadata Arrays for Demonstration
-const MOCK_CATEGORIES = [
-  "Black & Grey",
-  "Realism",
-  "Colour",
-  "Fine Line",
-  "Traditional",
-  "Neo-Traditional",
-  "Japanese",
-  "Ornamental",
-];
-const MOCK_ARTISTS = [
+/* =========================================================
+   META DATA
+========================================================= */
+
+const ARTISTS = [
   "Vikram Singh",
   "Priya Sharma",
   "Rahul Desai",
@@ -157,7 +162,8 @@ const MOCK_ARTISTS = [
   "Sarah Chen",
   "David O'Connor",
 ];
-const MOCK_CITIES = [
+
+const CITIES = [
   "Mumbai, India",
   "Delhi, India",
   "Bangalore, India",
@@ -165,15 +171,8 @@ const MOCK_CITIES = [
   "New York, USA",
   "Berlin, Germany",
 ];
-const MOCK_STATUS = [
-  "Published",
-  "Published",
-  "Published",
-  "Finalist",
-  "Winner",
-  "People's Choice",
-];
-const MOCK_TITLES = [
+
+const TITLES = [
   "Midnight Lotus",
   "Urban Jungle",
   "Sacred Geometry",
@@ -183,175 +182,1293 @@ const MOCK_TITLES = [
   "Traditional Anchor",
 ];
 
-const generatePatternedProjects = () => {
-  const combined = [];
-  let pIdx = 0;
-  let vIdx = 0;
+const CATEGORIES = [
+  "Black & Grey",
+  "Realism",
+  "Colour",
+  "Fine Line",
+  "Traditional",
+  "Neo-Traditional",
+  "Japanese",
+  "Ornamental",
+];
 
-  while (pIdx < photos.length || vIdx < videos.length) {
-    if (vIdx < videos.length) combined.push(videos[vIdx++]);
-    if (pIdx < photos.length) combined.push(photos[pIdx++]);
-    if (pIdx < photos.length) combined.push(photos[pIdx++]);
-    if (pIdx < photos.length) combined.push(photos[pIdx++]);
+/* =========================================================
+   CREATE GALLERY
+========================================================= */
+
+function createGallery() {
+  const result = [];
+
+  let photoIndex = 0;
+  let videoIndex = 0;
+
+  while (photoIndex < photos.length || videoIndex < videos.length) {
+    if (videoIndex < videos.length) {
+      result.push(videos[videoIndex]);
+
+      videoIndex += 1;
+    }
+
+    for (let count = 0; count < 3; count += 1) {
+      if (photoIndex < photos.length) {
+        result.push(photos[photoIndex]);
+
+        photoIndex += 1;
+      }
+    }
   }
 
-  // Inject Mock Metadata into the array to simulate a real database
-  return combined.map((item, index) => {
-    const status = MOCK_STATUS[index % MOCK_STATUS.length];
-    return {
-      ...item,
-      id: `ART-${1000 + index}`,
-      artistName: MOCK_ARTISTS[index % MOCK_ARTISTS.length],
-      title: MOCK_TITLES[index % MOCK_TITLES.length],
-      category: MOCK_CATEGORIES[index % MOCK_CATEGORIES.length],
-      city: MOCK_CITIES[index % MOCK_CITIES.length],
-      status: status,
-      season: "2026",
-      isWinner: status === "Winner" || status === "People's Choice",
-      isFinalist: status === "Finalist",
-    };
-  });
-};
+  return result.map((item, index) => ({
+    ...item,
 
-const galleryProjects = generatePatternedProjects();
-const MAIN_FILTERS = ["ALL", "ARTWORK", "FINALISTS", "WINNERS", "VIDEOS"];
+    id: `INK-${1000 + index}`,
+
+    artistName: ARTISTS[index % ARTISTS.length],
+
+    title: TITLES[index % TITLES.length],
+
+    category: CATEGORIES[index % CATEGORIES.length],
+
+    city: CITIES[index % CITIES.length],
+
+    season: "2026",
+  }));
+}
+
+const galleryProjects = createGallery();
+
+/* =========================================================
+   FILTERS
+========================================================= */
+
+const FILTERS = ["ALL", "PHOTOS", "VIDEOS"];
+
+/* =========================================================
+   GALLERY
+========================================================= */
 
 function Gallery() {
   const [activeFilter, setActiveFilter] = useState("ALL");
-  const [activeCategory, setActiveCategory] = useState("ALL CATEGORIES");
+
   const [searchQuery, setSearchQuery] = useState("");
+
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // Advanced Filtering Logic
+  /* =========================================================
+     FILTERING
+  ========================================================= */
+
   const filteredProjects = useMemo(() => {
     return galleryProjects.filter((item) => {
-      // 1. Primary Tab Filter
-      if (activeFilter === "ARTWORK" && item.type === "video") return false;
-      if (activeFilter === "VIDEOS" && item.type === "photo") return false;
-      if (activeFilter === "FINALISTS" && !item.isFinalist) return false;
-      if (activeFilter === "WINNERS" && !item.isWinner) return false;
-
-      // 2. Category Dropdown Filter
-      if (
-        activeCategory !== "ALL CATEGORIES" &&
-        item.category !== activeCategory
-      )
+      if (activeFilter === "PHOTOS" && item.type !== "photo") {
         return false;
+      }
 
-      // 3. Search Query Filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesSearch =
-          item.artistName.toLowerCase().includes(query) ||
-          item.title.toLowerCase().includes(query) ||
-          item.category.toLowerCase().includes(query) ||
-          item.city.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
+      if (activeFilter === "VIDEOS" && item.type !== "video") {
+        return false;
+      }
+
+      if (searchQuery.trim()) {
+        const query = searchQuery.trim().toLowerCase();
+
+        const text = [item.artistName, item.title, item.category, item.city]
+          .join(" ")
+          .toLowerCase();
+
+        if (!text.includes(query)) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [activeFilter, activeCategory, searchQuery]);
+  }, [activeFilter, searchQuery]);
 
   return (
-    <div className="w-full min-h-screen bg-[#08080a] text-white select-none pt-32 pb-0 overflow-x-hidden font-sans">
-      {/* =========================================
-          1. HERO & SEARCH SECTION
-      ========================================= */}
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 space-y-12 mb-16">
-        <div className="space-y-6 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-[#a855f7] text-xs font-mono uppercase tracking-widest">
-            <Sparkles size={14} /> CURATED TATTOO ARTISTRY
-          </div>
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tighter text-white uppercase leading-[1.05]">
-            INK CONVENTION GALLERY
-          </h1>
-          <p className="text-gray-400 text-base sm:text-lg font-light leading-relaxed max-w-2xl">
-            Explore exceptional tattoo work from Ink Convention artists,
-            competition finalists and recognised winners across multiple styles
-            and categories.
-          </p>
-          <p className="text-[#a855f7] text-xs font-mono tracking-widest uppercase">
-            New work is added throughout the competition season.
-          </p>
-        </div>
+    <div
+      className="
+        w-full
 
-        {/* Filters & Search Bar */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-[#0b0b0f] p-4 sm:p-6 rounded-2xl border border-white/5 shadow-2xl">
-          {/* Search */}
-          <div className="relative w-full lg:w-80">
-            <Search
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="SEARCH ARTISTS OR TATTOOS..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white text-xs font-mono focus:outline-none focus:border-[#a855f7] transition"
-            />
-          </div>
+        min-h-screen
 
-          {/* Primary Filters */}
-          <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-            {MAIN_FILTERS.map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setActiveFilter(filter)}
-                className={`px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-widest transition duration-300 cursor-pointer flex-grow sm:flex-grow-0 ${
-                  activeFilter === filter
-                    ? "bg-[#a855f7] text-white shadow-lg shadow-purple-900/40"
-                    : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/5"
-                }`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
+        bg-[#08080a]
 
-          {/* Category Dropdown */}
-          <div className="w-full lg:w-auto">
-            <select
-              value={activeCategory}
-              onChange={(e) => setActiveCategory(e.target.value)}
-              className="w-full lg:w-48 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-xs font-mono focus:outline-none focus:border-[#a855f7] transition appearance-none cursor-pointer"
+        text-white
+
+        pt-28
+        sm:pt-32
+
+        overflow-x-hidden
+
+        font-sans
+      "
+    >
+      {/* =====================================================
+          TOP HERO
+          LEFT = GALLERY
+          RIGHT = 3 BUTTONS
+      ===================================================== */}
+
+      <section
+        className="
+          relative
+
+          max-w-7xl
+
+          mx-auto
+
+          px-5
+          sm:px-8
+          lg:px-12
+
+          pb-16
+        "
+      >
+        {/* PURPLE GLOW */}
+
+        <div
+          className="
+            absolute
+
+            top-[-100px]
+            right-[-100px]
+
+            w-[500px]
+            h-[500px]
+
+            bg-[#a855f7]/10
+
+            blur-[150px]
+
+            rounded-full
+
+            pointer-events-none
+          "
+        />
+
+        <div
+          className="
+            relative
+            z-10
+
+            grid
+
+            grid-cols-1
+
+            lg:grid-cols-[minmax(0,1fr)_430px]
+
+            xl:grid-cols-[minmax(0,1fr)_480px]
+
+            gap-12
+            lg:gap-16
+
+            items-start
+          "
+        >
+          {/* =================================================
+              LEFT HERO
+          ================================================= */}
+
+          <div
+            className="
+              max-w-3xl
+
+              lg:pt-6
+            "
+          >
+            {/* BADGE */}
+
+            <div
+              className="
+                inline-flex
+
+                items-center
+
+                gap-2
+
+                px-3.5
+                py-1.5
+
+                rounded-full
+
+                bg-purple-500/10
+
+                border
+                border-purple-500/20
+
+                text-[#a855f7]
+
+                text-[10px]
+                sm:text-xs
+
+                font-mono
+
+                uppercase
+
+                tracking-widest
+              "
             >
-              <option value="ALL CATEGORIES">ALL CATEGORIES</option>
-              {MOCK_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+              <Sparkles size={13} />
+              INK CONVENTION GALLERY
+            </div>
 
-      {/* =========================================
-          2. GALLERY GRID
-      ========================================= */}
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 mb-32">
-        {filteredProjects.length === 0 ? (
-          <div className="text-center py-20 bg-[#0b0b0f] border border-dashed border-white/10 rounded-3xl">
-            <Search className="mx-auto text-gray-600 mb-4" size={40} />
-            <h3 className="text-xl font-bold text-white uppercase tracking-widest">
-              NO ARTWORK FOUND
-            </h3>
-            <p className="text-gray-500 font-light mt-2">
-              Try adjusting your filters or search criteria.
+            {/* TITLE */}
+
+            <h1
+              className="
+                mt-7
+
+                text-[clamp(3.8rem,8vw,7.5rem)]
+
+                font-black
+
+                tracking-[-0.075em]
+
+                text-white
+
+                uppercase
+
+                leading-[0.78]
+              "
+            >
+              ART.
+              <br />
+              <span
+                className="
+                  text-[#a855f7]
+                "
+              >
+                IN MOTION.
+              </span>
+            </h1>
+
+            {/* DESCRIPTION */}
+
+            <p
+              className="
+                mt-8
+
+                max-w-xl
+
+                text-gray-400
+
+                text-sm
+                sm:text-lg
+
+                font-light
+
+                leading-relaxed
+              "
+            >
+              Explore photos and videos from Ink Convention artists, tattoo work
+              and moments from the community.
+            </p>
+
+            <p
+              className="
+                mt-5
+
+                text-[#a855f7]
+
+                text-[9px]
+
+                font-mono
+
+                tracking-[0.2em]
+
+                uppercase
+              "
+            >
+              PHOTOS • VIDEOS • ARTISTS • INK CONVENTION 2026
             </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {filteredProjects.map((project) => (
+
+          {/* =================================================
+              RIGHT SIDE CTA
+          ================================================= */}
+
+          <div
+            className="
+              relative
+
+              w-full
+
+              bg-[#0c0c11]/80
+
+              backdrop-blur-xl
+
+              border
+              border-white/10
+
+              rounded-[26px]
+
+              p-5
+              sm:p-6
+
+              shadow-[0_30px_100px_rgba(0,0,0,0.35)]
+            "
+          >
+            {/* TOP */}
+
+            <div
+              className="
+                mb-6
+
+                pb-5
+
+                border-b
+                border-white/10
+              "
+            >
+              <p
+                className="
+                  text-[#a855f7]
+
+                  text-[8px]
+
+                  font-mono
+
+                  tracking-[0.22em]
+
+                  uppercase
+                "
+              >
+                INK CONVENTION 2026
+              </p>
+
+              <h2
+                className="
+                  mt-3
+
+                  text-2xl
+                  sm:text-3xl
+
+                  font-black
+
+                  tracking-[-0.04em]
+
+                  uppercase
+
+                  leading-[0.95]
+                "
+              >
+                BE PART OF THE
+                <br />
+                CONVENTION.
+              </h2>
+
+              <p
+                className="
+                  mt-4
+
+                  text-xs
+
+                  text-gray-500
+
+                  leading-relaxed
+                "
+              >
+                Choose how you want to participate.
+              </p>
+            </div>
+
+            {/* =================================================
+                BUTTON 1
+                BOOK STALL
+            ================================================= */}
+
+            <Link
+              to="/upcoming"
+              className="
+                group
+
+                relative
+
+                w-full
+
+                min-h-[78px]
+
+                bg-white
+
+                hover:bg-gray-200
+
+                text-black
+
+                rounded-2xl
+
+                px-5
+                py-4
+
+                flex
+
+                items-center
+
+                justify-between
+
+                gap-4
+
+                transition-all
+
+                duration-300
+
+                hover:-translate-y-1
+              "
+            >
               <div
+                className="
+                  text-left
+                "
+              >
+                <p
+                  className="
+                    text-[7px]
+
+                    font-mono
+
+                    tracking-[0.16em]
+
+                    text-black/40
+
+                    uppercase
+
+                    mb-1
+                  "
+                >
+                  01 / EXHIBIT
+                </p>
+
+                <p
+                  className="
+                    text-[11px]
+
+                    font-black
+
+                    font-mono
+
+                    tracking-[0.1em]
+
+                    uppercase
+                  "
+                >
+                  BOOK YOUR STALL
+                </p>
+              </div>
+
+              <div
+                className="
+                  w-10
+                  h-10
+
+                  shrink-0
+
+                  bg-black
+
+                  text-white
+
+                  rounded-full
+
+                  flex
+
+                  items-center
+
+                  justify-center
+
+                  transition-transform
+
+                  duration-300
+
+                  group-hover:translate-x-1
+                "
+              >
+                <ChevronRight size={17} />
+              </div>
+            </Link>
+
+            {/* DESCRIPTION */}
+
+            <div
+              className="
+                py-4
+                px-1
+
+                border-b
+                border-white/[0.06]
+              "
+            >
+              <p
+                className="
+                  text-[9px]
+
+                  font-mono
+
+                  tracking-widest
+
+                  text-gray-600
+
+                  uppercase
+                "
+              >
+                BOOK A STALL
+              </p>
+
+              <p
+                className="
+                  mt-1.5
+
+                  text-[11px]
+
+                  text-gray-500
+
+                  leading-relaxed
+                "
+              >
+                Reserve a place for your tattoo studio, brand or business.
+              </p>
+            </div>
+
+            {/* =================================================
+                BUTTON 2
+                COMPETITION
+            ================================================= */}
+
+            <Link
+              to="/upload"
+              className="
+                group
+
+                relative
+
+                overflow-hidden
+
+                mt-4
+
+                w-full
+
+                min-h-[78px]
+
+                bg-[#a855f7]
+
+                hover:bg-[#9333ea]
+
+                text-white
+
+                rounded-2xl
+
+                px-5
+                py-4
+
+                flex
+
+                items-center
+
+                justify-between
+
+                gap-4
+
+                transition-all
+
+                duration-300
+
+                hover:-translate-y-1
+
+                shadow-[0_15px_45px_rgba(168,85,247,0.22)]
+              "
+            >
+              {/* SHINE */}
+
+              <span
+                className="
+                  absolute
+
+                  inset-y-0
+
+                  left-[-50%]
+
+                  w-[30%]
+
+                  bg-gradient-to-r
+
+                  from-transparent
+
+                  via-white/20
+
+                  to-transparent
+
+                  skew-x-[-20deg]
+
+                  group-hover:left-[130%]
+
+                  transition-all
+
+                  duration-700
+
+                  pointer-events-none
+                "
+              />
+
+              <div
+                className="
+                  relative
+                  z-10
+
+                  text-left
+                "
+              >
+                <p
+                  className="
+                    text-[7px]
+
+                    font-mono
+
+                    tracking-[0.16em]
+
+                    text-white/60
+
+                    uppercase
+
+                    mb-1
+                  "
+                >
+                  02 / COMPETE
+                </p>
+
+                <p
+                  className="
+                    text-[11px]
+
+                    font-black
+
+                    font-mono
+
+                    tracking-[0.08em]
+
+                    uppercase
+                  "
+                >
+                  GO TO THE COMPETITION
+                </p>
+              </div>
+
+              <div
+                className="
+                  relative
+                  z-10
+
+                  w-10
+                  h-10
+
+                  shrink-0
+
+                  bg-white
+
+                  text-[#a855f7]
+
+                  rounded-full
+
+                  flex
+
+                  items-center
+
+                  justify-center
+
+                  transition-transform
+
+                  duration-300
+
+                  group-hover:translate-x-1
+                "
+              >
+                <ChevronRight size={17} />
+              </div>
+            </Link>
+
+            {/* DESCRIPTION */}
+
+            <div
+              className="
+                py-4
+                px-1
+
+                border-b
+                border-white/[0.06]
+              "
+            >
+              <p
+                className="
+                  text-[9px]
+
+                  font-mono
+
+                  tracking-widest
+
+                  text-[#a855f7]
+
+                  uppercase
+                "
+              >
+                COMPETE
+              </p>
+
+              <p
+                className="
+                  mt-1.5
+
+                  text-[11px]
+
+                  text-gray-500
+
+                  leading-relaxed
+                "
+              >
+                Submit your tattoo work and enter the competition.
+              </p>
+            </div>
+
+            {/* =================================================
+                BUTTON 3
+                FREE ENTRY
+            ================================================= */}
+
+            <Link
+              to="/Enter"
+              className="
+                group
+
+                relative
+
+                mt-4
+
+                w-full
+
+                min-h-[78px]
+
+                bg-[#111116]
+
+                hover:bg-[#a855f7]/10
+
+                border
+                border-[#a855f7]/60
+
+                hover:border-[#a855f7]
+
+                text-white
+
+                rounded-2xl
+
+                px-5
+                py-4
+
+                flex
+
+                items-center
+
+                justify-between
+
+                gap-4
+
+                transition-all
+
+                duration-300
+
+                hover:-translate-y-1
+              "
+            >
+              <div
+                className="
+                  text-left
+                "
+              >
+                <div
+                  className="
+                    flex
+
+                    items-center
+
+                    gap-2
+
+                    mb-1
+                  "
+                >
+                  <span
+                    className="
+                      w-1.5
+                      h-1.5
+
+                      rounded-full
+
+                      bg-[#a855f7]
+
+                      animate-pulse
+
+                      shadow-[0_0_10px_rgba(168,85,247,1)]
+                    "
+                  />
+
+                  <p
+                    className="
+                      text-[7px]
+
+                      font-mono
+
+                      tracking-[0.16em]
+
+                      text-[#a855f7]
+
+                      uppercase
+                    "
+                  >
+                    03 / JOIN
+                  </p>
+                </div>
+
+                <p
+                  className="
+                    text-[11px]
+
+                    font-black
+
+                    font-mono
+
+                    tracking-[0.1em]
+
+                    uppercase
+                  "
+                >
+                  GET A FREE ENTRY
+                </p>
+              </div>
+
+              <div
+                className="
+                  w-10
+                  h-10
+
+                  shrink-0
+
+                  bg-[#a855f7]
+
+                  text-white
+
+                  rounded-full
+
+                  flex
+
+                  items-center
+
+                  justify-center
+
+                  transition-transform
+
+                  duration-300
+
+                  group-hover:translate-x-1
+                "
+              >
+                <ChevronRight size={17} />
+              </div>
+            </Link>
+
+            {/* DESCRIPTION */}
+
+            <div
+              className="
+                pt-4
+                px-1
+              "
+            >
+              <p
+                className="
+                  text-[9px]
+
+                  font-mono
+
+                  tracking-widest
+
+                  text-[#a855f7]
+
+                  uppercase
+                "
+              >
+                FREE ARTIST ENTRY
+              </p>
+
+              <p
+                className="
+                  mt-1.5
+
+                  text-[11px]
+
+                  text-gray-500
+
+                  leading-relaxed
+                "
+              >
+                Create your artist profile and start with the free plan.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          SEARCH + FILTER
+      ===================================================== */}
+
+      <section
+        className="
+          max-w-7xl
+
+          mx-auto
+
+          px-5
+          sm:px-8
+          lg:px-12
+
+          mb-12
+        "
+      >
+        <div
+          className="
+            bg-[#0b0b0f]
+
+            border
+            border-white/5
+
+            rounded-2xl
+
+            p-4
+            sm:p-5
+
+            flex
+
+            flex-col
+            lg:flex-row
+
+            lg:items-center
+
+            justify-between
+
+            gap-5
+          "
+        >
+          {/* SEARCH */}
+
+          <div
+            className="
+              relative
+
+              w-full
+
+              lg:max-w-[420px]
+            "
+          >
+            <Search
+              size={17}
+              className="
+                absolute
+
+                left-4
+
+                top-1/2
+
+                -translate-y-1/2
+
+                text-gray-500
+              "
+            />
+
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="SEARCH GALLERY..."
+              className="
+                w-full
+
+                bg-black/50
+
+                border
+                border-white/10
+
+                focus:border-[#a855f7]
+
+                rounded-xl
+
+                pl-12
+                pr-4
+
+                py-4
+
+                text-white
+
+                text-xs
+
+                font-mono
+
+                outline-none
+
+                placeholder:text-gray-700
+
+                transition
+              "
+            />
+          </div>
+
+          {/* =================================================
+              ALL / PHOTOS / VIDEOS
+          ================================================= */}
+
+          <div
+            className="
+              grid
+
+              grid-cols-3
+
+              gap-2
+
+              w-full
+
+              lg:w-auto
+            "
+          >
+            {FILTERS.map((filter) => {
+              const active = activeFilter === filter;
+
+              return (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setActiveFilter(filter)}
+                  className={`
+                      min-w-0
+
+                      lg:min-w-[125px]
+
+                      px-3
+                      sm:px-6
+
+                      py-3.5
+
+                      rounded-xl
+
+                      text-[9px]
+                      sm:text-xs
+
+                      font-black
+
+                      font-mono
+
+                      uppercase
+
+                      tracking-[0.12em]
+
+                      transition-all
+
+                      duration-300
+
+                      ${
+                        active
+                          ? `
+                            bg-[#a855f7]
+
+                            text-white
+
+                            shadow-[0_0_25px_rgba(168,85,247,0.28)]
+                          `
+                          : `
+                            bg-white/[0.04]
+
+                            border
+                            border-white/[0.06]
+
+                            text-gray-500
+
+                            hover:text-white
+
+                            hover:bg-white/[0.08]
+                          `
+                      }
+                    `}
+                >
+                  {filter}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* RESULTS */}
+
+        <div
+          className="
+            flex
+
+            items-center
+
+            justify-between
+
+            mt-5
+
+            px-1
+          "
+        >
+          <p
+            className="
+              text-[9px]
+
+              font-mono
+
+              text-gray-600
+
+              tracking-[0.15em]
+
+              uppercase
+            "
+          >
+            {activeFilter}
+          </p>
+
+          <p
+            className="
+              text-[9px]
+
+              font-mono
+
+              text-[#a855f7]
+
+              tracking-[0.15em]
+
+              uppercase
+            "
+          >
+            {filteredProjects.length} ITEMS
+          </p>
+        </div>
+      </section>
+
+      {/* =====================================================
+          GALLERY GRID
+      ===================================================== */}
+
+      <section
+        className="
+          max-w-7xl
+
+          mx-auto
+
+          px-5
+          sm:px-8
+          lg:px-12
+
+          pb-32
+        "
+      >
+        {filteredProjects.length === 0 ? (
+          <div
+            className="
+              min-h-[350px]
+
+              bg-[#0b0b0f]
+
+              border
+              border-dashed
+              border-white/10
+
+              rounded-3xl
+
+              flex
+
+              flex-col
+
+              items-center
+
+              justify-center
+
+              text-center
+            "
+          >
+            <Search
+              size={40}
+              className="
+                text-gray-700
+
+                mb-5
+              "
+            />
+
+            <h3
+              className="
+                text-xl
+
+                font-black
+
+                uppercase
+
+                tracking-widest
+              "
+            >
+              NOTHING FOUND
+            </h3>
+          </div>
+        ) : (
+          <div
+            className="
+              grid
+
+              grid-cols-1
+              sm:grid-cols-2
+              lg:grid-cols-3
+
+              gap-5
+              sm:gap-7
+            "
+          >
+            {filteredProjects.map((project) => (
+              <article
                 key={project.id}
                 onClick={() => setSelectedItem(project)}
-                className="group relative bg-[#0b0b0f] rounded-2xl overflow-hidden border border-white/5 hover:border-[#a855f7]/50 transition duration-500 shadow-2xl cursor-pointer"
+                className="
+                    group
+
+                    relative
+
+                    bg-[#0b0b0f]
+
+                    rounded-[22px]
+
+                    overflow-hidden
+
+                    border
+                    border-white/[0.06]
+
+                    hover:border-[#a855f7]/50
+
+                    transition-all
+
+                    duration-500
+
+                    cursor-pointer
+
+                    hover:-translate-y-1
+                  "
               >
-                {/* Media Container */}
-                <div className="relative h-[350px] sm:h-[400px] w-full overflow-hidden bg-[#050507]">
+                <div
+                  className="
+                      relative
+
+                      w-full
+
+                      h-[380px]
+                      sm:h-[420px]
+
+                      overflow-hidden
+
+                      bg-[#050507]
+                    "
+                >
+                  {/* VIDEO */}
+
                   {project.type === "video" ? (
                     <video
                       src={project.image}
@@ -359,211 +1476,757 @@ function Gallery() {
                       loop
                       muted
                       playsInline
-                      className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105 ease-out"
+                      className="
+                          w-full
+                          h-full
+
+                          object-cover
+
+                          transition-transform
+
+                          duration-700
+
+                          group-hover:scale-105
+                        "
                     />
                   ) : (
+                    /* PHOTO */
+
                     <img
                       src={project.image}
                       alt={project.title}
-                      className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105 ease-out"
+                      loading="lazy"
+                      className="
+                          w-full
+                          h-full
+
+                          object-cover
+
+                          transition-transform
+
+                          duration-700
+
+                          group-hover:scale-105
+                        "
                     />
                   )}
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-500" />
+                  {/* DARK GRADIENT */}
 
-                  {project.type === "video" && (
-                    <div className="absolute top-4 right-4 w-8 h-8 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center border border-white/10">
-                      <Play size={14} className="text-white ml-0.5" />
-                    </div>
-                  )}
+                  <div
+                    className="
+                        absolute
 
-                  {/* Status Badges */}
-                  <div className="absolute top-4 left-4 flex flex-col gap-2">
-                    {project.isWinner && (
-                      <span className="bg-[#a855f7] text-white text-[10px] font-bold font-mono px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 shadow-lg">
-                        <Trophy size={12} /> WINNER
-                      </span>
-                    )}
-                    {project.isFinalist && (
-                      <span className="bg-white text-black text-[10px] font-bold font-mono px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 shadow-lg">
-                        <Medal size={12} /> FINALIST
-                      </span>
+                        inset-0
+
+                        bg-gradient-to-t
+
+                        from-black/95
+
+                        via-black/10
+
+                        to-transparent
+
+                        pointer-events-none
+                      "
+                  />
+
+                  {/* TYPE */}
+
+                  <div
+                    className="
+                        absolute
+
+                        top-4
+                        right-4
+
+                        z-10
+
+                        bg-black/60
+
+                        backdrop-blur-md
+
+                        border
+                        border-white/10
+
+                        rounded-full
+
+                        px-3
+                        py-2
+
+                        flex
+
+                        items-center
+
+                        gap-2
+
+                        text-[9px]
+
+                        font-mono
+
+                        tracking-widest
+
+                        uppercase
+                      "
+                  >
+                    {project.type === "video" ? (
+                      <>
+                        <Play size={11} />
+                        VIDEO
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className="
+                              w-1.5
+                              h-1.5
+
+                              rounded-full
+
+                              bg-[#a855f7]
+                            "
+                        />
+                        PHOTO
+                      </>
                     )}
                   </div>
 
-                  {/* Artwork Metadata (Revealed subtly at bottom) */}
-                  <div className="absolute bottom-0 left-0 w-full p-6 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                    <p className="text-[#a855f7] text-[10px] font-mono tracking-widest uppercase mb-1">
+                  {/* INFO */}
+
+                  <div
+                    className="
+                        absolute
+
+                        left-0
+                        right-0
+                        bottom-0
+
+                        p-6
+
+                        z-10
+                      "
+                  >
+                    <p
+                      className="
+                          text-[#a855f7]
+
+                          text-[9px]
+
+                          font-mono
+
+                          tracking-widest
+
+                          uppercase
+
+                          mb-2
+                        "
+                    >
                       {project.category}
                     </p>
-                    <h3 className="text-lg font-bold text-white leading-tight mb-1 truncate">
+
+                    <h3
+                      className="
+                          text-xl
+
+                          font-black
+
+                          uppercase
+
+                          truncate
+                        "
+                    >
                       {project.title}
                     </h3>
-                    <p className="text-xs text-gray-400 font-light flex items-center gap-1">
-                      <User size={12} /> {project.artistName}{" "}
-                      <span className="mx-1">•</span> {project.city}
-                    </p>
+
+                    <div
+                      className="
+                          mt-3
+
+                          flex
+
+                          items-center
+
+                          text-[11px]
+
+                          text-gray-400
+                        "
+                    >
+                      <User
+                        size={12}
+                        className="
+                            mr-1.5
+
+                            text-[#a855f7]
+                          "
+                      />
+
+                      <span
+                        className="
+                            truncate
+                          "
+                      >
+                        {project.artistName}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
-      </div>
-
-      {/* =========================================
-          3. ACQUISITION CTA (Bottom of Gallery)
-      ========================================= */}
-      <section className="w-full py-32 px-6 sm:px-10 lg:px-12 bg-gradient-to-t from-[#140a24] to-[#08080a] border-t border-[#a855f7]/20 text-center">
-        <div className="max-w-3xl mx-auto space-y-8">
-          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-white uppercase leading-tight">
-            THINK YOUR WORK BELONGS HERE?
-          </h2>
-          <p className="text-gray-300 text-lg font-light">
-            Submit your best work and compete for recognition, awards and Ink
-            Convention ranking points.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
-            <Link
-              to="/upload"
-              className="w-full sm:w-auto bg-[#a855f7] hover:bg-[#9333ea] text-white px-10 py-5 rounded-xl font-bold text-sm font-mono uppercase tracking-widest transition duration-300 shadow-lg shadow-purple-900/50"
-            >
-              ENTER THE COMPETITION
-            </Link>
-            <Link
-              to="/categories"
-              className="w-full sm:w-auto bg-transparent border border-white/20 hover:border-white/60 text-white px-10 py-5 rounded-xl font-bold text-sm font-mono uppercase tracking-widest transition duration-300"
-            >
-              VIEW CATEGORIES
-            </Link>
-          </div>
-        </div>
       </section>
 
-      {/* =========================================
-          4. DETAILED LIGHTBOX MODAL
-      ========================================= */}
+      {/* =====================================================
+          POPUP
+      ===================================================== */}
+
       {selectedItem && (
         <div
           onClick={() => setSelectedItem(null)}
-          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fadeIn"
+          className="
+            fixed
+
+            inset-0
+
+            z-[9999]
+
+            bg-black/95
+
+            backdrop-blur-md
+
+            flex
+
+            items-center
+
+            justify-center
+
+            p-4
+            sm:p-6
+          "
         >
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-6xl w-full max-h-[95vh] bg-[#0b0b0f] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row"
+            onClick={(event) => event.stopPropagation()}
+            className="
+              relative
+
+              max-w-6xl
+
+              w-full
+
+              max-h-[94vh]
+
+              bg-[#0b0b0f]
+
+              border
+              border-white/10
+
+              rounded-[28px]
+
+              overflow-hidden
+
+              shadow-2xl
+
+              flex
+
+              flex-col
+              lg:flex-row
+            "
           >
-            {/* Close Button */}
+            {/* CLOSE */}
+
             <button
+              type="button"
               onClick={() => setSelectedItem(null)}
-              className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-[#a855f7] hover:border-[#a855f7] transition duration-300 cursor-pointer"
+              className="
+                absolute
+
+                top-4
+                right-4
+
+                z-50
+
+                w-11
+                h-11
+
+                rounded-full
+
+                bg-black/70
+
+                border
+                border-white/20
+
+                text-white
+
+                flex
+
+                items-center
+
+                justify-center
+
+                hover:bg-[#a855f7]
+
+                hover:border-[#a855f7]
+
+                transition
+              "
             >
               <X size={20} />
             </button>
 
-            {/* Left: Media Area */}
-            <div className="w-full lg:w-2/3 h-[40vh] lg:h-[85vh] bg-[#050507] flex items-center justify-center relative">
+            {/* MEDIA */}
+
+            <div
+              className="
+                w-full
+
+                lg:w-[70%]
+
+                h-[52vh]
+
+                lg:h-[85vh]
+
+                bg-[#050507]
+
+                flex
+
+                items-center
+
+                justify-center
+              "
+            >
               {selectedItem.type === "video" ? (
                 <video
                   src={selectedItem.image}
                   controls
                   autoPlay
                   playsInline
-                  className="max-w-full max-h-full object-contain"
+                  className="
+                    max-w-full
+
+                    max-h-full
+
+                    object-contain
+                  "
                 />
               ) : (
                 <img
                   src={selectedItem.image}
                   alt={selectedItem.title}
-                  className="max-w-full max-h-full object-contain"
+                  className="
+                    max-w-full
+
+                    max-h-full
+
+                    object-contain
+                  "
                 />
               )}
             </div>
 
-            {/* Right: Detailed Metadata & Ecosystem Links */}
-            <div className="w-full lg:w-1/3 h-full max-h-[50vh] lg:max-h-[85vh] overflow-y-auto p-8 lg:p-10 flex flex-col bg-gradient-to-b from-[#0b0b0f] to-[#120a1f]">
-              <div className="space-y-6 flex-grow">
-                {/* Header Info */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[#a855f7] text-[10px] font-mono tracking-widest uppercase bg-[#a855f7]/10 px-2 py-1 rounded">
-                      SEASON {selectedItem.season}
-                    </span>
-                    {selectedItem.isWinner && (
-                      <span className="text-white text-[10px] font-mono tracking-widest uppercase bg-[#a855f7] px-2 py-1 rounded flex items-center gap-1">
-                        <Trophy size={10} /> WINNER
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="text-3xl font-black text-white uppercase leading-tight mb-2">
-                    {selectedItem.title}
-                  </h2>
-                  <p className="text-gray-400 text-sm font-mono tracking-widest uppercase">
-                    {selectedItem.category}
+            {/* INFO */}
+
+            <div
+              className="
+                w-full
+
+                lg:w-[30%]
+
+                max-h-[42vh]
+
+                lg:max-h-[85vh]
+
+                overflow-y-auto
+
+                p-7
+                lg:p-8
+
+                bg-gradient-to-b
+
+                from-[#0b0b0f]
+
+                to-[#120a1f]
+              "
+            >
+              {/* TYPE */}
+
+              <div
+                className="
+                  flex
+
+                  items-center
+
+                  gap-2
+
+                  mb-5
+                "
+              >
+                <span
+                  className="
+                    text-[#a855f7]
+
+                    text-[9px]
+
+                    font-mono
+
+                    tracking-widest
+
+                    uppercase
+
+                    bg-[#a855f7]/10
+
+                    px-3
+                    py-1.5
+
+                    rounded-lg
+                  "
+                >
+                  {selectedItem.type}
+                </span>
+
+                <span
+                  className="
+                    text-gray-600
+
+                    text-[9px]
+
+                    font-mono
+                  "
+                >
+                  {selectedItem.season}
+                </span>
+              </div>
+
+              {/* TITLE */}
+
+              <h2
+                className="
+                  text-3xl
+
+                  font-black
+
+                  uppercase
+
+                  leading-[0.95]
+                "
+              >
+                {selectedItem.title}
+              </h2>
+
+              <p
+                className="
+                  mt-3
+
+                  text-[#a855f7]
+
+                  text-[10px]
+
+                  font-mono
+
+                  tracking-widest
+
+                  uppercase
+                "
+              >
+                {selectedItem.category}
+              </p>
+
+              <div
+                className="
+                  border-t
+
+                  border-white/10
+
+                  my-7
+                "
+              />
+
+              {/* ARTIST */}
+
+              <p
+                className="
+                  text-[9px]
+
+                  font-mono
+
+                  text-gray-600
+
+                  tracking-widest
+
+                  uppercase
+
+                  mb-4
+                "
+              >
+                ARTIST
+              </p>
+
+              <div
+                className="
+                  flex
+
+                  items-center
+
+                  gap-4
+                "
+              >
+                <div
+                  className="
+                    w-12
+                    h-12
+
+                    rounded-full
+
+                    bg-white/5
+
+                    border
+                    border-white/10
+
+                    flex
+
+                    items-center
+
+                    justify-center
+                  "
+                >
+                  <User
+                    size={19}
+                    className="
+                      text-gray-500
+                    "
+                  />
+                </div>
+
+                <div
+                  className="
+                    min-w-0
+                  "
+                >
+                  <h3
+                    className="
+                      text-sm
+
+                      font-bold
+
+                      truncate
+                    "
+                  >
+                    {selectedItem.artistName}
+                  </h3>
+
+                  <p
+                    className="
+                      mt-1
+
+                      text-[11px]
+
+                      text-gray-500
+
+                      flex
+
+                      items-center
+
+                      gap-1
+                    "
+                  >
+                    <MapPin
+                      size={11}
+                      className="
+                        text-[#a855f7]
+                      "
+                    />
+
+                    {selectedItem.city}
                   </p>
                 </div>
-
-                <hr className="border-white/5" />
-
-                {/* Artist Info */}
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                    ARTIST PROFILE
-                  </h4>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center overflow-hidden">
-                      <User className="text-gray-500" size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white">
-                        {selectedItem.artistName}
-                      </h3>
-                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                        <MapPin size={12} className="text-[#a855f7]" />{" "}
-                        {selectedItem.city}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Link
-                    to={`/artists`}
-                    className="inline-flex w-full items-center justify-center gap-2 mt-2 px-4 py-3 rounded-xl border border-white/10 hover:border-[#a855f7] hover:bg-[#a855f7]/10 text-white text-xs font-mono uppercase tracking-widest transition duration-300"
-                  >
-                    VIEW ARTIST PROFILE <ChevronRight size={14} />
-                  </Link>
-                </div>
-
-                <hr className="border-white/5" />
-
-                {/* Social Sharing */}
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                    SHARE THIS ENTRY
-                  </h4>
-                  <div className="flex gap-3">
-                    <button className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl py-3 text-white transition">
-                      <Heart size={16} />
-                    </button>
-                    <button className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl py-3 text-white transition">
-                      <Share2 size={16} />
-                    </button>
-                    <button
-                      className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl py-3 text-white transition"
-                      onClick={() =>
-                        navigator.clipboard.writeText(window.location.href)
-                      }
-                    >
-                      <LinkIcon size={16} />
-                    </button>
-                  </div>
-                </div>
               </div>
 
-              <div className="pt-8 text-center">
-                <p className="text-[10px] text-gray-600 font-mono">
-                  INK CONVENTION ID: {selectedItem.id}
-                </p>
+              {/* ARTIST PAGE */}
+
+              <Link
+                to="/artists"
+                className="
+                  mt-6
+
+                  w-full
+
+                  flex
+
+                  items-center
+
+                  justify-center
+
+                  gap-2
+
+                  border
+
+                  border-white/10
+
+                  hover:border-[#a855f7]
+
+                  hover:bg-[#a855f7]/10
+
+                  rounded-xl
+
+                  px-4
+
+                  py-3
+
+                  text-[10px]
+
+                  font-mono
+
+                  uppercase
+
+                  tracking-widest
+
+                  transition
+                "
+              >
+                VIEW ARTIST
+                <ChevronRight size={13} />
+              </Link>
+
+              <div
+                className="
+                  border-t
+
+                  border-white/10
+
+                  my-7
+                "
+              />
+
+              {/* SHARE */}
+
+              <p
+                className="
+                  text-[9px]
+
+                  font-mono
+
+                  text-gray-600
+
+                  tracking-widest
+
+                  uppercase
+
+                  mb-4
+                "
+              >
+                SHARE
+              </p>
+
+              <div
+                className="
+                  grid
+
+                  grid-cols-3
+
+                  gap-2
+                "
+              >
+                <button
+                  type="button"
+                  className="
+                    bg-white/5
+
+                    hover:bg-white/10
+
+                    border
+
+                    border-white/5
+
+                    rounded-xl
+
+                    py-3
+
+                    flex
+
+                    items-center
+
+                    justify-center
+
+                    transition
+                  "
+                >
+                  <Heart size={16} />
+                </button>
+
+                <button
+                  type="button"
+                  className="
+                    bg-white/5
+
+                    hover:bg-white/10
+
+                    border
+
+                    border-white/5
+
+                    rounded-xl
+
+                    py-3
+
+                    flex
+
+                    items-center
+
+                    justify-center
+
+                    transition
+                  "
+                >
+                  <Share2 size={16} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(window.location.href);
+                    }
+                  }}
+                  className="
+                    bg-white/5
+
+                    hover:bg-white/10
+
+                    border
+
+                    border-white/5
+
+                    rounded-xl
+
+                    py-3
+
+                    flex
+
+                    items-center
+
+                    justify-center
+
+                    transition
+                  "
+                >
+                  <LinkIcon size={16} />
+                </button>
               </div>
+
+              <p
+                className="
+                  pt-8
+
+                  text-[9px]
+
+                  text-gray-700
+
+                  font-mono
+
+                  text-center
+                "
+              >
+                INK ID: {selectedItem.id}
+              </p>
             </div>
           </div>
         </div>

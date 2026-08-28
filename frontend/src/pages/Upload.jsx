@@ -33,7 +33,6 @@ const CATEGORIES = [
 const PACKAGES = [
   {
     id: "single",
-    name: "1 Category Entry",
     price: "999",
     maxCategories: 1,
     subs: "1 competition submission",
@@ -41,7 +40,6 @@ const PACKAGES = [
   },
   {
     id: "pro",
-    name: "3 Category Entries",
     price: "1499",
     maxCategories: 2,
     subs: "Up to 2 submissions",
@@ -49,7 +47,6 @@ const PACKAGES = [
   },
   {
     id: "multi",
-    name: "5 Category Entries",
     price: "1999",
     maxCategories: 3,
     subs: "Up to 3 submissions",

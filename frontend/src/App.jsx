@@ -28,6 +28,7 @@ import About from "./pages/About";
 import Gallery from "./pages/Gallery";
 import HallOfFame from "./pages/Halloffam";
 import Artists from "./pages/Artists";
+import Enter from "./pages/Enter";
 import Upload from "./pages/Upload";
 import TOP from "./pages/TOP";
 import Upcoming from "./pages/Upcomeing";
@@ -49,43 +50,50 @@ import "./Style/SmoothScroll.css";
 import "./Style/BarbaTransitions.css";
 import "./Style/PageTransition.css";
 
+/* ======================================================
+   LAYOUT
+====================================================== */
 
 function Layout() {
   const location = useLocation();
 
-  /* =================================
-     HIDE NORMAL NAVBAR + FOOTER
-     ON BOTH ADMIN PAGES
-  ================================= */
+  /* ================================
+     HIDE NAVBAR + FOOTER
+     ON ADMIN PAGES
+  ================================ */
 
   const isExcludedNavFooter =
     location.pathname === "/admin/dashboard" ||
     location.pathname === "/admin/clients";
 
   return (
-    <div className="min-h-screen bg-[#08080a] text-white flex flex-col justify-between selection:bg-[#a855f7] selection:text-white">
-
-      {/* =================================
-          NORMAL WEBSITE NAVBAR
-          Hidden on admin pages
-      ================================= */}
+    <div
+      className="
+        min-h-screen
+        bg-[#08080a]
+        text-white
+        flex
+        flex-col
+        justify-between
+        selection:bg-[#a855f7]
+        selection:text-white
+      "
+    >
+      {/* ================================
+          NAVBAR
+      ================================ */}
 
       {!isExcludedNavFooter && <Navbar />}
 
-      {/* =================================
+      {/* ================================
           MAIN CONTENT
-      ================================= */}
+      ================================ */}
 
       <div className="flex-grow w-full">
-
-        <Routes
-          location={location}
-          key={location.pathname}
-        >
-
-          {/* =================================
+        <Routes location={location} key={location.pathname}>
+          {/* ================================
               HOME
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/"
@@ -96,9 +104,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* ================================
               ABOUT
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/about"
@@ -109,9 +117,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* ================================
               GALLERY
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/gallery"
@@ -122,9 +130,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* ================================
               SERVICES
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/services"
@@ -135,9 +143,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* ================================
               HALL OF FAME
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/hall-of-fame"
@@ -148,9 +156,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* ================================
               ARTISTS
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/artists"
@@ -161,9 +169,35 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* =========================================
+              ENTER / ARTIST REGISTRATION
+              
+              THIS WAS MISSING IN YOUR OLD APP.JSX
+          ========================================= */}
+
+          <Route
+            path="/Enter"
+            element={
+              <PageTransition>
+                <Enter />
+              </PageTransition>
+            }
+          />
+
+          {/* Also support lowercase */}
+
+          <Route
+            path="/enter"
+            element={
+              <PageTransition>
+                <Enter />
+              </PageTransition>
+            }
+          />
+
+          {/* ================================
               TOP
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/top"
@@ -174,9 +208,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* ================================
               UPCOMING EVENTS
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/upcoming"
@@ -187,9 +221,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* ================================
               CONTACT
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/contact"
@@ -200,9 +234,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
-              TATTOO UPLOAD
-          ================================= */}
+          {/* ================================
+              UPLOAD
+          ================================ */}
 
           <Route
             path="/Upload"
@@ -213,9 +247,20 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* Lowercase upload */}
+
+          <Route
+            path="/upload"
+            element={
+              <PageTransition>
+                <Upload />
+              </PageTransition>
+            }
+          />
+
+          {/* ================================
               PAYMENT
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/payment"
@@ -226,9 +271,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
+          {/* ================================
               CLIENT LOGIN
-          ================================= */}
+          ================================ */}
 
           <Route
             path="/client-login"
@@ -239,9 +284,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
-              ADMIN - TATTOO SUBMISSIONS
-          ================================= */}
+          {/* ================================
+              ADMIN DASHBOARD
+          ================================ */}
 
           <Route
             path="/admin/dashboard"
@@ -252,9 +297,9 @@ function Layout() {
             }
           />
 
-          {/* =================================
-              ADMIN - CLIENTS
-          ================================= */}
+          {/* ================================
+              ADMIN CLIENTS
+          ================================ */}
 
           <Route
             path="/admin/clients"
@@ -265,79 +310,114 @@ function Layout() {
             }
           />
 
-        </Routes>
+          {/* ================================
+              404
+          ================================ */}
 
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </div>
 
-      {/* =================================
-          NORMAL WEBSITE FOOTER
-          Hidden on admin pages
-      ================================= */}
+      {/* ================================
+          FOOTER
+      ================================ */}
 
       {!isExcludedNavFooter && <Footer />}
-
     </div>
   );
 }
 
+/* ======================================================
+   404 PAGE
+====================================================== */
 
-/* ======================================
+function NotFound() {
+  return (
+    <div
+      className="
+        min-h-[75vh]
+        bg-[#08080a]
+        flex
+        flex-col
+        items-center
+        justify-center
+        text-center
+        px-5
+      "
+    >
+      <p
+        className="
+          text-purple-500
+          font-black
+          text-sm
+          tracking-[0.3em]
+          mb-4
+        "
+      >
+        404
+      </p>
+
+      <h1
+        className="
+          text-4xl
+          sm:text-6xl
+          font-black
+          uppercase
+          tracking-tighter
+        "
+      >
+        PAGE NOT FOUND
+      </h1>
+
+      <p className="text-gray-500 mt-4">This page does not exist.</p>
+    </div>
+  );
+}
+
+/* ======================================================
    APP
-====================================== */
+====================================================== */
 
 export default function App() {
-
   useEffect(() => {
+    /* ================================
+       LENIS
+    ================================ */
 
     const lenis = new Lenis({
       duration: 1.2,
 
-      easing: (t) =>
-        Math.min(
-          1,
-          1.001 - Math.pow(2, -10 * t)
-        ),
-
-      direction: "vertical",
-
-      smooth: true,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
 
     /* ================================
-       LENIS + GSAP
-    ================================= */
+       GSAP + LENIS
+    ================================ */
 
-    lenis.on("scroll", gsap.updateRoot);
-
-    gsap.ticker.add((time) => {
+    const raf = (time) => {
       lenis.raf(time * 1000);
-    });
+    };
+
+    gsap.ticker.add(raf);
 
     gsap.ticker.lagSmoothing(0);
 
     /* ================================
        CLEANUP
-    ================================= */
+    ================================ */
 
     return () => {
+      gsap.ticker.remove(raf);
 
       lenis.destroy();
-
-      gsap.ticker.remove(
-        lenis.raf
-      );
-
     };
-
   }, []);
 
   return (
     <Router>
-
       <ScrollToTop />
 
       <Layout />
-
     </Router>
   );
 }

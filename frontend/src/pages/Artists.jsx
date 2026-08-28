@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+
+import { Link, useLocation } from "react-router-dom";
 
 import {
   Sparkles,
@@ -12,1115 +13,3338 @@ import {
 
 import gsap from "gsap";
 
-// ======================================================
-// STATIC ARTISTS
-// ======================================================
+/* =========================================================
+   CONSTANTS
+========================================================= */
 
-const staticDirectoryArtists = [];
+const ONE_DAY = 24 * 60 * 60 * 1000;
 
-// ======================================================
-// CITY / COMMUNITY COUNTERS
-// Changes every 2 seconds
-// ======================================================
+const CITY_COUNTER_KEY = "inkConventionCityCounters";
+
+const ARTISTS_PER_PAGE = 20;
+
+const ARTIST_ROTATE_MS = 4000;
+
+/* =========================================================
+   COMMUNITY CITIES
+========================================================= */
 
 const communityCounters = [
   {
     city: "MUMBAI",
-    count: "2000+",
-    state: "MAHARASHTRA",
-  },
-  {
-    city: "PUNE",
-    count: "1500+",
+    count: 2003,
     state: "MAHARASHTRA",
   },
   {
     city: "DELHI",
-    count: "1800+",
+    count: 1820,
     state: "DELHI",
   },
   {
     city: "BENGALURU",
-    count: "1700+",
+    count: 1745,
     state: "KARNATAKA",
   },
   {
     city: "HYDERABAD",
-    count: "1400+",
+    count: 1410,
     state: "TELANGANA",
   },
   {
-    city: "AHMEDABAD",
-    count: "1200+",
-    state: "GUJARAT",
-  },
-  {
-    city: "JAIPUR",
-    count: "1100+",
-    state: "RAJASTHAN",
-  },
-  {
     city: "CHENNAI",
-    count: "1300+",
+    count: 1336,
     state: "TAMIL NADU",
   },
   {
     city: "KOLKATA",
-    count: "1250+",
+    count: 1251,
     state: "WEST BENGAL",
   },
   {
-    city: "LUCKNOW",
-    count: "950+",
-    state: "UTTAR PRADESH",
-  },
-  {
-    city: "INDORE",
-    count: "850+",
-    state: "MADHYA PRADESH",
-  },
-  {
-    city: "SURAT",
-    count: "900+",
+    city: "AHMEDABAD",
+    count: 1290,
     state: "GUJARAT",
   },
   {
-    city: "CHANDIGARH",
-    count: "750+",
-    state: "CHANDIGARH",
-  },
-  {
-    city: "KOCHI",
-    count: "820+",
-    state: "KERALA",
-  },
-  {
-    city: "NAGPUR",
-    count: "780+",
+    city: "PUNE",
+    count: 1550,
     state: "MAHARASHTRA",
   },
   {
-    city: "AJMER",
-    count: "650+",
+    city: "SURAT",
+    count: 1050,
+    state: "GUJARAT",
+  },
+  {
+    city: "JAIPUR",
+    count: 1100,
     state: "RAJASTHAN",
   },
   {
-    city: "GOA",
-    count: "700+",
-    state: "GOA",
+    city: "LUCKNOW",
+    count: 980,
+    state: "UTTAR PRADESH",
   },
   {
-    city: "BHOPAL",
-    count: "620+",
+    city: "KANPUR",
+    count: 850,
+    state: "UTTAR PRADESH",
+  },
+  {
+    city: "NAGPUR",
+    count: 950,
+    state: "MAHARASHTRA",
+  },
+  {
+    city: "INDORE",
+    count: 900,
     state: "MADHYA PRADESH",
   },
   {
     city: "PATNA",
-    count: "600+",
+    count: 820,
     state: "BIHAR",
   },
   {
+    city: "KOCHI",
+    count: 780,
+    state: "KERALA",
+  },
+  {
+    city: "CHANDIGARH",
+    count: 740,
+    state: "CHANDIGARH",
+  },
+  {
+    city: "VISAKHAPATNAM",
+    count: 720,
+    state: "ANDHRA PRADESH",
+  },
+  {
+    city: "BHUBANESWAR",
+    count: 690,
+    state: "ODISHA",
+  },
+  {
     city: "GUWAHATI",
-    count: "550+",
+    count: 650,
     state: "ASSAM",
   },
 ];
 
-// ======================================================
-// COMPONENT
-// ======================================================
+/* =========================================================
+   CITY COORDINATES
+
+   [longitude, latitude]
+========================================================= */
+
+const CITY_COORDINATES = {
+  MUMBAI: [72.8777, 19.076],
+
+  DELHI: [77.209, 28.6139],
+
+  BENGALURU: [77.5946, 12.9716],
+
+  HYDERABAD: [78.4867, 17.385],
+
+  CHENNAI: [80.2707, 13.0827],
+
+  KOLKATA: [88.3639, 22.5726],
+
+  AHMEDABAD: [72.5714, 23.0225],
+
+  PUNE: [73.8567, 18.5204],
+
+  SURAT: [72.8311, 21.1702],
+
+  JAIPUR: [75.7873, 26.9124],
+
+  LUCKNOW: [80.9462, 26.8467],
+
+  KANPUR: [80.3319, 26.4499],
+
+  NAGPUR: [79.0882, 21.1458],
+
+  INDORE: [75.8577, 22.7196],
+
+  PATNA: [85.1376, 25.5941],
+
+  KOCHI: [76.2673, 9.9312],
+
+  CHANDIGARH: [76.7794, 30.7333],
+
+  VISAKHAPATNAM: [83.2185, 17.6868],
+
+  BHUBANESWAR: [85.8245, 20.2961],
+
+  GUWAHATI: [91.7362, 26.1445],
+};
+
+/* =========================================================
+   INDIA MAP
+
+   PURE GEOJSON + SVG
+   NO react-simple-maps
+========================================================= */
+
+const INDIA_GEOJSON_URL =
+  "https://raw.githubusercontent.com/AbhinavSwami28/india-official-geojson/main/india-states-simplified.geojson";
+
+const MAP_WIDTH = 430;
+
+const MAP_HEIGHT = 430;
+
+const INDIA_BOUNDS = {
+  minLon: 68,
+  maxLon: 98,
+  minLat: 6,
+  maxLat: 38,
+};
+
+/* =========================================================
+   MAP PROJECTION
+========================================================= */
+
+function projectCoordinate(coordinates) {
+  const [longitude, latitude] = coordinates;
+
+  const paddingX = 28;
+  const paddingY = 12;
+
+  const usableWidth = MAP_WIDTH - paddingX * 2;
+
+  const usableHeight = MAP_HEIGHT - paddingY * 2;
+
+  const x =
+    paddingX +
+    ((longitude - INDIA_BOUNDS.minLon) /
+      (INDIA_BOUNDS.maxLon - INDIA_BOUNDS.minLon)) *
+      usableWidth;
+
+  const y =
+    paddingY +
+    ((INDIA_BOUNDS.maxLat - latitude) /
+      (INDIA_BOUNDS.maxLat - INDIA_BOUNDS.minLat)) *
+      usableHeight;
+
+  return [x, y];
+}
+
+/* =========================================================
+   CONVERT GEOJSON RING TO SVG
+========================================================= */
+
+function ringToPath(ring) {
+  if (!Array.isArray(ring) || ring.length === 0) {
+    return "";
+  }
+
+  const result = ring
+    .map((coordinate, index) => {
+      const [x, y] = projectCoordinate(coordinate);
+
+      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
+    })
+    .join(" ");
+
+  return `${result} Z`;
+}
+
+/* =========================================================
+   CONVERT GEOJSON GEOMETRY TO SVG
+========================================================= */
+
+function geometryToPath(geometry) {
+  if (!geometry) {
+    return "";
+  }
+
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates.map((ring) => ringToPath(ring)).join(" ");
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates
+      .map((polygon) => polygon.map((ring) => ringToPath(ring)).join(" "))
+      .join(" ");
+  }
+
+  return "";
+}
+
+/* =========================================================
+   GENERAL HELPERS
+========================================================= */
+
+const safeText = (value) => String(value || "").toLowerCase();
+
+const planPriority = {
+  gold: 1,
+  silver: 2,
+  free: 3,
+};
+
+/* =========================================================
+   DAILY INCREASE
+
+   +3 TO +8
+========================================================= */
+
+function getDailyIncrement(city, dayNumber) {
+  const text = `${city}-${dayNumber}`;
+
+  let hash = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) | 0;
+  }
+
+  return 3 + (Math.abs(hash) % 6);
+}
+
+/* =========================================================
+   DEFAULT CITY COUNTS
+========================================================= */
+
+function getDefaultCounts() {
+  const result = {};
+
+  communityCounters.forEach((city) => {
+    result[city.city] = city.count;
+  });
+
+  return result;
+}
+
+/* =========================================================
+   24 HOUR AUTO COUNTER
+========================================================= */
+
+function getUpdatedCounterData() {
+  const now = Date.now();
+
+  let savedData = null;
+
+  try {
+    const stored = localStorage.getItem(CITY_COUNTER_KEY);
+
+    if (stored) {
+      savedData = JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error("Counter error:", error);
+  }
+
+  /* FIRST VISIT */
+
+  if (!savedData || !savedData.counts || !savedData.lastUpdated) {
+    const firstData = {
+      counts: getDefaultCounts(),
+
+      lastUpdated: now,
+    };
+
+    localStorage.setItem(CITY_COUNTER_KEY, JSON.stringify(firstData));
+
+    return firstData;
+  }
+
+  const difference = now - Number(savedData.lastUpdated);
+
+  const daysPassed = Math.floor(difference / ONE_DAY);
+
+  if (daysPassed <= 0) {
+    return savedData;
+  }
+
+  const newCounts = {
+    ...savedData.counts,
+  };
+
+  /* ADD EVERY MISSED DAY */
+
+  for (let day = 1; day <= daysPassed; day += 1) {
+    const dayTime = Number(savedData.lastUpdated) + day * ONE_DAY;
+
+    const dayNumber = Math.floor(dayTime / ONE_DAY);
+
+    communityCounters.forEach((city) => {
+      const current = Number(newCounts[city.city]) || city.count;
+
+      const increase = getDailyIncrement(city.city, dayNumber);
+
+      newCounts[city.city] = current + increase;
+    });
+  }
+
+  const updatedData = {
+    counts: newCounts,
+
+    lastUpdated: Number(savedData.lastUpdated) + daysPassed * ONE_DAY,
+  };
+
+  localStorage.setItem(CITY_COUNTER_KEY, JSON.stringify(updatedData));
+
+  return updatedData;
+}
+
+/* =========================================================
+   MAIN ARTISTS PAGE
+========================================================= */
 
 export default function Artists() {
+  const location = useLocation();
+
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [dynamicArtists, setDynamicArtists] = useState([]);
+  const [localArtists, setLocalArtists] = useState([]);
 
-  // Counter
+  const [backendArtists, setBackendArtists] = useState([]);
+
   const [counterIndex, setCounterIndex] = useState(0);
 
-  const counterRef = useRef(null);
-  const numberRef = useRef(null);
-  const glowRef = useRef(null);
+  const [selectedArtist, setSelectedArtist] = useState(null);
 
-  // ======================================================
-  // FETCH REGISTERED ARTISTS
-  // ======================================================
+  const [artistPage, setArtistPage] = useState(0);
 
-  useEffect(() => {
-    fetch("https://api.inkconvention.com/api/admin/users")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.users)) {
-          const formattedUsers = data.users.map((user) => ({
-            name:
-              user.professionalName ||
-              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-              "Participant Artist",
+  const [cityCounts, setCityCounts] = useState(() => {
+    const data = getUpdatedCounterData();
 
-            studio: user.studio || "Independent / Convention Participant",
+    return data.counts;
+  });
 
-            category: user.category || "CONVENTION COMPETITOR",
+  const artistSectionRef = useRef(null);
 
-            city: user.city || "India",
+  const artistGridRef = useRef(null);
 
-            state: user.state || "",
+  const entryButtonRef = useRef(null);
 
-            badge: "NEW ENTRY",
-
-            year: "2026",
-
-            metrics: user.experience
-              ? `Experience: ${user.experience}`
-              : "Convention Competitor",
-          }));
-
-          setDynamicArtists(formattedUsers);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load registered artists:", err);
-      });
-  }, []);
-
-  // ======================================================
-  // CITY COUNTER - EVERY 2 SECONDS
-  // ======================================================
+  /* =========================================================
+     FREE ENTRY BUTTON ANIMATION
+  ========================================================= */
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (!counterRef.current) return;
+    const button = entryButtonRef.current;
 
-      // Current city leaves
-      gsap.to(counterRef.current, {
+    if (!button) {
+      return;
+    }
+
+    const arrow = button.querySelector(".entry-arrow");
+
+    const shine = button.querySelector(".entry-shine");
+
+    const entrance = gsap.fromTo(
+      button,
+      {
         opacity: 0,
-        y: -25,
-        filter: "blur(6px)",
-        scale: 0.96,
-        duration: 0.35,
-        ease: "power2.in",
+        scale: 0.88,
+        y: 20,
+      },
+      {
+        opacity: 1,
+        scale: 1,
+        y: 0,
 
-        onComplete: () => {
-          setCounterIndex(
-            (previous) => (previous + 1) % communityCounters.length,
-          );
-        },
+        duration: 0.8,
+
+        delay: 0.5,
+
+        ease: "back.out(1.7)",
+      },
+    );
+
+    const pulse = gsap.to(button, {
+      scale: 1.025,
+
+      boxShadow: "0 0 35px rgba(168,85,247,0.42)",
+
+      duration: 1.2,
+
+      repeat: -1,
+
+      yoyo: true,
+
+      ease: "sine.inOut",
+
+      delay: 1.2,
+    });
+
+    let arrowTween = null;
+
+    let shineTween = null;
+
+    if (arrow) {
+      arrowTween = gsap.to(arrow, {
+        x: 5,
+
+        duration: 0.65,
+
+        repeat: -1,
+
+        yoyo: true,
+
+        ease: "sine.inOut",
       });
-    }, 2000);
+    }
+
+    if (shine) {
+      shineTween = gsap.fromTo(
+        shine,
+        {
+          xPercent: -200,
+        },
+        {
+          xPercent: 300,
+
+          duration: 1.2,
+
+          repeat: -1,
+
+          repeatDelay: 1.4,
+
+          ease: "power2.inOut",
+        },
+      );
+    }
 
     return () => {
-      clearInterval(timer);
+      entrance.kill();
+      pulse.kill();
+
+      arrowTween?.kill();
+      shineTween?.kill();
     };
   }, []);
 
-  // ======================================================
-  // NEW CITY ENTRANCE
-  // ======================================================
+  /* =========================================================
+     CHECK 24H COUNTER
+  ========================================================= */
 
   useEffect(() => {
-    if (!counterRef.current) return;
+    const checkCounter = () => {
+      const data = getUpdatedCounterData();
 
-    gsap.fromTo(
-      counterRef.current,
+      setCityCounts(data.counts);
+    };
+
+    const interval = setInterval(checkCounter, 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  /* =========================================================
+     ROTATE CITY
+
+     EVERY 2.8 SECONDS
+  ========================================================= */
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCounterIndex((previous) => (previous + 1) % communityCounters.length);
+    }, 2800);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  /* =========================================================
+     LOAD LOCAL ARTISTS
+  ========================================================= */
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem("inkConventionDirectoryArtists") || "[]",
+      );
+
+      setLocalArtists(Array.isArray(saved) ? saved : []);
+    } catch (error) {
+      console.error("Local artist error:", error);
+
+      setLocalArtists([]);
+    }
+  }, []);
+
+  /* =========================================================
+     LOAD BACKEND ARTISTS
+  ========================================================= */
+
+  useEffect(() => {
+    fetch("https://api.inkconvention.com/api/admin/users")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        return response.json();
+      })
+
+      .then((data) => {
+        if (!data.success || !Array.isArray(data.users)) {
+          return;
+        }
+
+        const artists = data.users.map((user, index) => ({
+          id: user._id || user.id || `backend-${index}`,
+
+          plan: user.plan || "free",
+
+          name:
+            user.professionalName ||
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+            "Participant Artist",
+
+          profileImage: user.profileImage || "",
+
+          phone: user.phone || user.phoneNumber || "",
+
+          email: user.email || "",
+
+          city: user.city || "",
+
+          state: user.state || "",
+
+          studio: user.studio || "",
+
+          experience: user.experience || "",
+
+          instagram: user.instagram || "",
+
+          createdAt: user.createdAt || "",
+
+          year: "2026",
+        }));
+
+        setBackendArtists(artists);
+      })
+
+      .catch((error) => {
+        console.error("Backend artist error:", error);
+      });
+  }, []);
+
+  /* =========================================================
+     NEW ARTIST SCROLL
+  ========================================================= */
+
+  useEffect(() => {
+    if (!location.state?.newArtistId) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      artistSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+
+        block: "start",
+      });
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [location.state]);
+
+  /* =========================================================
+     MODAL ESC + BODY LOCK
+  ========================================================= */
+
+  useEffect(() => {
+    if (!selectedArtist) {
+      document.body.style.overflow = "";
+
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+
+    const closeWithEsc = (event) => {
+      if (event.key === "Escape") {
+        setSelectedArtist(null);
+      }
+    };
+
+    window.addEventListener("keydown", closeWithEsc);
+
+    return () => {
+      document.body.style.overflow = "";
+
+      window.removeEventListener("keydown", closeWithEsc);
+    };
+  }, [selectedArtist]);
+
+  /* =========================================================
+     COMBINE ARTISTS
+  ========================================================= */
+
+  const allArtists = useMemo(() => {
+    return [...localArtists, ...backendArtists];
+  }, [localArtists, backendArtists]);
+
+  /* =========================================================
+     SEARCH + SORT
+
+     GOLD
+     SILVER
+     FREE
+  ========================================================= */
+
+  const filteredArtists = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    let results = allArtists;
+
+    if (query) {
+      results = allArtists.filter(
+        (artist) =>
+          safeText(artist.name).includes(query) ||
+          safeText(artist.city).includes(query) ||
+          safeText(artist.state).includes(query) ||
+          safeText(artist.studio).includes(query) ||
+          safeText(artist.phone).includes(query) ||
+          safeText(artist.email).includes(query) ||
+          safeText(artist.instagram).includes(query),
+      );
+    }
+
+    return [...results].sort((a, b) => {
+      const planA = safeText(a.plan) || "free";
+
+      const planB = safeText(b.plan) || "free";
+
+      const priorityA = planPriority[planA] || 3;
+
+      const priorityB = planPriority[planB] || 3;
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+      return dateB - dateA;
+    });
+  }, [allArtists, searchQuery]);
+
+  /* =========================================================
+     ARTIST CARD ROTATION
+========================================================= */
+
+  const totalArtistPages = Math.max(
+    1,
+    Math.ceil(filteredArtists.length / ARTISTS_PER_PAGE),
+  );
+
+  /* SAFE PAGE DERIVED DIRECTLY WITHOUT USEEFFECT LINT ERRORS */
+  const safeArtistPage = Math.min(
+    artistPage,
+    Math.max(totalArtistPages - 1, 0),
+  );
+
+  const artistPageStart = safeArtistPage * ARTISTS_PER_PAGE;
+
+  const visibleArtists = useMemo(() => {
+    const start = safeArtistPage * ARTISTS_PER_PAGE;
+
+    return filteredArtists.slice(start, start + ARTISTS_PER_PAGE);
+  }, [filteredArtists, safeArtistPage]);
+
+  const firstVisibleArtistNumber =
+    filteredArtists.length === 0 ? 0 : artistPageStart + 1;
+
+  const lastVisibleArtistNumber = Math.min(
+    artistPageStart + ARTISTS_PER_PAGE,
+    filteredArtists.length,
+  );
+
+  /* RESET TO FIRST GROUP WHEN SEARCH CHANGES */
+
+  useEffect(() => {
+    setArtistPage(0);
+  }, [searchQuery]);
+
+  /* AUTO CHANGE TO NEXT 20 EVERY 4 SECONDS */
+
+  useEffect(() => {
+    if (totalArtistPages <= 1) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      setArtistPage((previous) => (previous + 1) % totalArtistPages);
+    }, ARTIST_ROTATE_MS);
+
+    return () => clearInterval(interval);
+  }, [totalArtistPages]);
+
+  /* CARD CHANGE ANIMATION */
+
+  useEffect(() => {
+    if (!artistGridRef.current) {
+      return undefined;
+    }
+
+    const cards = Array.from(artistGridRef.current.children);
+
+    if (cards.length === 0) {
+      return undefined;
+    }
+
+    gsap.killTweensOf(cards);
+
+    const tween = gsap.fromTo(
+      cards,
       {
         opacity: 0,
-        y: 30,
-        filter: "blur(7px)",
-        scale: 0.94,
+        y: 20,
+        scale: 0.97,
       },
       {
         opacity: 1,
         y: 0,
-        filter: "blur(0px)",
         scale: 1,
-        duration: 0.65,
-        ease: "back.out(1.7)",
-      },
-    );
-  }, [counterIndex]);
-
-  // ======================================================
-  // NUMBER ATTENTION ANIMATION
-  // ======================================================
-
-  useEffect(() => {
-    if (!numberRef.current) return;
-
-    const numberAnimation = gsap.fromTo(
-      numberRef.current,
-      {
-        scale: 0.85,
-      },
-      {
-        scale: 1,
-        duration: 0.6,
-        ease: "back.out(2)",
+        duration: 0.5,
+        stagger: 0.025,
+        ease: "power3.out",
       },
     );
 
-    return () => {
-      numberAnimation.kill();
-    };
-  }, [counterIndex]);
+    return () => tween.kill();
+  }, [safeArtistPage, filteredArtists.length]);
 
-  // ======================================================
-  // BACKGROUND GLOW
-  // ======================================================
-
-  useEffect(() => {
-    if (!glowRef.current) return;
-
-    const glowAnimation = gsap.to(glowRef.current, {
-      scale: 1.15,
-      opacity: 0.7,
-      repeat: -1,
-      yoyo: true,
-      duration: 1.5,
-      ease: "sine.inOut",
-    });
-
-    return () => {
-      glowAnimation.kill();
-    };
-  }, []);
-
-  // ======================================================
-  // COMBINE ARTISTS
-  // ======================================================
-
-  const allDirectoryArtists = useMemo(() => {
-    return [...dynamicArtists, ...staticDirectoryArtists];
-  }, [dynamicArtists]);
-
-  // ======================================================
-  // FILTER
-  // ======================================================
-
-  const filteredArtists = useMemo(() => {
-    if (!searchQuery) {
-      return allDirectoryArtists;
-    }
-
-    const q = searchQuery.toLowerCase();
-
-    return allDirectoryArtists.filter(
-      (artist) =>
-        artist.name.toLowerCase().includes(q) ||
-        artist.studio.toLowerCase().includes(q) ||
-        artist.city.toLowerCase().includes(q) ||
-        artist.category.toLowerCase().includes(q) ||
-        artist.state.toLowerCase().includes(q),
-    );
-  }, [searchQuery, allDirectoryArtists]);
+  /* =========================================================
+     CURRENT CITY
+  ========================================================= */
 
   const currentCounter = communityCounters[counterIndex];
 
-  // ======================================================
-  // JSX
-  // ======================================================
+  const currentCount = cityCounts[currentCounter.city] ?? currentCounter.count;
+
+  const todayIncrement = getDailyIncrement(
+    currentCounter.city,
+
+    Math.floor(Date.now() / ONE_DAY),
+  );
+
+  return (
+    <>
+      <main
+        className="
+          min-h-screen
+
+          bg-[#08080a]
+
+          text-white
+
+          pt-32
+          pb-24
+
+          px-4
+          sm:px-6
+          lg:px-10
+        "
+      >
+        <div
+          className="
+            max-w-[1700px]
+
+            mx-auto
+
+            space-y-12
+          "
+        >
+          {/* =================================================
+              HERO
+          ================================================= */}
+
+          <section
+            className="
+              grid
+
+              grid-cols-1
+
+              xl:grid-cols-[minmax(0,0.75fr)_minmax(650px,1.25fr)]
+
+              gap-12
+              xl:gap-16
+
+              items-center
+
+              border-b
+              border-white/10
+
+              pb-12
+            "
+          >
+            {/* LEFT */}
+
+            <div>
+              <div
+                className="
+                  flex
+
+                  items-center
+
+                  gap-2
+
+                  text-purple-400
+
+                  text-[10px]
+
+                  font-mono
+
+                  tracking-[0.2em]
+
+                  mb-5
+                "
+              >
+                <Sparkles size={13} />
+                COMMUNITY NETWORK
+              </div>
+
+              <h1
+                className="
+                  text-[clamp(3.5rem,7vw,7rem)]
+
+                  font-black
+
+                  uppercase
+
+                  tracking-[-0.065em]
+
+                  leading-[0.85]
+                "
+              >
+                ARTIST
+                <br />
+                DIRECTORY
+              </h1>
+
+              <p
+                className="
+                  max-w-xl
+
+                  mt-6
+
+                  text-gray-500
+
+                  text-sm
+
+                  leading-relaxed
+                "
+              >
+                Discover artists and studios from the Ink Convention community.
+              </p>
+            </div>
+
+            {/* REAL INDIA MAP BOX */}
+
+            <CommunityMapBox
+              currentCounter={currentCounter}
+              currentCount={currentCount}
+              todayIncrement={todayIncrement}
+            />
+          </section>
+
+          {/* =================================================
+              SEARCH + FREE ENTRY
+          ================================================= */}
+
+          <section
+            className="
+              flex
+
+              flex-col
+              sm:flex-row
+
+              sm:items-center
+
+              justify-between
+
+              gap-4
+
+              bg-[#0d0d11]
+
+              border
+              border-white/10
+
+              rounded-2xl
+
+              p-4
+            "
+          >
+            {/* SEARCH */}
+
+            <div
+              className="
+                relative
+
+                w-full
+
+                sm:max-w-[520px]
+              "
+            >
+              <Search
+                size={16}
+                className="
+                  absolute
+
+                  left-4
+
+                  top-1/2
+
+                  -translate-y-1/2
+
+                  text-gray-600
+                "
+              />
+
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="SEARCH NAME, CITY, STATE, STUDIO..."
+                className="
+                  w-full
+
+                  bg-black/40
+
+                  border
+                  border-white/10
+
+                  focus:border-purple-500
+
+                  rounded-xl
+
+                  pl-11
+                  pr-4
+
+                  py-4
+
+                  text-xs
+
+                  text-white
+
+                  outline-none
+
+                  placeholder:text-gray-700
+
+                  transition
+                "
+              />
+            </div>
+
+            {/* FREE ENTRY */}
+
+            <Link
+              ref={entryButtonRef}
+              to="/Enter"
+              className="
+                group
+
+                relative
+
+                overflow-hidden
+
+                bg-purple-600
+
+                hover:bg-purple-500
+
+                border
+                border-purple-400/40
+
+                rounded-xl
+
+                px-7
+                py-4
+
+                flex
+
+                items-center
+                justify-center
+
+                gap-3
+
+                text-[10px]
+
+                font-black
+
+                tracking-[0.14em]
+
+                whitespace-nowrap
+
+                shadow-[0_0_20px_rgba(168,85,247,0.20)]
+
+                transition-all
+
+                duration-300
+
+                hover:-translate-y-1
+              "
+            >
+              <span
+                className="
+                  entry-shine
+
+                  absolute
+
+                  top-0
+                  bottom-0
+
+                  left-[-40%]
+
+                  w-[30%]
+
+                  bg-gradient-to-r
+
+                  from-transparent
+                  via-white/30
+                  to-transparent
+
+                  skew-x-[-20deg]
+
+                  pointer-events-none
+                "
+              />
+
+              <span
+                className="
+                  relative
+
+                  z-10
+
+                  w-2
+                  h-2
+
+                  rounded-full
+
+                  bg-white
+
+                  animate-pulse
+
+                  shadow-[0_0_12px_rgba(255,255,255,0.95)]
+                "
+              />
+
+              <span
+                className="
+                  relative
+                  z-10
+                "
+              >
+                GET FREE ENTRY
+              </span>
+
+              <ArrowRight
+                size={14}
+                className="
+                  entry-arrow
+
+                  relative
+
+                  z-10
+                "
+              />
+            </Link>
+          </section>
+
+          {/* =================================================
+              ARTISTS
+          ================================================= */}
+
+          <section
+            ref={artistSectionRef}
+            className="
+              scroll-mt-32
+            "
+          >
+            <div
+              className="
+                flex
+
+                flex-col
+                sm:flex-row
+
+                sm:items-end
+
+                justify-between
+
+                gap-4
+
+                mb-8
+              "
+            >
+              <div>
+                <p
+                  className="
+                    text-purple-400
+
+                    text-[9px]
+
+                    font-mono
+
+                    tracking-widest
+
+                    mb-2
+                  "
+                >
+                  ARTIST NETWORK
+                </p>
+
+                <h2
+                  className="
+                    text-3xl
+                    sm:text-5xl
+
+                    font-black
+
+                    uppercase
+                  "
+                >
+                  {searchQuery ? "SEARCH RESULTS" : "OUR ARTISTS"}
+                </h2>
+              </div>
+
+              <div
+                className="
+                flex
+                flex-col
+                sm:items-end
+                gap-1.5
+              "
+              >
+                <span
+                  className="
+                  text-[9px]
+                  font-mono
+                  text-gray-600
+                "
+                >
+                  {filteredArtists.length} ARTISTS
+                </span>
+
+                {filteredArtists.length > ARTISTS_PER_PAGE && (
+                  <span
+                    className="
+                    text-[8px]
+                    font-mono
+                    tracking-[0.12em]
+                    text-purple-400
+                    uppercase
+                  "
+                  >
+                    SHOWING {firstVisibleArtistNumber}-{lastVisibleArtistNumber}
+                    {" / "}
+                    PAGE {safeArtistPage + 1} OF {totalArtistPages}
+                    {" / AUTO 4S"}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {filteredArtists.length === 0 ? (
+              <div
+                className="
+                min-h-[280px]
+
+                flex
+                flex-col
+
+                items-center
+                justify-center
+
+                border
+                border-dashed
+                border-white/10
+
+                rounded-[28px]
+              "
+              >
+                <Search
+                  size={35}
+                  className="
+                  text-gray-700
+
+                  mb-4
+                "
+                />
+
+                <h3
+                  className="
+                  font-black
+                "
+                >
+                  NO ARTISTS FOUND
+                </h3>
+              </div>
+            ) : (
+              <div
+                ref={artistGridRef}
+                className="
+                grid
+
+                grid-cols-1
+                sm:grid-cols-2
+                lg:grid-cols-3
+                xl:grid-cols-4
+
+                gap-5
+
+                items-stretch
+              "
+              >
+                {visibleArtists.map((artist, index) => {
+                  const globalIndex = artistPageStart + index;
+
+                  return (
+                    <ArtistCard
+                      key={artist.id || `${artist.name}-${globalIndex}`}
+                      artist={artist}
+                      index={globalIndex}
+                      isNew={location.state?.newArtistId === artist.id}
+                      onClick={() => setSelectedArtist(artist)}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+
+      {/* MODAL */}
+
+      {selectedArtist && (
+        <ArtistModal
+          artist={selectedArtist}
+          onClose={() => setSelectedArtist(null)}
+        />
+      )}
+    </>
+  );
+}
+
+/* =========================================================
+   COMMUNITY MAP BOX
+========================================================= */
+
+function CommunityMapBox({ currentCounter, currentCount, todayIncrement }) {
+  const [mapFeatures, setMapFeatures] = useState([]);
+
+  const [mapError, setMapError] = useState(false);
+
+  const contentRef = useRef(null);
+
+  const numberRef = useRef(null);
+
+  const glowRef = useRef(null);
+
+  /* =========================================================
+     LOAD GEOJSON
+  ========================================================= */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(INDIA_GEOJSON_URL)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Map HTTP ${response.status}`);
+        }
+
+        return response.json();
+      })
+
+      .then((data) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (!Array.isArray(data.features)) {
+          throw new Error("Invalid map data");
+        }
+
+        setMapFeatures(data.features);
+
+        setMapError(false);
+      })
+
+      .catch((error) => {
+        console.error("India map error:", error);
+
+        if (!cancelled) {
+          setMapError(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* =========================================================
+     CITY CHANGE ANIMATION
+  ========================================================= */
+
+  useEffect(() => {
+    if (!contentRef.current) {
+      return;
+    }
+
+    gsap.killTweensOf(contentRef.current);
+
+    gsap.fromTo(
+      contentRef.current,
+
+      {
+        opacity: 0,
+
+        y: 14,
+
+        filter: "blur(3px)",
+      },
+
+      {
+        opacity: 1,
+
+        y: 0,
+
+        filter: "blur(0px)",
+
+        duration: 0.55,
+
+        ease: "power3.out",
+      },
+    );
+  }, [currentCounter.city]);
+
+  /* NUMBER */
+
+  useEffect(() => {
+    if (!numberRef.current) {
+      return;
+    }
+
+    gsap.killTweensOf(numberRef.current);
+
+    gsap.fromTo(
+      numberRef.current,
+
+      {
+        opacity: 0,
+
+        scale: 0.86,
+
+        y: 8,
+      },
+
+      {
+        opacity: 1,
+
+        scale: 1,
+
+        y: 0,
+
+        duration: 0.55,
+
+        ease: "back.out(1.5)",
+      },
+    );
+  }, [currentCounter.city, currentCount]);
+
+  /* GLOW */
+
+  useEffect(() => {
+    if (!glowRef.current) {
+      return;
+    }
+
+    const tween = gsap.to(glowRef.current, {
+      scale: 1.12,
+
+      opacity: 0.65,
+
+      duration: 1.5,
+
+      repeat: -1,
+
+      yoyo: true,
+
+      ease: "sine.inOut",
+    });
+
+    return () => tween.kill();
+  }, []);
 
   return (
     <div
       className="
+        relative
+
         w-full
-        min-h-screen
-        bg-[#08080a]
-        text-white
-        select-none
-        pt-32
-        pb-24
-        px-4
-        sm:px-6
-        lg:px-12
-        font-sans
+
+        min-w-0
       "
     >
+      {/* PURPLE BACKGROUND GLOW */}
+
+      <div
+        ref={glowRef}
+        className="
+          absolute
+
+          right-[5%]
+          top-[15%]
+
+          w-[320px]
+          h-[320px]
+
+          rounded-full
+
+          bg-purple-600/[0.10]
+
+          blur-[110px]
+
+          pointer-events-none
+        "
+      />
+
+      {/* BOX */}
+
       <div
         className="
-          max-w-[1700px]
-          mx-auto
-          space-y-12
+          relative
+
+          w-full
+
+          min-h-[440px]
+
+          overflow-hidden
+
+          bg-[#0b0b0f]
+
+          border
+          border-white/10
+
+          rounded-[28px]
+
+          p-5
+          sm:p-7
         "
       >
-        {/* ================================================= */}
-        {/* HERO */}
-        {/* ================================================= */}
+        {/* =================================================
+            TOP BAR
+        ================================================= */}
 
         <div
           className="
-            grid
-            grid-cols-1
-            lg:grid-cols-[1fr_500px]
-            gap-10
-            xl:gap-20
+            relative
+            z-30
+
+            flex
+
             items-center
+            justify-between
+
+            gap-4
+
+            pb-5
+
             border-b
-            border-white/10
-            pb-12
+            border-white/[0.07]
           "
         >
-          {/* ================================================= */}
-          {/* LEFT HERO */}
-          {/* ================================================= */}
+          <div
+            className="
+              flex
 
-          <div className="space-y-4">
-            <div
-              className="
-                inline-flex
-                items-center
-                gap-2
-                px-3.5
-                py-1.5
-                rounded-full
-                bg-purple-500/10
-                border
-                border-purple-500/20
-                text-[#a855f7]
-                text-xs
-                font-mono
-                uppercase
-                tracking-widest
-              "
-            >
-              <Sparkles size={14} />
-              COMMUNITY NETWORK
-            </div>
+              items-center
 
-            <h1
-              className="
-                text-4xl
-                sm:text-6xl
-                md:text-7xl
-                font-black
-                tracking-tighter
-                text-white
-                uppercase
-                leading-none
-              "
-            >
-              ARTIST DIRECTORY
-            </h1>
+              gap-2
 
-            <p
-              className="
-                text-gray-400
-                text-sm
-                sm:text-base
-                font-light
-                leading-relaxed
-                max-w-2xl
-              "
-            >
-              Discover tattoo artists, studios and creative professionals
-              participating in or featured by the Ink Convention community.
-            </p>
+              text-purple-400
+
+              text-[9px]
+
+              font-mono
+
+              tracking-[0.15em]
+
+              uppercase
+            "
+          >
+            <Users size={13} />
+            OUR COMMUNITY
           </div>
 
-          {/* ================================================= */}
-          {/* RIGHT SIDE ROTATING COUNTER */}
-          {/* ================================================= */}
+          <div
+            className="
+              flex
+
+              items-center
+
+              gap-2
+
+              text-[8px]
+
+              font-mono
+
+              text-gray-600
+            "
+          >
+            <span
+              className="
+                relative
+
+                flex
+
+                w-2
+                h-2
+              "
+            >
+              <span
+                className="
+                  absolute
+
+                  w-full
+                  h-full
+
+                  rounded-full
+
+                  bg-purple-400
+
+                  opacity-70
+
+                  animate-ping
+                "
+              />
+
+              <span
+                className="
+                  relative
+
+                  w-2
+                  h-2
+
+                  rounded-full
+
+                  bg-purple-500
+
+                  shadow-[0_0_14px_rgba(168,85,247,1)]
+                "
+              />
+            </span>
+            LIVE
+          </div>
+        </div>
+
+        {/* =================================================
+            CITY + MAP
+        ================================================= */}
+
+        <div
+          className="
+            relative
+            z-10
+
+            grid
+
+            grid-cols-1
+
+            md:grid-cols-[0.72fr_1.28fr]
+
+            gap-4
+            md:gap-6
+
+            items-center
+
+            min-h-[320px]
+          "
+        >
+          {/* =================================================
+              LEFT INFO
+          ================================================= */}
+
+          <div
+            ref={contentRef}
+            className="
+              relative
+
+              z-20
+
+              min-w-0
+
+              py-6
+              md:py-0
+            "
+          >
+            <p
+              className="
+                text-[8px]
+                sm:text-[9px]
+
+                font-mono
+
+                tracking-[0.22em]
+
+                text-gray-600
+
+                uppercase
+
+                mb-4
+              "
+            >
+              OUR COMMUNITY IN
+            </p>
+
+            <h2
+              className="
+                text-[clamp(2rem,4vw,3.7rem)]
+
+                font-black
+
+                uppercase
+
+                tracking-[-0.06em]
+
+                leading-[0.88]
+
+                break-words
+              "
+            >
+              {currentCounter.city}
+            </h2>
+
+            <span
+              ref={numberRef}
+              className="
+                block
+
+                mt-5
+
+                text-[clamp(3rem,6vw,5rem)]
+
+                font-black
+
+                text-purple-500
+
+                tracking-[-0.075em]
+
+                leading-[0.8]
+
+                whitespace-nowrap
+
+                drop-shadow-[0_0_20px_rgba(168,85,247,0.25)]
+              "
+            >
+              {currentCount}+
+            </span>
+
+            <div
+              className="
+                mt-7
+
+                flex
+
+                items-center
+
+                gap-2
+
+                text-[8px]
+
+                font-mono
+
+                tracking-[0.1em]
+
+                text-gray-500
+
+                uppercase
+              "
+            >
+              <MapPinned
+                size={13}
+                className="
+                  text-purple-500
+
+                  shrink-0
+                "
+              />
+
+              {currentCounter.state}
+            </div>
+
+            <div
+              className="
+                mt-5
+
+                inline-flex
+
+                items-center
+
+                gap-2
+
+                px-3
+                py-2
+
+                rounded-full
+
+                border
+                border-purple-500/20
+
+                bg-purple-500/[0.05]
+              "
+            >
+              <span
+                className="
+                  w-1.5
+                  h-1.5
+
+                  rounded-full
+
+                  bg-purple-500
+
+                  animate-pulse
+
+                  shadow-[0_0_10px_rgba(168,85,247,1)]
+                "
+              />
+
+              <span
+                className="
+                  text-[7px]
+
+                  font-mono
+
+                  tracking-[0.16em]
+
+                  text-purple-400
+                "
+              >
+                ACTIVE CITY
+              </span>
+            </div>
+          </div>
+
+          {/* =================================================
+              RIGHT INDIA MAP
+          ================================================= */}
 
           <div
             className="
               relative
+
               w-full
-              lg:max-w-[500px]
-              lg:ml-auto
+
+              min-h-[310px]
+
+              flex
+
+              items-center
+              justify-center
+
+              overflow-hidden
             "
           >
-            {/* PURPLE GLOW */}
+            {/* BACKGROUND GRID */}
 
             <div
-              ref={glowRef}
               className="
                 absolute
-                inset-0
-                bg-purple-600/10
-                blur-[70px]
-                rounded-full
+
+                inset-3
+
+                opacity-[0.035]
+
                 pointer-events-none
+
+                bg-[linear-gradient(rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.35)_1px,transparent_1px)]
+
+                bg-[size:28px_28px]
               "
             />
 
-            {/* CARD */}
+            {/* MAP GLOW */}
 
             <div
               className="
+                absolute
+
+                left-1/2
+                top-1/2
+
+                -translate-x-1/2
+                -translate-y-1/2
+
+                w-[260px]
+                h-[300px]
+
+                rounded-full
+
+                bg-purple-500/[0.04]
+
+                blur-[60px]
+              "
+            />
+
+            {/* =================================================
+                REAL INDIA SVG
+            ================================================= */}
+
+            <svg
+              viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+              preserveAspectRatio="xMidYMid meet"
+              role="img"
+              aria-label="India community map"
+              className="
                 relative
-                overflow-hidden
-                bg-[#0b0b0f]
-                border
-                border-white/10
-                rounded-3xl
-                min-h-[230px]
-                p-7
-                sm:p-8
-                flex
-                flex-col
-                justify-between
-                group
+
+                z-10
+
+                w-full
+
+                max-w-[430px]
+
+                h-auto
               "
             >
-              {/* TOP */}
+              {/* =============================================
+                  REAL STATE BORDERS
+              ============================================= */}
 
-              <div
-                className="
-                  flex
-                  items-center
-                  justify-between
-                  gap-4
-                "
-              >
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-2
-                    text-[10px]
-                    sm:text-xs
-                    font-mono
-                    text-purple-400
-                    tracking-[0.2em]
-                    uppercase
-                  "
-                >
-                  <Users size={15} />
-                  OUR COMMUNITY
-                </div>
+              <g>
+                {mapFeatures.map((feature, index) => (
+                  <path
+                    key={
+                      feature.properties?.name ||
+                      feature.properties?.NAME_1 ||
+                      feature.properties?.st_nm ||
+                      index
+                    }
+                    d={geometryToPath(feature.geometry)}
+                    fill="rgba(255,255,255,0.006)"
+                    stroke="rgba(255,255,255,0.50)"
+                    strokeWidth="0.65"
+                    vectorEffect="non-scaling-stroke"
+                    fillRule="evenodd"
+                  />
+                ))}
+              </g>
 
-                {/* LIVE */}
+              {/* =============================================
+                  CITY LIGHTS
+              ============================================= */}
 
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-2
-                    text-[10px]
-                    font-mono
-                    text-gray-400
-                    tracking-widest
-                  "
-                >
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span
-                      className="
-                        animate-ping
-                        absolute
-                        inline-flex
-                        h-full
-                        w-full
-                        rounded-full
-                        bg-purple-400
-                        opacity-75
-                      "
-                    />
+              <g>
+                {communityCounters.map((city) => {
+                  const coordinates = CITY_COORDINATES[city.city];
 
-                    <span
-                      className="
-                        relative
-                        inline-flex
-                        rounded-full
-                        h-2.5
-                        w-2.5
-                        bg-purple-500
-                      "
-                    />
-                  </span>
-                  LIVE
-                </div>
-              </div>
+                  if (!coordinates) {
+                    return null;
+                  }
 
-              {/* CHANGING CONTENT */}
+                  const [x, y] = projectCoordinate(coordinates);
 
-              <div
-                ref={counterRef}
-                className="
-                  relative
-                  py-5
-                "
-              >
-                <div
-                  className="
-                    flex
-                    items-end
-                    justify-between
-                    gap-4
-                  "
-                >
-                  {/* CITY */}
+                  const isActive = currentCounter.city === city.city;
 
-                  <div>
-                    <p
-                      className="
-                        text-gray-500
-                        text-[10px]
-                        sm:text-xs
-                        font-mono
-                        tracking-[0.25em]
-                        uppercase
-                        mb-2
-                      "
-                    >
-                      OUR COMMUNITY IN
-                    </p>
+                  const labelWidth = Math.max(
+                    58,
 
-                    <h2
-                      className="
-                        text-3xl
-                        sm:text-4xl
-                        xl:text-5xl
-                        font-black
-                        tracking-tight
-                        text-white
-                        uppercase
-                        leading-none
-                      "
-                    >
-                      {currentCounter.city}
-                    </h2>
-                  </div>
+                    city.city.length * 6.2,
+                  );
 
-                  {/* NUMBER */}
+                  return (
+                    <g key={city.city}>
+                      {/* ACTIVE PULSE */}
 
-                  <div
-                    ref={numberRef}
-                    className="
-                      text-right
-                    "
-                  >
-                    <h3
-                      className="
-                        text-4xl
-                        sm:text-5xl
-                        xl:text-6xl
-                        font-black
-                        text-[#a855f7]
-                        leading-none
-                        drop-shadow-[0_0_25px_rgba(168,85,247,0.45)]
-                      "
-                    >
-                      {currentCounter.count}
-                    </h3>
-                  </div>
-                </div>
+                      {isActive && (
+                        <>
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r="8"
+                            fill="none"
+                            stroke="#a855f7"
+                            strokeWidth="1"
+                          >
+                            <animate
+                              attributeName="r"
+                              values="6;18;6"
+                              dur="1.8s"
+                              repeatCount="indefinite"
+                            />
 
-                {/* STATE */}
+                            <animate
+                              attributeName="opacity"
+                              values="0.8;0;0.8"
+                              dur="1.8s"
+                              repeatCount="indefinite"
+                            />
+                          </circle>
 
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-2
-                    mt-4
-                    text-gray-500
-                    text-[10px]
-                    sm:text-xs
-                    font-mono
-                    uppercase
-                    tracking-widest
-                  "
-                >
-                  <MapPinned size={13} className="text-purple-500" />
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r="11"
+                            fill="rgba(168,85,247,0.10)"
+                          />
+                        </>
+                      )}
 
-                  {currentCounter.state}
-                </div>
-              </div>
+                      {/* CITY POINT */}
 
-              {/* BOTTOM */}
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={isActive ? 4.5 : 2.3}
+                        fill={isActive ? "#a855f7" : "rgba(255,255,255,0.48)"}
+                        stroke={isActive ? "#ffffff" : "rgba(255,255,255,0.25)"}
+                        strokeWidth={isActive ? 1.2 : 0.5}
+                        style={{
+                          filter: isActive
+                            ? "drop-shadow(0 0 7px #a855f7)"
+                            : "none",
 
-              <div
-                className="
-                  flex
-                  items-center
-                  justify-between
-                  border-t
-                  border-white/10
-                  pt-4
-                "
-              >
-                <span
-                  className="
-                    text-[9px]
-                    sm:text-[10px]
-                    font-mono
-                    text-gray-500
-                    uppercase
-                    tracking-[0.15em]
-                  "
-                >
-                  Artists • Studios • Creators
-                </span>
+                          transition: "all 0.35s ease",
+                        }}
+                      />
 
-                {/* 01 / 20 */}
+                      {/* ACTIVE CITY NAME */}
 
-                <span
-                  className="
-                    text-[10px]
-                    font-mono
-                    text-purple-400
-                  "
-                >
-                  {String(counterIndex + 1).padStart(2, "0")}/
-                  {String(communityCounters.length).padStart(2, "0")}
-                </span>
-              </div>
+                      {isActive && (
+                        <g>
+                          <rect
+                            x={x + 9}
+                            y={y - 14}
+                            width={labelWidth}
+                            height="21"
+                            rx="5"
+                            fill="rgba(8,8,10,0.96)"
+                            stroke="rgba(168,85,247,0.65)"
+                            strokeWidth="0.7"
+                          />
 
-              {/* DECORATIVE NUMBER */}
+                          <text
+                            x={x + 15}
+                            y={y}
+                            fill="#ffffff"
+                            fontSize="7"
+                            fontWeight="700"
+                            fontFamily="monospace"
+                            letterSpacing="0.7"
+                          >
+                            {city.city}
+                          </text>
+                        </g>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
+            </svg>
 
+            {/* LOADING */}
+
+            {mapFeatures.length === 0 && !mapError && (
               <div
                 className="
                   absolute
-                  -right-4
-                  -bottom-14
-                  text-[130px]
-                  leading-none
-                  font-black
-                  text-white/[0.015]
-                  pointer-events-none
+
+                  inset-0
+
+                  z-20
+
+                  flex
+
+                  items-center
+                  justify-center
+
+                  text-[8px]
+
+                  font-mono
+
+                  tracking-widest
+
+                  text-gray-600
                 "
               >
-                {String(counterIndex + 1).padStart(2, "0")}
+                LOADING INDIA MAP...
               </div>
+            )}
+
+            {/* ERROR */}
+
+            {mapError && (
+              <div
+                className="
+                  absolute
+
+                  inset-0
+
+                  z-20
+
+                  flex
+                  flex-col
+
+                  items-center
+                  justify-center
+
+                  text-center
+
+                  px-5
+                "
+              >
+                <MapPinned
+                  size={28}
+                  className="
+                    text-purple-500
+
+                    mb-4
+                  "
+                />
+
+                <p
+                  className="
+                    text-[9px]
+
+                    font-mono
+
+                    text-gray-500
+
+                    tracking-widest
+                  "
+                >
+                  INDIA MAP COULD NOT LOAD
+                </p>
+              </div>
+            )}
+
+            {/* LABEL */}
+
+            <div
+              className="
+                absolute
+
+                bottom-2
+                right-2
+
+                z-30
+
+                flex
+
+                items-center
+
+                gap-2
+
+                text-[7px]
+
+                font-mono
+
+                text-gray-600
+
+                tracking-[0.16em]
+              "
+            >
+              <span
+                className="
+                  w-5
+
+                  h-[1px]
+
+                  bg-white/20
+                "
+              />
+              INDIA NETWORK
             </div>
           </div>
         </div>
 
-        {/* ================================================= */}
-        {/* SEARCH + FREE ENTRY */}
-        {/* ================================================= */}
+        {/* =================================================
+            BOTTOM GROWTH
+        ================================================= */}
 
         <div
           className="
+            relative
+            z-30
+
             flex
-            flex-col
-            sm:flex-row
+
+            items-center
             justify-between
-            items-stretch
-            sm:items-center
+
             gap-4
-            bg-[#0b0b0f]
-            p-4
-            sm:p-6
-            rounded-2xl
-            border
-            border-white/5
-            shadow-xl
+
+            border-t
+            border-white/10
+
+            pt-4
           "
         >
-          {/* SEARCH */}
-
           <div
             className="
-              relative
-              w-full
-              sm:w-[430px]
-            "
-          >
-            <Search
-              className="
-                absolute
-                left-4
-                top-1/2
-                -translate-y-1/2
-                text-gray-500
-              "
-              size={18}
-            />
-
-            <input
-              type="text"
-              placeholder="SEARCH ARTISTS, STUDIOS, CITIES..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="
-                w-full
-                bg-black/50
-                border
-                border-white/10
-                rounded-xl
-                pl-12
-                pr-4
-                py-3.5
-                text-white
-                text-xs
-                font-mono
-                placeholder:text-gray-600
-                focus:outline-none
-                focus:border-[#a855f7]
-                focus:shadow-[0_0_20px_rgba(168,85,247,0.12)]
-                transition-all
-                duration-300
-              "
-            />
-          </div>
-
-          {/* ================================================= */}
-          {/* GET FREE ENTRY */}
-          {/* ================================================= */}
-
-          <Link
-            to="/Enter"
-            className="
-              relative
-              overflow-hidden
-              group
-              min-w-[190px]
-              bg-[#a855f7]
-              hover:bg-[#9333ea]
-              text-white
-              rounded-xl
-              px-6
-              py-3.5
               flex
+
               items-center
-              justify-center
-              gap-3
-              font-black
-              text-xs
-              tracking-[0.14em]
-              uppercase
-              transition-all
-              duration-300
-              hover:scale-[1.03]
-              shadow-[0_0_25px_rgba(168,85,247,0.25)]
-              hover:shadow-[0_0_35px_rgba(168,85,247,0.45)]
+
+              gap-2
             "
           >
-            {/* SHIMMER */}
+            <span
+              className="
+                w-1.5
+                h-1.5
+
+                rounded-full
+
+                bg-white/30
+              "
+            />
 
             <span
               className="
-                absolute
-                top-0
-                -left-[100%]
-                w-[70%]
-                h-full
-                bg-gradient-to-r
-                from-transparent
-                via-white/25
-                to-transparent
-                skew-x-[-20deg]
-                group-hover:left-[150%]
-                transition-all
-                duration-700
+                text-[7px]
+                sm:text-[8px]
+
+                font-mono
+
+                tracking-[0.1em]
+
+                text-gray-600
               "
-            />
+            >
+              COMMUNITY GROWTH
+            </span>
+          </div>
 
-            <span className="relative z-10">GET FREE ENTRY</span>
-
-            <ArrowRight
-              size={17}
-              className="
-                relative
-                z-10
-                transition-transform
-                duration-300
-                group-hover:translate-x-1.5
-              "
-            />
-          </Link>
-        </div>
-
-        {/* ================================================= */}
-        {/* ARTIST GRID / EMPTY */}
-        {/* ================================================= */}
-
-        {filteredArtists.length === 0 ? (
-          <div
+          <span
             className="
-              text-center
-              py-20
-              bg-[#0b0b0f]
-              border
-              border-dashed
-              border-white/10
-              rounded-3xl
+              text-[8px]
+
+              font-mono
+
+              text-purple-400
+
+              whitespace-nowrap
             "
           >
-            <Search
-              className="
-                mx-auto
-                text-gray-600
-                mb-4
-              "
-              size={40}
-            />
+            +{todayIncrement} TODAY
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   ARTIST CARD
+========================================================= */
+
+function ArtistCard({ artist, index, isNew, onClick }) {
+  const plan = safeText(artist.plan) || "free";
+
+  const isGold = plan === "gold";
+
+  const isSilver = plan === "silver";
+
+  const isFree = !isGold && !isSilver;
+
+  const locationText = [artist.city, artist.state].filter(Boolean).join(", ");
+
+  return (
+    <article
+      onClick={onClick}
+      className={`
+        group
+
+        relative
+
+        w-full
+
+        h-[500px]
+
+        rounded-[24px]
+
+        overflow-hidden
+
+        flex
+        flex-col
+
+        cursor-pointer
+
+        transition-all
+
+        duration-500
+
+        hover:-translate-y-2
+
+        ${
+          isGold
+            ? `
+              border-2
+
+              border-yellow-400
+
+              bg-gradient-to-br
+
+              from-yellow-400/[0.07]
+
+              via-[#111008]
+
+              to-[#0d0d11]
+
+              shadow-[0_0_30px_rgba(250,204,21,0.10)]
+            `
+            : isSilver
+              ? `
+              border-2
+
+              border-slate-300
+
+              bg-gradient-to-br
+
+              from-white/[0.05]
+
+              via-[#101116]
+
+              to-[#0d0d11]
+            `
+              : `
+              border
+
+              border-white/10
+
+              bg-[#0d0d11]
+
+              hover:border-purple-500/50
+            `
+        }
+
+        ${
+          isNew
+            ? `
+              ring-2
+
+              ring-purple-500
+
+              ring-offset-4
+
+              ring-offset-[#08080a]
+            `
+            : ""
+        }
+      `}
+    >
+      {/* =================================================
+          GOLD / SILVER HEADER
+      ================================================= */}
+
+      {(isGold || isSilver) && (
+        <div
+          className="
+            flex
+
+            items-center
+
+            gap-4
+
+            p-5
+
+            border-b
+            border-white/10
+          "
+        >
+          <div
+            className={`
+              w-16
+              h-16
+
+              rounded-full
+
+              overflow-hidden
+
+              shrink-0
+
+              bg-black
+
+              border-2
+
+              ${isGold ? "border-yellow-400" : "border-slate-300"}
+            `}
+          >
+            {artist.profileImage ? (
+              <img
+                src={artist.profileImage}
+                alt={artist.name || "Artist"}
+                className="
+                  w-full
+                  h-full
+
+                  object-cover
+                "
+              />
+            ) : (
+              <div
+                className="
+                  w-full
+                  h-full
+
+                  flex
+
+                  items-center
+                  justify-center
+
+                  font-black
+
+                  text-xl
+                "
+              >
+                {artist.name?.charAt(0)?.toUpperCase() || "A"}
+              </div>
+            )}
+          </div>
+
+          <div
+            className="
+              flex-1
+
+              min-w-0
+            "
+          >
+            <p
+              className={`
+                text-[8px]
+
+                font-mono
+
+                tracking-widest
+
+                mb-1
+
+                ${isGold ? "text-yellow-400" : "text-slate-300"}
+              `}
+            >
+              INK CONVENTION ARTIST
+            </p>
 
             <h3
               className="
                 text-xl
-                font-bold
-                text-white
+
+                font-black
+
                 uppercase
-                tracking-widest
+
+                truncate
               "
             >
-              NO ARTISTS FOUND
+              {artist.name || "Participant Artist"}
             </h3>
 
-            <p
+            <div
               className="
-                text-gray-500
-                font-light
-                mt-2
-              "
-            >
-              Try searching by a different name, city, or style.
-            </p>
+                flex
 
-            {/* ALSO FREE ENTRY HERE */}
-
-            <Link
-              to="/Enter"
-              className="
-                inline-flex
                 items-center
-                gap-2
-                mt-7
-                text-xs
-                font-black
-                tracking-widest
-                uppercase
-                text-purple-400
-                hover:text-purple-300
-                transition
+
+                gap-1.5
+
+                mt-2
+
+                text-[11px]
+
+                text-gray-400
               "
             >
-              Become part of the community
-              <ArrowRight size={15} />
-            </Link>
+              <MapPin size={11} />
+
+              <span
+                className="
+                  truncate
+                "
+              >
+                {locationText || "India"}
+              </span>
+            </div>
           </div>
-        ) : (
+        </div>
+      )}
+
+      {/* =================================================
+          FREE HEADER
+      ================================================= */}
+
+      {isFree && (
+        <div
+          className="
+            p-5
+          "
+        >
           <div
             className="
-              grid
-              grid-cols-1
-              sm:grid-cols-2
-              lg:grid-cols-3
-              xl:grid-cols-4
-              gap-6
+              flex
+
+              items-center
+              justify-between
+
+              mb-6
             "
           >
-            {filteredArtists.map((artist, index) => {
-              const globalIndex = index + 1;
+            <span
+              className="
+                w-9
+                h-9
 
-              return (
-                <div
-                  key={`${artist.name}-${index}`}
-                  className="
-                      group
-                      relative
-                      bg-[#0b0b0f]
-                      rounded-3xl
-                      p-6
-                      border
-                      border-white/5
-                      hover:border-[#a855f7]/50
-                      transition-all
-                      duration-500
-                      shadow-2xl
-                      flex
-                      flex-col
-                      justify-between
-                      space-y-6
-                      overflow-hidden
-                    "
-                >
-                  {/* GLOW */}
+                rounded-full
 
-                  <div
-                    className="
-                        absolute
-                        -right-20
-                        -top-20
-                        w-48
-                        h-48
-                        bg-[#a855f7]/10
-                        rounded-full
-                        blur-2xl
-                        group-hover:bg-[#a855f7]/20
-                        transition-all
-                        duration-500
-                        pointer-events-none
-                      "
-                  />
+                bg-purple-500/10
 
-                  <div className="space-y-4 relative z-10">
-                    {/* NUMBER + BADGE */}
+                border
+                border-purple-500/20
 
-                    <div
-                      className="
-                          flex
-                          items-center
-                          justify-between
-                          gap-2
-                        "
-                    >
-                      <span
-                        className="
-                            w-8
-                            h-8
-                            rounded-full
-                            text-[11px]
-                            font-mono
-                            font-black
-                            flex
-                            items-center
-                            justify-center
-                            bg-[#a855f7]/20
-                            border
-                            border-[#a855f7]/40
-                            text-[#a855f7]
-                          "
-                      >
-                        #{globalIndex}
-                      </span>
+                flex
 
-                      {artist.badge && (
-                        <span
-                          className={`
-                              text-[10px]
-                              font-mono
-                              uppercase
-                              tracking-wider
-                              px-3
-                              py-1
-                              rounded-full
-                              shadow-lg
+                items-center
+                justify-center
 
-                              ${
-                                artist.badge === "NEW ENTRY"
-                                  ? "bg-purple-600 text-white animate-pulse"
-                                  : "bg-[#a855f7] text-white"
-                              }
-                            `}
-                        >
-                          {artist.badge}
-                        </span>
-                      )}
-                    </div>
+                text-purple-400
 
-                    {/* DETAILS */}
+                text-[8px]
 
-                    <div className="space-y-2">
-                      <p
-                        className="
-                            text-[11px]
-                            font-mono
-                            text-[#a855f7]
-                            uppercase
-                            tracking-wider
-                            truncate
-                          "
-                      >
-                        {artist.category}
-                      </p>
+                font-mono
+              "
+            >
+              #{String(index + 1).padStart(2, "0")}
+            </span>
 
-                      <h3
-                        className="
-                            text-xl
-                            font-black
-                            text-white
-                            group-hover:text-[#a855f7]
-                            transition
-                            duration-300
-                          "
-                      >
-                        {artist.name}
-                      </h3>
+            <span
+              className="
+                w-2.5
+                h-2.5
 
-                      <p
-                        className="
-                            text-xs
-                            text-gray-400
-                            font-medium
-                          "
-                      >
-                        {artist.studio}
-                      </p>
-                    </div>
+                rounded-full
 
-                    {/* LOCATION */}
+                bg-purple-500
 
-                    <div
-                      className="
-                          flex
-                          items-center
-                          gap-2
-                          text-xs
-                          font-medium
-                          text-gray-300
-                        "
-                    >
-                      <MapPin size={13} className="text-[#a855f7]" />
+                shadow-[0_0_12px_rgba(168,85,247,0.8)]
+              "
+            />
+          </div>
 
-                      <span>
-                        {artist.city}
+          <p
+            className="
+              text-purple-400
 
-                        {artist.state ? `, ${artist.state}` : ""}
-                      </span>
-                    </div>
-                  </div>
+              text-[8px]
 
-                  {/* BOTTOM */}
+              font-mono
 
-                  <div
-                    className="
-                        pt-4
-                        border-t
-                        border-white/10
-                        flex
-                        items-center
-                        justify-between
-                        gap-3
-                        relative
-                        z-10
-                      "
-                  >
-                    <div
-                      className="
-                          flex
-                          items-center
-                          gap-1
-                          text-[11px]
-                          font-mono
-                          text-gray-400
-                          truncate
-                        "
-                    >
-                      <Sparkles
-                        size={12}
-                        className="
-                            text-[#a855f7]
-                            flex-shrink-0
-                          "
-                      />
+              tracking-widest
 
-                      <span className="truncate">{artist.metrics}</span>
-                    </div>
+              mb-2
+            "
+          >
+            INK CONVENTION ARTIST
+          </p>
 
-                    <div
-                      className="
-                          font-mono
-                          text-[11px]
-                          text-gray-400
-                          bg-white/5
-                          border
-                          border-white/10
-                          px-3
-                          py-1
-                          rounded-lg
-                          flex-shrink-0
-                        "
-                    >
-                      {artist.year}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <h3
+            className="
+              text-2xl
+
+              font-black
+
+              uppercase
+
+              truncate
+            "
+          >
+            {artist.name || "Participant Artist"}
+          </h3>
+        </div>
+      )}
+
+      {/* =================================================
+          DETAILS
+      ================================================= */}
+
+      <div
+        className="
+          px-5
+          pt-4
+          pb-5
+
+          flex
+          flex-col
+          flex-1
+
+          min-h-0
+        "
+      >
+        {/* FREE */}
+
+        {isFree && (
+          <div
+            className="
+              flex
+
+              items-center
+
+              gap-2
+
+              text-sm
+
+              text-gray-400
+            "
+          >
+            <MapPin
+              size={13}
+              className="
+                text-purple-500
+              "
+            />
+
+            {artist.state || "India"}
           </div>
         )}
+
+        {/* SILVER */}
+
+        {isSilver && (
+          <div
+            className="
+              space-y-4
+            "
+          >
+            <InfoRow title="CITY" value={artist.city} />
+
+            <InfoRow title="STATE" value={artist.state} />
+
+            <InfoRow title="PHONE" value={artist.phone} />
+          </div>
+        )}
+
+        {/* GOLD */}
+
+        {isGold && (
+          <div
+            className="
+              space-y-2.5
+            "
+          >
+            <InfoRow title="PHONE" value={artist.phone} />
+
+            <InfoRow title="EMAIL" value={artist.email} />
+
+            <InfoRow title="CITY" value={artist.city} />
+
+            <InfoRow title="STATE" value={artist.state} />
+
+            <InfoRow title="STUDIO" value={artist.studio} />
+
+            <InfoRow title="EXPERIENCE" value={artist.experience} />
+
+            <InfoRow title="INSTAGRAM" value={artist.instagram} />
+          </div>
+        )}
+
+        {/* FOOTER */}
+
+        <div
+          className="
+            mt-auto
+          "
+        >
+          <p
+            className="
+              py-3
+
+              text-[8px]
+
+              font-mono
+
+              tracking-widest
+
+              text-gray-600
+
+              group-hover:text-gray-400
+            "
+          >
+            CLICK TO VIEW FULL PROFILE
+          </p>
+
+          <div
+            className="
+              border-t
+              border-white/10
+
+              pt-3
+
+              flex
+
+              items-center
+              justify-between
+            "
+          >
+            <div
+              className="
+                flex
+
+                items-center
+
+                gap-2
+
+                text-[8px]
+
+                font-mono
+
+                text-gray-600
+              "
+            >
+              <Sparkles
+                size={10}
+                className={
+                  isGold
+                    ? "text-yellow-400"
+                    : isSilver
+                      ? "text-slate-300"
+                      : "text-purple-500"
+                }
+              />
+              INK CONVENTION
+            </div>
+
+            <span
+              className="
+                text-[8px]
+
+                font-mono
+
+                text-gray-600
+              "
+            >
+              {artist.year || "2026"}
+            </span>
+          </div>
+        </div>
       </div>
+    </article>
+  );
+}
+
+/* =========================================================
+   ARTIST MODAL
+========================================================= */
+
+function ArtistModal({ artist, onClose }) {
+  const modalRef = useRef(null);
+
+  const plan = safeText(artist.plan) || "free";
+
+  const isGold = plan === "gold";
+
+  const isSilver = plan === "silver";
+
+  const isFree = !isGold && !isSilver;
+
+  /* OPEN */
+
+  useEffect(() => {
+    if (!modalRef.current) {
+      return;
+    }
+
+    gsap.fromTo(
+      modalRef.current,
+
+      {
+        opacity: 0,
+
+        scale: 0.9,
+
+        y: 25,
+      },
+
+      {
+        opacity: 1,
+
+        scale: 1,
+
+        y: 0,
+
+        duration: 0.4,
+
+        ease: "power3.out",
+      },
+    );
+  }, []);
+
+  /* CLOSE */
+
+  const closeModal = () => {
+    if (!modalRef.current) {
+      onClose();
+
+      return;
+    }
+
+    gsap.to(modalRef.current, {
+      opacity: 0,
+
+      scale: 0.95,
+
+      y: 15,
+
+      duration: 0.22,
+
+      ease: "power2.in",
+
+      onComplete: onClose,
+    });
+  };
+
+  const handleBackdropClick = (event) => {
+    if (event.target === event.currentTarget) {
+      closeModal();
+    }
+  };
+
+  return (
+    <div
+      onMouseDown={handleBackdropClick}
+      className="
+        fixed
+
+        inset-0
+
+        z-[9999]
+
+        bg-black/85
+
+        backdrop-blur-xl
+
+        p-4
+        sm:p-8
+
+        flex
+
+        items-center
+        justify-center
+
+        overflow-y-auto
+      "
+    >
+      <div
+        ref={modalRef}
+        className={`
+          relative
+
+          w-full
+
+          max-w-[1000px]
+
+          max-h-[90vh]
+
+          overflow-y-auto
+
+          rounded-[30px]
+
+          bg-[#0c0c0f]
+
+          text-white
+
+          ${
+            isGold
+              ? `
+                border-2
+                border-yellow-400
+
+                shadow-[0_0_80px_rgba(250,204,21,0.18)]
+              `
+              : isSilver
+                ? `
+                border-2
+                border-slate-300
+              `
+                : `
+                border
+
+                border-purple-500/40
+              `
+          }
+        `}
+      >
+        {/* X */}
+
+        <button
+          type="button"
+          onClick={closeModal}
+          aria-label="Close profile"
+          className="
+            absolute
+
+            top-5
+            right-5
+
+            z-30
+
+            w-12
+            h-12
+
+            rounded-full
+
+            bg-black/70
+
+            border
+            border-white/15
+
+            hover:bg-white
+            hover:text-black
+
+            flex
+
+            items-center
+            justify-center
+
+            text-3xl
+
+            transition
+          "
+        >
+          ×
+        </button>
+
+        {/* =================================================
+            GOLD / SILVER HEADER
+        ================================================= */}
+
+        {(isGold || isSilver) && (
+          <div
+            className="
+              p-6
+              sm:p-10
+
+              pr-20
+
+              border-b
+              border-white/10
+            "
+          >
+            <div
+              className="
+                flex
+
+                flex-col
+                sm:flex-row
+
+                sm:items-center
+
+                gap-6
+              "
+            >
+              <div
+                className={`
+                  w-28
+                  h-28
+
+                  sm:w-36
+                  sm:h-36
+
+                  shrink-0
+
+                  rounded-full
+
+                  overflow-hidden
+
+                  bg-black
+
+                  border-[3px]
+
+                  ${isGold ? "border-yellow-400" : "border-slate-300"}
+                `}
+              >
+                {artist.profileImage ? (
+                  <img
+                    src={artist.profileImage}
+                    alt={artist.name || "Artist"}
+                    className="
+                      w-full
+                      h-full
+
+                      object-cover
+                    "
+                  />
+                ) : (
+                  <div
+                    className="
+                      w-full
+                      h-full
+
+                      flex
+
+                      items-center
+                      justify-center
+
+                      text-4xl
+
+                      font-black
+                    "
+                  >
+                    {artist.name?.charAt(0)?.toUpperCase() || "A"}
+                  </div>
+                )}
+              </div>
+
+              <div
+                className="
+                  min-w-0
+                "
+              >
+                <p
+                  className={`
+                    text-[10px]
+
+                    font-mono
+
+                    tracking-[0.2em]
+
+                    mb-3
+
+                    ${isGold ? "text-yellow-400" : "text-slate-300"}
+                  `}
+                >
+                  INK CONVENTION ARTIST
+                </p>
+
+                <h2
+                  className="
+                    text-4xl
+                    sm:text-6xl
+
+                    font-black
+
+                    uppercase
+
+                    tracking-[-0.05em]
+
+                    leading-none
+
+                    break-words
+                  "
+                >
+                  {artist.name || "Participant Artist"}
+                </h2>
+
+                <div
+                  className="
+                    flex
+
+                    items-center
+
+                    gap-2
+
+                    mt-5
+
+                    text-gray-400
+                  "
+                >
+                  <MapPin
+                    size={14}
+                    className={isGold ? "text-yellow-400" : "text-slate-300"}
+                  />
+
+                  {[artist.city, artist.state].filter(Boolean).join(", ") ||
+                    "India"}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =================================================
+            FREE HEADER
+        ================================================= */}
+
+        {isFree && (
+          <div
+            className="
+              p-8
+              sm:p-12
+
+              pr-20
+
+              border-b
+              border-white/10
+            "
+          >
+            <p
+              className="
+                text-purple-400
+
+                text-[10px]
+
+                font-mono
+
+                tracking-[0.2em]
+
+                mb-4
+              "
+            >
+              INK CONVENTION ARTIST
+            </p>
+
+            <h2
+              className="
+                text-4xl
+                sm:text-6xl
+
+                font-black
+
+                uppercase
+              "
+            >
+              {artist.name || "Participant Artist"}
+            </h2>
+          </div>
+        )}
+
+        {/* =================================================
+            MODAL BODY
+        ================================================= */}
+
+        <div
+          className="
+            p-6
+            sm:p-10
+          "
+        >
+          {/* FREE */}
+
+          {isFree && (
+            <ModalInfo title="STATE" value={artist.state} accent="purple" />
+          )}
+
+          {/* SILVER */}
+
+          {isSilver && (
+            <div
+              className="
+                grid
+
+                grid-cols-1
+                sm:grid-cols-2
+
+                gap-8
+              "
+            >
+              <ModalInfo title="CITY" value={artist.city} accent="silver" />
+
+              <ModalInfo title="STATE" value={artist.state} accent="silver" />
+
+              <ModalInfo title="PHONE" value={artist.phone} accent="silver" />
+            </div>
+          )}
+
+          {/* GOLD */}
+
+          {isGold && (
+            <div
+              className="
+                grid
+
+                grid-cols-1
+                sm:grid-cols-2
+
+                gap-x-12
+                gap-y-8
+              "
+            >
+              <ModalInfo title="PHONE" value={artist.phone} accent="gold" />
+
+              <ModalInfo title="EMAIL" value={artist.email} accent="gold" />
+
+              <ModalInfo title="CITY" value={artist.city} accent="gold" />
+
+              <ModalInfo title="STATE" value={artist.state} accent="gold" />
+
+              <ModalInfo title="STUDIO" value={artist.studio} accent="gold" />
+
+              <ModalInfo
+                title="EXPERIENCE"
+                value={artist.experience}
+                accent="gold"
+              />
+
+              <ModalInfo
+                title="INSTAGRAM"
+                value={artist.instagram}
+                accent="gold"
+              />
+            </div>
+          )}
+
+          <div
+            className="
+              mt-10
+
+              pt-6
+
+              border-t
+              border-white/10
+
+              flex
+
+              justify-end
+            "
+          >
+            <button
+              type="button"
+              onClick={closeModal}
+              className={`
+                px-7
+                py-4
+
+                text-[10px]
+
+                font-black
+
+                tracking-widest
+
+                ${
+                  isGold
+                    ? `
+                      bg-yellow-400
+
+                      hover:bg-yellow-300
+
+                      text-black
+                    `
+                    : isSilver
+                      ? `
+                      bg-slate-100
+
+                      hover:bg-white
+
+                      text-black
+                    `
+                      : `
+                      bg-purple-600
+
+                      hover:bg-purple-500
+
+                      text-white
+                    `
+                }
+              `}
+            >
+              CLOSE PROFILE
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   SMALL CARD INFO
+========================================================= */
+
+function InfoRow({ title, value }) {
+  return (
+    <div
+      className="
+        min-w-0
+      "
+    >
+      <p
+        className="
+          text-[7px]
+
+          font-mono
+
+          tracking-[0.16em]
+
+          text-gray-600
+
+          mb-1
+        "
+      >
+        {title}
+      </p>
+
+      <p
+        className="
+          text-[12px]
+
+          text-gray-300
+
+          truncate
+        "
+        title={value || "-"}
+      >
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
+/* =========================================================
+   MODAL INFO
+========================================================= */
+
+function ModalInfo({ title, value, accent = "purple" }) {
+  let accentClass = "text-purple-400";
+
+  if (accent === "gold") {
+    accentClass = "text-yellow-400";
+  }
+
+  if (accent === "silver") {
+    accentClass = "text-slate-300";
+  }
+
+  return (
+    <div
+      className="
+        min-w-0
+
+        border-b
+        border-white/10
+
+        pb-5
+      "
+    >
+      <p
+        className={`
+          text-[8px]
+
+          font-mono
+
+          tracking-[0.2em]
+
+          uppercase
+
+          mb-2
+
+          ${accentClass}
+        `}
+      >
+        {title}
+      </p>
+
+      <p
+        className="
+          text-base
+          sm:text-lg
+
+          font-semibold
+
+          text-white
+
+          break-words
+        "
+      >
+        {value || "-"}
+      </p>
     </div>
   );
 }
