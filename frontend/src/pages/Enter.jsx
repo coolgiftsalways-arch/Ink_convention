@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-
 import { useNavigate } from "react-router-dom";
 
 import { ArrowRight, Sparkles, MapPin, Users } from "lucide-react";
@@ -15,6 +14,8 @@ const PROFILE_KEY = "inkConventionUserProfiles";
 const DIRECTORY_KEY = "inkConventionDirectoryArtists";
 
 const CURRENT_USER_KEY = "inkConventionCurrentUserId";
+
+const PENDING_MEMBERSHIP_KEY = "inkConventionPendingMembership";
 
 /* =========================================================
    EMPTY FORM
@@ -32,73 +33,107 @@ const emptyForm = {
 };
 
 /* =========================================================
-   PLANS
+   NEW DIRECTORY MEMBERSHIPS
+
+   FREE
+   PRO ₹1,499 / YEAR
+   VERIFIED ₹2,999 / YEAR
 ========================================================= */
 
 const plans = [
   {
-    id: "gold",
-    name: "GOLD",
-    price: "₹1299",
-    priority: 3,
+    id: "free",
+
+    name: "LIFETIME FREE LISTING",
+
+    shortName: "FREE",
+
+    price: "₹0",
+
+    amount: 0,
+
+    billing: "LIFETIME",
+
+    priority: 1,
 
     description:
-      "Your complete professional artist profile with maximum directory visibility.",
+      "Permanent entry in the Ink Convention directory. This is the primary lead-generation hook, while public contact details remain masked to encourage upgrades.",
 
     benefits: [
-      "Gold profile border",
-      "Highest directory position",
+      "Permanent directory entry",
       "Profile photo",
-      "Artist name",
-      "Phone number",
-      "Email address",
-      "City",
-      "State",
-      "Studio name",
-      "Experience",
-      "Instagram",
+      "Artist / studio name",
+      "City & state displayed",
+      "Studio name displayed",
+      "Contact details remain masked",
+      "Primary lead-generation listing",
+      "Upgrade anytime",
     ],
   },
 
   {
-    id: "silver",
-    name: "SILVER",
-    price: "₹799",
+    id: "pro",
+
+    name: "PRO LISTING",
+
+    shortName: "PRO",
+
+    price: "₹1,499",
+
+    amount: 1499,
+
+    billing: "PER YEAR",
+
     priority: 2,
 
     description:
-      "A professional listing with your profile photo and important contact information.",
+      "Upgrade your profile with city-wise search visibility, a Recommended tag and unmasked direct contact information for consumer booking.",
 
     benefits: [
-      "Silver profile border",
-      "Above Free artists",
-      "Profile photo",
-      "Artist name",
-      "City",
-      "State",
-      "Phone number",
+      "Everything in Lifetime Free",
+      "City-wise search visibility",
+      "Recommended profile tag",
+      "Phone number visible",
+      "Email visible",
+      "Instagram visible",
+      "Direct consumer booking contact",
+      "Higher directory visibility",
     ],
   },
 
   {
-    id: "free",
-    name: "FREE",
-    price: "₹0",
-    priority: 1,
+    id: "verified",
 
-    description: "A simple basic entry in the Ink Convention Artist Directory.",
+    name: "VERIFIED SPOTLIGHT",
+
+    shortName: "VERIFIED",
+
+    price: "₹2,999",
+
+    amount: 2999,
+
+    billing: "PER YEAR",
+
+    priority: 3,
+
+    description:
+      "Premium tier with a dedicated standalone URL profile page, Hall of Fame inclusion, priority search ranking and maximum digital visibility.",
 
     benefits: [
-      "Artist name",
-      "State",
-      "Normal profile border",
-      "Basic directory listing",
+      "Everything in Pro",
+      "Verified Spotlight badge",
+      "Dedicated standalone profile URL",
+      "Hall of Fame inclusion",
+      "Priority search ranking",
+      "Featured Spotlight placement",
+      "Maximum digital visibility",
+      "Full direct contact visibility",
     ],
   },
 ];
 
 /* =========================================================
-   HELPERS
+   STORAGE HELPERS
 ========================================================= */
 
 const getStoredArray = (key) => {
@@ -113,16 +148,113 @@ const getStoredArray = (key) => {
   }
 };
 
+/* =========================================================
+   OLD PLAN MIGRATION
+
+   SILVER -> PRO
+   GOLD   -> VERIFIED
+========================================================= */
+
+const normalizePlan = (plan) => {
+  const value = String(plan || "free").toLowerCase();
+
+  if (value === "gold") {
+    return "verified";
+  }
+
+  if (value === "silver") {
+    return "pro";
+  }
+
+  if (value === "verified") {
+    return "verified";
+  }
+
+  if (value === "pro") {
+    return "pro";
+  }
+
+  return "free";
+};
+
+/* =========================================================
+   PLAN PRIORITY
+========================================================= */
+
 const getPlanPriority = (plan) => {
-  if (plan === "gold") {
+  const normalized = normalizePlan(plan);
+
+  if (normalized === "verified") {
     return 3;
   }
 
-  if (plan === "silver") {
+  if (normalized === "pro") {
     return 2;
   }
 
   return 1;
+};
+
+/* =========================================================
+   FIND PLAN
+========================================================= */
+
+const getPlanById = (id) => {
+  const normalized = normalizePlan(id);
+
+  return plans.find((plan) => plan.id === normalized) || plans[0];
+};
+
+/* =========================================================
+   VERIFIED PROFILE URL
+========================================================= */
+
+const createProfileSlug = (name, id) => {
+  const safeName = String(name || "artist")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `${safeName || "artist"}-${id}`;
+};
+
+/* =========================================================
+   NORMALIZE SAVED PROFILES
+========================================================= */
+
+const migrateProfiles = () => {
+  const profiles = getStoredArray(PROFILE_KEY);
+
+  let changed = false;
+
+  const migrated = profiles.map((profile) => {
+    const newPlan = normalizePlan(profile.plan);
+
+    if (newPlan !== profile.plan) {
+      changed = true;
+    }
+
+    return {
+      ...profile,
+
+      plan: newPlan,
+    };
+  });
+
+  if (changed) {
+    try {
+      localStorage.setItem(
+        PROFILE_KEY,
+
+        JSON.stringify(migrated),
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  return migrated;
 };
 
 /* =========================================================
@@ -149,7 +281,7 @@ export default function Enter() {
   useEffect(() => {
     const currentUserId = localStorage.getItem(CURRENT_USER_KEY);
 
-    const profiles = getStoredArray(PROFILE_KEY);
+    const profiles = migrateProfiles();
 
     if (currentUserId) {
       const found = profiles.find(
@@ -169,7 +301,7 @@ export default function Enter() {
   }, []);
 
   /* =========================================================
-     ANIMATION
+     PAGE ANIMATION
   ========================================================= */
 
   useEffect(() => {
@@ -180,15 +312,22 @@ export default function Enter() {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         ".enter-reveal",
+
         {
           opacity: 0,
+
           y: 25,
         },
+
         {
           opacity: 1,
+
           y: 0,
+
           duration: 0.7,
+
           stagger: 0.05,
+
           ease: "power3.out",
         },
       );
@@ -208,6 +347,7 @@ export default function Enter() {
 
     setFormData((previous) => ({
       ...previous,
+
       [name]: value,
     }));
 
@@ -215,7 +355,7 @@ export default function Enter() {
   };
 
   /* =========================================================
-     COMPRESS IMAGE
+     COMPRESS PROFILE IMAGE
   ========================================================= */
 
   const compressImage = (file, maxSize = 700, quality = 0.65) => {
@@ -231,7 +371,11 @@ export default function Enter() {
           let height = image.height;
 
           if (width > maxSize || height > maxSize) {
-            const ratio = Math.min(maxSize / width, maxSize / height);
+            const ratio = Math.min(
+              maxSize / width,
+
+              maxSize / height,
+            );
 
             width = Math.round(width * ratio);
 
@@ -254,7 +398,13 @@ export default function Enter() {
 
           context.drawImage(image, 0, 0, width, height);
 
-          resolve(canvas.toDataURL("image/jpeg", quality));
+          resolve(
+            canvas.toDataURL(
+              "image/jpeg",
+
+              quality,
+            ),
+          );
         };
 
         image.onerror = () => {
@@ -295,15 +445,15 @@ export default function Enter() {
       setProfileImage(image);
 
       setError("");
-    } catch (error) {
-      console.error(error);
+    } catch (imageError) {
+      console.error(imageError);
 
       setError("Unable to load profile image.");
     }
   };
 
   /* =========================================================
-     VALIDATE
+     VALIDATE FORM
   ========================================================= */
 
   const validateForm = () => {
@@ -381,32 +531,94 @@ export default function Enter() {
 
     window.scrollTo({
       top: 0,
+
       behavior: "smooth",
     });
   };
 
   /* =========================================================
-     CREATE PUBLIC ARTIST
+     BUILD PROFILE FROM FORM
+  ========================================================= */
+
+  const buildProfileFromForm = (selectedPlan) => {
+    const now = new Date().toISOString();
+
+    return {
+      id: Date.now(),
+
+      plan: normalizePlan(selectedPlan),
+
+      name: formData.name.trim(),
+
+      phone: formData.phone.trim(),
+
+      email: formData.email.trim(),
+
+      city: formData.city.trim(),
+
+      state: formData.state.trim(),
+
+      studio: formData.studio.trim(),
+
+      experience: formData.experience.trim(),
+
+      instagram: formData.instagram.trim(),
+
+      profileImage,
+
+      createdAt: now,
+
+      updatedAt: now,
+
+      membershipStartedAt: selectedPlan === "free" ? now : null,
+
+      membershipExpiresAt: null,
+
+      paymentStatus: selectedPlan === "free" ? "not_required" : "pending",
+    };
+  };
+
+  /* =========================================================
+     CREATE PUBLIC DIRECTORY ARTIST
 
      FREE:
-     NAME + STATE
+     - Name
+     - Photo
+     - City
+     - State
+     - Studio
+     - Contact hidden
 
-     SILVER:
-     PROFILE + NAME + CITY + STATE + PHONE
+     PRO:
+     - Full contact
+     - SEO boost
+     - Analytics
+     - Higher priority
 
-     GOLD:
-     PROFILE + NAME + ALL 7 DETAILS
+     VERIFIED:
+     - Everything Pro
+     - Verified
+     - Spotlight
+     - Highest priority
   ========================================================= */
 
   const buildDirectoryArtist = (profile) => {
+    const plan = normalizePlan(profile.plan);
+
     const common = {
       id: profile.id,
 
-      plan: profile.plan,
+      plan,
 
       name: profile.name,
 
+      profileImage: profile.profileImage || "",
+
+      city: profile.city,
+
       state: profile.state,
+
+      studio: profile.studio,
 
       year: "2026",
 
@@ -415,46 +627,159 @@ export default function Enter() {
       updatedAt: new Date().toISOString(),
     };
 
-    /* FREE */
+    /* =====================================================
+       LIFETIME FREE LISTING
 
-    if (profile.plan === "free") {
-      return common;
-    }
+       Permanent directory entry.
+       Contact details stay masked.
+       Acts as the lead-generation entry tier.
+    ===================================================== */
 
-    /* SILVER */
-
-    if (profile.plan === "silver") {
+    if (plan === "free") {
       return {
         ...common,
 
-        profileImage: profile.profileImage,
+        contactMasked: true,
 
-        city: profile.city,
+        phoneVisible: false,
 
-        phone: profile.phone,
+        emailVisible: false,
+
+        instagramVisible: false,
+
+        consumerBookingEnabled: false,
+
+        citySearchVisible: false,
+
+        recommended: false,
+
+        verified: false,
+
+        spotlight: false,
+
+        standaloneProfile: false,
+
+        standaloneProfileUrl: "",
+
+        hallOfFameEligible: false,
+
+        prioritySearch: false,
+
+        maximumDigitalVisibility: false,
+
+        leadGenerationListing: true,
+
+        directoryPriority: 1,
       };
     }
 
-    /* GOLD */
+    /* =====================================================
+       PRO LISTING
+
+       City-wise visibility + Recommended tag.
+       Direct contact is unmasked for consumer booking.
+    ===================================================== */
+
+    if (plan === "pro") {
+      return {
+        ...common,
+
+        phone: profile.phone,
+
+        email: profile.email,
+
+        experience: profile.experience,
+
+        instagram: profile.instagram,
+
+        contactMasked: false,
+
+        phoneVisible: true,
+
+        emailVisible: true,
+
+        instagramVisible: true,
+
+        consumerBookingEnabled: true,
+
+        citySearchVisible: true,
+
+        recommended: true,
+
+        verified: false,
+
+        spotlight: false,
+
+        standaloneProfile: false,
+
+        standaloneProfileUrl: "",
+
+        hallOfFameEligible: false,
+
+        prioritySearch: false,
+
+        maximumDigitalVisibility: false,
+
+        leadGenerationListing: false,
+
+        directoryPriority: 2,
+      };
+    }
+
+    /* =====================================================
+       VERIFIED SPOTLIGHT
+
+       Dedicated URL + Hall of Fame + priority ranking +
+       maximum digital visibility.
+    ===================================================== */
+
+    const standaloneProfileUrl = `/artist/${createProfileSlug(
+      profile.name,
+      profile.id,
+    )}`;
 
     return {
       ...common,
-
-      profileImage: profile.profileImage,
 
       phone: profile.phone,
 
       email: profile.email,
 
-      city: profile.city,
-
-      state: profile.state,
-
-      studio: profile.studio,
-
       experience: profile.experience,
 
       instagram: profile.instagram,
+
+      contactMasked: false,
+
+      phoneVisible: true,
+
+      emailVisible: true,
+
+      instagramVisible: true,
+
+      consumerBookingEnabled: true,
+
+      citySearchVisible: true,
+
+      recommended: true,
+
+      verified: true,
+
+      spotlight: true,
+
+      standaloneProfile: true,
+
+      standaloneProfileUrl,
+
+      hallOfFameEligible: true,
+
+      prioritySearch: true,
+
+      maximumDigitalVisibility: true,
+
+      leadGenerationListing: false,
+
+      directoryPriority: 3,
     };
   };
 
@@ -481,51 +806,38 @@ export default function Enter() {
       updated = [publicArtist, ...directory];
     }
 
-    localStorage.setItem(DIRECTORY_KEY, JSON.stringify(updated));
+    localStorage.setItem(
+      DIRECTORY_KEY,
+
+      JSON.stringify(updated),
+    );
   };
 
   /* =========================================================
-     CREATE PROFILE
+     SAVE FREE PROFILE
+
+     FREE NEEDS NO PAYMENT
   ========================================================= */
 
-  const createProfile = (selectedPlan) => {
-    const profiles = getStoredArray(PROFILE_KEY);
+  const createFreeProfile = () => {
+    const profiles = migrateProfiles();
 
-    const newProfile = {
-      id: Date.now(),
-
-      plan: selectedPlan,
-
-      name: formData.name.trim(),
-
-      phone: formData.phone.trim(),
-
-      email: formData.email.trim(),
-
-      city: formData.city.trim(),
-
-      state: formData.state.trim(),
-
-      studio: formData.studio.trim(),
-
-      experience: formData.experience.trim(),
-
-      instagram: formData.instagram.trim(),
-
-      profileImage,
-
-      createdAt: new Date().toISOString(),
-
-      updatedAt: new Date().toISOString(),
-    };
+    const newProfile = buildProfileFromForm("free");
 
     try {
       localStorage.setItem(
         PROFILE_KEY,
+
         JSON.stringify([newProfile, ...profiles]),
       );
 
-      localStorage.setItem(CURRENT_USER_KEY, String(newProfile.id));
+      localStorage.setItem(
+        CURRENT_USER_KEY,
+
+        String(newProfile.id),
+      );
+
+      localStorage.removeItem(PENDING_MEMBERSHIP_KEY);
 
       updateDirectory(newProfile);
 
@@ -536,11 +848,110 @@ export default function Enter() {
           newArtistId: newProfile.id,
         },
       });
-    } catch (error) {
-      console.error(error);
+    } catch (saveError) {
+      console.error(saveError);
 
       setError("Unable to save your profile.");
     }
+  };
+
+  /* =========================================================
+     START PAID MEMBERSHIP CHECKOUT
+
+     IMPORTANT:
+     THIS DOES NOT ACTIVATE PRO/VERIFIED YET.
+
+     PAYMENT PAGE MUST VERIFY PAYMENT FIRST.
+  ========================================================= */
+
+  const startPaidMembership = (selectedPlan, existingProfile = null) => {
+    const plan = getPlanById(selectedPlan);
+
+    if (plan.id === "free") {
+      createFreeProfile();
+
+      return;
+    }
+
+    const profileDraft = existingProfile
+      ? {
+          ...existingProfile,
+
+          plan: plan.id,
+
+          updatedAt: new Date().toISOString(),
+
+          paymentStatus: "pending",
+        }
+      : buildProfileFromForm(plan.id);
+
+    const pendingCheckout = {
+      source: "directory-membership",
+
+      action: existingProfile ? "upgrade" : "create",
+
+      planId: plan.id,
+
+      planName: plan.name,
+
+      amount: plan.amount,
+
+      billing: "yearly",
+
+      profileId: existingProfile?.id || profileDraft.id,
+
+      previousPlan: existingProfile?.plan || null,
+
+      profileDraft,
+
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem(
+        PENDING_MEMBERSHIP_KEY,
+
+        JSON.stringify(pendingCheckout),
+      );
+
+      navigate("/payment", {
+        state: {
+          source: "directory-membership",
+
+          action: pendingCheckout.action,
+
+          planId: plan.id,
+
+          planName: plan.name,
+
+          amount: plan.amount,
+
+          billing: "yearly",
+
+          profileDraft,
+        },
+      });
+    } catch (paymentError) {
+      console.error(paymentError);
+
+      setError("Unable to start payment.");
+    }
+  };
+
+  /* =========================================================
+     PLAN SELECT
+  ========================================================= */
+
+  const handlePlanSelect = (selectedPlan) => {
+    const normalized = normalizePlan(selectedPlan);
+
+    if (normalized === "free") {
+      createFreeProfile();
+
+      return;
+    }
+
+    startPaidMembership(normalized);
   };
 
   /* =========================================================
@@ -552,53 +963,27 @@ export default function Enter() {
       return;
     }
 
+    const normalizedNext = normalizePlan(nextPlan);
+
     const oldPriority = getPlanPriority(currentProfile.plan);
 
-    const nextPriority = getPlanPriority(nextPlan);
+    const nextPriority = getPlanPriority(normalizedNext);
 
     if (nextPriority <= oldPriority) {
       return;
     }
 
-    const profiles = getStoredArray(PROFILE_KEY);
+    startPaidMembership(
+      normalizedNext,
 
-    const upgradedProfile = {
-      ...currentProfile,
-
-      plan: nextPlan,
-
-      updatedAt: new Date().toISOString(),
-    };
-
-    const updatedProfiles = profiles.map((profile) =>
-      String(profile.id) === String(currentProfile.id)
-        ? upgradedProfile
-        : profile,
+      currentProfile,
     );
-
-    try {
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfiles));
-
-      updateDirectory(upgradedProfile);
-
-      setCurrentProfile(upgradedProfile);
-
-      navigate("/artists", {
-        state: {
-          newArtistId: upgradedProfile.id,
-        },
-      });
-    } catch (error) {
-      console.error(error);
-
-      setError("Unable to upgrade membership.");
-    }
   };
 
   /* =========================================================
      LOGOUT
 
-     DOES NOT DELETE USER PROFILE.
+     DOES NOT DELETE PROFILE.
   ========================================================= */
 
   const handleLogout = () => {
@@ -620,12 +1005,15 @@ export default function Enter() {
   };
 
   /* =========================================================
-     CURRENT PLAN
+     CURRENT NORMALIZED PLAN
   ========================================================= */
 
+  const normalizedCurrentPlan = normalizePlan(currentProfile?.plan);
+
   const currentPlan = useMemo(
-    () => plans.find((plan) => plan.id === currentProfile?.plan),
-    [currentProfile],
+    () => plans.find((plan) => plan.id === normalizedCurrentPlan),
+
+    [normalizedCurrentPlan],
   );
 
   /* =========================================================
@@ -633,26 +1021,19 @@ export default function Enter() {
   ========================================================= */
 
   if (screen === "loading") {
-    return (
-      <main
-        className="
-          min-h-screen
-          bg-[#08080a]
-        "
-      />
-    );
+    return <main className="min-h-screen bg-[#08080a]" />;
   }
 
   /* =========================================================
-     SAVED USER PROFILE
+     SAVED PROFILE
   ========================================================= */
 
   if (screen === "profile" && currentProfile) {
-    const isFree = currentProfile.plan === "free";
+    const isFree = normalizedCurrentPlan === "free";
 
-    const isSilver = currentProfile.plan === "silver";
+    const isPro = normalizedCurrentPlan === "pro";
 
-    const isGold = currentProfile.plan === "gold";
+    const isVerified = normalizedCurrentPlan === "verified";
 
     return (
       <main
@@ -673,19 +1054,27 @@ export default function Enter() {
             mx-auto
           "
         >
-          {/* HEADER + LOGOUT */}
+          {/* =================================================
+              HEADER
+          ================================================= */}
 
           <div
             className="
               enter-reveal
+
               border-b
               border-white/10
+
               pb-12
+
               flex
               flex-col
               sm:flex-row
+
               sm:items-end
+
               justify-between
+
               gap-8
             "
           >
@@ -693,33 +1082,35 @@ export default function Enter() {
               <p
                 className="
                   text-purple-400
+
                   text-[10px]
+
                   font-mono
+
                   tracking-[0.2em]
+
                   mb-5
                 "
               >
-                MY ARTIST PROFILE
+                MY DIRECTORY PROFILE
               </p>
 
               <h1
                 className="
                   text-[clamp(3.5rem,7vw,7rem)]
+
                   font-black
+
                   uppercase
+
                   tracking-[-0.07em]
+
                   leading-[0.85]
                 "
               >
                 WELCOME
                 <br />
-                <span
-                  className="
-                    text-purple-500
-                  "
-                >
-                  BACK.
-                </span>
+                <span className="text-purple-500">BACK.</span>
               </h1>
             </div>
 
@@ -730,19 +1121,31 @@ export default function Enter() {
               onClick={handleLogout}
               className="
                 shrink-0
+
                 border
                 border-red-500/30
+
                 bg-red-500/[0.05]
+
                 hover:bg-red-500
+
                 hover:text-white
+
                 text-red-400
+
                 px-7
                 py-4
+
                 text-[10px]
+
                 font-black
+
                 tracking-[0.16em]
+
                 uppercase
+
                 transition-all
+
                 duration-300
               "
             >
@@ -750,38 +1153,49 @@ export default function Enter() {
             </button>
           </div>
 
-          {/* PROFILE */}
+          {/* =================================================
+              PROFILE
+          ================================================= */}
 
           <div
             className="
               grid
+
               grid-cols-1
+
               lg:grid-cols-[330px_1fr]
+
               gap-8
               lg:gap-14
+
               mt-12
             "
           >
             {/* PHOTO */}
 
-            <div
-              className="
-                enter-reveal
-              "
-            >
+            <div className="enter-reveal">
               <div
                 className={`
                   relative
+
                   aspect-square
+
                   rounded-[30px]
+
                   overflow-hidden
+
                   bg-[#0d0d11]
+
                   border-2
 
                   ${
-                    isGold
-                      ? "border-yellow-400"
-                      : isSilver
+                    isVerified
+                      ? `
+                        border-purple-400
+
+                        shadow-[0_0_50px_rgba(168,85,247,0.16)]
+                      `
+                      : isPro
                         ? "border-slate-300"
                         : "border-white/10"
                   }
@@ -794,6 +1208,7 @@ export default function Enter() {
                     className="
                       w-full
                       h-full
+
                       object-cover
                     "
                   />
@@ -802,32 +1217,63 @@ export default function Enter() {
                     className="
                       w-full
                       h-full
+
                       flex
+
                       items-center
                       justify-center
+
                       bg-[#0d0d11]
                     "
                   >
-                    <Users
-                      size={40}
-                      className="
-                        text-gray-700
-                      "
-                    />
+                    <Users size={40} className="text-gray-700" />
+                  </div>
+                )}
+
+                {isVerified && (
+                  <div
+                    className="
+                      absolute
+
+                      top-4
+                      left-4
+
+                      bg-purple-600
+
+                      border
+                      border-purple-300/30
+
+                      px-4
+                      py-2
+
+                      text-[8px]
+
+                      font-black
+
+                      tracking-[0.15em]
+                    "
+                  >
+                    ✓ VERIFIED
                   </div>
                 )}
               </div>
             </div>
 
-            {/* INFORMATION */}
+            {/* =================================================
+                PROFILE INFORMATION
+            ================================================= */}
 
             <div
               className="
                 enter-reveal
+
                 bg-[#0d0d11]
+
                 border
                 border-white/10
+
                 rounded-[30px]
+
                 p-6
                 sm:p-8
               "
@@ -835,12 +1281,18 @@ export default function Enter() {
               <div
                 className="
                   flex
+
                   flex-col
                   sm:flex-row
+
                   sm:items-start
+
                   justify-between
+
                   gap-5
+
                   pb-7
+
                   border-b
                   border-white/10
                 "
@@ -849,19 +1301,24 @@ export default function Enter() {
                   <p
                     className="
                       text-[9px]
+
                       font-mono
+
                       text-gray-600
+
                       mb-2
                     "
                   >
-                    ARTIST PROFILE
+                    DIRECTORY PROFILE
                   </p>
 
                   <h2
                     className="
                       text-3xl
                       sm:text-5xl
+
                       font-black
+
                       uppercase
                     "
                   >
@@ -871,18 +1328,17 @@ export default function Enter() {
                   <div
                     className="
                       flex
+
                       items-center
+
                       gap-2
+
                       mt-4
+
                       text-gray-400
                     "
                   >
-                    <MapPin
-                      size={14}
-                      className="
-                        text-purple-500
-                      "
-                    />
+                    <MapPin size={14} className="text-purple-500" />
 
                     <span>
                       {currentProfile.city}, {currentProfile.state}
@@ -890,35 +1346,64 @@ export default function Enter() {
                   </div>
                 </div>
 
+                {/* PLAN BADGE */}
+
                 <div
                   className={`
                     px-5
                     py-3
-                    text-xs
+
+                    text-[10px]
+
                     font-black
+
                     tracking-[0.15em]
 
                     ${
-                      isGold
-                        ? "bg-yellow-400 text-black"
-                        : isSilver
-                          ? "bg-slate-200 text-black"
-                          : "bg-purple-600 text-white"
+                      isVerified
+                        ? `
+                          bg-purple-600
+
+                          text-white
+
+                          shadow-[0_0_25px_rgba(168,85,247,0.30)]
+                        `
+                        : isPro
+                          ? `
+                            bg-slate-200
+
+                            text-black
+                          `
+                          : `
+                            bg-white/10
+
+                            text-white
+
+                            border
+                            border-white/10
+                          `
                     }
                   `}
                 >
-                  {currentPlan?.name}
+                  {currentPlan?.shortName}
                 </div>
               </div>
 
-              {/* PRIVATE SAVED DETAILS */}
+              {/* =================================================
+                  PRIVATE SAVED DETAILS
+
+                  User can see everything here even on Free.
+              ================================================= */}
 
               <div
                 className="
                   grid
+
                   grid-cols-1
                   sm:grid-cols-2
+
                   gap-6
+
                   mt-8
                 "
               >
@@ -941,18 +1426,75 @@ export default function Enter() {
                   label="INSTAGRAM"
                   value={currentProfile.instagram}
                 />
+
+                <ProfileInfo label="MEMBERSHIP" value={currentPlan?.name} />
               </div>
+
+              {/* FREE MASK MESSAGE */}
+
+              {isFree && (
+                <div
+                  className="
+                    mt-8
+
+                    border
+                    border-purple-500/20
+
+                    bg-purple-500/[0.04]
+
+                    rounded-2xl
+
+                    p-5
+                  "
+                >
+                  <p
+                    className="
+                      text-[9px]
+
+                      font-mono
+
+                      tracking-[0.16em]
+
+                      text-purple-400
+                    "
+                  >
+                    FREE LISTING PRIVACY
+                  </p>
+
+                  <p
+                    className="
+                      mt-2
+
+                      text-sm
+
+                      text-gray-500
+
+                      leading-relaxed
+                    "
+                  >
+                    Your permanent Lifetime Free listing is active. Your phone,
+                    email and Instagram remain masked on the public directory.
+                    Upgrade to Pro to unlock direct consumer booking contact.
+                  </p>
+                </div>
+              )}
 
               <button
                 type="button"
                 onClick={() => navigate("/artists")}
                 className="
                   mt-8
+
                   text-[10px]
+
                   font-black
+
                   tracking-widest
+
                   text-purple-400
+
                   hover:text-purple-300
+
                   transition
                 "
               >
@@ -961,13 +1503,18 @@ export default function Enter() {
             </div>
           </div>
 
-          {/* UPGRADE */}
+          {/* =================================================
+              UPGRADE
+          ================================================= */}
 
           <section
             className="
               enter-reveal
+
               mt-16
+
               pt-12
+
               border-t
               border-white/10
             "
@@ -975,136 +1522,185 @@ export default function Enter() {
             <p
               className="
                 text-[9px]
+
                 text-purple-400
+
                 font-mono
+
                 tracking-[0.2em]
+
                 mb-3
               "
             >
-              MEMBERSHIP
+              DIRECTORY MEMBERSHIP
             </p>
 
             <h2
               className="
                 text-3xl
                 sm:text-5xl
+
                 font-black
+
                 uppercase
               "
             >
-              {isGold ? "YOU HAVE MAXIMUM VISIBILITY" : "UPGRADE YOUR PROFILE"}
+              {isVerified
+                ? "YOUR SPOTLIGHT IS ACTIVE"
+                : "GET MORE CLIENT VISIBILITY"}
             </h2>
 
-            {/* FREE -> SILVER/GOLD */}
+            <p
+              className="
+                mt-4
+
+                max-w-2xl
+
+                text-sm
+
+                text-gray-500
+
+                leading-relaxed
+              "
+            >
+              Upgrade to Pro for city-wise search visibility, a Recommended tag
+              and direct consumer booking contact. Choose Verified Spotlight for
+              a standalone profile URL, Hall of Fame inclusion and priority
+              ranking.
+            </p>
+
+            {/* ===============================================
+                FREE -> PRO / VERIFIED
+            =============================================== */}
 
             {isFree && (
               <div
                 className="
                   grid
+
                   grid-cols-1
                   md:grid-cols-2
+
                   gap-5
+
                   mt-8
                 "
               >
                 <UpgradeCard
-                  name="SILVER"
-                  price="₹799"
-                  description="Show your profile photo, name, city, state and phone number with Silver styling."
-                  type="silver"
+                  name="PRO LISTING"
+                  price="₹1,499"
+                  billing="PER YEAR"
+                  type="pro"
+                  description="Get city-wise search visibility, a Recommended tag and unmasked direct contact information for consumer booking."
                   benefits={[
-                    "Profile Photo",
-                    "Name",
-                    "City",
-                    "State",
-                    "Phone",
-                    "Silver Border",
+                    "Everything in Lifetime Free",
+                    "City-Wise Search Visibility",
+                    "Recommended Tag",
+                    "Phone Number Visible",
+                    "Email Visible",
+                    "Instagram Visible",
+                    "Direct Consumer Booking Contact",
+                    "Higher Directory Visibility",
                   ]}
-                  onClick={() => upgradePlan("silver")}
+                  onClick={() => upgradePlan("pro")}
                 />
 
                 <UpgradeCard
-                  name="GOLD"
-                  price="₹1299"
-                  description="Unlock your full professional profile and highest directory visibility."
-                  type="gold"
+                  name="VERIFIED SPOTLIGHT"
+                  price="₹2,999"
+                  billing="PER YEAR"
+                  type="verified"
+                  description="Premium visibility with a standalone profile URL, Hall of Fame inclusion, priority search ranking and maximum digital visibility."
                   benefits={[
-                    "Profile Photo",
-                    "Name",
-                    "Phone",
-                    "Email",
-                    "City",
-                    "State",
-                    "Studio",
-                    "Experience",
-                    "Instagram",
-                    "Gold Border",
+                    "Everything in Pro",
+                    "Verified Spotlight Badge",
+                    "Dedicated Standalone Profile URL",
+                    "Hall of Fame Inclusion",
+                    "Priority Search Ranking",
+                    "Featured Spotlight Placement",
+                    "Maximum Digital Visibility",
+                    "Full Direct Contact Visibility",
                   ]}
-                  onClick={() => upgradePlan("gold")}
+                  onClick={() => upgradePlan("verified")}
                 />
               </div>
             )}
 
-            {/* SILVER -> GOLD */}
+            {/* ===============================================
+                PRO -> VERIFIED
+            =============================================== */}
 
-            {isSilver && (
+            {isPro && (
               <div
                 className="
                   max-w-2xl
+
                   mt-8
                 "
               >
                 <UpgradeCard
-                  name="GOLD"
-                  price="₹1299"
-                  description="Upgrade your Silver profile to Gold and show all seven professional details."
-                  type="gold"
+                  name="VERIFIED SPOTLIGHT"
+                  price="₹2,999"
+                  billing="PER YEAR"
+                  type="verified"
+                  description="Upgrade from Pro to a standalone profile URL, Hall of Fame inclusion, priority search ranking and maximum digital visibility."
                   benefits={[
-                    "Phone",
-                    "Email",
-                    "City",
-                    "State",
-                    "Studio",
-                    "Experience",
-                    "Instagram",
-                    "Gold Border",
-                    "Highest Priority",
+                    "Everything in Pro",
+                    "Verified Spotlight Badge",
+                    "Dedicated Standalone Profile URL",
+                    "Hall of Fame Inclusion",
+                    "Priority Search Ranking",
+                    "Featured Spotlight Placement",
+                    "Maximum Digital Visibility",
                   ]}
-                  onClick={() => upgradePlan("gold")}
+                  onClick={() => upgradePlan("verified")}
                 />
               </div>
             )}
 
-            {/* GOLD */}
+            {/* ===============================================
+                VERIFIED
+            =============================================== */}
 
-            {isGold && (
+            {isVerified && (
               <div
                 className="
                   mt-8
+
                   border
-                  border-yellow-400/30
-                  bg-yellow-400/[0.05]
+                  border-purple-400/30
+
+                  bg-purple-500/[0.05]
+
+                  rounded-[24px]
+
                   p-7
                 "
               >
                 <p
                   className="
-                    text-yellow-400
+                    text-purple-400
+
                     font-black
                   "
                 >
-                  Your Gold profile is already active.
+                  ✓ YOUR VERIFIED SPOTLIGHT PROFILE IS ACTIVE
                 </p>
 
                 <p
                   className="
                     text-sm
+
                     text-gray-500
+
                     mt-2
+
+                    leading-relaxed
                   "
                 >
-                  Your card shows all seven professional details and receives
-                  the highest directory priority.
+                  Your premium tier is active with priority search ranking,
+                  maximum digital visibility, Hall of Fame eligibility and a
+                  dedicated standalone profile URL.
                 </p>
               </div>
             )}
@@ -1113,7 +1709,9 @@ export default function Enter() {
               <p
                 className="
                   mt-5
+
                   text-red-400
+
                   text-sm
                 "
               >
@@ -1127,7 +1725,7 @@ export default function Enter() {
   }
 
   /* =========================================================
-     REGISTRATION
+     REGISTRATION FORM
   ========================================================= */
 
   if (screen === "form") {
@@ -1135,10 +1733,14 @@ export default function Enter() {
       <main
         className="
           min-h-screen
+
           bg-[#08080a]
+
           text-white
+
           pt-32
           pb-24
+
           px-4
           sm:px-6
           lg:px-10
@@ -1147,72 +1749,142 @@ export default function Enter() {
         <div
           className="
             max-w-[1400px]
+
             mx-auto
           "
         >
+          {/* =================================================
+              HEADER
+          ================================================= */}
+
           <div
             className="
               enter-reveal
+
               mb-12
             "
           >
             <div
               className="
                 flex
+
                 items-center
+
                 gap-2
+
                 text-purple-400
+
                 text-[10px]
+
                 font-mono
+
                 tracking-[0.2em]
+
                 mb-4
               "
             >
               <Sparkles size={13} />
-              ARTIST REGISTRATION
+              CLAIM YOUR DIRECTORY LISTING
             </div>
 
             <h1
               className="
                 text-[clamp(3.5rem,7vw,7rem)]
+
                 font-black
+
                 uppercase
+
                 tracking-[-0.07em]
+
                 leading-[0.85]
               "
             >
-              CREATE YOUR
+              GET FOUND.
               <br />
-              <span
-                className="
-                  text-purple-500
-                "
-              >
-                PROFILE.
-              </span>
+              <span className="text-purple-500">GET BOOKED.</span>
             </h1>
 
             <p
               className="
                 mt-6
-                max-w-xl
+
+                max-w-2xl
+
                 text-gray-500
+
                 text-sm
+
                 leading-relaxed
               "
             >
-              Fill your information once. Your full private profile stays saved
-              even if you start with the Free membership.
+              Create your tattoo artist or studio profile once. Start with a
+              permanent Lifetime Free listing, move to Pro for city-wise
+              discovery and direct booking contact, or choose Verified Spotlight
+              for maximum digital visibility.
             </p>
+
+            {/* SMALL BENEFITS */}
+
+            <div
+              className="
+                flex
+
+                flex-wrap
+
+                gap-3
+
+                mt-6
+              "
+            >
+              {[
+                "LIFETIME FREE OPTION",
+                "INDIA-WIDE DIRECTORY",
+                "UPGRADE ANYTIME",
+              ].map((item) => (
+                <span
+                  key={item}
+                  className="
+                      border
+                      border-white/10
+
+                      bg-white/[0.03]
+
+                      rounded-full
+
+                      px-4
+                      py-2
+
+                      text-[8px]
+
+                      font-mono
+
+                      tracking-[0.12em]
+
+                      text-gray-500
+                    "
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
+
+          {/* =================================================
+              FORM
+          ================================================= */}
 
           <form
             onSubmit={handleSubmit}
             className="
               enter-reveal
+
               grid
+
               grid-cols-1
+
               lg:grid-cols-[340px_1fr]
+
               gap-10
               lg:gap-16
             "
@@ -1223,8 +1895,11 @@ export default function Enter() {
               <p
                 className="
                   text-[9px]
+
                   font-mono
+
                   text-gray-500
+
                   mb-3
                 "
               >
@@ -1234,14 +1909,22 @@ export default function Enter() {
               <label
                 className="
                   relative
+
                   block
+
                   aspect-square
+
                   overflow-hidden
+
                   bg-[#0d0d11]
+
                   border
                   border-white/10
+
                   hover:border-purple-500/50
+
                   cursor-pointer
+
                   transition
                 "
               >
@@ -1252,6 +1935,7 @@ export default function Enter() {
                     className="
                       w-full
                       h-full
+
                       object-cover
                     "
                   />
@@ -1259,11 +1943,15 @@ export default function Enter() {
                   <div
                     className="
                       absolute
+
                       inset-0
+
                       flex
                       flex-col
+
                       items-center
                       justify-center
+
                       text-center
                     "
                   >
@@ -1271,6 +1959,7 @@ export default function Enter() {
                       size={30}
                       className="
                         text-purple-500
+
                         mb-4
                       "
                     />
@@ -1278,6 +1967,7 @@ export default function Enter() {
                     <p
                       className="
                         font-black
+
                         text-lg
                       "
                     >
@@ -1287,7 +1977,9 @@ export default function Enter() {
                     <p
                       className="
                         text-xs
+
                         text-gray-600
+
                         mt-2
                       "
                     >
@@ -1303,21 +1995,59 @@ export default function Enter() {
                   className="hidden"
                 />
               </label>
+
+              <div
+                className="
+                  mt-4
+
+                  p-4
+
+                  border
+                  border-white/[0.06]
+
+                  bg-white/[0.02]
+                "
+              >
+                <p
+                  className="
+                    text-[8px]
+
+                    font-mono
+
+                    text-purple-400
+
+                    tracking-[0.12em]
+                  "
+                >
+                  YOUR DETAILS STAY SAVED
+                </p>
+
+                <p
+                  className="
+                    mt-2
+
+                    text-[11px]
+
+                    text-gray-600
+
+                    leading-relaxed
+                  "
+                >
+                  Free listings keep sensitive contact details hidden on the
+                  public directory.
+                </p>
+              </div>
             </div>
 
             {/* DETAILS */}
 
-            <div
-              className="
-                space-y-5
-              "
-            >
+            <div className="space-y-5">
               <InputField
-                label="FULL NAME"
+                label="ARTIST / OWNER NAME"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Your name"
+                placeholder="Your full name"
               />
 
               <InputField
@@ -1340,8 +2070,10 @@ export default function Enter() {
               <div
                 className="
                   grid
+
                   grid-cols-1
                   sm:grid-cols-2
+
                   gap-5
                 "
               >
@@ -1363,11 +2095,11 @@ export default function Enter() {
               </div>
 
               <InputField
-                label="STUDIO"
+                label="STUDIO NAME"
                 name="studio"
                 value={formData.studio}
                 onChange={handleChange}
-                placeholder="Studio name"
+                placeholder="Your tattoo studio"
               />
 
               <InputField
@@ -1391,10 +2123,14 @@ export default function Enter() {
                   className="
                     border-l-2
                     border-red-500
+
                     bg-red-500/[0.05]
+
                     px-5
                     py-4
+
                     text-red-400
+
                     text-sm
                   "
                 >
@@ -1406,24 +2142,35 @@ export default function Enter() {
                 type="submit"
                 className="
                   group
+
                   w-full
+
                   bg-purple-600
+
                   hover:bg-purple-500
+
                   p-5
+
                   flex
+
                   items-center
                   justify-between
+
                   font-black
+
                   text-[11px]
+
                   tracking-[0.15em]
+
                   transition
                 "
               >
-                CHOOSE MEMBERSHIP
+                VIEW LISTING OPTIONS
                 <ArrowRight
                   size={16}
                   className="
                     transition-transform
+
                     group-hover:translate-x-1
                   "
                 />
@@ -1436,17 +2183,21 @@ export default function Enter() {
   }
 
   /* =========================================================
-     FIRST MEMBERSHIP
+     CHOOSE MEMBERSHIP
   ========================================================= */
 
   return (
     <main
       className="
         min-h-screen
+
         bg-[#08080a]
+
         text-white
+
         pt-32
         pb-24
+
         px-4
         sm:px-6
         lg:px-10
@@ -1455,6 +2206,7 @@ export default function Enter() {
       <div
         className="
           max-w-[1400px]
+
           mx-auto
         "
       >
@@ -1463,42 +2215,89 @@ export default function Enter() {
           onClick={() => setScreen("form")}
           className="
             text-[10px]
+
             font-mono
+
             text-gray-500
+
             mb-10
+
             hover:text-white
+
             transition
           "
         >
           ← EDIT DETAILS
         </button>
 
-        <h1
-          className="
-            text-[clamp(3.5rem,7vw,7rem)]
-            font-black
-            uppercase
-            tracking-[-0.07em]
-            leading-[0.85]
-          "
-        >
-          CHOOSE YOUR
-          <br />
-          <span
+        <div className="enter-reveal">
+          <p
             className="
-              text-purple-500
+              text-purple-400
+
+              text-[10px]
+
+              font-mono
+
+              tracking-[0.2em]
+
+              mb-4
             "
           >
-            MEMBERSHIP.
-          </span>
-        </h1>
+            DIRECTORY MEMBERSHIP
+          </p>
+
+          <h1
+            className="
+              text-[clamp(3.5rem,7vw,7rem)]
+
+              font-black
+
+              uppercase
+
+              tracking-[-0.07em]
+
+              leading-[0.85]
+            "
+          >
+            CHOOSE YOUR
+            <br />
+            <span className="text-purple-500">VISIBILITY.</span>
+          </h1>
+
+          <p
+            className="
+              mt-6
+
+              max-w-2xl
+
+              text-sm
+
+              text-gray-500
+
+              leading-relaxed
+            "
+          >
+            Start with a permanent free directory entry, upgrade to Pro for
+            city-wise search visibility and direct booking contact, or choose
+            Verified Spotlight for a standalone URL, Hall of Fame inclusion and
+            priority search ranking.
+          </p>
+        </div>
+
+        {/* =================================================
+            PLAN CARDS
+        ================================================= */}
 
         <div
           className="
             grid
+
             grid-cols-1
             lg:grid-cols-3
+
             gap-5
+
             mt-12
           "
         >
@@ -1506,15 +2305,82 @@ export default function Enter() {
             <MembershipCard
               key={plan.id}
               plan={plan}
-              onClick={() => createProfile(plan.id)}
+              onClick={() => handlePlanSelect(plan.id)}
             />
           ))}
+        </div>
+
+        {/* PAYMENT INFO */}
+
+        <div
+          className="
+            mt-7
+
+            border
+            border-white/[0.06]
+
+            bg-white/[0.02]
+
+            p-5
+
+            flex
+
+            flex-col
+            md:flex-row
+
+            md:items-center
+
+            justify-between
+
+            gap-4
+          "
+        >
+          <div>
+            <p
+              className="
+                text-[9px]
+
+                font-black
+
+                tracking-[0.14em]
+              "
+            >
+              FREE REALLY MEANS FREE.
+            </p>
+
+            <p
+              className="
+                mt-2
+
+                text-xs
+
+                text-gray-600
+              "
+            >
+              No payment is required for the permanent Lifetime Free listing.
+            </p>
+          </div>
+
+          <p
+            className="
+              text-[9px]
+
+              font-mono
+
+              text-purple-400
+
+              tracking-[0.12em]
+            "
+          >
+            PRO & VERIFIED ARE BILLED ANNUALLY
+          </p>
         </div>
 
         {error && (
           <p
             className="
               mt-5
+
               text-red-400
             "
           >
@@ -1527,7 +2393,7 @@ export default function Enter() {
 }
 
 /* =========================================================
-   INPUT
+   INPUT FIELD
 ========================================================= */
 
 function InputField({ label, type = "text", ...props }) {
@@ -1536,8 +2402,11 @@ function InputField({ label, type = "text", ...props }) {
       <p
         className="
           text-[9px]
+
           font-mono
+
           text-gray-500
+
           mb-2
         "
       >
@@ -1549,15 +2418,23 @@ function InputField({ label, type = "text", ...props }) {
         type={type}
         className="
           w-full
+
           bg-[#0d0d11]
+
           border
           border-white/10
+
           focus:border-purple-500
+
           px-5
           py-4
+
           outline-none
+
           text-white
+
           placeholder:text-gray-700
+
           transition
         "
       />
@@ -1566,87 +2443,219 @@ function InputField({ label, type = "text", ...props }) {
 }
 
 /* =========================================================
-   MEMBERSHIP
+   MEMBERSHIP CARD
 ========================================================= */
 
 function MembershipCard({ plan, onClick }) {
-  const isGold = plan.id === "gold";
+  const isVerified = plan.id === "verified";
 
-  const isSilver = plan.id === "silver";
+  const isPro = plan.id === "pro";
+
+  const isFree = plan.id === "free";
 
   return (
     <article
       className={`
+        relative
+
         p-7
-        min-h-[570px]
+
+        min-h-[610px]
+
         flex
         flex-col
 
+        overflow-hidden
+
+        transition-all
+
+        duration-500
+
+        hover:-translate-y-2
+
         ${
-          isGold
+          isVerified
             ? `
               border-2
-              border-yellow-400
-              bg-yellow-400/[0.04]
+
+              border-purple-400
+
+              bg-gradient-to-br
+
+              from-purple-500/[0.10]
+
+              via-[#100b17]
+
+              to-[#0d0d11]
+
+              shadow-[0_0_50px_rgba(168,85,247,0.12)]
             `
-            : isSilver
+            : isPro
               ? `
-              border-2
-              border-slate-300
-              bg-white/[0.025]
-            `
+                border-2
+
+                border-slate-300
+
+                bg-gradient-to-br
+
+                from-white/[0.05]
+
+                to-[#0d0d11]
+              `
               : `
-              border
-              border-white/10
-              bg-[#0d0d11]
-            `
+                border
+
+                border-white/10
+
+                bg-[#0d0d11]
+              `
         }
       `}
     >
+      {/* POPULAR BADGE */}
+
+      {isPro && (
+        <div
+          className="
+            absolute
+
+            top-5
+            right-5
+
+            bg-white
+
+            text-black
+
+            px-3
+            py-1.5
+
+            text-[7px]
+
+            font-black
+
+            tracking-[0.12em]
+          "
+        >
+          POPULAR
+        </div>
+      )}
+
+      {isVerified && (
+        <div
+          className="
+            absolute
+
+            top-5
+            right-5
+
+            bg-purple-600
+
+            text-white
+
+            px-3
+            py-1.5
+
+            text-[7px]
+
+            font-black
+
+            tracking-[0.12em]
+          "
+        >
+          HIGHEST VISIBILITY
+        </div>
+      )}
+
       <p
         className={`
           text-[9px]
+
           font-mono
 
+          tracking-[0.12em]
+
           ${
-            isGold
-              ? "text-yellow-400"
-              : isSilver
+            isVerified
+              ? "text-purple-400"
+              : isPro
                 ? "text-slate-300"
-                : "text-purple-400"
+                : "text-gray-600"
           }
         `}
       >
-        MEMBERSHIP
+        DIRECTORY MEMBERSHIP
       </p>
 
       <h2
         className="
-          text-5xl
+          text-4xl
+          xl:text-5xl
+
           font-black
-          mt-4
+
+          uppercase
+
+          tracking-[-0.04em]
+
+          leading-[0.95]
+
+          mt-5
         "
       >
         {plan.name}
       </h2>
 
-      <p
+      <div
         className="
-          text-4xl
-          font-black
-          mt-3
+          flex
+
+          items-end
+
+          gap-3
+
+          mt-6
         "
       >
-        {plan.price}
-      </p>
+        <p
+          className={`
+            text-4xl
+            xl:text-5xl
+
+            font-black
+
+            ${isVerified ? "text-purple-400" : "text-white"}
+          `}
+        >
+          {plan.price}
+        </p>
+
+        <p
+          className="
+            text-[8px]
+
+            font-mono
+
+            text-gray-600
+
+            pb-1
+          "
+        >
+          {plan.billing}
+        </p>
+      </div>
 
       <p
         className="
           text-gray-500
+
           text-sm
+
           leading-relaxed
+
           mt-5
+
           pb-6
+
           border-b
           border-white/10
         "
@@ -1654,10 +2663,14 @@ function MembershipCard({ plan, onClick }) {
         {plan.description}
       </p>
 
+      {/* BENEFITS */}
+
       <div
         className="
           space-y-3
+
           mt-6
+
           flex-1
         "
       >
@@ -1666,9 +2679,13 @@ function MembershipCard({ plan, onClick }) {
             key={benefit}
             className="
                 flex
+
                 gap-3
+
                 items-start
+
                 text-sm
+
                 text-gray-300
               "
           >
@@ -1676,19 +2693,36 @@ function MembershipCard({ plan, onClick }) {
               className={`
                   w-5
                   h-5
+
                   rounded-full
+
                   shrink-0
+
                   flex
+
                   items-center
                   justify-center
+
                   text-[9px]
 
                   ${
-                    isGold
-                      ? "bg-yellow-400/10 text-yellow-400"
-                      : isSilver
-                        ? "bg-white/10 text-slate-200"
-                        : "bg-purple-500/10 text-purple-400"
+                    isVerified
+                      ? `
+                        bg-purple-500/10
+
+                        text-purple-400
+                      `
+                      : isPro
+                        ? `
+                          bg-white/10
+
+                          text-slate-200
+                        `
+                        : `
+                          bg-purple-500/10
+
+                          text-purple-400
+                        `
                   }
                 `}
             >
@@ -1700,28 +2734,104 @@ function MembershipCard({ plan, onClick }) {
         ))}
       </div>
 
+      {/* BUTTON */}
+
       <button
         type="button"
         onClick={onClick}
         className={`
-          mt-7
+          group
+
+          w-full
+
+          mt-8
+
           p-4
+
+          flex
+
+          items-center
+
+          justify-between
+
           font-black
+
           text-[10px]
+
           tracking-widest
-          transition
+
+          transition-all
 
           ${
-            isGold
-              ? "bg-yellow-400 hover:bg-yellow-300 text-black"
-              : isSilver
-                ? "bg-slate-100 hover:bg-white text-black"
-                : "bg-purple-600 hover:bg-purple-500 text-white"
+            isVerified
+              ? `
+                bg-purple-600
+
+                hover:bg-purple-500
+
+                text-white
+              `
+              : isPro
+                ? `
+                  bg-white
+
+                  hover:bg-slate-200
+
+                  text-black
+                `
+                : `
+                  border
+
+                  border-white/10
+
+                  bg-white/[0.04]
+
+                  hover:bg-purple-600
+
+                  hover:border-purple-600
+
+                  text-white
+                `
           }
         `}
       >
-        {isGold ? "SELECT GOLD" : isSilver ? "SELECT SILVER" : "CONTINUE FREE"}
+        <span>
+          {isFree
+            ? "CLAIM FREE LISTING"
+            : isPro
+              ? "GET PRO LISTING"
+              : "GET VERIFIED"}
+        </span>
+
+        <ArrowRight
+          size={15}
+          className="
+            transition-transform
+
+            group-hover:translate-x-1
+          "
+        />
       </button>
+
+      {!isFree && (
+        <p
+          className="
+            text-center
+
+            text-[7px]
+
+            text-gray-700
+
+            font-mono
+
+            tracking-[0.1em]
+
+            mt-3
+          "
+        >
+          CONTINUES TO SECURE PAYMENT
+        </p>
+      )}
     </article>
   );
 }
@@ -1736,8 +2846,11 @@ function ProfileInfo({ label, value }) {
       <p
         className="
           text-[8px]
+
           font-mono
+
           text-gray-600
+
           mb-1
         "
       >
@@ -1747,7 +2860,9 @@ function ProfileInfo({ label, value }) {
       <p
         className="
           text-sm
+
           text-gray-300
+
           break-words
         "
       >
@@ -1761,23 +2876,38 @@ function ProfileInfo({ label, value }) {
    UPGRADE CARD
 ========================================================= */
 
-function UpgradeCard({ name, price, description, type, benefits, onClick }) {
-  const isGold = type === "gold";
+function UpgradeCard({
+  name,
+  price,
+  billing,
+  description,
+  type,
+  benefits,
+  onClick,
+}) {
+  const isVerified = type === "verified";
 
   return (
     <article
       className={`
         p-7
+
         border-2
 
+        rounded-[24px]
+
         ${
-          isGold
+          isVerified
             ? `
-              border-yellow-400
-              bg-yellow-400/[0.04]
+              border-purple-400
+
+              bg-purple-500/[0.05]
+
+              shadow-[0_0_40px_rgba(168,85,247,0.08)]
             `
             : `
               border-slate-300
+
               bg-white/[0.025]
             `
         }
@@ -1786,7 +2916,9 @@ function UpgradeCard({ name, price, description, type, benefits, onClick }) {
       <p
         className="
           text-[9px]
+
           font-mono
+
           text-gray-600
         "
       >
@@ -1795,33 +2927,69 @@ function UpgradeCard({ name, price, description, type, benefits, onClick }) {
 
       <h3
         className={`
-          text-4xl
+          text-3xl
+          sm:text-4xl
+
           font-black
+
+          uppercase
+
           mt-3
 
-          ${isGold ? "text-yellow-400" : "text-slate-100"}
+          ${isVerified ? "text-purple-400" : "text-slate-100"}
         `}
       >
         {name}
       </h3>
 
-      <p
+      <div
         className="
-          text-3xl
-          font-black
-          mt-2
+          flex
+
+          items-end
+
+          gap-3
+
+          mt-3
         "
       >
-        {price}
-      </p>
+        <p
+          className="
+            text-3xl
+
+            font-black
+          "
+        >
+          {price}
+        </p>
+
+        <span
+          className="
+            text-[8px]
+
+            text-gray-600
+
+            font-mono
+
+            pb-1
+          "
+        >
+          {billing}
+        </span>
+      </div>
 
       <p
         className="
           text-sm
+
           text-gray-500
+
           leading-relaxed
+
           mt-5
+
           pb-5
+
           border-b
           border-white/10
         "
@@ -1832,6 +3000,7 @@ function UpgradeCard({ name, price, description, type, benefits, onClick }) {
       <div
         className="
           mt-5
+
           space-y-2
         "
       >
@@ -1840,6 +3009,7 @@ function UpgradeCard({ name, price, description, type, benefits, onClick }) {
             key={benefit}
             className="
                 text-sm
+
                 text-gray-300
               "
           >
@@ -1852,22 +3022,57 @@ function UpgradeCard({ name, price, description, type, benefits, onClick }) {
         type="button"
         onClick={onClick}
         className={`
+          group
+
           w-full
+
           mt-7
+
           py-4
+          px-5
+
+          flex
+
+          items-center
+
+          justify-between
+
           text-[10px]
+
           font-black
+
           tracking-widest
+
           transition
 
           ${
-            isGold
-              ? "bg-yellow-400 hover:bg-yellow-300 text-black"
-              : "bg-slate-100 hover:bg-white text-black"
+            isVerified
+              ? `
+                bg-purple-600
+
+                hover:bg-purple-500
+
+                text-white
+              `
+              : `
+                bg-slate-100
+
+                hover:bg-white
+
+                text-black
+              `
           }
         `}
       >
-        UPGRADE TO {name}
+        CONTINUE TO PAYMENT
+        <ArrowRight
+          size={14}
+          className="
+            transition-transform
+
+            group-hover:translate-x-1
+          "
+        />
       </button>
     </article>
   );

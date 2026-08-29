@@ -5,15 +5,12 @@ import gsap from "gsap";
 import {
   Trophy,
   Medal,
-  Globe,
-  Target,
-  PenTool,
   LayoutGrid,
-  Award,
   Star,
   ChevronDown,
-  Crown,
   ArrowRight,
+  Store,
+  Users,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -228,9 +225,9 @@ function Home() {
                   text-white
                 "
               >
-                THE GLOBAL ONLINE
+                INDIA&apos;S TATTOO
                 <br />
-                TATTOO CHAMPIONSHIP
+                ARTIST NETWORK
               </h1>
             </div>
 
@@ -247,9 +244,9 @@ function Home() {
                   leading-relaxed
                 "
               >
-                Compete with tattoo artists from around the world. Submit your
-                best work, get judged by experienced professionals, earn
-                recognition and build your Ink Convention ranking.
+                Discover tattoo artists and studios, join the directory, book
+                regional expo stalls and enter the Ink Convention competition
+                across India.
               </p>
             </div>
 
@@ -269,8 +266,8 @@ function Home() {
                   py-1
                 "
               >
-                PROFESSIONAL JUDGING • MULTIPLE CATEGORIES • GLOBAL
-                PARTICIPATION • ANNUAL RANKINGS
+                ARTIST DIRECTORY • REGIONAL EXPO TOUR • COMPETITION • VERIFIED
+                PROFILES
               </p>
             </div>
 
@@ -297,7 +294,8 @@ function Home() {
               ============================================= */}
 
               <Link
-                to="/upcoming"
+                to="/client-login"
+                state={{ redirectTo: "/stall" }}
                 className="
                   group
                   relative
@@ -360,7 +358,7 @@ function Home() {
               ============================================= */}
 
               <Link
-                to="/upload"
+                to="/Upload"
                 className="
                   group
                   relative
@@ -426,7 +424,7 @@ function Home() {
                     whitespace-nowrap
                   "
                 >
-                  GO TO THE COMPETITION
+                  ENTER COMPETITION
                 </span>
 
                 <ArrowRight
@@ -442,7 +440,7 @@ function Home() {
               </Link>
 
               {/* =============================================
-                  3. GET A FREE ENTRY
+                  3. JOIN DIRECTORY FREE
               ============================================= */}
 
               <Link
@@ -509,7 +507,7 @@ function Home() {
                     whitespace-nowrap
                   "
                 >
-                  GET A FREE ENTRY
+                  JOIN DIRECTORY FREE
                 </span>
 
                 <ArrowRight
@@ -565,7 +563,62 @@ function Home() {
                   text-white
                 "
               >
-                20+
+                6
+              </h3>
+
+              <p
+                className="
+                  text-[10px]
+                  sm:text-xs
+                  font-mono
+                  text-[#a855f7]
+                  tracking-wider
+                  uppercase
+                "
+              >
+                REGIONAL EXPO HUBS
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <h3
+                className="
+                  text-2xl
+                  font-black
+                  tracking-tight
+                  text-white
+                "
+              >
+                50–80
+              </h3>
+
+              <p
+                className="
+                  text-[10px]
+                  sm:text-xs
+                  font-mono
+                  text-[#a855f7]
+                  tracking-wider
+                  uppercase
+                "
+              >
+                STALLS / EVENT
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <h3
+                className="
+                  text-2xl
+                  font-black
+                  tracking-tight
+                  text-white
+                  flex
+                  items-center
+                  gap-2
+                "
+              >
+                <Medal size={24} className="text-white" />7
               </h3>
 
               <p
@@ -591,7 +644,7 @@ function Home() {
                   text-white
                 "
               >
-                3+
+                ₹0
               </h3>
 
               <p
@@ -604,63 +657,7 @@ function Home() {
                   uppercase
                 "
               >
-                JUDGES / CATEGORY
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <h3
-                className="
-                  text-2xl
-                  font-black
-                  tracking-tight
-                  text-white
-                  flex
-                  items-center
-                  gap-2
-                "
-              >
-                <Medal size={24} className="text-white" />
-                AWARDS
-              </h3>
-
-              <p
-                className="
-                  text-[10px]
-                  sm:text-xs
-                  font-mono
-                  text-[#a855f7]
-                  tracking-wider
-                  uppercase
-                "
-              >
-                MULTIPLE CATEGORIES
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <h3
-                className="
-                  text-2xl
-                  font-black
-                  tracking-tight
-                  text-white
-                "
-              >
-                100%
-              </h3>
-
-              <p
-                className="
-                  text-[10px]
-                  sm:text-xs
-                  font-mono
-                  text-[#a855f7]
-                  tracking-wider
-                  uppercase
-                "
-              >
-                ONLINE CHAMPIONSHIP
+                LIFETIME FREE LISTING
               </p>
             </div>
           </div>
@@ -720,7 +717,7 @@ function Home() {
               text-white
             "
           >
-            A NEW WAY TO COMPETE, GET RECOGNISED & GET DISCOVERED
+            ONE NETWORK FOR ARTISTS, STUDIOS, EXPO & COMPETITION
           </h2>
 
           <p
@@ -733,12 +730,10 @@ function Home() {
               leading-relaxed
             "
           >
-            Ink Convention is a global online tattoo competition and
-            artist-ranking platform created to give tattoo artists professional
-            recognition beyond their local studio or social-media following.
-            Artists can compete across specialist categories, submit their work
-            for professional evaluation, earn rankings and awards, and build a
-            lasting presence within the Ink Convention community.
+            Ink Convention connects tattoo artists, studios, clients and
+            industry brands through one growing ecosystem. Artists can create a
+            directory listing, improve their local visibility, join regional
+            three-day expos, book stalls and enter the tattoo competition.
           </p>
 
           <Link
@@ -757,14 +752,14 @@ function Home() {
               transition-colors
             "
           >
-            DISCOVER THE COMPETITION
+            DISCOVER INK CONVENTION
             <ArrowRight size={16} />
           </Link>
         </div>
       </section>
 
       {/* =====================================================
-          3. WHY INK CONVENTION
+          3. THREE WAYS TO JOIN
       ===================================================== */}
 
       <section
@@ -779,155 +774,8 @@ function Home() {
           border-white/5
         "
       >
-        <div
-          className="
-            max-w-7xl
-            mx-auto
-            space-y-16
-          "
-        >
-          <div
-            className="
-              text-center
-              max-w-2xl
-              mx-auto
-              space-y-3
-            "
-          >
-            <h2
-              className="
-                text-3xl
-                sm:text-4xl
-                font-black
-                tracking-tight
-                text-white
-                uppercase
-              "
-            >
-              MORE THAN A TATTOO COMPETITION
-            </h2>
-          </div>
-
-          <div
-            className="
-              grid
-              grid-cols-1
-              md:grid-cols-2
-              lg:grid-cols-4
-              gap-6
-            "
-          >
-            {[
-              {
-                icon: Target,
-                title: "PROFESSIONAL JUDGING",
-                desc: "Every entry is evaluated against published competition criteria by experienced judges.",
-              },
-              {
-                icon: Award,
-                title: "RECOGNITION",
-                desc: "Win category awards, finalist positions, special awards and professional recognition.",
-              },
-              {
-                icon: Trophy,
-                title: "ARTIST RANKINGS",
-                desc: "Build points through competitions and work toward the Ink Convention annual rankings.",
-              },
-              {
-                icon: Globe,
-                title: "GLOBAL EXPOSURE",
-                desc: "Showcase your work to artists, tattoo enthusiasts, industry professionals and clients.",
-              },
-            ].map((card, index) => (
-              <div
-                key={index}
-                className="
-                    bg-[#08080a]
-                    border
-                    border-white/5
-                    rounded-2xl
-                    p-8
-                    space-y-6
-                    hover:border-[#a855f7]/40
-                    transition
-                    duration-500
-                  "
-              >
-                <div
-                  className="
-                      w-12
-                      h-12
-                      rounded-xl
-                      bg-purple-500/10
-                      flex
-                      items-center
-                      justify-center
-                      text-[#a855f7]
-                    "
-                >
-                  <card.icon size={24} />
-                </div>
-
-                <div>
-                  <h3
-                    className="
-                        text-lg
-                        font-bold
-                        text-white
-                        mb-2
-                      "
-                  >
-                    {card.title}
-                  </h3>
-
-                  <p
-                    className="
-                        text-sm
-                        text-gray-400
-                        leading-relaxed
-                        font-light
-                      "
-                  >
-                    {card.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          4. HOW IT WORKS
-      ===================================================== */}
-
-      <section
-        className="
-          w-full
-          py-24
-          px-6
-          sm:px-10
-          lg:px-12
-          bg-[#08080a]
-          border-t
-          border-white/5
-        "
-      >
-        <div
-          className="
-            max-w-7xl
-            mx-auto
-            space-y-16
-          "
-        >
-          <div
-            className="
-              text-center
-              max-w-2xl
-              mx-auto
-              space-y-3
-            "
-          >
+        <div className="max-w-7xl mx-auto">
+          <div className="max-w-3xl mx-auto text-center mb-14">
             <h4
               className="
                 text-[#a855f7]
@@ -939,29 +787,36 @@ function Home() {
                 font-semibold
               "
             >
-              // THE PROCESS
+              // CHOOSE HOW YOU WANT TO JOIN
             </h4>
 
             <h2
               className="
                 text-3xl
-                sm:text-4xl
+                sm:text-5xl
                 font-black
                 tracking-tight
                 text-white
                 uppercase
+                mt-4
               "
             >
-              HOW IT WORKS
+              THREE WAYS TO BE PART OF INK CONVENTION
             </h2>
 
             <p
               className="
                 text-gray-400
-                font-light
+                text-sm
+                sm:text-base
+                leading-relaxed
+                max-w-2xl
+                mx-auto
+                mt-5
               "
             >
-              From submission to final ranking — the process is simple.
+              Book an expo stall, enter the tattoo competition, or create your
+              artist directory profile for free.
             </p>
           </div>
 
@@ -969,652 +824,394 @@ function Home() {
             className="
               grid
               grid-cols-1
-              md:grid-cols-4
-              gap-8
-            "
-          >
-            {[
-              {
-                step: "01",
-                title: "CHOOSE YOUR CATEGORY",
-                desc: "Select the competition category that best matches your tattoo and review the category requirements.",
-              },
-              {
-                step: "02",
-                title: "SUBMIT YOUR WORK",
-                desc: "Upload your required tattoo images and entry information before the submission deadline.",
-              },
-              {
-                step: "03",
-                title: "GET JUDGED",
-                desc: "Your work is evaluated by the assigned judging panel using the published scoring criteria.",
-              },
-              {
-                step: "04",
-                title: "GET RANKED & RECOGNISED",
-                desc: "Finalists and winners are announced, awards are issued and eligible results contribute to your ranking.",
-              },
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="
-                    relative
-                    p-6
-                    space-y-4
-                  "
-              >
-                <span
-                  className="
-                      text-4xl
-                      font-black
-                      text-[#a855f7]/20
-                      absolute
-                      -top-2
-                      left-6
-                    "
-                >
-                  {item.step}
-                </span>
-
-                <div
-                  className="
-                      relative
-                      z-10
-                      pt-4
-                    "
-                >
-                  <h3
-                    className="
-                        text-lg
-                        font-bold
-                        text-white
-                        mb-2
-                      "
-                  >
-                    {item.title}
-                  </h3>
-
-                  <p
-                    className="
-                        text-sm
-                        text-gray-400
-                        leading-relaxed
-                        font-light
-                      "
-                  >
-                    {item.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center">
-            <Link
-              to="/rules"
-              className="
-                text-sm
-                font-mono
-                tracking-widest
-                text-[#a855f7]
-                hover:text-white
-                uppercase
-                transition-colors
-                underline
-                underline-offset-8
-                decoration-white/20
-              "
-            >
-              SEE FULL COMPETITION RULES
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          5. CATEGORIES
-      ===================================================== */}
-
-      <section
-        className="
-          w-full
-          py-24
-          px-6
-          sm:px-10
-          lg:px-12
-          bg-[#050507]
-          border-t
-          border-white/5
-        "
-      >
-        <div
-          className="
-            max-w-7xl
-            mx-auto
-            space-y-12
-          "
-        >
-          <div
-            className="
-              flex
-              flex-col
-              md:flex-row
-              justify-between
-              items-start
-              md:items-end
+              lg:grid-cols-3
               gap-6
             "
           >
-            <div className="space-y-3">
-              <h2
+            {/* 01 / BOOK STALL */}
+
+            <article
+              className="
+                group
+                relative
+                overflow-hidden
+                min-h-[460px]
+                rounded-3xl
+                border
+                border-white/10
+                bg-[#08080a]
+                p-7
+                sm:p-8
+                hover:border-white/20
+                transition-all
+                duration-500
+                hover:-translate-y-2
+              "
+            >
+              <div
                 className="
-                  text-3xl
-                  sm:text-4xl
-                  font-black
-                  tracking-tight
-                  text-white
-                  uppercase
+                  absolute
+                  -right-16
+                  -top-16
+                  w-48
+                  h-48
+                  rounded-full
+                  bg-white/[0.04]
+                  blur-3xl
+                  pointer-events-none
+                "
+              />
+
+              <div
+                className="
+                  w-14
+                  h-14
+                  rounded-2xl
+                  bg-white
+                  text-black
+                  flex
+                  items-center
+                  justify-center
                 "
               >
-                COMPETE IN YOUR STYLE
-              </h2>
+                <Store size={24} />
+              </div>
 
               <p
                 className="
-                  text-gray-400
-                  font-light
+                  mt-8
+                  text-[9px]
+                  font-mono
+                  tracking-[0.18em]
+                  text-gray-600
                 "
               >
-                Choose the category that best represents your work.
+                01 / EXHIBIT
               </p>
-            </div>
 
-            <Link
-              to="/categories"
-              className="
-                text-xs
-                font-mono
-                tracking-widest
-                text-[#a855f7]
-                hover:text-white
-                uppercase
-                flex
-                items-center
-                gap-2
-              "
-            >
-              VIEW ALL CATEGORIES
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          <div
-            className="
-              grid
-              grid-cols-1
-              sm:grid-cols-2
-              lg:grid-cols-4
-              gap-4
-            "
-          >
-            {[
-              "Black & Grey",
-              "Realism",
-              "Colour",
-              "Fine Line",
-              "Traditional",
-              "Neo-Traditional",
-              "Japanese",
-              "Ornamental",
-            ].map((category, index) => (
-              <div
-                key={index}
+              <h3
                 className="
-                    bg-[#0b0b0f]
-                    border
-                    border-white/5
-                    p-6
-                    rounded-xl
-                    hover:bg-[#a855f7]/10
-                    transition-colors
-                    group
-                    cursor-pointer
-                  "
+                  text-3xl
+                  font-black
+                  uppercase
+                  mt-3
+                "
               >
-                <div
-                  className="
-                      flex
-                      justify-between
-                      items-center
-                      mb-4
-                    "
-                >
-                  <PenTool
-                    size={20}
-                    className="
-                        text-[#a855f7]
-                      "
-                  />
+                BOOK YOUR STALL
+              </h3>
 
-                  <span
-                    className="
-                        text-[10px]
-                        font-mono
-                        tracking-wider
-                        text-green-400
-                        bg-green-400/10
-                        px-2
-                        py-1
-                        rounded
-                      "
-                  >
-                    OPEN
-                  </span>
-                </div>
+              <p
+                className="
+                  text-sm
+                  text-gray-400
+                  leading-relaxed
+                  mt-5
+                "
+              >
+                Reserve space for your tattoo studio, artist setup, supplier or
+                brand at a three-day regional Ink Convention expo.
+              </p>
 
-                <h3
-                  className="
-                      text-lg
-                      font-bold
-                      text-white
-                      mb-1
-                    "
-                >
-                  {category}
-                </h3>
-
-                <p
-                  className="
-                      text-xs
-                      text-gray-500
-                      mb-6
-                    "
-                >
-                  Professional {category} Category
-                </p>
-
-                <div
-                  className="
-                      flex
-                      justify-between
-                      items-center
-                      text-xs
-                      font-mono
-                    "
-                >
-                  <span
-                    className="
-                        text-gray-400
-                      "
-                  >
-                    ENTRY FEE REQUIRED
-                  </span>
-
-                  <span
-                    className="
-                        text-[#a855f7]
-                        group-hover:translate-x-1
-                        transition-transform
-                      "
-                  >
-                    VIEW →
-                  </span>
-                </div>
+              <div className="space-y-3 mt-7">
+                <StepLine text="Choose your regional expo city" />
+                <StepLine text="Login to your booking account" />
+                <StepLine text="Select a stall package from ₹4,999" />
+                <StepLine text="Pay ₹1,499 advance to reserve" />
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* =====================================================
-          6. PRIZE POOL
-      ===================================================== */}
-
-      <section
-        className="
-          w-full
-          py-32
-          px-6
-          sm:px-10
-          lg:px-12
-          bg-gradient-to-b
-          from-[#08080a]
-          to-[#0b0b0f]
-          border-t
-          border-white/5
-          text-center
-        "
-      >
-        <div
-          className="
-            max-w-4xl
-            mx-auto
-            space-y-8
-          "
-        >
-          <Crown
-            size={48}
-            className="
-              mx-auto
-              text-[#a855f7]
-              mb-4
-            "
-          />
-
-          <h2
-            className="
-              text-3xl
-              sm:text-5xl
-              font-black
-              tracking-tight
-              text-white
-              uppercase
-            "
-          >
-            YOUR WORK DESERVES MORE THAN A LIKE.
-          </h2>
-
-          <p
-            className="
-              text-gray-400
-              text-lg
-              font-light
-            "
-          >
-            Compete for awards, recognition, prizes and a place in Ink
-            Convention history.
-          </p>
-
-          <div
-            className="
-              flex
-              flex-wrap
-              justify-center
-              gap-4
-              py-8
-            "
-          >
-            {[
-              "CATEGORY WINNERS",
-              "OVERALL CHAMPION",
-              "PEOPLE'S CHOICE",
-              "SPECIAL AWARDS",
-            ].map((award, index) => (
-              <span
-                key={index}
+              <Link
+                to="/client-login"
+                state={{ redirectTo: "/stall" }}
                 className="
-                    px-6
-                    py-3
-                    bg-[#08080a]
-                    border
-                    border-white/10
-                    rounded-full
-                    text-xs
-                    font-mono
-                    tracking-widest
-                    text-white
-                  "
+                  mt-8
+                  w-full
+                  bg-white
+                  hover:bg-gray-200
+                  text-black
+                  px-6
+                  py-4
+                  rounded-xl
+                  font-black
+                  text-[10px]
+                  font-mono
+                  tracking-widest
+                  uppercase
+                  flex
+                  items-center
+                  justify-between
+                  transition-all
+                "
               >
-                {award}
-              </span>
-            ))}
-          </div>
-
-          <h3
-            className="
-              text-2xl
-              sm:text-3xl
-              font-black
-              text-[#a855f7]
-              tracking-widest
-            "
-          >
-            MULTIPLE CATEGORIES & AWARDS
-          </h3>
-
-          <div className="pt-8">
-            <Link
-              to="/prizes"
-              className="
-                inline-block
-                bg-white
-                text-black
-                px-8
-                py-4
-                rounded-xl
-                font-bold
-                text-xs
-                font-mono
-                uppercase
-                tracking-widest
-                hover:bg-gray-200
-                transition
-                duration-300
-              "
-            >
-              VIEW PRIZES & AWARDS
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          7. JUDGES
-      ===================================================== */}
-
-      <section
-        className="
-          w-full
-          py-24
-          px-6
-          sm:px-10
-          lg:px-12
-          bg-[#08080a]
-          border-t
-          border-white/5
-        "
-      >
-        <div
-          className="
-            max-w-7xl
-            mx-auto
-            space-y-16
-          "
-        >
-          <div
-            className="
-              text-center
-              max-w-2xl
-              mx-auto
-              space-y-3
-            "
-          >
-            <h2
-              className="
-                text-3xl
-                sm:text-4xl
-                font-black
-                tracking-tight
-                text-white
-                uppercase
-              "
-            >
-              JUDGED BY THE INDUSTRY
-            </h2>
-
-            <p
-              className="
-                text-gray-400
-                font-light
-              "
-            >
-              Your work deserves to be evaluated by experienced tattoo
-              professionals.
-            </p>
-          </div>
-
-          <div
-            className="
-              grid
-              grid-cols-1
-              sm:grid-cols-2
-              md:grid-cols-4
-              gap-6
-            "
-          >
-            {[1, 2, 3, 4].map((judge) => (
-              <div
-                key={judge}
-                className="
-                    group
-                    relative
-                    overflow-hidden
-                    rounded-2xl
-                    bg-[#050507]
-                    border
-                    border-white/5
-                  "
-              >
-                <div
+                BOOK A STALL
+                <ArrowRight
+                  size={15}
                   className="
-                      aspect-[4/5]
-                      bg-gray-900
-                      w-full
-                      relative
-                    "
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1542332213-9b5a5a3fad35?auto=format&fit=crop&q=80&w=600&h=800"
-                    alt="Judge"
-                    className="
-                        w-full
-                        h-full
-                        object-cover
-                        opacity-60
-                        group-hover:opacity-100
-                        transition
-                        duration-500
-                        grayscale
-                        group-hover:grayscale-0
-                      "
-                  />
+                    transition-transform
+                    group-hover:translate-x-1
+                  "
+                />
+              </Link>
+            </article>
 
-                  <div
-                    className="
-                        absolute
-                        inset-0
-                        bg-gradient-to-t
-                        from-black
-                        via-black/50
-                        to-transparent
-                      "
-                  />
+            {/* 02 / COMPETITION */}
 
-                  <div
-                    className="
-                        absolute
-                        bottom-0
-                        left-0
-                        p-6
-                        w-full
-                      "
-                  >
-                    <p
-                      className="
-                          text-[#a855f7]
-                          text-[10px]
-                          font-mono
-                          tracking-widest
-                          uppercase
-                          mb-1
-                        "
-                    >
-                      Black & Grey
-                    </p>
+            <article
+              className="
+                group
+                relative
+                overflow-hidden
+                min-h-[460px]
+                rounded-3xl
+                border
+                border-[#a855f7]/40
+                bg-gradient-to-b
+                from-[#a855f7]/10
+                to-[#08080a]
+                p-7
+                sm:p-8
+                hover:border-[#a855f7]
+                transition-all
+                duration-500
+                hover:-translate-y-2
+              "
+            >
+              <div
+                className="
+                  absolute
+                  -right-16
+                  -top-16
+                  w-48
+                  h-48
+                  rounded-full
+                  bg-[#a855f7]/15
+                  blur-3xl
+                  pointer-events-none
+                "
+              />
 
-                    <h3
-                      className="
-                          text-lg
-                          font-bold
-                          text-white
-                        "
-                    >
-                      Confirmed Judge
-                    </h3>
-
-                    <p
-                      className="
-                          text-xs
-                          text-gray-400
-                          mt-1
-                        "
-                    >
-                      Location, Country
-                    </p>
-                  </div>
-                </div>
+              <div
+                className="
+                  w-14
+                  h-14
+                  rounded-2xl
+                  bg-[#a855f7]
+                  text-white
+                  flex
+                  items-center
+                  justify-center
+                  shadow-[0_0_30px_rgba(168,85,247,0.25)]
+                "
+              >
+                <Trophy size={24} />
               </div>
-            ))}
-          </div>
 
-          <div
-            className="
-              bg-[#0b0b0f]
-              border
-              border-white/10
-              rounded-2xl
-              p-8
-              md:p-12
-              text-center
-              max-w-4xl
-              mx-auto
-            "
-          >
-            <h4
+              <p
+                className="
+                  mt-8
+                  text-[9px]
+                  font-mono
+                  tracking-[0.18em]
+                  text-[#a855f7]
+                "
+              >
+                02 / COMPETE
+              </p>
+
+              <h3
+                className="
+                  text-3xl
+                  font-black
+                  uppercase
+                  mt-3
+                "
+              >
+                ENTER THE COMPETITION
+              </h3>
+
+              <p
+                className="
+                  text-sm
+                  text-gray-400
+                  leading-relaxed
+                  mt-5
+                "
+              >
+                Submit your tattoo work across seven competition categories and
+                compete for recognition, awards and Ink Convention rankings.
+              </p>
+
+              <div className="space-y-3 mt-7">
+                <StepLine text="Choose from 7 competition categories" accent />
+                <StepLine text="1 entry ₹999" accent />
+                <StepLine text="3 entries ₹1,499" accent />
+                <StepLine text="5 entries ₹1,999" accent />
+              </div>
+
+              <Link
+                to="/Upload"
+                className="
+                  mt-8
+                  w-full
+                  bg-[#a855f7]
+                  hover:bg-[#9333ea]
+                  text-white
+                  px-6
+                  py-4
+                  rounded-xl
+                  font-black
+                  text-[10px]
+                  font-mono
+                  tracking-widest
+                  uppercase
+                  flex
+                  items-center
+                  justify-between
+                  transition-all
+                "
+              >
+                ENTER COMPETITION
+                <ArrowRight
+                  size={15}
+                  className="
+                    transition-transform
+                    group-hover:translate-x-1
+                  "
+                />
+              </Link>
+            </article>
+
+            {/* 03 / FREE DIRECTORY */}
+
+            <article
               className="
-                text-lg
-                font-bold
-                text-white
-                mb-4
+                group
+                relative
+                overflow-hidden
+                min-h-[460px]
+                rounded-3xl
+                border
+                border-purple-500/20
+                bg-[#08080a]
+                p-7
+                sm:p-8
+                hover:border-purple-500/60
+                transition-all
+                duration-500
+                hover:-translate-y-2
               "
             >
-              PROFESSIONAL JUDGING SYSTEM
-            </h4>
+              <div
+                className="
+                  absolute
+                  -right-16
+                  -top-16
+                  w-48
+                  h-48
+                  rounded-full
+                  bg-purple-500/10
+                  blur-3xl
+                  pointer-events-none
+                "
+              />
 
-            <p
-              className="
-                text-gray-400
-                font-light
-                mb-8
-              "
-            >
-              Ink Convention judging is based on published competition criteria
-              designed to evaluate technical execution, composition, originality
-              and artistic quality.
-            </p>
+              <div
+                className="
+                  w-14
+                  h-14
+                  rounded-2xl
+                  bg-purple-500/10
+                  border
+                  border-purple-500/20
+                  text-purple-400
+                  flex
+                  items-center
+                  justify-center
+                "
+              >
+                <Users size={24} />
+              </div>
 
-            <Link
-              to="/judging-criteria"
-              className="
-                text-xs
-                font-mono
-                tracking-widest
-                text-[#a855f7]
-                hover:text-white
-                uppercase
-                underline
-                underline-offset-8
-                decoration-white/20
-              "
-            >
-              VIEW JUDGING CRITERIA
-            </Link>
+              <p
+                className="
+                  mt-8
+                  text-[9px]
+                  font-mono
+                  tracking-[0.18em]
+                  text-purple-400
+                "
+              >
+                03 / JOIN FREE
+              </p>
+
+              <h3
+                className="
+                  text-3xl
+                  font-black
+                  uppercase
+                  mt-3
+                "
+              >
+                FREE ARTIST ENTRY
+              </h3>
+
+              <p
+                className="
+                  text-sm
+                  text-gray-400
+                  leading-relaxed
+                  mt-5
+                "
+              >
+                Create a lifetime free artist or studio listing and become
+                discoverable inside the Ink Convention directory.
+              </p>
+
+              <div className="space-y-3 mt-7">
+                <StepLine text="Lifetime Free directory listing" />
+                <StepLine text="Artist / studio name, city and state" />
+                <StepLine text="Contact information stays masked on Free" />
+                <StepLine text="Upgrade to Pro or Verified anytime" />
+              </div>
+
+              <Link
+                to="/Enter"
+                className="
+                  mt-8
+                  w-full
+                  border
+                  border-[#a855f7]
+                  hover:bg-[#a855f7]/10
+                  text-white
+                  px-6
+                  py-4
+                  rounded-xl
+                  font-black
+                  text-[10px]
+                  font-mono
+                  tracking-widest
+                  uppercase
+                  flex
+                  items-center
+                  justify-between
+                  transition-all
+                "
+              >
+                JOIN DIRECTORY FREE
+                <ArrowRight
+                  size={15}
+                  className="
+                    transition-transform
+                    group-hover:translate-x-1
+                  "
+                />
+              </Link>
+            </article>
           </div>
         </div>
       </section>
 
       {/* =====================================================
-          8. ARTIST RANKINGS
+          4. ARTIST RANKINGS
       ===================================================== */}
 
       <section
@@ -1834,7 +1431,7 @@ function Home() {
       </section>
 
       {/* =====================================================
-          9. ARTIST DISCOVERY
+          5. ARTIST DISCOVERY
       ===================================================== */}
 
       <section
@@ -2035,7 +1632,7 @@ function Home() {
       </section>
 
       {/* =====================================================
-          10. HALL OF FAME
+          6. HALL OF FAME
       ===================================================== */}
 
       <section
@@ -2146,7 +1743,7 @@ function Home() {
       </section>
 
       {/* =====================================================
-          11. SPONSORS
+          7. SPONSORS
       ===================================================== */}
 
       <section
@@ -2221,7 +1818,7 @@ function Home() {
       </section>
 
       {/* =====================================================
-          12. FAQ
+          8. FAQ
       ===================================================== */}
 
       <section
@@ -2260,24 +1857,24 @@ function Home() {
           <div className="space-y-4">
             {[
               {
-                q: "Who can enter Ink Convention?",
-                a: "The competition is open to professional tattoo artists worldwide.",
+                q: "How do I join the artist directory?",
+                a: "Create your artist or studio profile and choose the Lifetime Free listing. You can upgrade to Pro or Verified Spotlight later.",
               },
               {
-                q: "Is the competition completely online?",
-                a: "Yes, Ink Convention is a 100% digital-first competition platform.",
+                q: "How does stall booking work?",
+                a: "Choose Book Your Stall, login to your account, select your expo city and stall package, then reserve your space with the ₹1,499 advance.",
               },
               {
-                q: "Can I enter multiple categories?",
-                a: "Yes, you may submit entries into as many categories as you wish, provided each entry meets the category requirements.",
+                q: "How much does a stall cost?",
+                a: "The planned stall packages are ₹4,999, ₹7,499 and ₹12,499, depending on the package and visibility level.",
               },
               {
-                q: "How are tattoos judged?",
-                a: "Entries are evaluated by a panel of experienced industry professionals based on a published set of technical and artistic criteria.",
+                q: "How do I enter the tattoo competition?",
+                a: "Open the competition form, choose from the seven categories and select 1 entry for ₹999, 3 entries for ₹1,499 or 5 entries for ₹1,999.",
               },
               {
-                q: "What do winners receive?",
-                a: "Winners receive official awards, global recognition on the platform, leaderboard points, and prizes determined by the final prize pool.",
+                q: "What is included in the Free directory listing?",
+                a: "The Lifetime Free listing includes your basic artist or studio profile. Public contact information stays masked until you upgrade.",
               },
             ].map((faq, index) => (
               <div
@@ -2363,357 +1960,27 @@ function Home() {
           </div>
         </div>
       </section>
-
-      {/* =====================================================
-          13. FINAL CONVERSION
-      ===================================================== */}
-
-      <section
-        className="
-          w-full
-          py-32
-          px-6
-          sm:px-10
-          lg:px-12
-
-          bg-gradient-to-t
-          from-[#140a24]
-          to-[#08080a]
-
-          border-t
-          border-[#a855f7]/20
-
-          text-center
-        "
-      >
-        <div
-          className="
-            max-w-4xl
-            mx-auto
-            space-y-8
-          "
-        >
-          <h2
-            className="
-              text-4xl
-              sm:text-5xl
-              font-black
-              tracking-tight
-              text-white
-              uppercase
-              leading-tight
-            "
-          >
-            READY TO PUT YOUR WORK ON THE WORLD STAGE?
-          </h2>
-
-          <p
-            className="
-              text-gray-300
-              text-lg
-              font-light
-            "
-          >
-            Choose how you want to participate in Ink Convention 2026.
-          </p>
-
-          {/* =================================================
-              SAME 3 ACTIONS
-          ================================================= */}
-
-          <div
-            className="
-              flex
-              flex-col
-              lg:flex-row
-
-              items-stretch
-              lg:items-center
-
-              justify-center
-
-              gap-4
-
-              pt-6
-            "
-          >
-            {/* 1 BOOK STALL */}
-
-            <Link
-              to="/contact"
-              className="
-                group
-
-                w-full
-                lg:w-auto
-
-                bg-white
-                hover:bg-gray-200
-
-                text-black
-
-                px-8
-                py-5
-
-                rounded-xl
-
-                font-black
-
-                text-xs
-                font-mono
-
-                uppercase
-
-                tracking-widest
-
-                flex
-                items-center
-                justify-center
-                gap-3
-
-                transition-all
-                duration-300
-
-                hover:-translate-y-1
-              "
-            >
-              BOOK YOUR STALL
-              <ArrowRight
-                size={14}
-                className="
-                  transition-transform
-                  group-hover:translate-x-1
-                "
-              />
-            </Link>
-
-            {/* 2 COMPETITION */}
-
-            <Link
-              to="/upload"
-              className="
-                group
-
-                w-full
-                lg:w-auto
-
-                bg-[#a855f7]
-                hover:bg-[#9333ea]
-
-                text-white
-
-                px-8
-                py-5
-
-                rounded-xl
-
-                font-black
-
-                text-xs
-                font-mono
-
-                uppercase
-
-                tracking-widest
-
-                flex
-                items-center
-                justify-center
-                gap-3
-
-                transition-all
-                duration-300
-
-                hover:-translate-y-1
-
-                shadow-lg
-                shadow-purple-900/50
-              "
-            >
-              GO TO THE COMPETITION
-              <ArrowRight
-                size={14}
-                className="
-                  transition-transform
-                  group-hover:translate-x-1
-                "
-              />
-            </Link>
-
-            {/* 3 FREE ENTRY */}
-
-            <Link
-              to="/Enter"
-              className="
-                group
-
-                w-full
-                lg:w-auto
-
-                bg-transparent
-
-                border
-                border-[#a855f7]
-
-                hover:bg-[#a855f7]/10
-
-                text-white
-
-                px-8
-                py-5
-
-                rounded-xl
-
-                font-black
-
-                text-xs
-                font-mono
-
-                uppercase
-
-                tracking-widest
-
-                flex
-                items-center
-                justify-center
-                gap-3
-
-                transition-all
-                duration-300
-
-                hover:-translate-y-1
-              "
-            >
-              <span
-                className="
-                  w-2
-                  h-2
-
-                  rounded-full
-
-                  bg-[#a855f7]
-
-                  animate-pulse
-
-                  shadow-[0_0_12px_rgba(168,85,247,0.9)]
-                "
-              />
-              GET A FREE ENTRY
-              <ArrowRight
-                size={14}
-                className="
-                  transition-transform
-                  group-hover:translate-x-1
-                "
-              />
-            </Link>
-          </div>
-
-          {/* ROUTE EXPLANATION */}
-
-          <div
-            className="
-              pt-8
-
-              grid
-              grid-cols-1
-              sm:grid-cols-3
-
-              gap-4
-
-              text-left
-            "
-          >
-            <div
-              className="
-                border-t
-                border-white/10
-                pt-4
-              "
-            >
-              <p
-                className="
-                  text-[9px]
-                  font-mono
-                  text-gray-600
-                  tracking-widest
-                "
-              >
-                01 / EXHIBIT
-              </p>
-
-              <p
-                className="
-                  text-sm
-                  text-gray-400
-                  mt-2
-                "
-              >
-                Reserve a stall for your studio, brand or business.
-              </p>
-            </div>
-
-            <div
-              className="
-                border-t
-                border-white/10
-                pt-4
-              "
-            >
-              <p
-                className="
-                  text-[9px]
-                  font-mono
-                  text-[#a855f7]
-                  tracking-widest
-                "
-              >
-                02 / COMPETE
-              </p>
-
-              <p
-                className="
-                  text-sm
-                  text-gray-400
-                  mt-2
-                "
-              >
-                Submit your tattoo work and enter the competition.
-              </p>
-            </div>
-
-            <div
-              className="
-                border-t
-                border-white/10
-                pt-4
-              "
-            >
-              <p
-                className="
-                  text-[9px]
-                  font-mono
-                  text-[#a855f7]
-                  tracking-widest
-                "
-              >
-                03 / JOIN
-              </p>
-
-              <p
-                className="
-                  text-sm
-                  text-gray-400
-                  mt-2
-                "
-              >
-                Create your artist profile and start with a free directory
-                entry.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+    </div>
+  );
+}
+
+function StepLine({ text, accent = false }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span
+        className={`
+          mt-1
+          w-2
+          h-2
+          rounded-full
+          shrink-0
+          ${accent ? "bg-[#a855f7]" : "bg-white/30"}
+        `}
+      />
+
+      <span className="text-xs sm:text-sm text-gray-400 leading-relaxed">
+        {text}
+      </span>
     </div>
   );
 }
