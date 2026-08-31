@@ -5,6 +5,9 @@ import { ArrowRight, Sparkles, MapPin, Users } from "lucide-react";
 
 import gsap from "gsap";
 
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 /* =========================================================
    STORAGE
 ========================================================= */
@@ -864,120 +867,52 @@ export default function Enter() {
      PAYMENT PAGE MUST VERIFY PAYMENT FIRST.
   ========================================================= */
 
-  const startPaidMembership = (selectedPlan, existingProfile = null) => {
-    const plan = getPlanById(selectedPlan);
-
-    if (plan.id === "free") {
-      createFreeProfile();
-
-      return;
-    }
-
-    const profileDraft = existingProfile
-      ? {
-          ...existingProfile,
-
-          plan: plan.id,
-
-          updatedAt: new Date().toISOString(),
-
-          paymentStatus: "pending",
-        }
-      : buildProfileFromForm(plan.id);
-
-    const pendingCheckout = {
-      source: "directory-membership",
-
-      action: existingProfile ? "upgrade" : "create",
-
-      planId: plan.id,
-
-      planName: plan.name,
-
-      amount: plan.amount,
-
-      billing: "yearly",
-
-      profileId: existingProfile?.id || profileDraft.id,
-
-      previousPlan: existingProfile?.plan || null,
-
-      profileDraft,
-
-      createdAt: new Date().toISOString(),
-    };
-
-    try {
-      localStorage.setItem(
-        PENDING_MEMBERSHIP_KEY,
-
-        JSON.stringify(pendingCheckout),
-      );
-
-      navigate("/payment", {
-        state: {
-          source: "directory-membership",
-
-          action: pendingCheckout.action,
-
-          planId: plan.id,
-
-          planName: plan.name,
-
-          amount: plan.amount,
-
-          billing: "yearly",
-
-          profileDraft,
-        },
-      });
-    } catch (paymentError) {
-      console.error(paymentError);
-
-      setError("Unable to start payment.");
-    }
-  };
-
-  /* =========================================================
-     PLAN SELECT
-  ========================================================= */
-
-  const handlePlanSelect = (selectedPlan) => {
-    const normalized = normalizePlan(selectedPlan);
-
-    if (normalized === "free") {
-      createFreeProfile();
-
-      return;
-    }
-
-    startPaidMembership(normalized);
-  };
-
-  /* =========================================================
-     UPGRADE
-  ========================================================= */
-
   const upgradePlan = (nextPlan) => {
     if (!currentProfile) {
       return;
     }
 
-    const normalizedNext = normalizePlan(nextPlan);
-
     const oldPriority = getPlanPriority(currentProfile.plan);
 
-    const nextPriority = getPlanPriority(normalizedNext);
+    const nextPriority = getPlanPriority(nextPlan);
 
     if (nextPriority <= oldPriority) {
       return;
     }
 
-    startPaidMembership(
-      normalizedNext,
+    const profiles = getStoredArray(PROFILE_KEY);
 
-      currentProfile,
+    const upgradedProfile = {
+      ...currentProfile,
+
+      plan: nextPlan,
+
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedProfiles = profiles.map((profile) =>
+      String(profile.id) === String(currentProfile.id)
+        ? upgradedProfile
+        : profile,
     );
+
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfiles));
+
+      updateDirectory(upgradedProfile);
+
+      setCurrentProfile(upgradedProfile);
+
+      navigate("/artists", {
+        state: {
+          newArtistId: upgradedProfile.id,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+
+      setError("Unable to upgrade membership.");
+    }
   };
 
   /* =========================================================

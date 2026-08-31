@@ -47,17 +47,534 @@ export default function StallBooking() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handlePayment = async (e) => {
+   const handlePayment = async (e) => {
     e.preventDefault();
+
+    // =====================================================
+    // VALIDATION
+    // =====================================================
+
+    if (!formData.fullName.trim()) {
+      alert("Please enter your full name.");
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      alert("Please enter your email address.");
+      return;
+    }
+
+    if (!formData.phone.trim()) {
+      alert("Please enter your phone number.");
+      return;
+    }
+
+    if (!formData.brandName.trim()) {
+      alert("Please enter your brand name.");
+      return;
+    }
+
+    if (!formData.city.trim()) {
+      alert("Please enter your city.");
+      return;
+    }
+
     setLoading(true);
 
-    // Simulate payment gateway integration
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-    }, 1500);
-  };
+    try {
+      const API_URL = import.meta.env.VITE_API_URL;
 
+      // =====================================================
+      // CHECK API URL
+      // =====================================================
+
+      if (!API_URL) {
+        throw new Error(
+          "VITE_API_URL is missing. Please check your frontend .env file."
+        );
+      }
+
+      console.log(
+        "🌐 Payment API:",
+        `${API_URL}/api/payment/create-order`
+      );
+
+      // =====================================================
+      // LOAD RAZORPAY SCRIPT IF NEEDED
+      // =====================================================
+
+      if (!window.Razorpay) {
+        console.log("Loading Razorpay Checkout...");
+
+        await new Promise((resolve, reject) => {
+          const existingScript = document.querySelector(
+            'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+          );
+
+          if (existingScript) {
+            existingScript.onload = resolve;
+            existingScript.onerror = reject;
+
+            // If it already loaded before this handler was attached
+            if (window.Razorpay) {
+              resolve();
+            }
+
+            return;
+          }
+
+          const script = document.createElement("script");
+
+          script.src =
+            "https://checkout.razorpay.com/v1/checkout.js";
+
+          script.async = true;
+
+          script.onload = () => {
+            console.log(
+              "✅ Razorpay Checkout loaded."
+            );
+
+            resolve();
+          };
+
+          script.onerror = () => {
+            reject(
+              new Error(
+                "Unable to load Razorpay Checkout."
+              )
+            );
+          };
+
+          document.body.appendChild(script);
+        });
+      }
+
+      // =====================================================
+      // FINAL CHECK
+      // =====================================================
+
+      if (!window.Razorpay) {
+        throw new Error(
+          "Razorpay Checkout failed to load. Please refresh the page."
+        );
+      }
+
+      // =====================================================
+      // CREATE RAZORPAY ORDER
+      // =====================================================
+
+      console.log(
+        "💳 Creating Razorpay order..."
+      );
+
+      const orderResponse = await fetch(
+        `${API_URL}/api/payment/create-order`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            // IMPORTANT
+            // Razorpay amount is handled by backend.
+            // We are requesting ₹1,499.
+
+            amount: 1499,
+
+            // This MUST match the package ID
+            // expected by your backend.
+            packageId: "stall-booking",
+
+            email: formData.email.trim(),
+
+            phone: formData.phone.trim(),
+
+            name: formData.fullName.trim(),
+          }),
+        }
+      );
+
+      // =====================================================
+      // READ ORDER RESPONSE
+      // =====================================================
+
+      const orderData =
+        await orderResponse.json();
+
+      console.log(
+        "💳 Razorpay order response:",
+        orderData
+      );
+
+      if (
+        !orderResponse.ok ||
+        !orderData.success
+      ) {
+        throw new Error(
+          orderData.message ||
+            "Unable to create Razorpay order."
+        );
+      }
+
+      // =====================================================
+      // GET ORDER DETAILS
+      // =====================================================
+
+      const razorpayOrderId =
+        orderData.orderId ||
+        orderData.order?.id ||
+        orderData.id;
+
+      const razorpayAmount =
+        orderData.amount;
+
+      const razorpayCurrency =
+        orderData.currency || "INR";
+
+      const razorpayKey =
+        orderData.key ||
+        import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+      // =====================================================
+      // VALIDATE ORDER ID
+      // =====================================================
+
+      if (!razorpayOrderId) {
+        console.error(
+          "❌ Missing Razorpay order ID:",
+          orderData
+        );
+
+        throw new Error(
+          "Razorpay order ID was not returned by the server."
+        );
+      }
+
+      if (
+        !String(razorpayOrderId).startsWith(
+          "order_"
+        )
+      ) {
+        console.error(
+          "❌ Invalid Razorpay order ID:",
+          razorpayOrderId
+        );
+
+        throw new Error(
+          "Invalid Razorpay order ID received from server."
+        );
+      }
+
+      // =====================================================
+      // CHECK RAZORPAY KEY
+      // =====================================================
+
+      if (!razorpayKey) {
+        throw new Error(
+          "Razorpay key is missing. Please check your backend response or VITE_RAZORPAY_KEY_ID."
+        );
+      }
+
+      // =====================================================
+      // RAZORPAY CHECKOUT OPTIONS
+      // =====================================================
+
+      const options = {
+        key: razorpayKey,
+
+        amount:
+          razorpayAmount || 149900,
+
+        currency:
+          razorpayCurrency,
+
+        name:
+          "INK CONVENTION 2026",
+
+        description:
+          "Stall Booking Advance",
+
+        order_id:
+          razorpayOrderId,
+
+        prefill: {
+          name:
+            formData.fullName.trim(),
+
+          email:
+            formData.email.trim(),
+
+          contact:
+            formData.phone.trim(),
+        },
+
+        notes: {
+          bookingType:
+            "Stall Booking",
+
+          brandName:
+            formData.brandName.trim(),
+
+          city:
+            formData.city.trim(),
+
+          duration:
+            formData.duration,
+        },
+
+        theme: {
+          color: "#a855f7",
+        },
+
+        // ===================================================
+        // PAYMENT SUCCESS
+        // ===================================================
+
+        handler:
+          async function (
+            paymentResponse
+          ) {
+            console.log(
+              "✅ Razorpay payment successful:",
+              paymentResponse
+            );
+
+            try {
+              // =============================================
+              // CHECK PAYMENT RESPONSE
+              // =============================================
+
+              if (
+                !paymentResponse
+                  ?.razorpay_order_id ||
+                !paymentResponse
+                  ?.razorpay_payment_id ||
+                !paymentResponse
+                  ?.razorpay_signature
+              ) {
+                throw new Error(
+                  "Incomplete Razorpay payment response."
+                );
+              }
+
+              // =============================================
+              // VERIFY PAYMENT ON BACKEND
+              // =============================================
+
+              console.log(
+                "🔐 Verifying payment..."
+              );
+
+              const verifyResponse =
+                await fetch(
+                  `${API_URL}/api/payment/verify`,
+                  {
+                    method: "POST",
+
+                    headers: {
+                      "Content-Type":
+                        "application/json",
+                    },
+
+                    body: JSON.stringify({
+                      razorpay_order_id:
+                        paymentResponse.razorpay_order_id,
+
+                      razorpay_payment_id:
+                        paymentResponse.razorpay_payment_id,
+
+                      razorpay_signature:
+                        paymentResponse.razorpay_signature,
+                    }),
+                  }
+                );
+
+              const verifyData =
+                await verifyResponse.json();
+
+              console.log(
+                "🔐 Verification response:",
+                verifyData
+              );
+
+              if (
+                !verifyResponse.ok ||
+                !verifyData.success
+              ) {
+                throw new Error(
+                  verifyData.message ||
+                    "Payment verification failed."
+                );
+              }
+
+              console.log(
+                "✅ Payment verified successfully."
+              );
+
+              // =============================================
+              // SAVE STALL BOOKING
+              // =============================================
+
+              console.log(
+                "💾 Saving stall booking..."
+              );
+
+              const bookingResponse =
+                await fetch(
+                  `${API_URL}/api/stall-bookings`,
+                  {
+                    method: "POST",
+
+                    headers: {
+                      "Content-Type":
+                        "application/json",
+                    },
+
+                    body: JSON.stringify({
+                      brandName:
+                        formData.brandName.trim(),
+
+                      fullName:
+                        formData.fullName.trim(),
+
+                      email:
+                        formData.email.trim(),
+
+                      phone:
+                        formData.phone.trim(),
+
+                      city:
+                        formData.city.trim(),
+
+                      duration:
+                        formData.duration,
+
+                      razorpayOrderId:
+                        paymentResponse.razorpay_order_id,
+
+                      razorpayPaymentId:
+                        paymentResponse.razorpay_payment_id,
+                    }),
+                  }
+                );
+
+              const bookingData =
+                await bookingResponse.json();
+
+              console.log(
+                "📦 Booking response:",
+                bookingData
+              );
+
+              if (
+                !bookingResponse.ok ||
+                !bookingData.success
+              ) {
+                throw new Error(
+                  bookingData.message ||
+                    "Payment succeeded but booking could not be saved."
+                );
+              }
+
+              // =============================================
+              // EVERYTHING SUCCESSFUL
+              // =============================================
+
+              console.log(
+                "🎉 Stall booking completed successfully."
+              );
+
+              setSuccess(true);
+
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              });
+            } catch (error) {
+              console.error(
+                "❌ Post-payment error:",
+                error
+              );
+
+              alert(
+                error.message ||
+                  "Payment was successful, but your booking could not be completed. Please contact support."
+              );
+            } finally {
+              setLoading(false);
+            }
+          },
+
+        // ===================================================
+        // PAYMENT MODAL CLOSED
+        // ===================================================
+
+        modal: {
+          ondismiss:
+            function () {
+              console.log(
+                "Payment popup closed."
+              );
+
+              setLoading(false);
+            },
+        },
+      };
+
+      // =====================================================
+      // CREATE RAZORPAY INSTANCE
+      // =====================================================
+
+      console.log(
+        "🚀 Opening Razorpay Checkout..."
+      );
+
+      const razorpay =
+        new window.Razorpay(options);
+
+      // =====================================================
+      // PAYMENT FAILED
+      // =====================================================
+
+      razorpay.on(
+        "payment.failed",
+        function (response) {
+          console.error(
+            "❌ Razorpay payment failed:",
+            response.error
+          );
+
+          alert(
+            response.error?.description ||
+              "Payment failed. Please try again."
+          );
+
+          setLoading(false);
+        }
+      );
+
+      // =====================================================
+      // OPEN CHECKOUT
+      // =====================================================
+
+      razorpay.open();
+    } catch (error) {
+      console.error(
+        "❌ Payment initialization error:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Unable to start payment. Please try again."
+      );
+
+      setLoading(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-[#08080a] text-white p-6 lg:p-12 font-sans selection:bg-[#a855f7] selection:text-white relative overflow-hidden">
       {/* Background Ambient Glows */}

@@ -29,6 +29,7 @@ const nodemailer = require("nodemailer");
 
 const paymentRoutes = require("./routes/payment");
 const clientRoutes = require("./routes/ClientRoutes");
+const tattooStudioRoutes = require("./routes/tattooStudioRoutes");
 
 // =====================================================
 // MODELS
@@ -288,6 +289,7 @@ app.use("/api/payment", paymentRoutes);
 // =====================================================
 
 app.use("/api/clients", clientRoutes);
+app.use("/api/admin/tattoo-studios", tattooStudioRoutes);
 
 // =====================================================
 // ADMIN LOGIN

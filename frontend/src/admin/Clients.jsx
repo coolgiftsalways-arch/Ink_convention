@@ -37,8 +37,7 @@ export default function Clients() {
   // API
   // =====================================================
 
-  const API_URL = "https://api.inkconvention.com";
-
+  const API_URL = "http://localhost:5000";
   // For local testing, use:
   // const API_URL = "http://localhost:5000";
 
