@@ -140,7 +140,13 @@ export default function AdminStalls() {
   }, []);
 
   React.useEffect(() => {
-    loadBookings();
+    const timer = window.setTimeout(() => {
+      void loadBookings();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [loadBookings]);
 
   const filteredBookings = React.useMemo(() => {

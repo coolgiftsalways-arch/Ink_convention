@@ -78,8 +78,6 @@ app.use((req, res, next) => {
     `🌐 ${req.method} ${req.originalUrl} | Origin: ${origin || "no-origin"}`,
   );
 
-  // Requests such as Postman/server-to-server may not
-  // contain an Origin header.
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
@@ -96,11 +94,10 @@ app.use((req, res, next) => {
 
   res.setHeader("Access-Control-Allow-Credentials", "true");
 
-  // Important when dynamically returning origin
   res.setHeader("Vary", "Origin");
 
   // ===================================================
-  // PREFLIGHT REQUEST
+  // PREFLIGHT
   // ===================================================
 
   if (req.method === "OPTIONS") {
@@ -114,11 +111,18 @@ app.use((req, res, next) => {
 // BODY PARSERS
 // =====================================================
 
-app.use(express.json());
+// Increased because profile images may be sent as base64.
+
+app.use(
+  express.json({
+    limit: "15mb",
+  }),
+);
 
 app.use(
   express.urlencoded({
     extended: true,
+    limit: "15mb",
   }),
 );
 
@@ -128,7 +132,6 @@ app.use(
 
 const uploadDir = path.join(__dirname, "uploads");
 
-// Create directory if it doesn't exist
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, {
     recursive: true,
@@ -160,14 +163,13 @@ const storage = multer.diskStorage({
 });
 
 // =====================================================
-// MULTER UPLOAD
+// MULTER
 // =====================================================
 
 const upload = multer({
   storage,
 
   limits: {
-    // 100 MB maximum per file
     fileSize: 100 * 1024 * 1024,
   },
 });
@@ -216,6 +218,7 @@ const transporter = nodemailer.createTransport({
 
   auth: {
     user: process.env.EMAIL_USER,
+
     pass: process.env.EMAIL_PASS,
   },
 });
@@ -240,41 +243,43 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
 // ROOT API
 // =====================================================
 
-app.get("/", (req, res) => {
-  return res.status(200).json({
-    success: true,
+app.get(
+  "/",
 
-    message: "Ink Convention backend API is running successfully!",
+  (req, res) => {
+    return res.status(200).json({
+      success: true,
 
-    environment: process.env.NODE_ENV || "development",
-  });
-});
+      message: "Ink Convention backend API is running successfully!",
+
+      environment: process.env.NODE_ENV || "development",
+    });
+  },
+);
 
 // =====================================================
 // HEALTH CHECK
 // =====================================================
 
-app.get("/api/health", (req, res) => {
-  return res.status(200).json({
-    success: true,
+app.get(
+  "/api/health",
 
-    message: "Server is healthy",
+  (req, res) => {
+    return res.status(200).json({
+      success: true,
 
-    database:
-      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+      message: "Server is healthy",
 
-    timestamp: new Date().toISOString(),
-  });
-});
+      database:
+        mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+
+      timestamp: new Date().toISOString(),
+    });
+  },
+);
 
 // =====================================================
 // PAYMENT ROUTES
-// =====================================================
-//
-// /api/payment
-// /api/payment/create-order
-// /api/payment/verify
-//
 // =====================================================
 
 app.use("/api/payment", paymentRoutes);
@@ -283,69 +288,98 @@ app.use("/api/claim", claimRoutes);
 // =====================================================
 // CLIENT ROUTES
 // =====================================================
-//
-// /api/clients
-// /api/clients/register
-// /api/clients/login
-//
-// =====================================================
 
 app.use("/api/clients", clientRoutes);
+
+// =====================================================
+// TATTOO DIRECTORY ROUTES
+// =====================================================
+
 app.use("/api/admin/tattoo-studios", tattooStudioRoutes);
+
+// =====================================================
+// CLAIM / UPDATE ARTIST ROUTES
+//
+// IMPORTANT:
+// MUST BE BEFORE THE /api 404 HANDLER.
+//
+// Routes:
+//
+// GET  /api/claim
+// GET  /api/claim/search
+//
+// POST /api/claim/send-otp
+// POST /api/claim/verify-otp
+//
+// GET  /api/claim/profile
+// PUT  /api/claim/profile
+//
+// POST /api/claim/phone/send-old-otp
+// POST /api/claim/phone/verify-old-otp
+//
+// POST /api/claim/phone/send-new-otp
+// POST /api/claim/phone/verify-new-otp
+//
+// POST /api/claim/logout
+// =====================================================
+
+app.use("/api/claim", claimRoutes);
+
+console.log("✅ Claim routes mounted at /api/claim");
 
 // =====================================================
 // ADMIN LOGIN
 // =====================================================
 
-app.post("/api/login", (req, res) => {
-  try {
-    const { gmail, password } = req.body;
+app.post(
+  "/api/login",
 
-    if (!gmail || !password) {
-      return res.status(400).json({
+  (req, res) => {
+    try {
+      const { gmail, password } = req.body;
+
+      if (!gmail || !password) {
+        return res.status(400).json({
+          success: false,
+
+          message: "Email and password are required.",
+        });
+      }
+
+      if (
+        gmail === process.env.ADMIN_EMAIL &&
+        password === process.env.ADMIN_PASSWORD
+      ) {
+        return res.status(200).json({
+          success: true,
+
+          message: "Login successful!",
+        });
+      }
+
+      return res.status(401).json({
         success: false,
 
-        message: "Email and password are required.",
+        message: "Invalid email or password.",
+      });
+    } catch (error) {
+      console.error("❌ Admin login error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Server error during login.",
       });
     }
-
-    if (
-      gmail === process.env.ADMIN_EMAIL &&
-      password === process.env.ADMIN_PASSWORD
-    ) {
-      return res.status(200).json({
-        success: true,
-
-        message: "Login successful!",
-      });
-    }
-
-    return res.status(401).json({
-      success: false,
-
-      message: "Invalid email or password.",
-    });
-  } catch (error) {
-    console.error("❌ Admin login error:", error);
-
-    return res.status(500).json({
-      success: false,
-
-      message: "Server error during login.",
-    });
-  }
-});
+  },
+);
 
 // =====================================================
-// TATTOO ARTIST SIGNUP / SUBMISSION
+// TATTOO ARTIST SIGNUP / COMPETITION SUBMISSION
 // =====================================================
 
 app.post(
   "/api/signup",
-
-  // ===================================================
-  // MULTER FILE UPLOAD
-  // ===================================================
 
   upload.fields([
     {
@@ -359,10 +393,6 @@ app.post(
     },
   ]),
 
-  // ===================================================
-  // REQUEST HANDLER
-  // ===================================================
-
   async (req, res) => {
     try {
       console.log("📥 Artist signup request received");
@@ -373,57 +403,35 @@ app.post(
 
       const {
         category,
-
         entryPackage,
-
         firstName,
-
         lastName,
-
         professionalName,
-
         gmail,
-
         phone,
-
         instagram,
-
         studio,
-
         city,
-
         state,
-
         country,
-
         primaryStyle,
-
         experience,
-
         tattooTitle,
-
         description,
-
         placement,
-
         size,
-
         isOriginal,
-
         declarationOriginal,
-
         declarationConsent,
-
         termsAccepted,
 
-        // Razorpay information
+        // Razorpay
         razorpay_order_id,
-
         razorpay_payment_id,
       } = req.body;
 
       // =================================================
-      // REQUIRED FIELD VALIDATION
+      // REQUIRED VALIDATION
       // =================================================
 
       if (
@@ -456,13 +464,13 @@ app.post(
       }
 
       // =================================================
-      // NORMALIZE EMAIL
+      // EMAIL
       // =================================================
 
       const cleanEmail = gmail.trim().toLowerCase();
 
       // =================================================
-      // CHECK DUPLICATE USER
+      // DUPLICATE
       // =================================================
 
       const existingUser = await User.findOne({
@@ -496,7 +504,7 @@ app.post(
           : [];
 
       // =================================================
-      // REQUIRE AT LEAST ONE IMAGE
+      // REQUIRE IMAGE
       // =================================================
 
       if (imagePaths.length === 0) {
@@ -516,7 +524,7 @@ app.post(
       )}`;
 
       // =================================================
-      // BOOLEAN HELP FUNCTION
+      // BOOLEAN
       // =================================================
 
       const toBoolean = (value) => {
@@ -588,7 +596,7 @@ app.post(
       console.log(`✅ Artist saved with Entry ID: ${generatedEntryId}`);
 
       // =================================================
-      // LOG PAYMENT DATA
+      // PAYMENT LOG
       // =================================================
 
       if (razorpay_payment_id) {
@@ -764,7 +772,9 @@ app.post(
 );
 
 // =====================================================
-// GET ALL ARTIST ENTRIES
+// GET ALL COMPETITION ARTIST ENTRIES
+//
+// GET /api/admin/users
 // =====================================================
 
 app.get(
@@ -807,6 +817,8 @@ app.get(
 
 // =====================================================
 // GET SINGLE ARTIST
+//
+// GET /api/admin/users/:id
 // =====================================================
 
 app.get(
@@ -830,6 +842,8 @@ app.get(
         user,
       });
     } catch (error) {
+      console.error("❌ Fetch single user error:", error);
+
       return res.status(500).json({
         success: false,
 
@@ -843,6 +857,8 @@ app.get(
 
 // =====================================================
 // UPDATE ARTIST STATUS
+//
+// PATCH /api/admin/users/:id/status
 // =====================================================
 
 app.patch(
@@ -903,6 +919,8 @@ app.patch(
 
 // =====================================================
 // DELETE ARTIST ENTRY
+//
+// DELETE /api/admin/users/:id
 // =====================================================
 
 app.delete(
@@ -926,6 +944,7 @@ app.delete(
 
       const filesToDelete = [
         ...(deletedUser.images || []),
+
         ...(deletedUser.videos || []),
       ];
 
@@ -962,15 +981,22 @@ app.delete(
 
 // =====================================================
 // 404 API HANDLER
+//
+// IMPORTANT:
+// THIS MUST ALWAYS STAY AFTER EVERY API ROUTE.
 // =====================================================
 
-app.use("/api", (req, res) => {
-  return res.status(404).json({
-    success: false,
+app.use(
+  "/api",
 
-    message: `API route not found: ${req.method} ${req.originalUrl}`,
-  });
-});
+  (req, res) => {
+    return res.status(404).json({
+      success: false,
+
+      message: `API route not found: ${req.method} ${req.originalUrl}`,
+    });
+  },
+);
 
 // =====================================================
 // GLOBAL ERROR HANDLER
@@ -979,7 +1005,10 @@ app.use("/api", (req, res) => {
 app.use((error, req, res, next) => {
   console.error("❌ Unhandled server error:", error);
 
-  // Multer error
+  // =================================================
+  // MULTER ERROR
+  // =================================================
+
   if (error instanceof multer.MulterError) {
     return res.status(400).json({
       success: false,
@@ -1001,18 +1030,28 @@ app.use((error, req, res, next) => {
 // START SERVER
 // =====================================================
 
-app.listen(PORT, () => {
-  console.log("==============================================");
+app.listen(
+  PORT,
 
-  console.log(`🚀 Server is running on port ${PORT}`);
+  () => {
+    console.log("==============================================");
 
-  console.log(`🌐 Local API: http://localhost:${PORT}`);
+    console.log(`🚀 Server is running on port ${PORT}`);
 
-  console.log(`❤️ Health: http://localhost:${PORT}/api/health`);
+    console.log(`🌐 Local API: http://localhost:${PORT}`);
 
-  console.log(`👤 Clients: http://localhost:${PORT}/api/clients`);
+    console.log(`❤️ Health: http://localhost:${PORT}/api/health`);
 
-  console.log(`💳 Payment: http://localhost:${PORT}/api/payment`);
+    console.log(`👤 Clients: http://localhost:${PORT}/api/clients`);
 
-  console.log("==============================================");
-});
+    console.log(
+      `🎨 Directory: http://localhost:${PORT}/api/admin/tattoo-studios`,
+    );
+
+    console.log(`🔐 Claim API: http://localhost:${PORT}/api/claim`);
+
+    console.log(`💳 Payment: http://localhost:${PORT}/api/payment`);
+
+    console.log("==============================================");
+  },
+);
