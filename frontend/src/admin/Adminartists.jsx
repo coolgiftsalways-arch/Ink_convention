@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   Trash2,
@@ -15,7 +15,6 @@ import {
   Maximize2,
   Award,
   Sparkles,
-  Search,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -231,20 +230,6 @@ const normalizeDirectoryArtist = (source = {}) => ({
     .trim()
     .toLowerCase(),
   profileImage: source.profileImage || source.image || source.photo || "",
-  membershipDate:
-    source.membershipActivatedAt ||
-    source.planActivatedAt ||
-    source.activatedAt ||
-    source.verifiedAt ||
-    source.proActivatedAt ||
-    source.paidAt ||
-    source.paymentDate ||
-    source.payment?.paidAt ||
-    source.payment?.createdAt ||
-    source.payment?.updatedAt ||
-    source.updatedAt ||
-    source.createdAt ||
-    "",
   updatedAt: source.updatedAt || source.createdAt || "",
 });
 
@@ -267,46 +252,6 @@ const hasValidPaidStatus = (artist) => {
   return ["paid", "success", "successful", "completed", "verified"].includes(
     status,
   );
-};
-
-const isToday = (value) => {
-  if (!value) return false;
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
-
-  const now = new Date();
-
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
-};
-
-const formatDirectoryDate = (value) => {
-  if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "N/A";
-
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const DIRECTORY_FILTER_LABELS = {
-  all: "All Directory Users",
-  free: "Free / Basic Users",
-  silver: "Silver Pro Members",
-  gold: "Gold Verified Members",
-  paid: "All Paid Members",
-  silverToday: "Silver Taken Today",
-  goldToday: "Gold Taken Today",
 };
 
 // =====================================================
@@ -382,19 +327,17 @@ function Dashboard() {
 
   const [membershipError, setMembershipError] = useState("");
 
-  const [loading, setLoading] = useState(false);
+  // Directory membership filter:
+  // basic = FREE / no paid plan
+  // pro = SILVER ₹1,499
+  // verified = GOLD ₹2,999
+  const [membershipFilter, setMembershipFilter] = useState("basic");
+
+  const [loading, setLoading] = useState(true);
 
   const [selectedUser, setSelectedUser] = useState(null);
 
   const [dashboardError, setDashboardError] = useState("");
-
-  const [directorySearch, setDirectorySearch] = useState("");
-
-  const [directoryFilter, setDirectoryFilter] = useState("all");
-
-  const [directoryPage, setDirectoryPage] = useState(1);
-
-  const directoryExplorerRef = useRef(null);
 
   // ===================================================
   // LOGIN
@@ -457,7 +400,6 @@ function Dashboard() {
 
     sessionStorage.removeItem("userEmail");
 
-    setLoading(false);
     setIsAuthenticated(false);
     setSelectedUser(null);
   };
@@ -525,58 +467,87 @@ function Dashboard() {
   // ===================================================
 
   const fetchMemberships = useCallback(async () => {
-    setMembershipError("");
+  setMembershipError("");
 
-    try {
-      const PAGE_SIZE = 1000;
-      let page = 1;
-      let totalPages = 1;
-      const allDirectoryArtists = [];
+  try {
+    const PAGE_SIZE = 1000;
+    let page = 1;
+    let totalPages = 1;
+    const allArtists = [];
 
-      do {
-        const response = await apiFetch(
-          `/api/admin/tattoo-studios?page=${page}&limit=${PAGE_SIZE}`,
+    do {
+      const response = await apiFetch(
+        `/api/admin/tattoo-studios?page=${page}&limit=${PAGE_SIZE}`
+      );
+
+      const data = await getJson(response);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            data.error ||
+            "Failed to load directory memberships."
         );
+      }
 
-        const data = await getJson(response);
+      const pageArtists = getDirectoryArtistsArray(data);
 
-        if (!response.ok) {
-          throw new Error(
-            data.message ||
-              data.error ||
-              "Failed to load directory memberships.",
-          );
+      allArtists.push(...pageArtists);
+
+      totalPages = Math.max(
+        1,
+        Number(data?.pagination?.totalPages || 1)
+      );
+
+      page += 1;
+    } while (page <= totalPages);
+
+    const members = allArtists
+      .map((artist) => normalizeDirectoryArtist(artist))
+      .filter((artist) => {
+        // FREE / BASIC
+        if (artist.plan === "basic") {
+          return true;
         }
 
-        const pageArtists = getDirectoryArtistsArray(data);
-        allDirectoryArtists.push(...pageArtists);
+        // SILVER / GOLD
+        if (
+          artist.plan === "pro" ||
+          artist.plan === "verified"
+        ) {
+          return hasValidPaidStatus(artist);
+        }
 
-        totalPages = Math.max(
-          1,
-          Number(data?.pagination?.totalPages || data?.totalPages || 1),
-        );
+        return false;
+      })
+      .sort((first, second) => {
+        const firstTime = new Date(
+          first.updatedAt || 0
+        ).getTime();
 
-        page += 1;
-      } while (page <= totalPages);
+        const secondTime = new Date(
+          second.updatedAt || 0
+        ).getTime();
 
-      const members = allDirectoryArtists
-        .map((artist) => normalizeDirectoryArtist(artist))
-        .sort((first, second) => {
-          const firstTime = new Date(first.updatedAt || 0).getTime();
-          const secondTime = new Date(second.updatedAt || 0).getTime();
-          return secondTime - firstTime;
-        });
+        return secondTime - firstTime;
+      });
 
-      console.log("✅ ALL DIRECTORY USERS:", members);
-      setDirectoryArtists(members);
-    } catch (error) {
-      console.error("Membership fetch error:", error);
-      setDirectoryArtists([]);
-      setMembershipError(
-        error.message || "Could not load Silver and Gold members.",
-      );
-    }
-  }, []);
+    console.log(
+      `✅ TOTAL DIRECTORY ARTISTS LOADED: ${members.length}`
+    );
+
+    setDirectoryArtists(members);
+  } catch (error) {
+    console.error("Membership fetch error:", error);
+
+    setDirectoryArtists([]);
+
+    setMembershipError(
+      error.message ||
+        "Could not load Free, Silver and Gold artists."
+    );
+  }
+}, []);
 
   // ===================================================
   // REFRESH DASHBOARD
@@ -600,17 +571,9 @@ function Dashboard() {
   // ===================================================
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => {
+    if (isAuthenticated) {
       refreshDashboard();
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    }
   }, [isAuthenticated, refreshDashboard]);
 
   // ===================================================
@@ -755,23 +718,6 @@ function Dashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const selectDirectoryFilter = useCallback((filter) => {
-    setDirectoryFilter(filter);
-    setDirectoryPage(1);
-
-    window.requestAnimationFrame(() => {
-      directoryExplorerRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  }, []);
-
-  const handleDirectorySearch = (event) => {
-    setDirectorySearch(event.target.value);
-    setDirectoryPage(1);
-  };
-
   // ===================================================
   // LOGIN PAGE
   // ===================================================
@@ -892,87 +838,46 @@ function Dashboard() {
     0,
   );
 
-  const totalDirectoryUsers = directoryArtists.length;
-
   const freeMembers = directoryArtists.filter(
     (artist) => artist.plan === "basic",
   );
 
   const silverMembers = directoryArtists.filter(
-    (artist) => artist.plan === "pro" && hasValidPaidStatus(artist),
+    (artist) => artist.plan === "pro",
   );
 
   const goldMembers = directoryArtists.filter(
-    (artist) => artist.plan === "verified" && hasValidPaidStatus(artist),
+    (artist) => artist.plan === "verified",
   );
 
-  const paidMembers = [...silverMembers, ...goldMembers];
-
-  const silverTodayMembers = silverMembers.filter((artist) =>
-    isToday(artist.membershipDate),
-  );
-
-  const goldTodayMembers = goldMembers.filter((artist) =>
-    isToday(artist.membershipDate),
-  );
-
-  const totalPaidMembers = paidMembers.length;
-
-  const directoryFilterMembers =
-    directoryFilter === "free"
-      ? freeMembers
-      : directoryFilter === "silver"
-        ? silverMembers
-        : directoryFilter === "gold"
-          ? goldMembers
-          : directoryFilter === "paid"
-            ? paidMembers
-            : directoryFilter === "silverToday"
-              ? silverTodayMembers
-              : directoryFilter === "goldToday"
-                ? goldTodayMembers
-                : directoryArtists;
-
-  const normalizedDirectorySearch = directorySearch.trim().toLowerCase();
-
-  const searchedDirectoryMembers = normalizedDirectorySearch
-    ? directoryFilterMembers.filter((artist) => {
-        const searchableText = [
-          artist.name,
-          artist.studio,
-          artist.email,
-          artist.phone,
-          artist.city,
-          artist.state,
-          artist.plan,
-          artist.paymentStatus,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-
-        return searchableText.includes(normalizedDirectorySearch);
-      })
-    : directoryFilterMembers;
-
-  const DIRECTORY_PAGE_SIZE = 50;
-
-  const totalDirectoryPages = Math.max(
-    1,
-    Math.ceil(searchedDirectoryMembers.length / DIRECTORY_PAGE_SIZE),
-  );
-
-  const safeDirectoryPage = Math.min(directoryPage, totalDirectoryPages);
-  const directoryStartIndex = (safeDirectoryPage - 1) * DIRECTORY_PAGE_SIZE;
-  const directoryEndIndex = Math.min(
-    directoryStartIndex + DIRECTORY_PAGE_SIZE,
-    searchedDirectoryMembers.length,
-  );
-
-  const visibleDirectoryMembers = searchedDirectoryMembers.slice(
-    directoryStartIndex,
-    directoryEndIndex,
-  );
+  const selectedMembership =
+    membershipFilter === "verified"
+      ? {
+          title: "Gold Verified",
+          price: "₹2,999",
+          members: goldMembers,
+          tone: "gold",
+          icon: <Trophy size={18} />,
+          description: "Artists who have taken the ₹2,999 Gold Verified plan.",
+        }
+      : membershipFilter === "pro"
+        ? {
+            title: "Silver Pro",
+            price: "₹1,499",
+            members: silverMembers,
+            tone: "silver",
+            icon: <Award size={18} />,
+            description:
+              "Artists who have taken only the ₹1,499 Silver Pro plan.",
+          }
+        : {
+            title: "Free / Basic",
+            price: "₹0",
+            members: freeMembers,
+            tone: "basic",
+            icon: <Sparkles size={18} />,
+            description: "Artists who have not taken Silver or Gold.",
+          };
 
   // ===================================================
   // DASHBOARD
@@ -1044,109 +949,58 @@ function Dashboard() {
               STATS
           ========================================== */}
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            <DashboardStat
-              label="Total Directory Users"
-              value={totalDirectoryUsers}
-              highlight
-              active={directoryFilter === "all"}
-              onClick={() => selectDirectoryFilter("all")}
-              helper="CLICK TO VIEW ALL"
-            />
+          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            <DashboardStat label="Tattoo Entries" value={submissions.length} />
+
+            <DashboardStat label="Media Files" value={totalMedia} highlight />
+
+            <DashboardStat label="Clients" value={clientCount} />
 
             <DashboardStat
               label="Free / Basic"
               value={freeMembers.length}
-              tone="free"
-              active={directoryFilter === "free"}
-              onClick={() => selectDirectoryFilter("free")}
-              helper="CLICK TO VIEW FREE"
+              tone="basic"
             />
 
             <DashboardStat
               label="Silver Pro ₹1,499"
               value={silverMembers.length}
               tone="silver"
-              active={directoryFilter === "silver"}
-              onClick={() => selectDirectoryFilter("silver")}
-              helper="CLICK TO VIEW SILVER"
             />
 
             <DashboardStat
               label="Gold Verified ₹2,999"
               value={goldMembers.length}
               tone="gold"
-              active={directoryFilter === "gold"}
-              onClick={() => selectDirectoryFilter("gold")}
-              helper="CLICK TO VIEW GOLD"
             />
 
-            <DashboardStat
-              label="Total Paid"
-              value={totalPaidMembers}
-              tone="paid"
-              active={directoryFilter === "paid"}
-              onClick={() => selectDirectoryFilter("paid")}
-              helper="SILVER + GOLD"
-            />
-
-            <DashboardStat
-              label="Silver Taken Today"
-              value={silverTodayMembers.length}
-              tone="silver"
-              active={directoryFilter === "silverToday"}
-              onClick={() => selectDirectoryFilter("silverToday")}
-              helper="CLICK TO VIEW TODAY"
-            />
-
-            <DashboardStat
-              label="Gold Taken Today"
-              value={goldTodayMembers.length}
-              tone="gold"
-              active={directoryFilter === "goldToday"}
-              onClick={() => selectDirectoryFilter("goldToday")}
-              helper="CLICK TO VIEW TODAY"
-            />
-
-            <DashboardStat label="Tattoo Entries" value={submissions.length} />
-
-            <DashboardStat label="Clients" value={clientCount} />
-
-            <DashboardStat label="Media Files" value={totalMedia} />
+            <DashboardStat label="Server" value="LIVE" />
           </div>
 
           {/* ==========================================
-              DIRECTORY USERS + MEMBERSHIPS
+              DIRECTORY MEMBERSHIPS
           ========================================== */}
 
-          <section ref={directoryExplorerRef} className="space-y-5 scroll-mt-8">
-            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
+          <section className="space-y-5">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5">
               <div>
                 <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#a855f7]">
-                  Directory User Explorer
+                  Directory Memberships
                 </p>
 
                 <h2 className="text-2xl sm:text-3xl font-black mt-2">
-                  {DIRECTORY_FILTER_LABELS[directoryFilter] ||
-                    "Directory Users"}
+                  Free, Silver & Gold Artists
                 </h2>
 
-                <p className="text-xs font-mono text-gray-600 mt-2">
-                  {totalDirectoryUsers} TOTAL · {freeMembers.length} FREE ·{" "}
-                  {silverMembers.length} SILVER · {goldMembers.length} GOLD ·{" "}
-                  {silverTodayMembers.length} SILVER TODAY ·{" "}
-                  {goldTodayMembers.length} GOLD TODAY
+                <p className="text-xs sm:text-sm text-gray-600 mt-2">
+                  Free = no Silver/Gold plan • Silver = ₹1,499 only • Gold =
+                  ₹2,999
                 </p>
               </div>
 
-              <div className="text-left xl:text-right">
-                <p className="text-xs font-mono text-emerald-400">
-                  {totalPaidMembers} PAID MEMBERS
-                </p>
-                <p className="text-[10px] font-mono text-gray-700 mt-1">
-                  CLICK ANY COUNT CARD ABOVE TO FILTER
-                </p>
-              </div>
+              <p className="text-xs font-mono text-gray-600">
+                {directoryArtists.length} TOTAL DIRECTORY ARTISTS
+              </p>
             </div>
 
             {membershipError && (
@@ -1155,158 +1009,51 @@ function Dashboard() {
               </div>
             )}
 
-            <div className="rounded-3xl border border-white/10 bg-[#0b0b0f] p-4 sm:p-5">
-              <div className="flex flex-col lg:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search
-                    size={16}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
-                  />
-                  <input
-                    type="text"
-                    value={directorySearch}
-                    onChange={handleDirectorySearch}
-                    placeholder="SEARCH NAME, STUDIO, EMAIL, PHONE, CITY OR STATE..."
-                    className="w-full rounded-xl border border-white/10 bg-black/40 py-3.5 pl-11 pr-4 text-xs text-white outline-none placeholder:text-gray-700 focus:border-[#a855f7]"
-                  />
-                </div>
+            {/* ==========================================
+                3 FILTER BUTTONS
+            ========================================== */}
 
-                {directorySearch && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDirectorySearch("");
-                      setDirectoryPage(1);
-                    }}
-                    className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:bg-white/10 hover:text-white"
-                  >
-                    Clear Search
-                  </button>
-                )}
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <MembershipFilterButton
+                active={membershipFilter === "basic"}
+                onClick={() => setMembershipFilter("basic")}
+                title="FREE / BASIC"
+                subtitle="No Silver or Gold"
+                count={freeMembers.length}
+                tone="basic"
+              />
 
-              <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-                {[
-                  ["all", `ALL ${totalDirectoryUsers}`],
-                  ["free", `FREE ${freeMembers.length}`],
-                  ["silver", `SILVER ${silverMembers.length}`],
-                  ["gold", `GOLD ${goldMembers.length}`],
-                  ["paid", `PAID ${totalPaidMembers}`],
-                  ["silverToday", `SILVER TODAY ${silverTodayMembers.length}`],
-                  ["goldToday", `GOLD TODAY ${goldTodayMembers.length}`],
-                ].map(([filter, label]) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => selectDirectoryFilter(filter)}
-                    className={`shrink-0 rounded-full border px-4 py-2 text-[8px] font-black tracking-widest transition ${
-                      directoryFilter === filter
-                        ? "border-[#a855f7] bg-[#a855f7]/15 text-purple-300"
-                        : "border-white/10 bg-white/[0.02] text-gray-600 hover:text-white"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <MembershipFilterButton
+                active={membershipFilter === "pro"}
+                onClick={() => setMembershipFilter("pro")}
+                title="SILVER PRO"
+                subtitle="₹1,499 Plan"
+                count={silverMembers.length}
+                tone="silver"
+              />
+
+              <MembershipFilterButton
+                active={membershipFilter === "verified"}
+                onClick={() => setMembershipFilter("verified")}
+                title="GOLD VERIFIED"
+                subtitle="₹2,999 Plan"
+                count={goldMembers.length}
+                tone="gold"
+              />
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <p className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">
-                {searchedDirectoryMembers.length === 0
-                  ? "0 USERS"
-                  : `SHOWING ${directoryStartIndex + 1}-${directoryEndIndex} OF ${searchedDirectoryMembers.length}`}
-              </p>
+            {/* ==========================================
+                SELECTED FILTER RESULTS
+            ========================================== */}
 
-              {searchedDirectoryMembers.length > DIRECTORY_PAGE_SIZE && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={safeDirectoryPage <= 1}
-                    onClick={() =>
-                      setDirectoryPage((previous) => Math.max(1, previous - 1))
-                    }
-                    className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-[9px] font-black uppercase tracking-widest text-gray-400 disabled:cursor-not-allowed disabled:opacity-30 hover:bg-white/10"
-                  >
-                    Previous
-                  </button>
-
-                  <span className="min-w-[100px] text-center text-[9px] font-mono text-gray-600">
-                    PAGE {safeDirectoryPage} / {totalDirectoryPages}
-                  </span>
-
-                  <button
-                    type="button"
-                    disabled={safeDirectoryPage >= totalDirectoryPages}
-                    onClick={() =>
-                      setDirectoryPage((previous) =>
-                        Math.min(totalDirectoryPages, previous + 1),
-                      )
-                    }
-                    className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-[9px] font-black uppercase tracking-widest text-gray-400 disabled:cursor-not-allowed disabled:opacity-30 hover:bg-white/10"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {visibleDirectoryMembers.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-white/10 bg-[#0b0b0f] px-5 py-16 text-center">
-                <Search size={34} className="mx-auto text-gray-700" />
-                <h3 className="mt-4 text-lg font-black">NO USERS FOUND</h3>
-                <p className="mt-2 text-xs text-gray-600">
-                  Try another plan filter or search text.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                {visibleDirectoryMembers.map((artist, index) => (
-                  <DirectoryExplorerRow
-                    key={
-                      artist.id ||
-                      `${artist.name}-${directoryStartIndex + index}`
-                    }
-                    artist={artist}
-                    number={directoryStartIndex + index + 1}
-                  />
-                ))}
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-white/10">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
-                <div>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-600">
-                    Paid Membership Quick Lists
-                  </p>
-                  <h3 className="text-xl sm:text-2xl font-black mt-2">
-                    Silver & Gold Members
-                  </h3>
-                </div>
-                <p className="text-[9px] font-mono text-gray-600">
-                  {silverMembers.length} SILVER · {goldMembers.length} GOLD
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <MembershipTierPanel
-                  title="Silver Pro"
-                  price="₹1,499"
-                  members={silverMembers}
-                  tone="silver"
-                  icon={<Award size={18} />}
-                />
-
-                <MembershipTierPanel
-                  title="Gold Verified"
-                  price="₹2,999"
-                  members={goldMembers}
-                  tone="gold"
-                  icon={<Trophy size={18} />}
-                />
-              </div>
-            </div>
+            <MembershipTierPanel
+              title={selectedMembership.title}
+              price={selectedMembership.price}
+              members={selectedMembership.members}
+              tone={selectedMembership.tone}
+              icon={selectedMembership.icon}
+              description={selectedMembership.description}
+            />
           </section>
 
           {/* ==========================================
@@ -1469,48 +1216,29 @@ function Dashboard() {
 // DASHBOARD STAT
 // =====================================================
 
-function DashboardStat({
-  label,
-  value,
-  highlight = false,
-  tone = "default",
-  onClick,
-  active = false,
-  helper = "",
-}) {
+function DashboardStat({ label, value, highlight = false, tone = "default" }) {
   const borderClass =
-    tone === "silver"
-      ? "border-slate-300/20 bg-slate-300/[0.025]"
-      : tone === "gold"
-        ? "border-amber-300/20 bg-amber-400/[0.025]"
-        : tone === "free"
-          ? "border-white/10 bg-white/[0.02]"
-          : tone === "paid"
-            ? "border-emerald-400/20 bg-emerald-400/[0.025]"
-            : "border-white/10 bg-[#0b0b0f]";
+    tone === "basic"
+      ? "border-purple-400/15 bg-purple-500/[0.02]"
+      : tone === "silver"
+        ? "border-slate-300/20 bg-slate-300/[0.025]"
+        : tone === "gold"
+          ? "border-amber-300/20 bg-amber-400/[0.025]"
+          : "border-white/10 bg-[#0b0b0f]";
 
   const valueClass =
-    tone === "silver"
-      ? "text-slate-200"
-      : tone === "gold"
-        ? "text-amber-300"
-        : tone === "free"
-          ? "text-gray-200"
-          : tone === "paid"
-            ? "text-emerald-400"
-            : highlight
-              ? "text-[#a855f7]"
-              : "text-white";
+    tone === "basic"
+      ? "text-purple-300"
+      : tone === "silver"
+        ? "text-slate-200"
+        : tone === "gold"
+          ? "text-amber-300"
+          : highlight
+            ? "text-[#a855f7]"
+            : "text-white";
 
-  const className = `
-    w-full border rounded-2xl p-5 sm:p-6 text-left transition-all duration-300
-    ${borderClass}
-    ${onClick ? "cursor-pointer hover:-translate-y-1 hover:border-[#a855f7]/50" : ""}
-    ${active ? "ring-2 ring-[#a855f7]/70 border-[#a855f7]/60 shadow-[0_0_28px_rgba(168,85,247,0.12)]" : ""}
-  `;
-
-  const content = (
-    <>
+  return (
+    <div className={`border rounded-2xl p-5 sm:p-6 ${borderClass}`}>
       <span className="text-[10px] sm:text-xs font-mono text-gray-500 uppercase tracking-widest">
         {label}
       </span>
@@ -1518,106 +1246,6 @@ function DashboardStat({
       <p className={`text-2xl sm:text-3xl font-black mt-2 ${valueClass}`}>
         {value}
       </p>
-
-      {helper && (
-        <p className="mt-2 text-[7px] font-mono uppercase tracking-[0.12em] text-gray-700">
-          {helper}
-        </p>
-      )}
-    </>
-  );
-
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick} className={className}>
-        {content}
-      </button>
-    );
-  }
-
-  return <div className={className}>{content}</div>;
-}
-
-// =====================================================
-// DIRECTORY EXPLORER ROW
-// =====================================================
-
-function DirectoryExplorerRow({ artist, number }) {
-  const isGold = artist.plan === "verified";
-  const isSilver = artist.plan === "pro";
-
-  const planLabel = isGold
-    ? "GOLD VERIFIED"
-    : isSilver
-      ? "SILVER PRO"
-      : "FREE / BASIC";
-
-  const badgeClass = isGold
-    ? "border-amber-300/20 bg-amber-400/10 text-amber-300"
-    : isSilver
-      ? "border-slate-300/20 bg-slate-300/10 text-slate-200"
-      : "border-white/10 bg-white/[0.04] text-gray-400";
-
-  return (
-    <div className="rounded-2xl border border-white/[0.07] bg-[#0b0b0f] p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[8px] font-mono text-gray-700">
-              #{String(number).padStart(4, "0")}
-            </span>
-            <span
-              className={`rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-widest ${badgeClass}`}
-            >
-              {planLabel}
-            </span>
-            {(isSilver || isGold) && isToday(artist.membershipDate) && (
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[7px] font-black uppercase tracking-widest text-emerald-400">
-                TAKEN TODAY
-              </span>
-            )}
-          </div>
-
-          <h4 className="mt-3 text-lg font-black break-words">
-            {artist.name || "Tattoo Artist"}
-          </h4>
-
-          {artist.studio && (
-            <p className="mt-1 text-xs text-gray-500 break-words">
-              {artist.studio}
-            </p>
-          )}
-        </div>
-
-        <div
-          className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-            isGold
-              ? "bg-amber-400 shadow-[0_0_12px_rgba(250,204,21,0.7)]"
-              : isSilver
-                ? "bg-slate-200 shadow-[0_0_10px_rgba(226,232,240,0.45)]"
-                : "bg-gray-700"
-          }`}
-        />
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-        <MembershipInfo label="City" value={artist.city || "N/A"} />
-        <MembershipInfo label="State" value={artist.state || "N/A"} />
-        <MembershipInfo label="Email" value={artist.email || "N/A"} />
-        <MembershipInfo label="Phone" value={artist.phone || "N/A"} />
-      </div>
-
-      <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
-        <span className="text-[8px] font-mono uppercase tracking-widest text-gray-700">
-          {isSilver || isGold
-            ? "Membership / Payment Date"
-            : "Directory Updated"}
-        </span>
-
-        <span className="text-[9px] font-mono text-gray-500">
-          {formatDirectoryDate(artist.membershipDate || artist.updatedAt)}
-        </span>
-      </div>
     </div>
   );
 }
@@ -1626,35 +1254,105 @@ function DirectoryExplorerRow({ artist, number }) {
 // SILVER / GOLD MEMBERSHIP PANEL
 // =====================================================
 
-function MembershipTierPanel({ title, price, members, tone, icon }) {
+function MembershipFilterButton({
+  active,
+  onClick,
+  title,
+  subtitle,
+  count,
+  tone,
+}) {
+  const toneClass =
+    tone === "gold"
+      ? active
+        ? "border-amber-300/50 bg-amber-400/10 text-amber-200 shadow-[0_0_30px_rgba(251,191,36,0.08)]"
+        : "border-amber-300/15 bg-amber-400/[0.02] text-amber-300"
+      : tone === "silver"
+        ? active
+          ? "border-slate-200/50 bg-slate-200/10 text-white shadow-[0_0_30px_rgba(226,232,240,0.06)]"
+          : "border-slate-300/15 bg-slate-300/[0.02] text-slate-300"
+        : active
+          ? "border-purple-400/50 bg-purple-500/10 text-purple-200 shadow-[0_0_30px_rgba(168,85,247,0.08)]"
+          : "border-purple-400/15 bg-purple-500/[0.02] text-purple-300";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-2xl border p-4 sm:p-5 text-left transition-all duration-300 hover:-translate-y-0.5 ${toneClass}`}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.14em]">
+            {title}
+          </p>
+
+          <p className="text-[10px] font-mono text-gray-500 mt-1">{subtitle}</p>
+        </div>
+
+        <span className="min-w-11 h-11 px-3 rounded-xl border border-current/20 flex items-center justify-center text-xl font-black">
+          {count}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// =====================================================
+// FREE / SILVER / GOLD MEMBERSHIP PANEL
+// =====================================================
+
+function MembershipTierPanel({
+  title,
+  price,
+  members,
+  tone,
+  icon,
+  description,
+}) {
   const isGold = tone === "gold";
+  const isSilver = tone === "silver";
+  const isBasic = tone === "basic";
 
   const outerClass = isGold
     ? "border-amber-300/25 bg-amber-400/[0.025]"
-    : "border-slate-300/20 bg-slate-300/[0.02]";
+    : isSilver
+      ? "border-slate-300/20 bg-slate-300/[0.02]"
+      : "border-purple-400/20 bg-purple-500/[0.02]";
 
-  const accentClass = isGold ? "text-amber-300" : "text-slate-200";
+  const accentClass = isGold
+    ? "text-amber-300"
+    : isSilver
+      ? "text-slate-200"
+      : "text-purple-300";
 
   const badgeClass = isGold
     ? "border-amber-300/20 bg-amber-400/10 text-amber-300"
-    : "border-slate-300/20 bg-slate-300/10 text-slate-200";
+    : isSilver
+      ? "border-slate-300/20 bg-slate-300/10 text-slate-200"
+      : "border-purple-400/20 bg-purple-500/10 text-purple-300";
 
   return (
     <div className={`rounded-3xl border p-5 sm:p-6 ${outerClass}`}>
-      <div className="flex items-start justify-between gap-4 pb-5 border-b border-white/10">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b border-white/10">
         <div>
           <div className={`flex items-center gap-2 ${accentClass}`}>
             {icon}
+
             <span className="text-[10px] font-mono uppercase tracking-[0.16em]">
               {price} PLAN
             </span>
           </div>
 
           <h3 className="text-2xl font-black mt-2 uppercase">{title}</h3>
+
+          {description && (
+            <p className="text-xs text-gray-600 mt-2 max-w-xl">{description}</p>
+          )}
         </div>
 
         <div
-          className={`min-w-12 h-12 px-3 rounded-xl border flex items-center justify-center text-xl font-black ${badgeClass}`}
+          className={`min-w-14 h-14 px-3 rounded-xl border flex items-center justify-center text-2xl font-black ${badgeClass}`}
         >
           {members.length}
         </div>
@@ -1665,15 +1363,17 @@ function MembershipTierPanel({ title, price, members, tone, icon }) {
           <Sparkles size={25} className={`mx-auto ${accentClass} opacity-40`} />
 
           <p className="text-sm font-bold text-gray-400 mt-4">
-            No {title} members yet
+            No {title} artists yet
           </p>
 
           <p className="text-xs text-gray-600 mt-1">
-            Paid members will appear here automatically.
+            {isBasic
+              ? "Artists without Silver or Gold will appear here."
+              : "Paid members will appear here automatically."}
           </p>
         </div>
       ) : (
-        <div className="mt-4 space-y-3 max-h-[430px] overflow-y-auto pr-1">
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-[560px] overflow-y-auto pr-1">
           {members.map((artist, index) => (
             <MembershipMemberRow
               key={artist.id || `${artist.name}-${index}`}
@@ -1689,23 +1389,30 @@ function MembershipTierPanel({ title, price, members, tone, icon }) {
 
 function MembershipMemberRow({ artist, tone }) {
   const isGold = tone === "gold";
+  const isSilver = tone === "silver";
 
-  const accentClass = isGold ? "text-amber-300" : "text-slate-200";
+  const accentClass = isGold
+    ? "text-amber-300"
+    : isSilver
+      ? "text-slate-200"
+      : "text-purple-300";
+
+  const dotClass = isGold
+    ? "bg-amber-400"
+    : isSilver
+      ? "bg-slate-300"
+      : "bg-purple-400";
+
+  const planLabel = isGold ? "GOLD" : isSilver ? "SILVER" : "FREE";
 
   return (
     <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span
-              className={`relative block w-2 h-2 rounded-full ${
-                isGold ? "bg-amber-400" : "bg-slate-300"
-              }`}
-            >
+            <span className={`relative block w-2 h-2 rounded-full ${dotClass}`}>
               <span
-                className={`absolute inset-0 rounded-full animate-ping opacity-40 ${
-                  isGold ? "bg-amber-400" : "bg-slate-300"
-                }`}
+                className={`absolute inset-0 rounded-full animate-ping opacity-40 ${dotClass}`}
               />
             </span>
 
@@ -1722,7 +1429,7 @@ function MembershipMemberRow({ artist, tone }) {
         <span
           className={`shrink-0 text-[8px] font-black uppercase tracking-widest ${accentClass}`}
         >
-          {isGold ? "GOLD" : "SILVER"}
+          {planLabel}
         </span>
       </div>
 
@@ -1735,11 +1442,23 @@ function MembershipMemberRow({ artist, tone }) {
 
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
         <span className="text-[8px] font-mono uppercase tracking-widest text-gray-600">
-          Payment
+          Membership
         </span>
 
-        <span className="text-[9px] font-bold uppercase text-emerald-400">
-          {artist.paymentStatus || "ACTIVE"}
+        <span
+          className={`text-[9px] font-bold uppercase ${
+            isGold
+              ? "text-amber-300"
+              : isSilver
+                ? "text-slate-200"
+                : "text-purple-300"
+          }`}
+        >
+          {isGold
+            ? artist.paymentStatus || "GOLD ACTIVE"
+            : isSilver
+              ? artist.paymentStatus || "SILVER ACTIVE"
+              : "FREE / BASIC"}
         </span>
       </div>
     </div>

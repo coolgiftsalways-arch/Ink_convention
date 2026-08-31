@@ -12,21 +12,52 @@ import {
 } from "lucide-react";
 import gsap from "gsap";
 
-const API_URL = (
-  import.meta.env.VITE_API_URL || "https://api.inkconvention.com"
-).replace(/\/$/, "");
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+function getStoredArray(key) {
+  try {
+    const raw = localStorage.getItem(key);
+
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error(
+      `Failed to read localStorage key: ${key}`,
+      error
+    );
+
+    return [];
+  }
+}
+
+/* =========================================================
+   STORAGE
+========================================================= */
+
+const PROFILE_KEY = "inkConventionUserProfiles";
+
+const DIRECTORY_KEY = "inkConventionDirectoryArtists";
+
+const CURRENT_USER_KEY = "inkConventionCurrentUserId";
 
 const PENDING_MEMBERSHIP_KEY = "inkConventionPendingMembership";
+
+
 
 const PLANS = [
   {
     id: "pro",
-    name: "SILVER PRO",
+    name: "PRO LISTING",
     price: "₹1,499",
     amount: 1499,
     billing: "PER YEAR",
     description:
-      "Higher directory visibility with city search, email visibility and a Recommended profile tag.",
+      "Higher directory visibility with city-wise discovery and a Recommended tag.",
     benefits: [
       "Name visible",
       "Email visible",
@@ -38,20 +69,20 @@ const PLANS = [
   },
   {
     id: "verified",
-    name: "GOLD VERIFIED",
+    name: "VERIFIED SPOTLIGHT",
     price: "₹2,999",
     amount: 2999,
     billing: "PER YEAR",
     description:
-      "Maximum visibility with a full public profile, Gold Verified status and Hall of Fame placement.",
+      "Maximum visibility with full profile details, Verified status and Hall of Fame placement.",
     benefits: [
-      "Everything in Silver Pro",
+      "Everything in Pro",
       "Photo visible",
       "Phone visible",
       "Studio visible",
       "Experience visible",
       "Instagram visible",
-      "Gold Verified badge",
+      "Verified Spotlight badge",
       "Highest directory ranking",
       "Standalone profile page",
       "Hall of Fame inclusion",
@@ -74,12 +105,7 @@ function normalizePlan(value) {
     .trim()
     .toLowerCase();
 
-  if (
-    plan === "gold" ||
-    plan === "verified" ||
-    plan === "spotlight" ||
-    plan === "verified spotlight"
-  ) {
+  if (plan === "gold" || plan === "spotlight" || plan === "verified") {
     return "verified";
   }
 
@@ -90,27 +116,58 @@ function normalizePlan(value) {
   return "basic";
 }
 
+function getPlanPriority(plan) {
+  const normalized = normalizePlan(plan);
+
+  if (normalized === "verified") return 3;
+  if (normalized === "pro") return 2;
+
+  return 1;
+}
+
+function updateDirectory(updatedProfile) {
+  try {
+    const directory = getStoredArray(DIRECTORY_KEY);
+
+    const updatedDirectory = directory.map((artist) =>
+      String(artist.id || artist._id || artist.profileId) ===
+      String(updatedProfile.id || updatedProfile._id || updatedProfile.profileId)
+        ? {
+            ...artist,
+            ...updatedProfile,
+            plan: normalizePlan(updatedProfile.plan),
+          }
+        : artist,
+    );
+
+    localStorage.setItem(
+      DIRECTORY_KEY,
+      JSON.stringify(updatedDirectory),
+    );
+
+    console.log("✅ Directory updated successfully");
+  } catch (error) {
+    console.error("❌ Failed to update directory:", error);
+  }
+}
 function normalizeArtist(source = {}) {
   return {
     id: source.id || source._id || source.profileId || "",
     name:
-      source.name ||
-      source.artistName ||
-      source.professionalName ||
-      "Tattoo Artist",
+      source.name || source.artistName || source.professionalName || "Artist",
     studio: source.studio || source.studioName || "",
     city: source.city || "",
     state: source.state || "",
     maskedPhone: source.maskedPhone || source.phoneMasked || "",
-    profileImage: source.profileImage || source.image || source.photo || "",
-    plan: normalizePlan(source.plan || source.membershipPlan || source.tier),
+    profileImage: source.profileImage || source.image || "",
+    plan: normalizePlan(source.plan || source.membershipPlan),
   };
 }
 
 function makeForm(profile = {}) {
   return {
     name: profile.name || profile.artistName || profile.professionalName || "",
-    email: profile.email || profile.gmail || "",
+    email: profile.email || "",
     city: profile.city || "",
     state: profile.state || "",
     studio: profile.studio || profile.studioName || "",
@@ -119,21 +176,11 @@ function makeForm(profile = {}) {
   };
 }
 
-function getResultsArray(data) {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.profiles)) return data.profiles;
-  if (Array.isArray(data?.artists)) return data.artists;
-  if (Array.isArray(data?.results)) return data.results;
-  if (Array.isArray(data?.data)) return data.data;
-  return [];
-}
-
 async function apiRequest(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, {
     method: options.method || "GET",
     credentials: "include",
     headers: {
-      Accept: "application/json",
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
     },
@@ -146,16 +193,33 @@ async function apiRequest(path, options = {}) {
     const error = new Error(
       data.message || data.error || `Request failed (${response.status})`,
     );
+
     error.status = response.status;
     throw error;
   }
 
   return data;
 }
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+
+    document.body.appendChild(script);
+  });
+};
 
 export default function Enter() {
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const incomingArtistSource =
     location.state?.artist ||
@@ -198,24 +262,28 @@ export default function Enter() {
   const [profileImage, setProfileImage] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [changePhoneOpen, setChangePhoneOpen] = useState(false);
+  const [newPhone, setNewPhone] = useState("");
+  const [newPhoneOtp, setNewPhoneOtp] = useState("");
+  const [newPhoneOtpSent, setNewPhoneOtpSent] = useState(false);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const currentPlan = useMemo(
-    () => normalizePlan(currentProfile?.plan || selectedArtist?.plan),
-    [currentProfile?.plan, selectedArtist?.plan],
-  );
 
   useEffect(() => {
     const context = gsap.context(() => {
       gsap.fromTo(
         ".enter-reveal",
-        { opacity: 0, y: 20 },
+        {
+          opacity: 0,
+          y: 22,
+        },
         {
           opacity: 1,
           y: 0,
-          duration: 0.55,
-          stagger: 0.035,
+          duration: 0.6,
+          stagger: 0.04,
           ease: "power3.out",
         },
       );
@@ -234,9 +302,38 @@ export default function Enter() {
     return () => window.clearInterval(timer);
   }, [resendSeconds]);
 
+  const currentPlan = useMemo(
+    () => normalizePlan(currentProfile?.plan || selectedArtist?.plan),
+    [currentProfile?.plan, selectedArtist?.plan],
+  );
+
   const clearMessages = () => {
     setError("");
     setSuccess("");
+  };
+  const resetToFind = () => {
+    setScreen("find");
+    setSelectedArtist(null);
+
+    setOtp("");
+    setOtpSent(false);
+    setResendSeconds(0);
+
+    setCurrentProfile(null);
+    setFormData(EMPTY_FORM);
+    setProfileImage("");
+
+    setChangePhoneOpen(false);
+    setNewPhone("");
+    setNewPhoneOtp("");
+    setNewPhoneOtpSent(false);
+
+    clearMessages();
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   const handleSearch = async (event) => {
@@ -245,7 +342,7 @@ export default function Enter() {
     const query = searchQuery.trim();
 
     if (query.length < 2) {
-      setError("Enter at least 2 characters of the artist or studio name.");
+      setError("Enter at least 2 characters of artist or studio name.");
       return;
     }
 
@@ -253,13 +350,22 @@ export default function Enter() {
     clearMessages();
 
     try {
-      const data = await apiRequest(
-        `/api/claim/search?q=${encodeURIComponent(query)}&limit=12`,
-      );
+      const data = await apiRequest("/api/claim/find", {
+        method: "POST",
+        body: {
+          query,
+        },
+      });
 
-      const results = getResultsArray(data).map((artist) =>
-        normalizeArtist(artist),
-      );
+      const rawResults = Array.isArray(data.profiles)
+        ? data.profiles
+        : Array.isArray(data.artists)
+          ? data.artists
+          : Array.isArray(data.results)
+            ? data.results
+            : [];
+
+      const results = rawResults.map((artist) => normalizeArtist(artist));
 
       setSearchResults(results);
 
@@ -267,31 +373,39 @@ export default function Enter() {
         setError("No matching artist or studio found.");
       }
     } catch (searchError) {
-      console.error("Artist search error:", searchError);
+      console.error(searchError);
+
       setSearchResults([]);
-      setError(searchError.message || "Unable to search artist profiles.");
+
+      setError(searchError.message || "Unable to search profiles.");
     } finally {
       setSearching(false);
     }
   };
 
   const chooseArtist = (artist) => {
-    const normalized = normalizeArtist(artist);
+    const profile = normalizeArtist(artist);
 
-    setSelectedArtist(normalized);
-    setMaskedPhone(normalized.maskedPhone || "");
-    setOtpSent(false);
+    setSelectedArtist(profile);
+    setMaskedPhone(profile.maskedPhone || "");
+
     setOtp("");
+    setOtpSent(false);
     setResendSeconds(0);
+
     clearMessages();
+
     setScreen("verify");
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   const sendOtp = async () => {
     if (!selectedArtist?.id) {
-      setError("Artist profile ID is missing.");
+      setError("Artist profile is missing.");
       return;
     }
 
@@ -314,11 +428,15 @@ export default function Enter() {
           selectedArtist.maskedPhone ||
           "REGISTERED NUMBER",
       );
+
       setOtpSent(true);
+
       setResendSeconds(Number(data.resendAfterSeconds || 60));
-      setSuccess("OTP sent to the mobile number already saved on this card.");
+
+      setSuccess("OTP sent to the registered mobile number.");
     } catch (sendError) {
-      console.error("OTP send error:", sendError);
+      console.error(sendError);
+
       setError(sendError.message || "Unable to send OTP.");
     } finally {
       setOtpLoading(false);
@@ -329,7 +447,7 @@ export default function Enter() {
     event.preventDefault();
 
     if (!selectedArtist?.id) {
-      setError("Artist profile ID is missing.");
+      setError("Artist profile is missing.");
       return;
     }
 
@@ -353,27 +471,35 @@ export default function Enter() {
       let profile = verifyData.profile || verifyData.artist || null;
 
       if (!profile) {
-        const profileData = await apiRequest("/api/claim/profile");
+        const profileData = await apiRequest("/api/claim/me");
+
         profile = profileData.profile || profileData.artist || profileData;
       }
 
       setCurrentProfile(profile);
+
       setFormData(makeForm(profile));
-      setProfileImage(
-        profile?.profileImage || profile?.image || profile?.photo || "",
-      );
+
+      setProfileImage(profile?.profileImage || profile?.image || "");
+
       setMaskedPhone(
         profile?.maskedPhone ||
           profile?.phoneMasked ||
           verifyData.maskedPhone ||
           maskedPhone,
       );
-      setSuccess("OTP verified. You can now update this profile.");
+
+      setSuccess("OTP verified. You can now update your profile.");
+
       setScreen("edit");
 
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch (verifyError) {
-      console.error("OTP verify error:", verifyError);
+      console.error(verifyError);
+
       setError(verifyError.message || "Incorrect or expired OTP.");
     } finally {
       setOtpLoading(false);
@@ -391,36 +517,84 @@ export default function Enter() {
     clearMessages();
   };
 
-  const handleProfileImage = (event) => {
+  const compressImage = (file, maxSize = 800, quality = 0.72) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const image = new Image();
+
+        image.onload = () => {
+          let width = image.width;
+          let height = image.height;
+
+          if (width > maxSize || height > maxSize) {
+            const ratio = Math.min(maxSize / width, maxSize / height);
+
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          const canvas = document.createElement("canvas");
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const context = canvas.getContext("2d");
+
+          if (!context) {
+            reject(new Error("Canvas unavailable."));
+            return;
+          }
+
+          context.drawImage(image, 0, 0, width, height);
+
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+
+        image.onerror = () => {
+          reject(new Error("Unable to load image."));
+        };
+
+        image.src = String(reader.result || "");
+      };
+
+      reader.onerror = () => {
+        reject(new Error("Unable to read image."));
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+  const handleProfileImage = async (event) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setError("Please choose a valid image file.");
+      setError("Please select a valid image.");
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Profile image must be smaller than 5 MB.");
+    if (file.size > 8 * 1024 * 1024) {
+      setError("Image must be smaller than 8 MB.");
       return;
     }
 
-    const reader = new FileReader();
+    try {
+      const image = await compressImage(file);
 
-    reader.onload = () => {
-      setProfileImage(String(reader.result || ""));
+      setProfileImage(image);
+
       clearMessages();
-    };
+    } catch (imageError) {
+      console.error(imageError);
 
-    reader.onerror = () => {
-      setError("Unable to read this image.");
-    };
-
-    reader.readAsDataURL(file);
+      setError("Unable to process profile image.");
+    }
   };
 
-  const validateProfile = () => {
+  const validateForm = () => {
     if (!formData.name.trim()) {
       setError("Please enter artist / owner name.");
       return false;
@@ -446,28 +620,42 @@ export default function Enter() {
       return false;
     }
 
+    if (!formData.studio.trim()) {
+      setError("Please enter studio name.");
+      return false;
+    }
+
     return true;
   };
 
   const saveProfile = async (event) => {
     event.preventDefault();
 
-    if (!validateProfile()) return;
+    if (!validateForm()) return;
 
     setSaving(true);
     clearMessages();
 
     try {
-      const data = await apiRequest("/api/claim/profile", {
-        method: "PUT",
+      const data = await apiRequest("/api/claim/update", {
+        method: "POST",
         body: {
+          profileId: selectedArtist?.id,
+
           name: formData.name.trim(),
+
           email: formData.email.trim(),
+
           city: formData.city.trim(),
+
           state: formData.state.trim(),
+
           studio: formData.studio.trim(),
+
           experience: formData.experience.trim(),
+
           instagram: formData.instagram.trim(),
+
           profileImage,
         },
       });
@@ -480,25 +668,32 @@ export default function Enter() {
         };
 
       setCurrentProfile(updatedProfile);
+
       setSelectedArtist((previous) =>
         normalizeArtist({
           ...(previous || {}),
           ...updatedProfile,
         }),
       );
+
       setSuccess("Profile updated successfully.");
+
       setScreen("plans");
 
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch (saveError) {
-      console.error("Profile update error:", saveError);
+      console.error(saveError);
 
       if (saveError.status === 401 || saveError.status === 403) {
+        setError("Your verification expired. Please verify OTP again.");
+
         setOtp("");
         setOtpSent(false);
-        setResendSeconds(0);
+
         setScreen("verify");
-        setError("Your verification expired. Please verify OTP again.");
       } else {
         setError(saveError.message || "Unable to update profile.");
       }
@@ -507,64 +702,453 @@ export default function Enter() {
     }
   };
 
-  const startPaidPlan = (planId) => {
-    const plan = PLANS.find((item) => item.id === normalizePlan(planId));
+  const sendNewPhoneOtp = async () => {
+    const cleanedPhone = newPhone.replace(/[^0-9+]/g, "").trim();
 
-    if (!plan || !selectedArtist?.id) {
-      setError("Unable to start this upgrade.");
+    if (cleanedPhone.length < 10) {
+      setError("Enter a valid new mobile number.");
       return;
     }
 
-    if (currentPlan === "verified") {
-      setError("This profile is already Gold Verified.");
-      return;
+    setPhoneLoading(true);
+    clearMessages();
+
+    try {
+      await apiRequest("/api/claim/change-phone/send-otp", {
+        method: "POST",
+        body: {
+          profileId: selectedArtist?.id,
+          newPhone: cleanedPhone,
+        },
+      });
+
+      setNewPhone(cleanedPhone);
+
+      setNewPhoneOtpSent(true);
+
+      setSuccess("OTP sent to the new mobile number.");
+    } catch (phoneError) {
+      console.error(phoneError);
+
+      setError(phoneError.message || "Unable to send OTP to new number.");
+    } finally {
+      setPhoneLoading(false);
     }
-
-    if (currentPlan === "pro" && plan.id === "pro") {
-      setError("This profile is already Silver Pro.");
-      return;
-    }
-
-    const pendingCheckout = {
-      source: "directory-membership",
-      action: "upgrade",
-      profileId: selectedArtist.id,
-      claimArtistId: selectedArtist.id,
-      planId: plan.id,
-      planName: plan.name,
-      amount: plan.amount,
-      billing: "yearly",
-      previousPlan: currentPlan,
-      createdAt: new Date().toISOString(),
-    };
-
-    localStorage.setItem(
-      PENDING_MEMBERSHIP_KEY,
-      JSON.stringify(pendingCheckout),
-    );
-
-    navigate("/payment", {
-      state: pendingCheckout,
-    });
   };
 
-  const resetToFind = () => {
-    setScreen("find");
-    setSelectedArtist(null);
-    setSearchQuery("");
-    setSearchResults([]);
-    setOtpSent(false);
-    setOtp("");
-    setMaskedPhone("");
-    setResendSeconds(0);
-    setCurrentProfile(null);
-    setFormData(EMPTY_FORM);
-    setProfileImage("");
+  const verifyNewPhoneOtp = async () => {
+    if (!/^\d{6}$/.test(newPhoneOtp)) {
+      setError("Enter the 6-digit OTP sent to the new number.");
+
+      return;
+    }
+
+    setPhoneLoading(true);
     clearMessages();
+
+    try {
+      const data = await apiRequest("/api/claim/change-phone/verify-otp", {
+        method: "POST",
+        body: {
+          profileId: selectedArtist?.id,
+          newPhone,
+          otp: newPhoneOtp,
+        },
+      });
+
+      setMaskedPhone(data.maskedPhone || data.phoneMasked || "NUMBER UPDATED");
+
+      setChangePhoneOpen(false);
+
+      setNewPhone("");
+      setNewPhoneOtp("");
+
+      setNewPhoneOtpSent(false);
+
+      setSuccess("Mobile number updated successfully.");
+    } catch (phoneError) {
+      console.error(phoneError);
+
+      setError(phoneError.message || "Incorrect OTP for the new number.");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const startPaidPlan = async (planId) => {
+  if (!currentProfile) {
+    setError("Profile information is missing.");
+    return;
+  }
+
+  const selectedPlan = PLANS.find(
+    (plan) => plan.id === planId
+  );
+
+  if (!selectedPlan) {
+    setError("Invalid membership plan.");
+    return;
+  }
+
+  try {
+    setSaving(true);
+    clearMessages();
+
+    // =====================================================
+    // LOAD RAZORPAY CHECKOUT
+    // =====================================================
+
+    const razorpayLoaded = await loadRazorpayScript();
+
+    if (!razorpayLoaded) {
+      throw new Error(
+        "Razorpay checkout could not be loaded. Please check your internet connection."
+      );
+    }
+
+    // =====================================================
+    // CREATE ORDER ON BACKEND
+    // =====================================================
+
+    console.log("💳 Creating Razorpay order...");
+    console.log("📦 Plan:", selectedPlan.id);
+    console.log("💰 Amount:", selectedPlan.amount);
+
+    const orderData = await apiRequest(
+      "/api/payment/create-order",
+      {
+        method: "POST",
+        body: {
+          amount: selectedPlan.amount,
+          packageId: selectedPlan.id,
+          email:
+            currentProfile.email ||
+            formData.email ||
+            "",
+          phone:
+            currentProfile.phone ||
+            currentProfile.mobile ||
+            "",
+          name:
+            currentProfile.name ||
+            formData.name ||
+            "",
+        },
+      }
+    );
+
+    console.log("✅ Razorpay order created:", orderData);
+
+    if (!orderData.success) {
+      throw new Error(
+        orderData.message ||
+          "Unable to create payment order."
+      );
+    }
+
+    // =====================================================
+    // OPEN RAZORPAY
+    // =====================================================
+
+    const options = {
+      key: orderData.key,
+
+      amount: orderData.amount,
+
+      currency: orderData.currency || "INR",
+
+      name: "INK CONVENTION 2026",
+
+      description: selectedPlan.name,
+
+      order_id: orderData.orderId,
+
+      prefill: {
+        name:
+          currentProfile.name ||
+          formData.name ||
+          "",
+        email:
+          currentProfile.email ||
+          formData.email ||
+          "",
+        contact:
+          currentProfile.phone ||
+          currentProfile.mobile ||
+          "",
+      },
+
+      theme: {
+        color: "#a855f7",
+      },
+
+      handler: async function (response) {
+        try {
+          console.log(
+            "💳 Razorpay payment response:",
+            response
+          );
+
+          setSaving(true);
+          clearMessages();
+
+          // =================================================
+          // VERIFY PAYMENT ON BACKEND
+          // =================================================
+
+          const verifyData = await apiRequest(
+            "/api/payment/verify",
+            {
+              method: "POST",
+              body: {
+                razorpay_order_id:
+                  response.razorpay_order_id,
+
+                razorpay_payment_id:
+                  response.razorpay_payment_id,
+
+                razorpay_signature:
+                  response.razorpay_signature,
+              },
+            }
+          );
+
+          console.log(
+            "🔐 Payment verification:",
+            verifyData
+          );
+
+          if (!verifyData.success) {
+            throw new Error(
+              verifyData.message ||
+                "Payment verification failed."
+            );
+          }
+
+          // =================================================
+          // PAYMENT SUCCESS
+          // =================================================
+
+          const upgradedProfile = {
+            ...currentProfile,
+            plan: selectedPlan.id,
+            paymentId:
+              response.razorpay_payment_id,
+            orderId:
+              response.razorpay_order_id,
+            updatedAt:
+              new Date().toISOString(),
+          };
+
+          // Save locally for your current frontend setup
+          const profiles =
+            getStoredArray(PROFILE_KEY);
+
+          const updatedProfiles =
+            profiles.map((profile) =>
+              String(profile.id) ===
+              String(currentProfile.id)
+                ? upgradedProfile
+                : profile
+            );
+
+          localStorage.setItem(
+            PROFILE_KEY,
+            JSON.stringify(updatedProfiles)
+          );
+
+          updateDirectory(upgradedProfile);
+
+          setCurrentProfile(upgradedProfile);
+
+          setSuccess(
+            `${selectedPlan.name} activated successfully!`
+          );
+
+          console.log(
+            "✅ Membership upgraded:",
+            selectedPlan.id
+          );
+
+          // Small delay so user sees success message
+          setTimeout(() => {
+            navigate("/artists", {
+              state: {
+                newArtistId:
+                  upgradedProfile.id,
+              },
+            });
+          }, 1200);
+
+        } catch (verifyError) {
+          console.error(
+            "❌ Payment verification error:",
+            verifyError
+          );
+
+          setError(
+            verifyError.message ||
+              "Payment verification failed."
+          );
+        } finally {
+          setSaving(false);
+        }
+      },
+
+      modal: {
+        ondismiss: function () {
+          console.log(
+            "ℹ️ Razorpay checkout closed."
+          );
+
+          setSaving(false);
+        },
+      },
+    };
+
+    console.log(
+      "🚀 Opening Razorpay checkout..."
+    );
+
+    const razorpay =
+      new window.Razorpay(options);
+
+    razorpay.on(
+      "payment.failed",
+      function (response) {
+        console.error(
+          "❌ Razorpay payment failed:",
+          response
+        );
+
+        setError(
+          response.error?.description ||
+            "Payment failed. Please try again."
+        );
+
+        setSaving(false);
+      }
+    );
+
+    razorpay.open();
+
+  } catch (error) {
+    console.error(
+      "❌ Razorpay initialization error:",
+      error
+    );
+
+    setError(
+      error.message ||
+        "Unable to start payment."
+    );
+
+    setSaving(false);
+  }
+};
+
+
+
+  const upgradePlan = (nextPlan) => {
+    if (!currentProfile) {
+      return;
+    }
+
+    const oldPriority = getPlanPriority(currentProfile.plan);
+
+    const nextPriority = getPlanPriority(nextPlan);
+
+    if (nextPriority <= oldPriority) {
+      return;
+    }
+
+    const profiles = getStoredArray(PROFILE_KEY);
+
+    const upgradedProfile = {
+      ...currentProfile,
+
+      plan: nextPlan,
+
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedProfiles = profiles.map((profile) =>
+      String(profile.id) === String(currentProfile.id)
+        ? upgradedProfile
+        : profile,
+    );
+
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfiles));
+
+      updateDirectory(upgradedProfile);
+
+      setCurrentProfile(upgradedProfile);
+
+      navigate("/artists", {
+        state: {
+          newArtistId: upgradedProfile.id,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+
+      setError("Unable to upgrade membership.");
+    }
+  };
+
+  /* =========================================================
+     LOGOUT
+
+     DOES NOT DELETE PROFILE.
+  ========================================================= */
+
+  const handleLogout = () => {
+    localStorage.removeItem(CURRENT_USER_KEY);
+
+    localStorage.removeItem("inkConventionLoggedUser");
+
+    setCurrentProfile(null);
+
+    setFormData(EMPTY_FORM);
+
+    setProfileImage("");
+
+    setError("");
 
     navigate("/Enter", {
       replace: true,
       state: null,
+    });
+  };
+
+  /* =========================================================
+    Test User
+  ========================================================= */
+
+  const openTestPlans = () => {
+    const testProfile = {
+      id: "test-profile",
+      name: "Test Artist",
+      email: "test@example.com",
+      city: "Mumbai",
+      state: "Maharashtra",
+      studio: "Test Tattoo Studio",
+      experience: "5 Years",
+      instagram: "@testartist",
+      plan: "basic",
+    };
+
+    setSelectedArtist(normalizeArtist(testProfile));
+    setCurrentProfile(testProfile);
+    setFormData(makeForm(testProfile));
+    setProfileImage("");
+    clearMessages();
+    setScreen("plans");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
     });
   };
 
@@ -581,9 +1165,9 @@ export default function Enter() {
           </h1>
 
           <p className="mt-6 max-w-2xl text-sm text-gray-500 leading-relaxed">
-            Search your artist or studio name. Your card can only be edited
-            after an OTP is verified on the mobile number already saved with
-            that profile.
+            Search your artist or studio name. Nobody can edit a card until the
+            OTP sent to the mobile number already saved with that card is
+            verified.
           </p>
 
           <form
@@ -614,12 +1198,21 @@ export default function Enter() {
             </button>
           </form>
 
+          {/* TEMPORARY TEST BUTTON */}
+          <button
+            type="button"
+            onClick={openTestPlans}
+            className="mt-4 w-full border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 rounded-xl p-4 text-[10px] font-black tracking-widest transition"
+          >
+            TEST PLANS PAGE
+          </button>
+
           <Message error={error} success={success} />
 
           <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {searchResults.map((artist, index) => (
+            {searchResults.map((artist) => (
               <button
-                key={artist.id || `${artist.name}-${index}`}
+                key={artist.id}
                 type="button"
                 onClick={() => chooseArtist(artist)}
                 className="text-left bg-[#0d0d11] border border-white/10 hover:border-purple-500/60 rounded-2xl p-5 transition"
@@ -632,12 +1225,13 @@ export default function Enter() {
                   {artist.name}
                 </h2>
 
-                {artist.studio && (
-                  <p className="mt-1 text-sm text-gray-500">{artist.studio}</p>
-                )}
+                <p className="mt-1 text-sm text-gray-500">
+                  {artist.studio || "Tattoo Artist / Studio"}
+                </p>
 
                 <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
                   <MapPin size={13} className="text-purple-500" />
+
                   {[artist.city, artist.state].filter(Boolean).join(", ") ||
                     "India"}
                 </div>
@@ -758,11 +1352,11 @@ export default function Enter() {
   if (screen === "edit") {
     return (
       <PageShell>
-        <div className="max-w-[1200px] mx-auto">
+        <div className="max-w-[1250px] mx-auto">
           <div className="enter-reveal flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-white/10 pb-8">
             <div>
               <Eyebrow icon={<CheckCircle2 size={13} />}>
-                MOBILE VERIFIED
+                PHONE VERIFIED
               </Eyebrow>
 
               <h1 className="text-[clamp(3rem,7vw,6rem)] font-black uppercase tracking-[-0.065em] leading-[0.86]">
@@ -794,13 +1388,15 @@ export default function Enter() {
                 {profileImage ? (
                   <img
                     src={profileImage}
-                    alt="Artist profile"
+                    alt="Profile"
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                     <Users size={32} className="text-purple-500" />
+
                     <p className="mt-4 font-black">UPLOAD PHOTO</p>
+
                     <p className="mt-1 text-xs text-gray-600">
                       Click to select
                     </p>
@@ -818,6 +1414,7 @@ export default function Enter() {
               <div className="mt-5 bg-[#0d0d11] border border-white/10 rounded-2xl p-5">
                 <div className="flex items-center gap-2 text-purple-400">
                   <Lock size={13} />
+
                   <p className="text-[8px] font-mono tracking-[0.14em]">
                     VERIFIED MOBILE
                   </p>
@@ -828,9 +1425,85 @@ export default function Enter() {
                 </p>
 
                 <p className="mt-2 text-xs text-gray-600 leading-relaxed">
-                  The saved mobile number is protected and cannot be edited from
-                  this form.
+                  The mobile number cannot be typed over directly. Use secure
+                  number change below.
                 </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearMessages();
+
+                    setChangePhoneOpen((previous) => !previous);
+
+                    setNewPhone("");
+
+                    setNewPhoneOtp("");
+
+                    setNewPhoneOtpSent(false);
+                  }}
+                  className="mt-4 text-[9px] font-black text-purple-400 hover:text-purple-300"
+                >
+                  {changePhoneOpen
+                    ? "CANCEL NUMBER CHANGE"
+                    : "CHANGE MOBILE NUMBER →"}
+                </button>
+
+                {changePhoneOpen && (
+                  <div className="mt-5 pt-5 border-t border-white/10">
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      Your current number was already verified to open this
+                      profile. Enter the new number and verify its OTP.
+                    </p>
+
+                    <input
+                      type="text"
+                      value={newPhone}
+                      onChange={(event) => setNewPhone(event.target.value)}
+                      disabled={newPhoneOtpSent}
+                      placeholder="NEW MOBILE NUMBER"
+                      className="mt-4 w-full bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl px-4 py-3 outline-none text-sm disabled:opacity-60"
+                    />
+
+                    {!newPhoneOtpSent ? (
+                      <button
+                        type="button"
+                        onClick={sendNewPhoneOtp}
+                        disabled={phoneLoading}
+                        className="mt-3 w-full bg-white text-black hover:bg-slate-200 disabled:opacity-50 rounded-xl py-3 text-[9px] font-black tracking-widest"
+                      >
+                        {phoneLoading ? "SENDING..." : "SEND OTP TO NEW NUMBER"}
+                      </button>
+                    ) : (
+                      <>
+                        <input
+                          type="text"
+                          value={newPhoneOtp}
+                          onChange={(event) =>
+                            setNewPhoneOtp(
+                              event.target.value.replace(/\D/g, "").slice(0, 6),
+                            )
+                          }
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          placeholder="000000"
+                          className="mt-3 w-full text-center tracking-[0.45em] bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl px-4 py-3 outline-none font-black"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={verifyNewPhoneOtp}
+                          disabled={phoneLoading || newPhoneOtp.length !== 6}
+                          className="mt-3 w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl py-3 text-[9px] font-black tracking-widest"
+                        >
+                          {phoneLoading
+                            ? "VERIFYING..."
+                            : "VERIFY & CHANGE NUMBER"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -876,7 +1549,6 @@ export default function Enter() {
                 value={formData.studio}
                 onChange={handleChange}
                 placeholder="Your tattoo studio"
-                required={false}
               />
 
               <InputField
@@ -905,6 +1577,7 @@ export default function Enter() {
                 className="group w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl p-5 flex items-center justify-between text-[10px] font-black tracking-[0.14em] transition"
               >
                 <span>{saving ? "UPDATING..." : "UPDATE PROFILE"}</span>
+
                 <ArrowRight
                   size={15}
                   className="transition-transform group-hover:translate-x-1"
@@ -919,7 +1592,7 @@ export default function Enter() {
 
   return (
     <PageShell>
-      <div className="max-w-[1200px] mx-auto">
+      <div className="max-w-[1250px] mx-auto">
         <div className="enter-reveal text-center max-w-3xl mx-auto">
           <Eyebrow icon={<Sparkles size={13} />}>PROFILE UPDATED</Eyebrow>
 
@@ -930,19 +1603,21 @@ export default function Enter() {
           </h1>
 
           <p className="mt-6 text-sm text-gray-500 leading-relaxed">
-            Your directory card is updated. Keep the Basic listing or upgrade to
-            Silver Pro or Gold Verified.
+            Your existing Basic directory card has been updated. You can keep it
+            as Basic or upgrade for more visibility.
           </p>
         </div>
 
         {currentPlan === "verified" ? (
-          <div className="enter-reveal mt-12 max-w-2xl mx-auto border border-amber-300/30 bg-amber-400/[0.05] rounded-[28px] p-8 text-center">
-            <CheckCircle2 size={36} className="text-amber-300 mx-auto" />
+          <div className="enter-reveal mt-12 max-w-2xl mx-auto border border-purple-400/30 bg-purple-500/[0.05] rounded-[28px] p-8 text-center">
+            <CheckCircle2 size={36} className="text-purple-400 mx-auto" />
+
             <h2 className="mt-5 text-3xl font-black uppercase">
-              ALREADY GOLD VERIFIED
+              ALREADY VERIFIED
             </h2>
+
             <p className="mt-3 text-sm text-gray-500">
-              Your ₹2,999 Gold Verified membership is already active.
+              Your Verified Spotlight membership is already active.
             </p>
           </div>
         ) : (
@@ -952,7 +1627,10 @@ export default function Enter() {
             } gap-6`}
           >
             {PLANS.filter((plan) => {
-              if (currentPlan === "pro") return plan.id === "verified";
+              if (currentPlan === "pro") {
+                return plan.id === "verified";
+              }
+
               return true;
             }).map((plan) => (
               <PlanCard
@@ -969,8 +1647,9 @@ export default function Enter() {
             <p className="text-[9px] font-black tracking-widest">
               FINISHED UPDATING?
             </p>
+
             <p className="mt-1 text-xs text-gray-600">
-              Return to the directory to see your card.
+              Go back to the directory to see your card.
             </p>
           </div>
 
@@ -1025,7 +1704,9 @@ function InputField({ label, type = "text", required = true, ...props }) {
 }
 
 function Message({ error, success }) {
-  if (!error && !success) return null;
+  if (!error && !success) {
+    return null;
+  }
 
   return (
     <div
@@ -1041,33 +1722,29 @@ function Message({ error, success }) {
 }
 
 function PlanCard({ plan, onClick }) {
-  const isGold = plan.id === "verified";
+  const isVerified = plan.id === "verified";
 
   return (
     <article
-      className={`relative flex flex-col min-h-[540px] rounded-[28px] p-7 sm:p-9 border-2 ${
-        isGold
-          ? "border-amber-300/60 bg-amber-400/[0.04] shadow-[0_0_50px_rgba(251,191,36,0.10)]"
-          : "border-slate-300/50 bg-slate-300/[0.025] shadow-[0_0_45px_rgba(226,232,240,0.06)]"
+      className={`relative flex flex-col min-h-[560px] rounded-[28px] p-7 sm:p-9 border-2 transition-transform hover:-translate-y-1 ${
+        isVerified
+          ? "border-purple-400 bg-purple-500/[0.05] shadow-[0_0_50px_rgba(168,85,247,0.10)]"
+          : "border-slate-300 bg-white/[0.025]"
       }`}
     >
-      {isGold && (
-        <div className="absolute top-5 right-5 bg-amber-400 text-black px-3 py-1.5 text-[7px] font-black tracking-widest">
+      {isVerified && (
+        <div className="absolute top-5 right-5 bg-purple-600 px-3 py-1.5 text-[7px] font-black tracking-widest">
           HALL OF FAME
         </div>
       )}
 
-      <p
-        className={`text-[9px] font-mono tracking-[0.14em] ${
-          isGold ? "text-amber-300" : "text-slate-300"
-        }`}
-      >
-        {isGold ? "GOLD MEMBERSHIP" : "SILVER MEMBERSHIP"}
+      <p className="text-[9px] font-mono tracking-[0.14em] text-gray-500">
+        DIRECTORY UPGRADE
       </p>
 
       <h2
         className={`mt-5 text-4xl sm:text-5xl font-black uppercase leading-[0.9] ${
-          isGold ? "text-amber-300" : "text-slate-100"
+          isVerified ? "text-purple-400" : "text-white"
         }`}
       >
         {plan.name}
@@ -1075,6 +1752,7 @@ function PlanCard({ plan, onClick }) {
 
       <div className="mt-6 flex items-end gap-3">
         <p className="text-4xl sm:text-5xl font-black">{plan.price}</p>
+
         <span className="pb-1 text-[8px] font-mono text-gray-600">
           {plan.billing}
         </span>
@@ -1089,13 +1767,14 @@ function PlanCard({ plan, onClick }) {
           <div key={benefit} className="flex items-start gap-3 text-sm">
             <span
               className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[9px] ${
-                isGold
-                  ? "bg-amber-400/10 text-amber-300"
-                  : "bg-slate-300/10 text-slate-200"
+                isVerified
+                  ? "bg-purple-500/10 text-purple-400"
+                  : "bg-white/10 text-slate-200"
               }`}
             >
               ✓
             </span>
+
             <span className="text-gray-300">{benefit}</span>
           </div>
         ))}
@@ -1105,12 +1784,13 @@ function PlanCard({ plan, onClick }) {
         type="button"
         onClick={onClick}
         className={`group mt-8 w-full rounded-xl p-4 flex items-center justify-between text-[10px] font-black tracking-widest transition ${
-          isGold
-            ? "bg-amber-400 hover:bg-amber-300 text-black"
-            : "bg-slate-100 hover:bg-white text-black"
+          isVerified
+            ? "bg-purple-600 hover:bg-purple-500 text-white"
+            : "bg-white hover:bg-slate-200 text-black"
         }`}
       >
-        <span>{isGold ? "GET GOLD VERIFIED" : "GET SILVER PRO"}</span>
+        <span>{isVerified ? "GET VERIFIED" : "GET PRO LISTING"}</span>
+
         <ArrowRight
           size={15}
           className="transition-transform group-hover:translate-x-1"
