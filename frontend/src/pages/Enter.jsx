@@ -1,29 +1,66 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
-import { ArrowRight, Sparkles, MapPin, Users } from "lucide-react";
-
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Lock,
+  MapPin,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import gsap from "gsap";
 
-/* =========================================================
-   STORAGE
-========================================================= */
-
-const PROFILE_KEY = "inkConventionUserProfiles";
-
-const DIRECTORY_KEY = "inkConventionDirectoryArtists";
-
-const CURRENT_USER_KEY = "inkConventionCurrentUserId";
+const API_URL = (
+  import.meta.env.VITE_API_URL || "https://api.inkconvention.com"
+).replace(/\/$/, "");
 
 const PENDING_MEMBERSHIP_KEY = "inkConventionPendingMembership";
 
-/* =========================================================
-   EMPTY FORM
-========================================================= */
+const PLANS = [
+  {
+    id: "pro",
+    name: "PRO LISTING",
+    price: "₹1,499",
+    amount: 1499,
+    billing: "PER YEAR",
+    description:
+      "Higher directory visibility with city-wise discovery and a Recommended tag.",
+    benefits: [
+      "Name visible",
+      "Email visible",
+      "City & state visible",
+      "City-wise search visibility",
+      "Recommended tag",
+      "Higher directory ranking",
+    ],
+  },
+  {
+    id: "verified",
+    name: "VERIFIED SPOTLIGHT",
+    price: "₹2,999",
+    amount: 2999,
+    billing: "PER YEAR",
+    description:
+      "Maximum visibility with full profile details, Verified status and Hall of Fame placement.",
+    benefits: [
+      "Everything in Pro",
+      "Photo visible",
+      "Phone visible",
+      "Studio visible",
+      "Experience visible",
+      "Instagram visible",
+      "Verified Spotlight badge",
+      "Highest directory ranking",
+      "Standalone profile page",
+      "Hall of Fame inclusion",
+    ],
+  },
+];
 
-const emptyForm = {
+const EMPTY_FORM = {
   name: "",
-  phone: "",
   email: "",
   city: "",
   state: "",
@@ -32,334 +69,351 @@ const emptyForm = {
   instagram: "",
 };
 
-/* =========================================================
-   NEW DIRECTORY MEMBERSHIPS
-
-   FREE
-   PRO ₹1,499 / YEAR
-   VERIFIED ₹2,999 / YEAR
-========================================================= */
-
-const plans = [
-  {
-    id: "free",
-
-    name: "LIFETIME FREE LISTING",
-
-    shortName: "FREE",
-
-    price: "₹0",
-
-    amount: 0,
-
-    billing: "LIFETIME",
-
-    priority: 1,
-
-    description:
-      "Permanent entry in the Ink Convention directory. This is the primary lead-generation hook, while public contact details remain masked to encourage upgrades.",
-
-    benefits: [
-      "Permanent directory entry",
-      "Profile photo",
-      "Artist / studio name",
-      "City & state displayed",
-      "Studio name displayed",
-      "Contact details remain masked",
-      "Primary lead-generation listing",
-      "Upgrade anytime",
-    ],
-  },
-
-  {
-    id: "pro",
-
-    name: "PRO LISTING",
-
-    shortName: "PRO",
-
-    price: "₹1,499",
-
-    amount: 1499,
-
-    billing: "PER YEAR",
-
-    priority: 2,
-
-    description:
-      "Upgrade your profile with city-wise search visibility, a Recommended tag and unmasked direct contact information for consumer booking.",
-
-    benefits: [
-      "Everything in Lifetime Free",
-      "City-wise search visibility",
-      "Recommended profile tag",
-      "Phone number visible",
-      "Email visible",
-      "Instagram visible",
-      "Direct consumer booking contact",
-      "Higher directory visibility",
-    ],
-  },
-
-  {
-    id: "verified",
-
-    name: "VERIFIED SPOTLIGHT",
-
-    shortName: "VERIFIED",
-
-    price: "₹2,999",
-
-    amount: 2999,
-
-    billing: "PER YEAR",
-
-    priority: 3,
-
-    description:
-      "Premium tier with a dedicated standalone URL profile page, Hall of Fame inclusion, priority search ranking and maximum digital visibility.",
-
-    benefits: [
-      "Everything in Pro",
-      "Verified Spotlight badge",
-      "Dedicated standalone profile URL",
-      "Hall of Fame inclusion",
-      "Priority search ranking",
-      "Featured Spotlight placement",
-      "Maximum digital visibility",
-      "Full direct contact visibility",
-    ],
-  },
-];
-
-/* =========================================================
-   STORAGE HELPERS
-========================================================= */
-
-const getStoredArray = (key) => {
-  try {
-    const value = JSON.parse(localStorage.getItem(key) || "[]");
-
-    return Array.isArray(value) ? value : [];
-  } catch (error) {
-    console.error("Storage error:", error);
-
-    return [];
-  }
-};
-
-/* =========================================================
-   OLD PLAN MIGRATION
-
-   SILVER -> PRO
-   GOLD   -> VERIFIED
-========================================================= */
-
-const normalizePlan = (plan) => {
-  const value = String(plan || "free").toLowerCase();
-
-  if (value === "gold") {
-    return "verified";
-  }
-
-  if (value === "silver") {
-    return "pro";
-  }
-
-  if (value === "verified") {
-    return "verified";
-  }
-
-  if (value === "pro") {
-    return "pro";
-  }
-
-  return "free";
-};
-
-/* =========================================================
-   PLAN PRIORITY
-========================================================= */
-
-const getPlanPriority = (plan) => {
-  const normalized = normalizePlan(plan);
-
-  if (normalized === "verified") {
-    return 3;
-  }
-
-  if (normalized === "pro") {
-    return 2;
-  }
-
-  return 1;
-};
-
-/* =========================================================
-   FIND PLAN
-========================================================= */
-
-const getPlanById = (id) => {
-  const normalized = normalizePlan(id);
-
-  return plans.find((plan) => plan.id === normalized) || plans[0];
-};
-
-/* =========================================================
-   VERIFIED PROFILE URL
-========================================================= */
-
-const createProfileSlug = (name, id) => {
-  const safeName = String(name || "artist")
+function normalizePlan(value) {
+  const plan = String(value || "basic")
     .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .toLowerCase();
 
-  return `${safeName || "artist"}-${id}`;
-};
+  if (plan === "gold" || plan === "spotlight" || plan === "verified") {
+    return "verified";
+  }
 
-/* =========================================================
-   NORMALIZE SAVED PROFILES
-========================================================= */
+  if (plan === "silver" || plan === "pro") {
+    return "pro";
+  }
 
-const migrateProfiles = () => {
-  const profiles = getStoredArray(PROFILE_KEY);
+  return "basic";
+}
 
-  let changed = false;
+function normalizeArtist(source = {}) {
+  return {
+    id: source.id || source._id || source.profileId || "",
+    name:
+      source.name || source.artistName || source.professionalName || "Artist",
+    studio: source.studio || source.studioName || "",
+    city: source.city || "",
+    state: source.state || "",
+    maskedPhone: source.maskedPhone || source.phoneMasked || "",
+    profileImage: source.profileImage || source.image || "",
+    plan: normalizePlan(source.plan || source.membershipPlan),
+  };
+}
 
-  const migrated = profiles.map((profile) => {
-    const newPlan = normalizePlan(profile.plan);
+function makeForm(profile = {}) {
+  return {
+    name: profile.name || profile.artistName || profile.professionalName || "",
+    email: profile.email || "",
+    city: profile.city || "",
+    state: profile.state || "",
+    studio: profile.studio || profile.studioName || "",
+    experience: profile.experience || "",
+    instagram: profile.instagram || "",
+  };
+}
 
-    if (newPlan !== profile.plan) {
-      changed = true;
-    }
-
-    return {
-      ...profile,
-
-      plan: newPlan,
-    };
+async function apiRequest(path, options = {}) {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: options.method || "GET",
+    credentials: "include",
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.headers || {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  if (changed) {
-    try {
-      localStorage.setItem(
-        PROFILE_KEY,
+  const data = await response.json().catch(() => ({}));
 
-        JSON.stringify(migrated),
-      );
-    } catch (error) {
-      console.error(error);
-    }
+  if (!response.ok) {
+    const error = new Error(
+      data.message || data.error || `Request failed (${response.status})`,
+    );
+
+    error.status = response.status;
+    throw error;
   }
 
-  return migrated;
-};
-
-/* =========================================================
-   MAIN
-========================================================= */
+  return data;
+}
 
 export default function Enter() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [screen, setScreen] = useState("loading");
+  const incomingArtistSource =
+    location.state?.artist ||
+    location.state?.profile ||
+    location.state?.selectedArtist ||
+    null;
 
-  const [error, setError] = useState("");
+  const incomingProfileId =
+    location.state?.profileId ||
+    location.state?.claimArtistId ||
+    location.state?.artistId ||
+    incomingArtistSource?._id ||
+    incomingArtistSource?.id ||
+    "";
+
+  const initialArtist = incomingProfileId
+    ? normalizeArtist({
+        ...(incomingArtistSource || {}),
+        id: incomingProfileId,
+      })
+    : null;
+
+  const [screen, setScreen] = useState(initialArtist ? "verify" : "find");
+  const [selectedArtist, setSelectedArtist] = useState(initialArtist);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [maskedPhone, setMaskedPhone] = useState(
+    initialArtist?.maskedPhone || "",
+  );
+  const [resendSeconds, setResendSeconds] = useState(0);
 
   const [currentProfile, setCurrentProfile] = useState(null);
-
-  const [formData, setFormData] = useState(emptyForm);
-
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [profileImage, setProfileImage] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  /* =========================================================
-     CHECK SAVED PROFILE
-  ========================================================= */
+  const [changePhoneOpen, setChangePhoneOpen] = useState(false);
+  const [newPhone, setNewPhone] = useState("");
+  const [newPhoneOtp, setNewPhoneOtp] = useState("");
+  const [newPhoneOtpSent, setNewPhoneOtpSent] = useState(false);
+  const [phoneLoading, setPhoneLoading] = useState(false);
 
-  useEffect(() => {
-    const currentUserId = localStorage.getItem(CURRENT_USER_KEY);
-
-    const profiles = migrateProfiles();
-
-    if (currentUserId) {
-      const found = profiles.find(
-        (profile) => String(profile.id) === String(currentUserId),
-      );
-
-      if (found) {
-        setCurrentProfile(found);
-
-        setScreen("profile");
-
-        return;
-      }
-    }
-
-    setScreen("form");
-  }, []);
-
-  /* =========================================================
-     PAGE ANIMATION
-  ========================================================= */
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    if (screen === "loading") {
-      return;
-    }
-
-    const ctx = gsap.context(() => {
+    const context = gsap.context(() => {
       gsap.fromTo(
         ".enter-reveal",
-
         {
           opacity: 0,
-
-          y: 25,
+          y: 22,
         },
-
         {
           opacity: 1,
-
           y: 0,
-
-          duration: 0.7,
-
-          stagger: 0.05,
-
+          duration: 0.6,
+          stagger: 0.04,
           ease: "power3.out",
         },
       );
     });
 
-    return () => {
-      ctx.revert();
-    };
+    return () => context.revert();
   }, [screen]);
 
-  /* =========================================================
-     INPUT
-  ========================================================= */
+  useEffect(() => {
+    if (resendSeconds <= 0) return undefined;
+
+    const timer = window.setInterval(() => {
+      setResendSeconds((previous) => Math.max(previous - 1, 0));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendSeconds]);
+
+  const currentPlan = useMemo(
+    () => normalizePlan(currentProfile?.plan || selectedArtist?.plan),
+    [currentProfile?.plan, selectedArtist?.plan],
+  );
+
+  const clearMessages = () => {
+    setError("");
+    setSuccess("");
+  };
+
+  const handleSearch = async (event) => {
+    event.preventDefault();
+
+    const query = searchQuery.trim();
+
+    if (query.length < 2) {
+      setError("Enter at least 2 characters of artist or studio name.");
+      return;
+    }
+
+    setSearching(true);
+    clearMessages();
+
+    try {
+      const data = await apiRequest("/api/claim/find", {
+        method: "POST",
+        body: {
+          query,
+        },
+      });
+
+      const rawResults = Array.isArray(data.profiles)
+        ? data.profiles
+        : Array.isArray(data.artists)
+          ? data.artists
+          : Array.isArray(data.results)
+            ? data.results
+            : [];
+
+      const results = rawResults.map((artist) => normalizeArtist(artist));
+
+      setSearchResults(results);
+
+      if (results.length === 0) {
+        setError("No matching artist or studio found.");
+      }
+    } catch (searchError) {
+      console.error(searchError);
+
+      setSearchResults([]);
+
+      setError(searchError.message || "Unable to search profiles.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const chooseArtist = (artist) => {
+    const profile = normalizeArtist(artist);
+
+    setSelectedArtist(profile);
+    setMaskedPhone(profile.maskedPhone || "");
+
+    setOtp("");
+    setOtpSent(false);
+    setResendSeconds(0);
+
+    clearMessages();
+
+    setScreen("verify");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  const sendOtp = async () => {
+    if (!selectedArtist?.id) {
+      setError("Artist profile is missing.");
+      return;
+    }
+
+    if (otpLoading || resendSeconds > 0) return;
+
+    setOtpLoading(true);
+    clearMessages();
+
+    try {
+      const data = await apiRequest("/api/claim/send-otp", {
+        method: "POST",
+        body: {
+          profileId: selectedArtist.id,
+        },
+      });
+
+      setMaskedPhone(
+        data.maskedPhone ||
+          data.phoneMasked ||
+          selectedArtist.maskedPhone ||
+          "REGISTERED NUMBER",
+      );
+
+      setOtpSent(true);
+
+      setResendSeconds(Number(data.resendAfterSeconds || 60));
+
+      setSuccess("OTP sent to the registered mobile number.");
+    } catch (sendError) {
+      console.error(sendError);
+
+      setError(sendError.message || "Unable to send OTP.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const verifyOtp = async (event) => {
+    event.preventDefault();
+
+    if (!selectedArtist?.id) {
+      setError("Artist profile is missing.");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(otp)) {
+      setError("Enter the 6-digit OTP.");
+      return;
+    }
+
+    setOtpLoading(true);
+    clearMessages();
+
+    try {
+      const verifyData = await apiRequest("/api/claim/verify-otp", {
+        method: "POST",
+        body: {
+          profileId: selectedArtist.id,
+          otp,
+        },
+      });
+
+      let profile = verifyData.profile || verifyData.artist || null;
+
+      if (!profile) {
+        const profileData = await apiRequest("/api/claim/me");
+
+        profile = profileData.profile || profileData.artist || profileData;
+      }
+
+      setCurrentProfile(profile);
+
+      setFormData(makeForm(profile));
+
+      setProfileImage(profile?.profileImage || profile?.image || "");
+
+      setMaskedPhone(
+        profile?.maskedPhone ||
+          profile?.phoneMasked ||
+          verifyData.maskedPhone ||
+          maskedPhone,
+      );
+
+      setSuccess("OTP verified. You can now update your profile.");
+
+      setScreen("edit");
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    } catch (verifyError) {
+      console.error(verifyError);
+
+      setError(verifyError.message || "Incorrect or expired OTP.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
 
     setFormData((previous) => ({
       ...previous,
-
       [name]: value,
     }));
 
-    setError("");
+    clearMessages();
   };
 
-  /* =========================================================
-     COMPRESS PROFILE IMAGE
-  ========================================================= */
-
-  const compressImage = (file, maxSize = 700, quality = 0.65) => {
-    return new Promise((resolve, reject) => {
+  const compressImage = (file, maxSize = 800, quality = 0.72) =>
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
 
       reader.onload = () => {
@@ -367,51 +421,37 @@ export default function Enter() {
 
         image.onload = () => {
           let width = image.width;
-
           let height = image.height;
 
           if (width > maxSize || height > maxSize) {
-            const ratio = Math.min(
-              maxSize / width,
-
-              maxSize / height,
-            );
+            const ratio = Math.min(maxSize / width, maxSize / height);
 
             width = Math.round(width * ratio);
-
             height = Math.round(height * ratio);
           }
 
           const canvas = document.createElement("canvas");
 
           canvas.width = width;
-
           canvas.height = height;
 
           const context = canvas.getContext("2d");
 
           if (!context) {
             reject(new Error("Canvas unavailable."));
-
             return;
           }
 
           context.drawImage(image, 0, 0, width, height);
 
-          resolve(
-            canvas.toDataURL(
-              "image/jpeg",
-
-              quality,
-            ),
-          );
+          resolve(canvas.toDataURL("image/jpeg", quality));
         };
 
         image.onerror = () => {
           reject(new Error("Unable to load image."));
         };
 
-        image.src = reader.result;
+        image.src = String(reader.result || "");
       };
 
       reader.onerror = () => {
@@ -420,22 +460,19 @@ export default function Enter() {
 
       reader.readAsDataURL(file);
     });
-  };
-
-  /* =========================================================
-     PROFILE IMAGE
-  ========================================================= */
 
   const handleProfileImage = async (event) => {
     const file = event.target.files?.[0];
 
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     if (!file.type.startsWith("image/")) {
       setError("Please select a valid image.");
+      return;
+    }
 
+    if (file.size > 8 * 1024 * 1024) {
+      setError("Image must be smaller than 8 MB.");
       return;
     }
 
@@ -444,451 +481,211 @@ export default function Enter() {
 
       setProfileImage(image);
 
-      setError("");
+      clearMessages();
     } catch (imageError) {
       console.error(imageError);
 
-      setError("Unable to load profile image.");
+      setError("Unable to process profile image.");
     }
   };
 
-  /* =========================================================
-     VALIDATE FORM
-  ========================================================= */
-
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setError("Please enter your name.");
-
-      return false;
-    }
-
-    if (!formData.phone.trim()) {
-      setError("Please enter your phone number.");
-
+      setError("Please enter artist / owner name.");
       return false;
     }
 
     if (!formData.email.trim()) {
-      setError("Please enter your email.");
+      setError("Please enter email.");
+      return false;
+    }
 
+    if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
+      setError("Please enter a valid email address.");
       return false;
     }
 
     if (!formData.city.trim()) {
-      setError("Please enter your city.");
-
+      setError("Please enter city.");
       return false;
     }
 
     if (!formData.state.trim()) {
-      setError("Please enter your state.");
-
+      setError("Please enter state.");
       return false;
     }
 
     if (!formData.studio.trim()) {
-      setError("Please enter your studio.");
-
-      return false;
-    }
-
-    if (!formData.experience.trim()) {
-      setError("Please enter your experience.");
-
-      return false;
-    }
-
-    if (!formData.instagram.trim()) {
-      setError("Please enter your Instagram username.");
-
-      return false;
-    }
-
-    if (!profileImage) {
-      setError("Please upload your profile photo.");
-
+      setError("Please enter studio name.");
       return false;
     }
 
     return true;
   };
 
-  /* =========================================================
-     FORM SUBMIT
-  ========================================================= */
-
-  const handleSubmit = (event) => {
+  const saveProfile = async (event) => {
     event.preventDefault();
 
-    setError("");
+    if (!validateForm()) return;
 
-    if (!validateForm()) {
-      return;
-    }
-
-    setScreen("choose-plan");
-
-    window.scrollTo({
-      top: 0,
-
-      behavior: "smooth",
-    });
-  };
-
-  /* =========================================================
-     BUILD PROFILE FROM FORM
-  ========================================================= */
-
-  const buildProfileFromForm = (selectedPlan) => {
-    const now = new Date().toISOString();
-
-    return {
-      id: Date.now(),
-
-      plan: normalizePlan(selectedPlan),
-
-      name: formData.name.trim(),
-
-      phone: formData.phone.trim(),
-
-      email: formData.email.trim(),
-
-      city: formData.city.trim(),
-
-      state: formData.state.trim(),
-
-      studio: formData.studio.trim(),
-
-      experience: formData.experience.trim(),
-
-      instagram: formData.instagram.trim(),
-
-      profileImage,
-
-      createdAt: now,
-
-      updatedAt: now,
-
-      membershipStartedAt: selectedPlan === "free" ? now : null,
-
-      membershipExpiresAt: null,
-
-      paymentStatus: selectedPlan === "free" ? "not_required" : "pending",
-    };
-  };
-
-  /* =========================================================
-     CREATE PUBLIC DIRECTORY ARTIST
-
-     FREE:
-     - Name
-     - Photo
-     - City
-     - State
-     - Studio
-     - Contact hidden
-
-     PRO:
-     - Full contact
-     - SEO boost
-     - Analytics
-     - Higher priority
-
-     VERIFIED:
-     - Everything Pro
-     - Verified
-     - Spotlight
-     - Highest priority
-  ========================================================= */
-
-  const buildDirectoryArtist = (profile) => {
-    const plan = normalizePlan(profile.plan);
-
-    const common = {
-      id: profile.id,
-
-      plan,
-
-      name: profile.name,
-
-      profileImage: profile.profileImage || "",
-
-      city: profile.city,
-
-      state: profile.state,
-
-      studio: profile.studio,
-
-      year: "2026",
-
-      createdAt: profile.createdAt,
-
-      updatedAt: new Date().toISOString(),
-    };
-
-    /* =====================================================
-       LIFETIME FREE LISTING
-
-       Permanent directory entry.
-       Contact details stay masked.
-       Acts as the lead-generation entry tier.
-    ===================================================== */
-
-    if (plan === "free") {
-      return {
-        ...common,
-
-        contactMasked: true,
-
-        phoneVisible: false,
-
-        emailVisible: false,
-
-        instagramVisible: false,
-
-        consumerBookingEnabled: false,
-
-        citySearchVisible: false,
-
-        recommended: false,
-
-        verified: false,
-
-        spotlight: false,
-
-        standaloneProfile: false,
-
-        standaloneProfileUrl: "",
-
-        hallOfFameEligible: false,
-
-        prioritySearch: false,
-
-        maximumDigitalVisibility: false,
-
-        leadGenerationListing: true,
-
-        directoryPriority: 1,
-      };
-    }
-
-    /* =====================================================
-       PRO LISTING
-
-       City-wise visibility + Recommended tag.
-       Direct contact is unmasked for consumer booking.
-    ===================================================== */
-
-    if (plan === "pro") {
-      return {
-        ...common,
-
-        phone: profile.phone,
-
-        email: profile.email,
-
-        experience: profile.experience,
-
-        instagram: profile.instagram,
-
-        contactMasked: false,
-
-        phoneVisible: true,
-
-        emailVisible: true,
-
-        instagramVisible: true,
-
-        consumerBookingEnabled: true,
-
-        citySearchVisible: true,
-
-        recommended: true,
-
-        verified: false,
-
-        spotlight: false,
-
-        standaloneProfile: false,
-
-        standaloneProfileUrl: "",
-
-        hallOfFameEligible: false,
-
-        prioritySearch: false,
-
-        maximumDigitalVisibility: false,
-
-        leadGenerationListing: false,
-
-        directoryPriority: 2,
-      };
-    }
-
-    /* =====================================================
-       VERIFIED SPOTLIGHT
-
-       Dedicated URL + Hall of Fame + priority ranking +
-       maximum digital visibility.
-    ===================================================== */
-
-    const standaloneProfileUrl = `/artist/${createProfileSlug(
-      profile.name,
-      profile.id,
-    )}`;
-
-    return {
-      ...common,
-
-      phone: profile.phone,
-
-      email: profile.email,
-
-      experience: profile.experience,
-
-      instagram: profile.instagram,
-
-      contactMasked: false,
-
-      phoneVisible: true,
-
-      emailVisible: true,
-
-      instagramVisible: true,
-
-      consumerBookingEnabled: true,
-
-      citySearchVisible: true,
-
-      recommended: true,
-
-      verified: true,
-
-      spotlight: true,
-
-      standaloneProfile: true,
-
-      standaloneProfileUrl,
-
-      hallOfFameEligible: true,
-
-      prioritySearch: true,
-
-      maximumDigitalVisibility: true,
-
-      leadGenerationListing: false,
-
-      directoryPriority: 3,
-    };
-  };
-
-  /* =========================================================
-     UPDATE DIRECTORY
-  ========================================================= */
-
-  const updateDirectory = (profile) => {
-    const directory = getStoredArray(DIRECTORY_KEY);
-
-    const publicArtist = buildDirectoryArtist(profile);
-
-    const index = directory.findIndex(
-      (artist) => String(artist.id) === String(profile.id),
-    );
-
-    let updated;
-
-    if (index >= 0) {
-      updated = [...directory];
-
-      updated[index] = publicArtist;
-    } else {
-      updated = [publicArtist, ...directory];
-    }
-
-    localStorage.setItem(
-      DIRECTORY_KEY,
-
-      JSON.stringify(updated),
-    );
-  };
-
-  /* =========================================================
-     SAVE FREE PROFILE
-
-     FREE NEEDS NO PAYMENT
-  ========================================================= */
-
-  const createFreeProfile = () => {
-    const profiles = migrateProfiles();
-
-    const newProfile = buildProfileFromForm("free");
+    setSaving(true);
+    clearMessages();
 
     try {
-      localStorage.setItem(
-        PROFILE_KEY,
+      const data = await apiRequest("/api/claim/update", {
+        method: "POST",
+        body: {
+          profileId: selectedArtist?.id,
 
-        JSON.stringify([newProfile, ...profiles]),
-      );
+          name: formData.name.trim(),
 
-      localStorage.setItem(
-        CURRENT_USER_KEY,
+          email: formData.email.trim(),
 
-        String(newProfile.id),
-      );
+          city: formData.city.trim(),
 
-      localStorage.removeItem(PENDING_MEMBERSHIP_KEY);
+          state: formData.state.trim(),
 
-      updateDirectory(newProfile);
+          studio: formData.studio.trim(),
 
-      setCurrentProfile(newProfile);
+          experience: formData.experience.trim(),
 
-      navigate("/artists", {
-        state: {
-          newArtistId: newProfile.id,
+          instagram: formData.instagram.trim(),
+
+          profileImage,
         },
+      });
+
+      const updatedProfile = data.profile ||
+        data.artist || {
+          ...currentProfile,
+          ...formData,
+          profileImage,
+        };
+
+      setCurrentProfile(updatedProfile);
+
+      setSelectedArtist((previous) =>
+        normalizeArtist({
+          ...(previous || {}),
+          ...updatedProfile,
+        }),
+      );
+
+      setSuccess("Profile updated successfully.");
+
+      setScreen("plans");
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
       });
     } catch (saveError) {
       console.error(saveError);
 
-      setError("Unable to save your profile.");
+      if (saveError.status === 401 || saveError.status === 403) {
+        setError("Your verification expired. Please verify OTP again.");
+
+        setOtp("");
+        setOtpSent(false);
+
+        setScreen("verify");
+      } else {
+        setError(saveError.message || "Unable to update profile.");
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
-  /* =========================================================
-     START PAID MEMBERSHIP CHECKOUT
+  const sendNewPhoneOtp = async () => {
+    const cleanedPhone = newPhone.replace(/[^0-9+]/g, "").trim();
 
-     IMPORTANT:
-     THIS DOES NOT ACTIVATE PRO/VERIFIED YET.
+    if (cleanedPhone.length < 10) {
+      setError("Enter a valid new mobile number.");
+      return;
+    }
 
-     PAYMENT PAGE MUST VERIFY PAYMENT FIRST.
-  ========================================================= */
+    setPhoneLoading(true);
+    clearMessages();
 
-  const startPaidMembership = (selectedPlan, existingProfile = null) => {
-    const plan = getPlanById(selectedPlan);
+    try {
+      await apiRequest("/api/claim/change-phone/send-otp", {
+        method: "POST",
+        body: {
+          profileId: selectedArtist?.id,
+          newPhone: cleanedPhone,
+        },
+      });
 
-    if (plan.id === "free") {
-      createFreeProfile();
+      setNewPhone(cleanedPhone);
+
+      setNewPhoneOtpSent(true);
+
+      setSuccess("OTP sent to the new mobile number.");
+    } catch (phoneError) {
+      console.error(phoneError);
+
+      setError(phoneError.message || "Unable to send OTP to new number.");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const verifyNewPhoneOtp = async () => {
+    if (!/^\d{6}$/.test(newPhoneOtp)) {
+      setError("Enter the 6-digit OTP sent to the new number.");
 
       return;
     }
 
-    const profileDraft = existingProfile
-      ? {
-          ...existingProfile,
+    setPhoneLoading(true);
+    clearMessages();
 
-          plan: plan.id,
+    try {
+      const data = await apiRequest("/api/claim/change-phone/verify-otp", {
+        method: "POST",
+        body: {
+          profileId: selectedArtist?.id,
+          newPhone,
+          otp: newPhoneOtp,
+        },
+      });
 
-          updatedAt: new Date().toISOString(),
+      setMaskedPhone(data.maskedPhone || data.phoneMasked || "NUMBER UPDATED");
 
-          paymentStatus: "pending",
-        }
-      : buildProfileFromForm(plan.id);
+      setChangePhoneOpen(false);
+
+      setNewPhone("");
+      setNewPhoneOtp("");
+
+      setNewPhoneOtpSent(false);
+
+      setSuccess("Mobile number updated successfully.");
+    } catch (phoneError) {
+      console.error(phoneError);
+
+      setError(phoneError.message || "Incorrect OTP for the new number.");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const startPaidPlan = (planId) => {
+    const plan = PLANS.find((item) => item.id === planId);
+
+    if (!plan || !selectedArtist?.id) {
+      setError("Unable to start this upgrade.");
+      return;
+    }
 
     const pendingCheckout = {
       source: "directory-membership",
 
-      action: existingProfile ? "upgrade" : "create",
+      action: "upgrade",
+
+      profileId: selectedArtist.id,
+
+      claimArtistId: selectedArtist.id,
 
       planId: plan.id,
 
@@ -898,1091 +695,297 @@ export default function Enter() {
 
       billing: "yearly",
 
-      profileId: existingProfile?.id || profileDraft.id,
-
-      previousPlan: existingProfile?.plan || null,
-
-      profileDraft,
+      previousPlan: currentPlan,
 
       createdAt: new Date().toISOString(),
     };
 
-    try {
-      localStorage.setItem(
-        PENDING_MEMBERSHIP_KEY,
-
-        JSON.stringify(pendingCheckout),
-      );
-
-      navigate("/payment", {
-        state: {
-          source: "directory-membership",
-
-          action: pendingCheckout.action,
-
-          planId: plan.id,
-
-          planName: plan.name,
-
-          amount: plan.amount,
-
-          billing: "yearly",
-
-          profileDraft,
-        },
-      });
-    } catch (paymentError) {
-      console.error(paymentError);
-
-      setError("Unable to start payment.");
-    }
-  };
-
-  /* =========================================================
-     PLAN SELECT
-  ========================================================= */
-
-  const handlePlanSelect = (selectedPlan) => {
-    const normalized = normalizePlan(selectedPlan);
-
-    if (normalized === "free") {
-      createFreeProfile();
-
-      return;
-    }
-
-    startPaidMembership(normalized);
-  };
-
-  /* =========================================================
-     UPGRADE
-  ========================================================= */
-
-  const upgradePlan = (nextPlan) => {
-    if (!currentProfile) {
-      return;
-    }
-
-    const normalizedNext = normalizePlan(nextPlan);
-
-    const oldPriority = getPlanPriority(currentProfile.plan);
-
-    const nextPriority = getPlanPriority(normalizedNext);
-
-    if (nextPriority <= oldPriority) {
-      return;
-    }
-
-    startPaidMembership(
-      normalizedNext,
-
-      currentProfile,
+    localStorage.setItem(
+      PENDING_MEMBERSHIP_KEY,
+      JSON.stringify(pendingCheckout),
     );
-  };
 
-  /* =========================================================
-     LOGOUT
-
-     DOES NOT DELETE PROFILE.
-  ========================================================= */
-
-  const handleLogout = () => {
-    localStorage.removeItem(CURRENT_USER_KEY);
-
-    localStorage.removeItem("inkConventionLoggedUser");
-
-    setCurrentProfile(null);
-
-    setFormData(emptyForm);
-
-    setProfileImage("");
-
-    setError("");
-
-    navigate("/client-login", {
-      replace: true,
+    navigate("/payment", {
+      state: pendingCheckout,
     });
   };
 
-  /* =========================================================
-     CURRENT NORMALIZED PLAN
-  ========================================================= */
+  const resetToFind = () => {
+    setScreen("find");
 
-  const normalizedCurrentPlan = normalizePlan(currentProfile?.plan);
+    setSelectedArtist(null);
 
-  const currentPlan = useMemo(
-    () => plans.find((plan) => plan.id === normalizedCurrentPlan),
+    setSearchQuery("");
 
-    [normalizedCurrentPlan],
-  );
+    setSearchResults([]);
 
-  /* =========================================================
-     LOADING
-  ========================================================= */
+    setOtpSent(false);
 
-  if (screen === "loading") {
-    return <main className="min-h-screen bg-[#08080a]" />;
-  }
+    setOtp("");
 
-  /* =========================================================
-     SAVED PROFILE
-  ========================================================= */
+    setMaskedPhone("");
 
-  if (screen === "profile" && currentProfile) {
-    const isFree = normalizedCurrentPlan === "free";
+    setResendSeconds(0);
 
-    const isPro = normalizedCurrentPlan === "pro";
+    setCurrentProfile(null);
 
-    const isVerified = normalizedCurrentPlan === "verified";
+    setFormData(EMPTY_FORM);
 
+    setProfileImage("");
+
+    setChangePhoneOpen(false);
+
+    setNewPhone("");
+
+    setNewPhoneOtp("");
+
+    setNewPhoneOtpSent(false);
+
+    clearMessages();
+
+    navigate("/Enter", {
+      replace: true,
+      state: null,
+    });
+  };
+
+  if (screen === "find") {
     return (
-      <main
-        className="
-          min-h-screen
-          bg-[#08080a]
-          text-white
-          pt-32
-          pb-24
-          px-4
-          sm:px-6
-          lg:px-10
-        "
-      >
-        <div
-          className="
-            max-w-[1400px]
-            mx-auto
-          "
-        >
-          {/* =================================================
-              HEADER
-          ================================================= */}
+      <PageShell>
+        <div className="enter-reveal max-w-4xl mx-auto">
+          <Eyebrow icon={<Search size={13} />}>FIND YOUR PROFILE</Eyebrow>
 
-          <div
-            className="
-              enter-reveal
+          <h1 className="text-[clamp(3.2rem,8vw,7rem)] font-black uppercase tracking-[-0.07em] leading-[0.84]">
+            FIND YOUR
+            <br />
+            <span className="text-purple-500">CARD.</span>
+          </h1>
 
-              border-b
-              border-white/10
+          <p className="mt-6 max-w-2xl text-sm text-gray-500 leading-relaxed">
+            Search your artist or studio name. Nobody can edit a card until the
+            OTP sent to the mobile number already saved with that card is
+            verified.
+          </p>
 
-              pb-12
-
-              flex
-              flex-col
-              sm:flex-row
-
-              sm:items-end
-
-              justify-between
-
-              gap-8
-            "
+          <form
+            onSubmit={handleSearch}
+            className="mt-10 flex flex-col sm:flex-row gap-3"
           >
-            <div>
-              <p
-                className="
-                  text-purple-400
+            <div className="relative flex-1">
+              <Search
+                size={17}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
+              />
 
-                  text-[10px]
-
-                  font-mono
-
-                  tracking-[0.2em]
-
-                  mb-5
-                "
-              >
-                MY DIRECTORY PROFILE
-              </p>
-
-              <h1
-                className="
-                  text-[clamp(3.5rem,7vw,7rem)]
-
-                  font-black
-
-                  uppercase
-
-                  tracking-[-0.07em]
-
-                  leading-[0.85]
-                "
-              >
-                WELCOME
-                <br />
-                <span className="text-purple-500">BACK.</span>
-              </h1>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="ARTIST OR STUDIO NAME..."
+                className="w-full bg-[#0d0d11] border border-white/10 focus:border-purple-500 rounded-xl pl-11 pr-4 py-4 outline-none text-sm"
+              />
             </div>
-
-            {/* LOGOUT */}
 
             <button
-              type="button"
-              onClick={handleLogout}
-              className="
-                shrink-0
-
-                border
-                border-red-500/30
-
-                bg-red-500/[0.05]
-
-                hover:bg-red-500
-
-                hover:text-white
-
-                text-red-400
-
-                px-7
-                py-4
-
-                text-[10px]
-
-                font-black
-
-                tracking-[0.16em]
-
-                uppercase
-
-                transition-all
-
-                duration-300
-              "
+              type="submit"
+              disabled={searching}
+              className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl px-7 py-4 text-[10px] font-black tracking-widest transition"
             >
-              LOGOUT →
+              {searching ? "SEARCHING..." : "SEARCH"}
             </button>
-          </div>
+          </form>
 
-          {/* =================================================
-              PROFILE
-          ================================================= */}
+          <Message error={error} success={success} />
 
-          <div
-            className="
-              grid
-
-              grid-cols-1
-
-              lg:grid-cols-[330px_1fr]
-
-              gap-8
-              lg:gap-14
-
-              mt-12
-            "
-          >
-            {/* PHOTO */}
-
-            <div className="enter-reveal">
-              <div
-                className={`
-                  relative
-
-                  aspect-square
-
-                  rounded-[30px]
-
-                  overflow-hidden
-
-                  bg-[#0d0d11]
-
-                  border-2
-
-                  ${
-                    isVerified
-                      ? `
-                        border-purple-400
-
-                        shadow-[0_0_50px_rgba(168,85,247,0.16)]
-                      `
-                      : isPro
-                        ? "border-slate-300"
-                        : "border-white/10"
-                  }
-                `}
-              >
-                {currentProfile.profileImage ? (
-                  <img
-                    src={currentProfile.profileImage}
-                    alt={currentProfile.name}
-                    className="
-                      w-full
-                      h-full
-
-                      object-cover
-                    "
-                  />
-                ) : (
-                  <div
-                    className="
-                      w-full
-                      h-full
-
-                      flex
-
-                      items-center
-                      justify-center
-
-                      bg-[#0d0d11]
-                    "
-                  >
-                    <Users size={40} className="text-gray-700" />
-                  </div>
-                )}
-
-                {isVerified && (
-                  <div
-                    className="
-                      absolute
-
-                      top-4
-                      left-4
-
-                      bg-purple-600
-
-                      border
-                      border-purple-300/30
-
-                      px-4
-                      py-2
-
-                      text-[8px]
-
-                      font-black
-
-                      tracking-[0.15em]
-                    "
-                  >
-                    ✓ VERIFIED
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* =================================================
-                PROFILE INFORMATION
-            ================================================= */}
-
-            <div
-              className="
-                enter-reveal
-
-                bg-[#0d0d11]
-
-                border
-                border-white/10
-
-                rounded-[30px]
-
-                p-6
-                sm:p-8
-              "
-            >
-              <div
-                className="
-                  flex
-
-                  flex-col
-                  sm:flex-row
-
-                  sm:items-start
-
-                  justify-between
-
-                  gap-5
-
-                  pb-7
-
-                  border-b
-                  border-white/10
-                "
-              >
-                <div>
-                  <p
-                    className="
-                      text-[9px]
-
-                      font-mono
-
-                      text-gray-600
-
-                      mb-2
-                    "
-                  >
-                    DIRECTORY PROFILE
-                  </p>
-
-                  <h2
-                    className="
-                      text-3xl
-                      sm:text-5xl
-
-                      font-black
-
-                      uppercase
-                    "
-                  >
-                    {currentProfile.name}
-                  </h2>
-
-                  <div
-                    className="
-                      flex
-
-                      items-center
-
-                      gap-2
-
-                      mt-4
-
-                      text-gray-400
-                    "
-                  >
-                    <MapPin size={14} className="text-purple-500" />
-
-                    <span>
-                      {currentProfile.city}, {currentProfile.state}
-                    </span>
-                  </div>
-                </div>
-
-                {/* PLAN BADGE */}
-
-                <div
-                  className={`
-                    px-5
-                    py-3
-
-                    text-[10px]
-
-                    font-black
-
-                    tracking-[0.15em]
-
-                    ${
-                      isVerified
-                        ? `
-                          bg-purple-600
-
-                          text-white
-
-                          shadow-[0_0_25px_rgba(168,85,247,0.30)]
-                        `
-                        : isPro
-                          ? `
-                            bg-slate-200
-
-                            text-black
-                          `
-                          : `
-                            bg-white/10
-
-                            text-white
-
-                            border
-                            border-white/10
-                          `
-                    }
-                  `}
-                >
-                  {currentPlan?.shortName}
-                </div>
-              </div>
-
-              {/* =================================================
-                  PRIVATE SAVED DETAILS
-
-                  User can see everything here even on Free.
-              ================================================= */}
-
-              <div
-                className="
-                  grid
-
-                  grid-cols-1
-                  sm:grid-cols-2
-
-                  gap-6
-
-                  mt-8
-                "
-              >
-                <ProfileInfo label="PHONE" value={currentProfile.phone} />
-
-                <ProfileInfo label="EMAIL" value={currentProfile.email} />
-
-                <ProfileInfo label="CITY" value={currentProfile.city} />
-
-                <ProfileInfo label="STATE" value={currentProfile.state} />
-
-                <ProfileInfo label="STUDIO" value={currentProfile.studio} />
-
-                <ProfileInfo
-                  label="EXPERIENCE"
-                  value={currentProfile.experience}
-                />
-
-                <ProfileInfo
-                  label="INSTAGRAM"
-                  value={currentProfile.instagram}
-                />
-
-                <ProfileInfo label="MEMBERSHIP" value={currentPlan?.name} />
-              </div>
-
-              {/* FREE MASK MESSAGE */}
-
-              {isFree && (
-                <div
-                  className="
-                    mt-8
-
-                    border
-                    border-purple-500/20
-
-                    bg-purple-500/[0.04]
-
-                    rounded-2xl
-
-                    p-5
-                  "
-                >
-                  <p
-                    className="
-                      text-[9px]
-
-                      font-mono
-
-                      tracking-[0.16em]
-
-                      text-purple-400
-                    "
-                  >
-                    FREE LISTING PRIVACY
-                  </p>
-
-                  <p
-                    className="
-                      mt-2
-
-                      text-sm
-
-                      text-gray-500
-
-                      leading-relaxed
-                    "
-                  >
-                    Your permanent Lifetime Free listing is active. Your phone,
-                    email and Instagram remain masked on the public directory.
-                    Upgrade to Pro to unlock direct consumer booking contact.
-                  </p>
-                </div>
-              )}
-
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {searchResults.map((artist) => (
               <button
+                key={artist.id}
                 type="button"
-                onClick={() => navigate("/artists")}
-                className="
-                  mt-8
-
-                  text-[10px]
-
-                  font-black
-
-                  tracking-widest
-
-                  text-purple-400
-
-                  hover:text-purple-300
-
-                  transition
-                "
+                onClick={() => chooseArtist(artist)}
+                className="text-left bg-[#0d0d11] border border-white/10 hover:border-purple-500/60 rounded-2xl p-5 transition"
               >
-                VIEW MY DIRECTORY CARD →
+                <p className="text-[8px] font-mono tracking-[0.14em] text-purple-400">
+                  DIRECTORY PROFILE
+                </p>
+
+                <h2 className="mt-2 text-xl font-black uppercase">
+                  {artist.name}
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  {artist.studio || "Tattoo Artist / Studio"}
+                </p>
+
+                <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
+                  <MapPin size={13} className="text-purple-500" />
+
+                  {[artist.city, artist.state].filter(Boolean).join(", ") ||
+                    "India"}
+                </div>
+
+                <div className="mt-5 flex items-center justify-between gap-3">
+                  <span className="text-[9px] font-mono text-gray-600">
+                    {artist.maskedPhone || "REGISTERED MOBILE"}
+                  </span>
+
+                  <span className="text-[9px] font-black text-purple-400">
+                    UPDATE YOUR CARD →
+                  </span>
+                </div>
               </button>
-            </div>
+            ))}
           </div>
-
-          {/* =================================================
-              UPGRADE
-          ================================================= */}
-
-          <section
-            className="
-              enter-reveal
-
-              mt-16
-
-              pt-12
-
-              border-t
-              border-white/10
-            "
-          >
-            <p
-              className="
-                text-[9px]
-
-                text-purple-400
-
-                font-mono
-
-                tracking-[0.2em]
-
-                mb-3
-              "
-            >
-              DIRECTORY MEMBERSHIP
-            </p>
-
-            <h2
-              className="
-                text-3xl
-                sm:text-5xl
-
-                font-black
-
-                uppercase
-              "
-            >
-              {isVerified
-                ? "YOUR SPOTLIGHT IS ACTIVE"
-                : "GET MORE CLIENT VISIBILITY"}
-            </h2>
-
-            <p
-              className="
-                mt-4
-
-                max-w-2xl
-
-                text-sm
-
-                text-gray-500
-
-                leading-relaxed
-              "
-            >
-              Upgrade to Pro for city-wise search visibility, a Recommended tag
-              and direct consumer booking contact. Choose Verified Spotlight for
-              a standalone profile URL, Hall of Fame inclusion and priority
-              ranking.
-            </p>
-
-            {/* ===============================================
-                FREE -> PRO / VERIFIED
-            =============================================== */}
-
-            {isFree && (
-              <div
-                className="
-                  grid
-
-                  grid-cols-1
-                  md:grid-cols-2
-
-                  gap-5
-
-                  mt-8
-                "
-              >
-                <UpgradeCard
-                  name="PRO LISTING"
-                  price="₹1,499"
-                  billing="PER YEAR"
-                  type="pro"
-                  description="Get city-wise search visibility, a Recommended tag and unmasked direct contact information for consumer booking."
-                  benefits={[
-                    "Everything in Lifetime Free",
-                    "City-Wise Search Visibility",
-                    "Recommended Tag",
-                    "Phone Number Visible",
-                    "Email Visible",
-                    "Instagram Visible",
-                    "Direct Consumer Booking Contact",
-                    "Higher Directory Visibility",
-                  ]}
-                  onClick={() => upgradePlan("pro")}
-                />
-
-                <UpgradeCard
-                  name="VERIFIED SPOTLIGHT"
-                  price="₹2,999"
-                  billing="PER YEAR"
-                  type="verified"
-                  description="Premium visibility with a standalone profile URL, Hall of Fame inclusion, priority search ranking and maximum digital visibility."
-                  benefits={[
-                    "Everything in Pro",
-                    "Verified Spotlight Badge",
-                    "Dedicated Standalone Profile URL",
-                    "Hall of Fame Inclusion",
-                    "Priority Search Ranking",
-                    "Featured Spotlight Placement",
-                    "Maximum Digital Visibility",
-                    "Full Direct Contact Visibility",
-                  ]}
-                  onClick={() => upgradePlan("verified")}
-                />
-              </div>
-            )}
-
-            {/* ===============================================
-                PRO -> VERIFIED
-            =============================================== */}
-
-            {isPro && (
-              <div
-                className="
-                  max-w-2xl
-
-                  mt-8
-                "
-              >
-                <UpgradeCard
-                  name="VERIFIED SPOTLIGHT"
-                  price="₹2,999"
-                  billing="PER YEAR"
-                  type="verified"
-                  description="Upgrade from Pro to a standalone profile URL, Hall of Fame inclusion, priority search ranking and maximum digital visibility."
-                  benefits={[
-                    "Everything in Pro",
-                    "Verified Spotlight Badge",
-                    "Dedicated Standalone Profile URL",
-                    "Hall of Fame Inclusion",
-                    "Priority Search Ranking",
-                    "Featured Spotlight Placement",
-                    "Maximum Digital Visibility",
-                  ]}
-                  onClick={() => upgradePlan("verified")}
-                />
-              </div>
-            )}
-
-            {/* ===============================================
-                VERIFIED
-            =============================================== */}
-
-            {isVerified && (
-              <div
-                className="
-                  mt-8
-
-                  border
-                  border-purple-400/30
-
-                  bg-purple-500/[0.05]
-
-                  rounded-[24px]
-
-                  p-7
-                "
-              >
-                <p
-                  className="
-                    text-purple-400
-
-                    font-black
-                  "
-                >
-                  ✓ YOUR VERIFIED SPOTLIGHT PROFILE IS ACTIVE
-                </p>
-
-                <p
-                  className="
-                    text-sm
-
-                    text-gray-500
-
-                    mt-2
-
-                    leading-relaxed
-                  "
-                >
-                  Your premium tier is active with priority search ranking,
-                  maximum digital visibility, Hall of Fame eligibility and a
-                  dedicated standalone profile URL.
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <p
-                className="
-                  mt-5
-
-                  text-red-400
-
-                  text-sm
-                "
-              >
-                {error}
-              </p>
-            )}
-          </section>
         </div>
-      </main>
+      </PageShell>
     );
   }
 
-  /* =========================================================
-     REGISTRATION FORM
-  ========================================================= */
-
-  if (screen === "form") {
+  if (screen === "verify") {
     return (
-      <main
-        className="
-          min-h-screen
-
-          bg-[#08080a]
-
-          text-white
-
-          pt-32
-          pb-24
-
-          px-4
-          sm:px-6
-          lg:px-10
-        "
-      >
-        <div
-          className="
-            max-w-[1400px]
-
-            mx-auto
-          "
-        >
-          {/* =================================================
-              HEADER
-          ================================================= */}
-
-          <div
-            className="
-              enter-reveal
-
-              mb-12
-            "
+      <PageShell>
+        <div className="enter-reveal max-w-2xl mx-auto">
+          <button
+            type="button"
+            onClick={resetToFind}
+            className="text-[9px] font-mono text-gray-500 hover:text-white transition mb-8"
           >
-            <div
-              className="
-                flex
+            ← CHOOSE ANOTHER PROFILE
+          </button>
 
-                items-center
-
-                gap-2
-
-                text-purple-400
-
-                text-[10px]
-
-                font-mono
-
-                tracking-[0.2em]
-
-                mb-4
-              "
-            >
-              <Sparkles size={13} />
-              CLAIM YOUR DIRECTORY LISTING
+          <div className="bg-[#0d0d11] border border-white/10 rounded-[28px] p-6 sm:p-9">
+            <div className="w-14 h-14 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+              <ShieldCheck size={25} className="text-purple-400" />
             </div>
 
-            <h1
-              className="
-                text-[clamp(3.5rem,7vw,7rem)]
-
-                font-black
-
-                uppercase
-
-                tracking-[-0.07em]
-
-                leading-[0.85]
-              "
-            >
-              GET FOUND.
-              <br />
-              <span className="text-purple-500">GET BOOKED.</span>
-            </h1>
-
-            <p
-              className="
-                mt-6
-
-                max-w-2xl
-
-                text-gray-500
-
-                text-sm
-
-                leading-relaxed
-              "
-            >
-              Create your tattoo artist or studio profile once. Start with a
-              permanent Lifetime Free listing, move to Pro for city-wise
-              discovery and direct booking contact, or choose Verified Spotlight
-              for maximum digital visibility.
+            <p className="mt-7 text-[9px] font-mono tracking-[0.16em] text-purple-400">
+              OWNERSHIP VERIFICATION
             </p>
 
-            {/* SMALL BENEFITS */}
+            <h1 className="mt-3 text-3xl sm:text-5xl font-black uppercase leading-none">
+              VERIFY BEFORE
+              <br />
+              YOU UPDATE.
+            </h1>
 
-            <div
-              className="
-                flex
+            <div className="mt-7 border border-white/10 rounded-2xl p-5">
+              <h2 className="font-black uppercase text-lg">
+                {selectedArtist?.name}
+              </h2>
 
-                flex-wrap
-
-                gap-3
-
-                mt-6
-              "
-            >
-              {[
-                "LIFETIME FREE OPTION",
-                "INDIA-WIDE DIRECTORY",
-                "UPGRADE ANYTIME",
-              ].map((item) => (
-                <span
-                  key={item}
-                  className="
-                      border
-                      border-white/10
-
-                      bg-white/[0.03]
-
-                      rounded-full
-
-                      px-4
-                      py-2
-
-                      text-[8px]
-
-                      font-mono
-
-                      tracking-[0.12em]
-
-                      text-gray-500
-                    "
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* =================================================
-              FORM
-          ================================================= */}
-
-          <form
-            onSubmit={handleSubmit}
-            className="
-              enter-reveal
-
-              grid
-
-              grid-cols-1
-
-              lg:grid-cols-[340px_1fr]
-
-              gap-10
-              lg:gap-16
-            "
-          >
-            {/* PHOTO */}
-
-            <div>
-              <p
-                className="
-                  text-[9px]
-
-                  font-mono
-
-                  text-gray-500
-
-                  mb-3
-                "
-              >
-                PROFILE PHOTO *
+              <p className="mt-1 text-sm text-gray-500">
+                {selectedArtist?.studio || "Tattoo Artist / Studio"}
               </p>
 
-              <label
-                className="
-                  relative
+              <p className="mt-3 text-xs text-gray-500">
+                OTP goes only to: {maskedPhone || "the saved mobile number"}
+              </p>
+            </div>
 
-                  block
-
-                  aspect-square
-
-                  overflow-hidden
-
-                  bg-[#0d0d11]
-
-                  border
-                  border-white/10
-
-                  hover:border-purple-500/50
-
-                  cursor-pointer
-
-                  transition
-                "
+            {!otpSent ? (
+              <button
+                type="button"
+                onClick={sendOtp}
+                disabled={otpLoading}
+                className="mt-6 w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl p-4 font-black text-[10px] tracking-widest transition"
               >
+                {otpLoading ? "SENDING..." : "SEND OTP"}
+              </button>
+            ) : (
+              <form onSubmit={verifyOtp} className="mt-6">
+                <label className="block text-[9px] font-mono text-gray-500 mb-2">
+                  ENTER 6-DIGIT OTP
+                </label>
+
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(event) =>
+                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  className="w-full text-center tracking-[0.55em] bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl px-5 py-5 outline-none text-xl font-black"
+                />
+
+                <button
+                  type="submit"
+                  disabled={otpLoading || otp.length !== 6}
+                  className="mt-4 w-full bg-white hover:bg-slate-200 text-black disabled:opacity-50 rounded-xl p-4 font-black text-[10px] tracking-widest transition"
+                >
+                  {otpLoading ? "VERIFYING..." : "VERIFY OTP & OPEN PROFILE"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={sendOtp}
+                  disabled={otpLoading || resendSeconds > 0}
+                  className="mt-4 w-full text-[9px] font-mono text-purple-400 disabled:text-gray-700"
+                >
+                  {resendSeconds > 0
+                    ? `RESEND OTP IN ${resendSeconds}s`
+                    : "RESEND OTP"}
+                </button>
+              </form>
+            )}
+
+            <Message error={error} success={success} />
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (screen === "edit") {
+    return (
+      <PageShell>
+        <div className="max-w-[1250px] mx-auto">
+          <div className="enter-reveal flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-white/10 pb-8">
+            <div>
+              <Eyebrow icon={<CheckCircle2 size={13} />}>
+                PHONE VERIFIED
+              </Eyebrow>
+
+              <h1 className="text-[clamp(3rem,7vw,6rem)] font-black uppercase tracking-[-0.065em] leading-[0.86]">
+                UPDATE YOUR
+                <br />
+                <span className="text-purple-500">PROFILE.</span>
+              </h1>
+            </div>
+
+            <button
+              type="button"
+              onClick={resetToFind}
+              className="text-[9px] font-mono text-gray-500 hover:text-white transition"
+            >
+              EXIT VERIFICATION
+            </button>
+          </div>
+
+          <form
+            onSubmit={saveProfile}
+            className="enter-reveal mt-10 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10"
+          >
+            <div>
+              <p className="text-[9px] font-mono text-gray-500 mb-3">
+                PROFILE PHOTO
+              </p>
+
+              <label className="relative block aspect-square overflow-hidden bg-[#0d0d11] border border-white/10 hover:border-purple-500/50 rounded-[26px] cursor-pointer transition">
                 {profileImage ? (
                   <img
                     src={profileImage}
                     alt="Profile"
-                    className="
-                      w-full
-                      h-full
-
-                      object-cover
-                    "
+                    className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div
-                    className="
-                      absolute
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <Users size={32} className="text-purple-500" />
 
-                      inset-0
+                    <p className="mt-4 font-black">UPLOAD PHOTO</p>
 
-                      flex
-                      flex-col
-
-                      items-center
-                      justify-center
-
-                      text-center
-                    "
-                  >
-                    <Users
-                      size={30}
-                      className="
-                        text-purple-500
-
-                        mb-4
-                      "
-                    />
-
-                    <p
-                      className="
-                        font-black
-
-                        text-lg
-                      "
-                    >
-                      UPLOAD PHOTO
-                    </p>
-
-                    <p
-                      className="
-                        text-xs
-
-                        text-gray-600
-
-                        mt-2
-                      "
-                    >
+                    <p className="mt-1 text-xs text-gray-600">
                       Click to select
                     </p>
                   </div>
@@ -1996,50 +999,101 @@ export default function Enter() {
                 />
               </label>
 
-              <div
-                className="
-                  mt-4
+              <div className="mt-5 bg-[#0d0d11] border border-white/10 rounded-2xl p-5">
+                <div className="flex items-center gap-2 text-purple-400">
+                  <Lock size={13} />
 
-                  p-4
+                  <p className="text-[8px] font-mono tracking-[0.14em]">
+                    VERIFIED MOBILE
+                  </p>
+                </div>
 
-                  border
-                  border-white/[0.06]
-
-                  bg-white/[0.02]
-                "
-              >
-                <p
-                  className="
-                    text-[8px]
-
-                    font-mono
-
-                    text-purple-400
-
-                    tracking-[0.12em]
-                  "
-                >
-                  YOUR DETAILS STAY SAVED
+                <p className="mt-2 text-lg font-black">
+                  {maskedPhone || "VERIFIED NUMBER"}
                 </p>
 
-                <p
-                  className="
-                    mt-2
-
-                    text-[11px]
-
-                    text-gray-600
-
-                    leading-relaxed
-                  "
-                >
-                  Free listings keep sensitive contact details hidden on the
-                  public directory.
+                <p className="mt-2 text-xs text-gray-600 leading-relaxed">
+                  The mobile number cannot be typed over directly. Use secure
+                  number change below.
                 </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearMessages();
+
+                    setChangePhoneOpen((previous) => !previous);
+
+                    setNewPhone("");
+
+                    setNewPhoneOtp("");
+
+                    setNewPhoneOtpSent(false);
+                  }}
+                  className="mt-4 text-[9px] font-black text-purple-400 hover:text-purple-300"
+                >
+                  {changePhoneOpen
+                    ? "CANCEL NUMBER CHANGE"
+                    : "CHANGE MOBILE NUMBER →"}
+                </button>
+
+                {changePhoneOpen && (
+                  <div className="mt-5 pt-5 border-t border-white/10">
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      Your current number was already verified to open this
+                      profile. Enter the new number and verify its OTP.
+                    </p>
+
+                    <input
+                      type="text"
+                      value={newPhone}
+                      onChange={(event) => setNewPhone(event.target.value)}
+                      disabled={newPhoneOtpSent}
+                      placeholder="NEW MOBILE NUMBER"
+                      className="mt-4 w-full bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl px-4 py-3 outline-none text-sm disabled:opacity-60"
+                    />
+
+                    {!newPhoneOtpSent ? (
+                      <button
+                        type="button"
+                        onClick={sendNewPhoneOtp}
+                        disabled={phoneLoading}
+                        className="mt-3 w-full bg-white text-black hover:bg-slate-200 disabled:opacity-50 rounded-xl py-3 text-[9px] font-black tracking-widest"
+                      >
+                        {phoneLoading ? "SENDING..." : "SEND OTP TO NEW NUMBER"}
+                      </button>
+                    ) : (
+                      <>
+                        <input
+                          type="text"
+                          value={newPhoneOtp}
+                          onChange={(event) =>
+                            setNewPhoneOtp(
+                              event.target.value.replace(/\D/g, "").slice(0, 6),
+                            )
+                          }
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          placeholder="000000"
+                          className="mt-3 w-full text-center tracking-[0.45em] bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl px-4 py-3 outline-none font-black"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={verifyNewPhoneOtp}
+                          disabled={phoneLoading || newPhoneOtp.length !== 6}
+                          className="mt-3 w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl py-3 text-[9px] font-black tracking-widest"
+                        >
+                          {phoneLoading
+                            ? "VERIFYING..."
+                            : "VERIFY & CHANGE NUMBER"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* DETAILS */}
 
             <div className="space-y-5">
               <InputField
@@ -2051,14 +1105,6 @@ export default function Enter() {
               />
 
               <InputField
-                label="PHONE"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="+91 98765 43210"
-              />
-
-              <InputField
                 label="EMAIL"
                 name="email"
                 type="email"
@@ -2067,16 +1113,7 @@ export default function Enter() {
                 placeholder="artist@gmail.com"
               />
 
-              <div
-                className="
-                  grid
-
-                  grid-cols-1
-                  sm:grid-cols-2
-
-                  gap-5
-                "
-              >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <InputField
                   label="CITY"
                   name="city"
@@ -2108,6 +1145,7 @@ export default function Enter() {
                 value={formData.experience}
                 onChange={handleChange}
                 placeholder="5 Years"
+                required={false}
               />
 
               <InputField
@@ -2116,962 +1154,234 @@ export default function Enter() {
                 value={formData.instagram}
                 onChange={handleChange}
                 placeholder="@username"
+                required={false}
               />
 
-              {error && (
-                <div
-                  className="
-                    border-l-2
-                    border-red-500
-
-                    bg-red-500/[0.05]
-
-                    px-5
-                    py-4
-
-                    text-red-400
-
-                    text-sm
-                  "
-                >
-                  {error}
-                </div>
-              )}
+              <Message error={error} success={success} />
 
               <button
                 type="submit"
-                className="
-                  group
-
-                  w-full
-
-                  bg-purple-600
-
-                  hover:bg-purple-500
-
-                  p-5
-
-                  flex
-
-                  items-center
-                  justify-between
-
-                  font-black
-
-                  text-[11px]
-
-                  tracking-[0.15em]
-
-                  transition
-                "
+                disabled={saving}
+                className="group w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl p-5 flex items-center justify-between text-[10px] font-black tracking-[0.14em] transition"
               >
-                VIEW LISTING OPTIONS
-                <ArrowRight
-                  size={16}
-                  className="
-                    transition-transform
+                <span>{saving ? "UPDATING..." : "UPDATE PROFILE"}</span>
 
-                    group-hover:translate-x-1
-                  "
+                <ArrowRight
+                  size={15}
+                  className="transition-transform group-hover:translate-x-1"
                 />
               </button>
             </div>
           </form>
         </div>
-      </main>
+      </PageShell>
     );
   }
 
-  /* =========================================================
-     CHOOSE MEMBERSHIP
-  ========================================================= */
-
   return (
-    <main
-      className="
-        min-h-screen
+    <PageShell>
+      <div className="max-w-[1250px] mx-auto">
+        <div className="enter-reveal text-center max-w-3xl mx-auto">
+          <Eyebrow icon={<Sparkles size={13} />}>PROFILE UPDATED</Eyebrow>
 
-        bg-[#08080a]
-
-        text-white
-
-        pt-32
-        pb-24
-
-        px-4
-        sm:px-6
-        lg:px-10
-      "
-    >
-      <div
-        className="
-          max-w-[1400px]
-
-          mx-auto
-        "
-      >
-        <button
-          type="button"
-          onClick={() => setScreen("form")}
-          className="
-            text-[10px]
-
-            font-mono
-
-            text-gray-500
-
-            mb-10
-
-            hover:text-white
-
-            transition
-          "
-        >
-          ← EDIT DETAILS
-        </button>
-
-        <div className="enter-reveal">
-          <p
-            className="
-              text-purple-400
-
-              text-[10px]
-
-              font-mono
-
-              tracking-[0.2em]
-
-              mb-4
-            "
-          >
-            DIRECTORY MEMBERSHIP
-          </p>
-
-          <h1
-            className="
-              text-[clamp(3.5rem,7vw,7rem)]
-
-              font-black
-
-              uppercase
-
-              tracking-[-0.07em]
-
-              leading-[0.85]
-            "
-          >
-            CHOOSE YOUR
+          <h1 className="text-[clamp(3.2rem,7vw,6.5rem)] font-black uppercase tracking-[-0.065em] leading-[0.86]">
+            GET MORE
             <br />
             <span className="text-purple-500">VISIBILITY.</span>
           </h1>
 
-          <p
-            className="
-              mt-6
-
-              max-w-2xl
-
-              text-sm
-
-              text-gray-500
-
-              leading-relaxed
-            "
-          >
-            Start with a permanent free directory entry, upgrade to Pro for
-            city-wise search visibility and direct booking contact, or choose
-            Verified Spotlight for a standalone URL, Hall of Fame inclusion and
-            priority search ranking.
+          <p className="mt-6 text-sm text-gray-500 leading-relaxed">
+            Your existing Basic directory card has been updated. You can keep it
+            as Basic or upgrade for more visibility.
           </p>
         </div>
 
-        {/* =================================================
-            PLAN CARDS
-        ================================================= */}
+        {currentPlan === "verified" ? (
+          <div className="enter-reveal mt-12 max-w-2xl mx-auto border border-purple-400/30 bg-purple-500/[0.05] rounded-[28px] p-8 text-center">
+            <CheckCircle2 size={36} className="text-purple-400 mx-auto" />
 
-        <div
-          className="
-            grid
+            <h2 className="mt-5 text-3xl font-black uppercase">
+              ALREADY VERIFIED
+            </h2>
 
-            grid-cols-1
-            lg:grid-cols-3
+            <p className="mt-3 text-sm text-gray-500">
+              Your Verified Spotlight membership is already active.
+            </p>
+          </div>
+        ) : (
+          <div
+            className={`enter-reveal mt-12 grid grid-cols-1 ${
+              currentPlan === "pro" ? "max-w-2xl mx-auto" : "lg:grid-cols-2"
+            } gap-6`}
+          >
+            {PLANS.filter((plan) => {
+              if (currentPlan === "pro") {
+                return plan.id === "verified";
+              }
 
-            gap-5
+              return true;
+            }).map((plan) => (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                onClick={() => startPaidPlan(plan.id)}
+              />
+            ))}
+          </div>
+        )}
 
-            mt-12
-          "
-        >
-          {plans.map((plan) => (
-            <MembershipCard
-              key={plan.id}
-              plan={plan}
-              onClick={() => handlePlanSelect(plan.id)}
-            />
-          ))}
-        </div>
-
-        {/* PAYMENT INFO */}
-
-        <div
-          className="
-            mt-7
-
-            border
-            border-white/[0.06]
-
-            bg-white/[0.02]
-
-            p-5
-
-            flex
-
-            flex-col
-            md:flex-row
-
-            md:items-center
-
-            justify-between
-
-            gap-4
-          "
-        >
+        <div className="enter-reveal mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border border-white/10 bg-[#0d0d11] rounded-2xl p-5">
           <div>
-            <p
-              className="
-                text-[9px]
-
-                font-black
-
-                tracking-[0.14em]
-              "
-            >
-              FREE REALLY MEANS FREE.
+            <p className="text-[9px] font-black tracking-widest">
+              FINISHED UPDATING?
             </p>
 
-            <p
-              className="
-                mt-2
-
-                text-xs
-
-                text-gray-600
-              "
-            >
-              No payment is required for the permanent Lifetime Free listing.
+            <p className="mt-1 text-xs text-gray-600">
+              Go back to the directory to see your card.
             </p>
           </div>
 
-          <p
-            className="
-              text-[9px]
-
-              font-mono
-
-              text-purple-400
-
-              tracking-[0.12em]
-            "
+          <button
+            type="button"
+            onClick={() => navigate("/artists")}
+            className="text-[9px] font-black text-purple-400 hover:text-purple-300"
           >
-            PRO & VERIFIED ARE BILLED ANNUALLY
-          </p>
+            BACK TO ARTISTS →
+          </button>
         </div>
 
-        {error && (
-          <p
-            className="
-              mt-5
-
-              text-red-400
-            "
-          >
-            {error}
-          </p>
-        )}
+        <Message error={error} success={success} />
       </div>
+    </PageShell>
+  );
+}
+
+function PageShell({ children }) {
+  return (
+    <main className="min-h-screen bg-[#08080a] text-white pt-32 pb-24 px-4 sm:px-6 lg:px-10">
+      {children}
     </main>
   );
 }
 
-/* =========================================================
-   INPUT FIELD
-========================================================= */
-
-function InputField({ label, type = "text", ...props }) {
+function Eyebrow({ icon, children }) {
   return (
-    <div>
-      <p
-        className="
-          text-[9px]
+    <div className="inline-flex items-center gap-2 text-purple-400 text-[10px] font-mono tracking-[0.2em] mb-5">
+      {icon}
+      {children}
+    </div>
+  );
+}
 
-          font-mono
-
-          text-gray-500
-
-          mb-2
-        "
-      >
-        {label} *
-      </p>
+function InputField({ label, type = "text", required = true, ...props }) {
+  return (
+    <label className="block">
+      <span className="block text-[9px] font-mono text-gray-500 mb-2">
+        {label}
+        {required ? " *" : ""}
+      </span>
 
       <input
         {...props}
         type={type}
-        className="
-          w-full
-
-          bg-[#0d0d11]
-
-          border
-          border-white/10
-
-          focus:border-purple-500
-
-          px-5
-          py-4
-
-          outline-none
-
-          text-white
-
-          placeholder:text-gray-700
-
-          transition
-        "
+        required={required}
+        className="w-full bg-[#0d0d11] border border-white/10 focus:border-purple-500 rounded-xl px-5 py-4 outline-none text-white placeholder:text-gray-700 transition"
       />
+    </label>
+  );
+}
+
+function Message({ error, success }) {
+  if (!error && !success) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`mt-5 rounded-xl border px-5 py-4 text-sm ${
+        error
+          ? "border-red-500/30 bg-red-500/[0.05] text-red-400"
+          : "border-emerald-500/30 bg-emerald-500/[0.05] text-emerald-400"
+      }`}
+    >
+      {error || success}
     </div>
   );
 }
 
-/* =========================================================
-   MEMBERSHIP CARD
-========================================================= */
-
-function MembershipCard({ plan, onClick }) {
+function PlanCard({ plan, onClick }) {
   const isVerified = plan.id === "verified";
-
-  const isPro = plan.id === "pro";
-
-  const isFree = plan.id === "free";
 
   return (
     <article
-      className={`
-        relative
-
-        p-7
-
-        min-h-[610px]
-
-        flex
-        flex-col
-
-        overflow-hidden
-
-        transition-all
-
-        duration-500
-
-        hover:-translate-y-2
-
-        ${
-          isVerified
-            ? `
-              border-2
-
-              border-purple-400
-
-              bg-gradient-to-br
-
-              from-purple-500/[0.10]
-
-              via-[#100b17]
-
-              to-[#0d0d11]
-
-              shadow-[0_0_50px_rgba(168,85,247,0.12)]
-            `
-            : isPro
-              ? `
-                border-2
-
-                border-slate-300
-
-                bg-gradient-to-br
-
-                from-white/[0.05]
-
-                to-[#0d0d11]
-              `
-              : `
-                border
-
-                border-white/10
-
-                bg-[#0d0d11]
-              `
-        }
-      `}
+      className={`relative flex flex-col min-h-[560px] rounded-[28px] p-7 sm:p-9 border-2 transition-transform hover:-translate-y-1 ${
+        isVerified
+          ? "border-purple-400 bg-purple-500/[0.05] shadow-[0_0_50px_rgba(168,85,247,0.10)]"
+          : "border-slate-300 bg-white/[0.025]"
+      }`}
     >
-      {/* POPULAR BADGE */}
-
-      {isPro && (
-        <div
-          className="
-            absolute
-
-            top-5
-            right-5
-
-            bg-white
-
-            text-black
-
-            px-3
-            py-1.5
-
-            text-[7px]
-
-            font-black
-
-            tracking-[0.12em]
-          "
-        >
-          POPULAR
-        </div>
-      )}
-
       {isVerified && (
-        <div
-          className="
-            absolute
-
-            top-5
-            right-5
-
-            bg-purple-600
-
-            text-white
-
-            px-3
-            py-1.5
-
-            text-[7px]
-
-            font-black
-
-            tracking-[0.12em]
-          "
-        >
-          HIGHEST VISIBILITY
+        <div className="absolute top-5 right-5 bg-purple-600 px-3 py-1.5 text-[7px] font-black tracking-widest">
+          HALL OF FAME
         </div>
       )}
 
-      <p
-        className={`
-          text-[9px]
-
-          font-mono
-
-          tracking-[0.12em]
-
-          ${
-            isVerified
-              ? "text-purple-400"
-              : isPro
-                ? "text-slate-300"
-                : "text-gray-600"
-          }
-        `}
-      >
-        DIRECTORY MEMBERSHIP
+      <p className="text-[9px] font-mono tracking-[0.14em] text-gray-500">
+        DIRECTORY UPGRADE
       </p>
 
       <h2
-        className="
-          text-4xl
-          xl:text-5xl
-
-          font-black
-
-          uppercase
-
-          tracking-[-0.04em]
-
-          leading-[0.95]
-
-          mt-5
-        "
+        className={`mt-5 text-4xl sm:text-5xl font-black uppercase leading-[0.9] ${
+          isVerified ? "text-purple-400" : "text-white"
+        }`}
       >
         {plan.name}
       </h2>
 
-      <div
-        className="
-          flex
+      <div className="mt-6 flex items-end gap-3">
+        <p className="text-4xl sm:text-5xl font-black">{plan.price}</p>
 
-          items-end
-
-          gap-3
-
-          mt-6
-        "
-      >
-        <p
-          className={`
-            text-4xl
-            xl:text-5xl
-
-            font-black
-
-            ${isVerified ? "text-purple-400" : "text-white"}
-          `}
-        >
-          {plan.price}
-        </p>
-
-        <p
-          className="
-            text-[8px]
-
-            font-mono
-
-            text-gray-600
-
-            pb-1
-          "
-        >
+        <span className="pb-1 text-[8px] font-mono text-gray-600">
           {plan.billing}
-        </p>
+        </span>
       </div>
 
-      <p
-        className="
-          text-gray-500
-
-          text-sm
-
-          leading-relaxed
-
-          mt-5
-
-          pb-6
-
-          border-b
-          border-white/10
-        "
-      >
+      <p className="mt-5 pb-6 border-b border-white/10 text-sm text-gray-500 leading-relaxed">
         {plan.description}
       </p>
 
-      {/* BENEFITS */}
-
-      <div
-        className="
-          space-y-3
-
-          mt-6
-
-          flex-1
-        "
-      >
+      <div className="mt-6 space-y-3 flex-1">
         {plan.benefits.map((benefit) => (
-          <div
-            key={benefit}
-            className="
-                flex
-
-                gap-3
-
-                items-start
-
-                text-sm
-
-                text-gray-300
-              "
-          >
+          <div key={benefit} className="flex items-start gap-3 text-sm">
             <span
-              className={`
-                  w-5
-                  h-5
-
-                  rounded-full
-
-                  shrink-0
-
-                  flex
-
-                  items-center
-                  justify-center
-
-                  text-[9px]
-
-                  ${
-                    isVerified
-                      ? `
-                        bg-purple-500/10
-
-                        text-purple-400
-                      `
-                      : isPro
-                        ? `
-                          bg-white/10
-
-                          text-slate-200
-                        `
-                        : `
-                          bg-purple-500/10
-
-                          text-purple-400
-                        `
-                  }
-                `}
+              className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[9px] ${
+                isVerified
+                  ? "bg-purple-500/10 text-purple-400"
+                  : "bg-white/10 text-slate-200"
+              }`}
             >
               ✓
             </span>
 
-            <span>{benefit}</span>
+            <span className="text-gray-300">{benefit}</span>
           </div>
         ))}
       </div>
 
-      {/* BUTTON */}
-
       <button
         type="button"
         onClick={onClick}
-        className={`
-          group
-
-          w-full
-
-          mt-8
-
-          p-4
-
-          flex
-
-          items-center
-
-          justify-between
-
-          font-black
-
-          text-[10px]
-
-          tracking-widest
-
-          transition-all
-
-          ${
-            isVerified
-              ? `
-                bg-purple-600
-
-                hover:bg-purple-500
-
-                text-white
-              `
-              : isPro
-                ? `
-                  bg-white
-
-                  hover:bg-slate-200
-
-                  text-black
-                `
-                : `
-                  border
-
-                  border-white/10
-
-                  bg-white/[0.04]
-
-                  hover:bg-purple-600
-
-                  hover:border-purple-600
-
-                  text-white
-                `
-          }
-        `}
+        className={`group mt-8 w-full rounded-xl p-4 flex items-center justify-between text-[10px] font-black tracking-widest transition ${
+          isVerified
+            ? "bg-purple-600 hover:bg-purple-500 text-white"
+            : "bg-white hover:bg-slate-200 text-black"
+        }`}
       >
-        <span>
-          {isFree
-            ? "CLAIM FREE LISTING"
-            : isPro
-              ? "GET PRO LISTING"
-              : "GET VERIFIED"}
-        </span>
+        <span>{isVerified ? "GET VERIFIED" : "GET PRO LISTING"}</span>
 
         <ArrowRight
           size={15}
-          className="
-            transition-transform
-
-            group-hover:translate-x-1
-          "
-        />
-      </button>
-
-      {!isFree && (
-        <p
-          className="
-            text-center
-
-            text-[7px]
-
-            text-gray-700
-
-            font-mono
-
-            tracking-[0.1em]
-
-            mt-3
-          "
-        >
-          CONTINUES TO SECURE PAYMENT
-        </p>
-      )}
-    </article>
-  );
-}
-
-/* =========================================================
-   PROFILE INFO
-========================================================= */
-
-function ProfileInfo({ label, value }) {
-  return (
-    <div>
-      <p
-        className="
-          text-[8px]
-
-          font-mono
-
-          text-gray-600
-
-          mb-1
-        "
-      >
-        {label}
-      </p>
-
-      <p
-        className="
-          text-sm
-
-          text-gray-300
-
-          break-words
-        "
-      >
-        {value || "-"}
-      </p>
-    </div>
-  );
-}
-
-/* =========================================================
-   UPGRADE CARD
-========================================================= */
-
-function UpgradeCard({
-  name,
-  price,
-  billing,
-  description,
-  type,
-  benefits,
-  onClick,
-}) {
-  const isVerified = type === "verified";
-
-  return (
-    <article
-      className={`
-        p-7
-
-        border-2
-
-        rounded-[24px]
-
-        ${
-          isVerified
-            ? `
-              border-purple-400
-
-              bg-purple-500/[0.05]
-
-              shadow-[0_0_40px_rgba(168,85,247,0.08)]
-            `
-            : `
-              border-slate-300
-
-              bg-white/[0.025]
-            `
-        }
-      `}
-    >
-      <p
-        className="
-          text-[9px]
-
-          font-mono
-
-          text-gray-600
-        "
-      >
-        UPGRADE TO
-      </p>
-
-      <h3
-        className={`
-          text-3xl
-          sm:text-4xl
-
-          font-black
-
-          uppercase
-
-          mt-3
-
-          ${isVerified ? "text-purple-400" : "text-slate-100"}
-        `}
-      >
-        {name}
-      </h3>
-
-      <div
-        className="
-          flex
-
-          items-end
-
-          gap-3
-
-          mt-3
-        "
-      >
-        <p
-          className="
-            text-3xl
-
-            font-black
-          "
-        >
-          {price}
-        </p>
-
-        <span
-          className="
-            text-[8px]
-
-            text-gray-600
-
-            font-mono
-
-            pb-1
-          "
-        >
-          {billing}
-        </span>
-      </div>
-
-      <p
-        className="
-          text-sm
-
-          text-gray-500
-
-          leading-relaxed
-
-          mt-5
-
-          pb-5
-
-          border-b
-          border-white/10
-        "
-      >
-        {description}
-      </p>
-
-      <div
-        className="
-          mt-5
-
-          space-y-2
-        "
-      >
-        {benefits.map((benefit) => (
-          <p
-            key={benefit}
-            className="
-                text-sm
-
-                text-gray-300
-              "
-          >
-            ✓ {benefit}
-          </p>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={onClick}
-        className={`
-          group
-
-          w-full
-
-          mt-7
-
-          py-4
-          px-5
-
-          flex
-
-          items-center
-
-          justify-between
-
-          text-[10px]
-
-          font-black
-
-          tracking-widest
-
-          transition
-
-          ${
-            isVerified
-              ? `
-                bg-purple-600
-
-                hover:bg-purple-500
-
-                text-white
-              `
-              : `
-                bg-slate-100
-
-                hover:bg-white
-
-                text-black
-              `
-          }
-        `}
-      >
-        CONTINUE TO PAYMENT
-        <ArrowRight
-          size={14}
-          className="
-            transition-transform
-
-            group-hover:translate-x-1
-          "
+          className="transition-transform group-hover:translate-x-1"
         />
       </button>
     </article>

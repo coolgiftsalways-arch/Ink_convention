@@ -287,13 +287,16 @@ function geometryToPath(geometry) {
    DIRECTORY PLAN HELPERS
 
    NEW MODEL:
-   1. VERIFIED SPOTLIGHT
-   2. PRO LISTING
-   3. FREE LISTING
+   1. VERIFIED SPOTLIGHT — ₹2,999 / YEAR
+   2. PRO LISTING        — ₹1,499 / YEAR
+   3. BASIC LISTING      — EXISTING DIRECTORY DATA
+
+   THERE IS NO SEPARATE "FREE PLAN" CARD ANYMORE.
 
    LEGACY SUPPORT:
    gold   -> verified
    silver -> pro
+   free   -> basic
 ========================================================= */
 
 const safeText = (value) => String(value || "").toLowerCase();
@@ -309,14 +312,22 @@ function normalizePlan(plan) {
     return "pro";
   }
 
-  return "free";
+  return "basic";
 }
 
-const planPriority = {
-  verified: 1,
-  pro: 2,
-  free: 3,
-};
+function getArtistPriority(artist) {
+  const plan = normalizePlan(artist?.plan);
+
+  if (plan === "verified") return 1;
+  if (plan === "pro") return 2;
+
+  /* Claimed / updated basic listings appear before untouched data. */
+  if (artist?.claimed || artist?.phoneVerified || artist?.updatedByOwner) {
+    return 3;
+  }
+
+  return 4;
+}
 
 function normalizeArtist(artist) {
   const plan = normalizePlan(artist?.plan);
@@ -324,18 +335,43 @@ function normalizeArtist(artist) {
   return {
     ...artist,
     plan,
+    claimed: Boolean(
+      artist?.claimed || artist?.phoneVerified || artist?.updatedByOwner,
+    ),
     verified: plan === "verified" || Boolean(artist?.verified),
     spotlight: plan === "verified" || Boolean(artist?.spotlight),
-    contactMasked: plan === "free" ? true : Boolean(artist?.contactMasked),
+    hallOfFameEligible:
+      plan === "verified" || Boolean(artist?.hallOfFameEligible),
   };
 }
 
-function getPlanLabel(plan) {
-  const normalized = normalizePlan(plan);
+function getPlanLabel(artist) {
+  const normalizedArtist = normalizeArtist(artist);
 
-  if (normalized === "verified") return "VERIFIED SPOTLIGHT";
-  if (normalized === "pro") return "PRO LISTING";
-  return "FREE LISTING";
+  if (normalizedArtist.plan === "verified") {
+    return "VERIFIED SPOTLIGHT · ₹2,999/YEAR";
+  }
+
+  if (normalizedArtist.plan === "pro") {
+    return "PRO LISTING · ₹1,499/YEAR";
+  }
+
+  if (normalizedArtist.claimed) {
+    return "UPDATED BASIC LISTING";
+  }
+
+  return "EXISTING DIRECTORY LISTING";
+}
+
+function maskPhone(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+
+  if (digits.length < 4) return "NUMBER ON FILE";
+
+  const first = digits.slice(0, 2);
+  const last = digits.slice(-2);
+
+  return `${first}${"X".repeat(Math.max(digits.length - 4, 4))}${last}`;
 }
 
 /* =========================================================
@@ -432,8 +468,10 @@ export default function Artists() {
   const location = useLocation();
 
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedCity, setSelectedCity] = React.useState("ALL");
   const [localArtists, setLocalArtists] = React.useState([]);
   const [backendArtists, setBackendArtists] = React.useState([]);
+  const [backendTotal, setBackendTotal] = React.useState(0);
   const [counterIndex, setCounterIndex] = React.useState(0);
   const [selectedArtist, setSelectedArtist] = React.useState(null);
   const [artistPage, setArtistPage] = React.useState(0);
@@ -448,7 +486,7 @@ export default function Artists() {
   const entryButtonRef = React.useRef(null);
 
   /* =========================================================
-     FREE LISTING BUTTON ANIMATION
+     UPDATE CARD BUTTON ANIMATION
   ========================================================= */
 
   React.useEffect(() => {
@@ -562,54 +600,114 @@ export default function Artists() {
 
   /* =========================================================
      LOAD BACKEND ARTISTS
+
+     New public endpoint expected:
+     GET /api/artists
+
+     It also keeps temporary compatibility with the old
+     /api/admin/users response while your backend is being migrated.
   ========================================================= */
 
   React.useEffect(() => {
-    fetch("https://api.inkconvention.com/api/admin/users")
-      .then((response) => {
+    let cancelled = false;
+
+    const mapBackendUser = (user, index) => {
+      const plan = normalizePlan(
+        user.plan || user.membershipPlan || user.directoryPlan || "basic",
+      );
+
+      return normalizeArtist({
+        id: user._id || user.id || `backend-${index}`,
+        plan,
+        name:
+          user.professionalName ||
+          user.artistName ||
+          user.name ||
+          `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+          "Tattoo Artist",
+        profileImage: user.profileImage || "",
+        phone: user.phone || user.phoneNumber || "",
+        email: user.email || "",
+        city: user.city || "",
+        state: user.state || "",
+        studio: user.studio || user.studioName || user.brandName || "",
+        experience: user.experience || "",
+        instagram: user.instagram || "",
+        claimed: Boolean(
+          user.claimed || user.phoneVerified || user.updatedByOwner,
+        ),
+        phoneVerified: Boolean(user.phoneVerified),
+        verified: user.verified || plan === "verified",
+        spotlight: user.spotlight || plan === "verified",
+        hallOfFameEligible: user.hallOfFameEligible || plan === "verified",
+        updatedAt: user.updatedAt || "",
+        createdAt: user.createdAt || "",
+        year: "2026",
+      });
+    };
+
+    const loadArtists = async () => {
+      const apiBase =
+        import.meta.env.VITE_API_URL || "https://api.inkconvention.com";
+
+      try {
+        /* New public directory API. */
+        const response = await fetch(`${apiBase}/api/artists?page=1&limit=200`);
+
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          throw new Error(`Public artists HTTP ${response.status}`);
         }
 
-        return response.json();
-      })
-      .then((data) => {
-        if (!data.success || !Array.isArray(data.users)) return;
+        const data = await response.json();
+        const list = Array.isArray(data?.artists) ? data.artists : [];
 
-        const artists = data.users.map((user, index) => {
-          const plan = normalizePlan(
-            user.plan || user.membershipPlan || user.directoryPlan || "free",
+        if (!cancelled) {
+          setBackendArtists(list.map(mapBackendUser));
+          setBackendTotal(
+            Number(
+              data?.total || data?.count || data?.totalArtists || list.length,
+            ),
           );
+        }
 
-          return normalizeArtist({
-            id: user._id || user.id || `backend-${index}`,
-            plan,
-            name:
-              user.professionalName ||
-              user.artistName ||
-              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-              "Participant Artist",
-            profileImage: user.profileImage || "",
-            phone: user.phone || user.phoneNumber || "",
-            email: user.email || "",
-            city: user.city || "",
-            state: user.state || "",
-            studio: user.studio || user.studioName || "",
-            experience: user.experience || "",
-            instagram: user.instagram || "",
-            verified: user.verified || plan === "verified",
-            spotlight: user.spotlight || plan === "verified",
-            contactMasked: plan === "free",
-            createdAt: user.createdAt || "",
-            year: "2026",
-          });
-        });
+        return;
+      } catch (publicError) {
+        console.warn(
+          "Public artist API unavailable, trying legacy API:",
+          publicError,
+        );
+      }
 
-        setBackendArtists(artists);
-      })
-      .catch((error) => {
-        console.error("Backend artist error:", error);
-      });
+      try {
+        /* Temporary fallback while your old backend is still active. */
+        const response = await fetch(`${apiBase}/api/admin/users`);
+
+        if (!response.ok) {
+          throw new Error(`Legacy artists HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const list = Array.isArray(data?.users) ? data.users : [];
+
+        if (!cancelled) {
+          setBackendArtists(list.map(mapBackendUser));
+          setBackendTotal(list.length);
+        }
+      } catch (legacyError) {
+        console.error("Backend artist error:", legacyError);
+
+        if (!cancelled) {
+          setBackendArtists([]);
+          setBackendTotal(0);
+        }
+      }
+    };
+
+    loadArtists();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /* =========================================================
@@ -674,11 +772,34 @@ export default function Artists() {
   }, [localArtists, backendArtists]);
 
   /* =========================================================
-     SEARCH + SORT
+     CITY FILTER OPTIONS
+  ========================================================= */
 
-     VERIFIED SPOTLIGHT
-     PRO LISTING
-     FREE LISTING
+  const cityOptions = React.useMemo(() => {
+    const cities = new Set();
+
+    allArtists.forEach((artist) => {
+      const city = String(artist.city || "").trim();
+      if (city) cities.add(city.toUpperCase());
+    });
+
+    communityCounters.forEach((item) => {
+      if (item.city) cities.add(String(item.city).toUpperCase());
+    });
+
+    return ["ALL", ...Array.from(cities).sort((a, b) => a.localeCompare(b))];
+  }, [allArtists]);
+
+  const directoryTotal = Math.max(backendTotal, allArtists.length);
+
+  /* =========================================================
+     SEARCH + CITY FILTER + DIRECTORY SORT
+
+     ORDER:
+     1. VERIFIED SPOTLIGHT ₹2,999
+     2. PRO ₹1,499
+     3. BASIC / OWNER UPDATED
+     4. EXISTING / NOT UPDATED
   ========================================================= */
 
   const filteredArtists = React.useMemo(() => {
@@ -686,19 +807,31 @@ export default function Artists() {
 
     let results = allArtists;
 
+    if (selectedCity !== "ALL") {
+      results = results.filter(
+        (artist) => safeText(artist.city).toUpperCase() === selectedCity,
+      );
+    }
+
     if (query) {
-      results = allArtists.filter((artist) => {
+      results = results.filter((artist) => {
         const plan = normalizePlan(artist.plan);
 
+        /* Basic public search can match the directory identity fields. */
         const publicSearchText = [
           artist.name,
+          artist.studio,
           artist.city,
           artist.state,
-          artist.studio,
         ];
 
-        /* Do not make hidden Free contact data searchable */
-        if (plan !== "free") {
+        /* Pro adds email to public/searchable information. */
+        if (plan === "pro") {
+          publicSearchText.push(artist.email);
+        }
+
+        /* Verified can expose the complete profile. */
+        if (plan === "verified") {
           publicSearchText.push(
             artist.phone,
             artist.email,
@@ -714,20 +847,19 @@ export default function Artists() {
     }
 
     return [...results].sort((a, b) => {
-      const planA = normalizePlan(a.plan);
-      const planB = normalizePlan(b.plan);
+      const priorityA = getArtistPriority(a);
+      const priorityB = getArtistPriority(b);
 
-      const priorityA = planPriority[planA] || 3;
-      const priorityB = planPriority[planB] || 3;
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
 
-      if (priorityA !== priorityB) return priorityA - priorityB;
-
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
+      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime() || 0;
 
       return dateB - dateA;
     });
-  }, [allArtists, searchQuery]);
+  }, [allArtists, searchQuery, selectedCity]);
 
   /* =========================================================
      20-CARD AUTO ROTATION
@@ -760,7 +892,7 @@ export default function Artists() {
 
   React.useEffect(() => {
     setArtistPage(0);
-  }, [searchQuery]);
+  }, [searchQuery, selectedCity]);
 
   React.useEffect(() => {
     if (totalArtistPages <= 1) return undefined;
@@ -809,6 +941,49 @@ export default function Artists() {
 
   return (
     <>
+      <style>{`
+        @keyframes inkSilverSweep {
+          0% { transform: translateX(-180%) skewX(-18deg); opacity: 0; }
+          12% { opacity: 0.85; }
+          42% { opacity: 0.35; }
+          58%, 100% { transform: translateX(420%) skewX(-18deg); opacity: 0; }
+        }
+
+        @keyframes inkGoldSweep {
+          0% { transform: translateX(-190%) skewX(-18deg); opacity: 0; }
+          10% { opacity: 1; }
+          46% { opacity: 0.5; }
+          60%, 100% { transform: translateX(430%) skewX(-18deg); opacity: 0; }
+        }
+
+        @keyframes inkPremiumFloat {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .35; }
+          50% { transform: translate3d(12px, -14px, 0) scale(1.14); opacity: .8; }
+        }
+
+        @keyframes inkGoldPulse {
+          0%, 100% { box-shadow: 0 0 10px rgba(245,196,81,.22), inset 0 0 0 rgba(245,196,81,0); }
+          50% { box-shadow: 0 0 34px rgba(245,196,81,.50), inset 0 0 22px rgba(245,196,81,.06); }
+        }
+
+        @keyframes inkSilverPulse {
+          0%, 100% { box-shadow: 0 0 8px rgba(226,232,240,.12); }
+          50% { box-shadow: 0 0 28px rgba(226,232,240,.32); }
+        }
+
+        @keyframes inkDotBlink {
+          0%, 100% { opacity: .22; transform: scale(.78); }
+          50% { opacity: 1; transform: scale(1.25); }
+        }
+
+        .ink-silver-shine { animation: inkSilverSweep 3.4s ease-in-out infinite; }
+        .ink-gold-shine { animation: inkGoldSweep 2.9s ease-in-out infinite; }
+        .ink-premium-float { animation: inkPremiumFloat 4.6s ease-in-out infinite; }
+        .ink-gold-card-pulse { animation: inkGoldPulse 2.8s ease-in-out infinite; }
+        .ink-silver-card-pulse { animation: inkSilverPulse 3.4s ease-in-out infinite; }
+        .ink-premium-dot { animation: inkDotBlink 1.8s ease-in-out infinite; }
+      `}</style>
+
       <main className="min-h-screen bg-[#08080a] text-white pt-32 pb-24 px-4 sm:px-6 lg:px-10">
         <div className="max-w-[1700px] mx-auto space-y-12">
           {/* =================================================
@@ -830,8 +1005,8 @@ export default function Artists() {
 
               <p className="max-w-xl mt-6 text-gray-500 text-sm leading-relaxed">
                 Discover tattoo artists and studios across India. Verified
-                Spotlight members appear first, followed by Pro and Lifetime
-                Free listings.
+                Spotlight members appear first, followed by Pro listings,
+                owner-updated basic profiles and untouched directory records.
               </p>
 
               <div className="mt-7 flex flex-wrap gap-3">
@@ -843,6 +1018,9 @@ export default function Artists() {
                 </span>
                 <span className="border border-white/10 bg-white/[0.02] rounded-full px-4 py-2 text-[8px] font-mono tracking-[0.12em] text-gray-500">
                   INDIA-WIDE NETWORK
+                </span>
+                <span className="border border-white/10 bg-white/[0.02] rounded-full px-4 py-2 text-[8px] font-mono tracking-[0.12em] text-gray-500">
+                  {directoryTotal.toLocaleString("en-IN")} DIRECTORY RECORDS
                 </span>
               </div>
             </div>
@@ -856,35 +1034,82 @@ export default function Artists() {
           </section>
 
           {/* =================================================
-              SEARCH + JOIN FREE
+              SEARCH + CITY FILTER + UPDATE CARD
           ================================================= */}
 
-          <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0d0d11] border border-white/10 rounded-2xl p-4">
-            <div className="relative w-full sm:max-w-[620px]">
-              <Search
-                size={16}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
-              />
+          <section className="bg-[#0d0d11] border border-white/10 rounded-2xl p-4 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+              <div className="relative flex-1 min-w-0">
+                <Search
+                  size={16}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
+                />
 
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="SEARCH ARTIST, STUDIO, CITY OR STATE..."
-                className="w-full bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl pl-11 pr-4 py-4 text-xs text-white outline-none placeholder:text-gray-700 transition"
-              />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="SEARCH ARTIST OR STUDIO NAME..."
+                  className="w-full bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl pl-11 pr-4 py-4 text-xs text-white outline-none placeholder:text-gray-700 transition"
+                />
+              </div>
+
+              <div className="relative min-w-[220px]">
+                <MapPin
+                  size={14}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400 pointer-events-none"
+                />
+
+                <select
+                  value={selectedCity}
+                  onChange={(event) => setSelectedCity(event.target.value)}
+                  className="w-full appearance-none bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl pl-10 pr-10 py-4 text-[10px] font-black tracking-widest text-white outline-none cursor-pointer"
+                >
+                  {cityOptions.map((city) => (
+                    <option key={city} value={city}>
+                      {city === "ALL" ? "ALL CITIES" : city}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Link
+                ref={entryButtonRef}
+                to="/Enter"
+                className="group relative overflow-hidden bg-purple-600 hover:bg-purple-500 border border-purple-400/40 rounded-xl px-7 py-4 flex items-center justify-center gap-3 text-[10px] font-black tracking-[0.14em] whitespace-nowrap shadow-[0_0_20px_rgba(168,85,247,0.20)] transition-all duration-300 hover:-translate-y-1"
+              >
+                <span className="entry-shine absolute top-0 bottom-0 left-[-40%] w-[30%] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] pointer-events-none" />
+                <span className="relative z-10 w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_12px_rgba(255,255,255,0.95)]" />
+                <span className="relative z-10">FIND / UPDATE YOUR CARD</span>
+                <ArrowRight size={14} className="entry-arrow relative z-10" />
+              </Link>
             </div>
 
-            <Link
-              ref={entryButtonRef}
-              to="/Enter"
-              className="group relative overflow-hidden bg-purple-600 hover:bg-purple-500 border border-purple-400/40 rounded-xl px-7 py-4 flex items-center justify-center gap-3 text-[10px] font-black tracking-[0.14em] whitespace-nowrap shadow-[0_0_20px_rgba(168,85,247,0.20)] transition-all duration-300 hover:-translate-y-1"
-            >
-              <span className="entry-shine absolute top-0 bottom-0 left-[-40%] w-[30%] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] pointer-events-none" />
-              <span className="relative z-10 w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_12px_rgba(255,255,255,0.95)]" />
-              <span className="relative z-10">CLAIM FREE LISTING</span>
-              <ArrowRight size={14} className="entry-arrow relative z-10" />
-            </Link>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {["ALL", "MUMBAI", "PUNE", "DELHI", "BENGALURU", "HYDERABAD"].map(
+                (city) => (
+                  <button
+                    key={city}
+                    type="button"
+                    onClick={() => setSelectedCity(city)}
+                    className={`shrink-0 rounded-full border px-4 py-2 text-[8px] font-black tracking-widest transition ${
+                      selectedCity === city
+                        ? "border-purple-400 bg-purple-500/15 text-purple-300"
+                        : "border-white/10 bg-white/[0.02] text-gray-600 hover:text-white"
+                    }`}
+                  >
+                    {city}
+                  </button>
+                ),
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[8px] font-mono tracking-wider text-gray-600">
+              <span>01 · VERIFIED ₹2,999 FIRST</span>
+              <span>02 · PRO ₹1,499 NEXT</span>
+              <span>03 · UPDATED BASIC</span>
+              <span>04 · NOT UPDATED LAST</span>
+            </div>
           </section>
 
           {/* =================================================
@@ -899,7 +1124,11 @@ export default function Artists() {
                 </p>
 
                 <h2 className="text-3xl sm:text-5xl font-black uppercase">
-                  {searchQuery ? "SEARCH RESULTS" : "DISCOVER ARTISTS"}
+                  {searchQuery
+                    ? "SEARCH RESULTS"
+                    : selectedCity !== "ALL"
+                      ? `${selectedCity} ARTISTS`
+                      : "DISCOVER ARTISTS"}
                 </h2>
               </div>
 
@@ -2091,31 +2320,46 @@ function ArtistCard({ artist, index, isNew, onClick }) {
 
   const isVerified = plan === "verified";
   const isPro = plan === "pro";
-  const isFree = plan === "free";
+  const isBasic = plan === "basic";
 
   const locationText = [normalizedArtist.city, normalizedArtist.state]
     .filter(Boolean)
     .join(", ");
 
+  const updateState = {
+    claimArtistId: normalizedArtist.id,
+    artist: {
+      id: normalizedArtist.id,
+      name: normalizedArtist.name || "",
+      studio: normalizedArtist.studio || "",
+      city: normalizedArtist.city || "",
+      state: normalizedArtist.state || "",
+      maskedPhone: maskPhone(normalizedArtist.phone),
+    },
+  };
+
   return (
     <article
       onClick={onClick}
       className={`
-        group relative w-full h-[520px] rounded-[24px] overflow-hidden flex flex-col
+        group relative w-full min-h-[520px] rounded-[24px] overflow-hidden flex flex-col
         cursor-pointer transition-all duration-500 hover:-translate-y-2
         ${
           isVerified
             ? `
-              border-2 border-purple-400
-              bg-gradient-to-br from-purple-500/[0.12] via-[#100b17] to-[#0d0d11]
-              shadow-[0_0_35px_rgba(168,85,247,0.12)]
-              hover:shadow-[0_0_55px_rgba(168,85,247,0.20)]
+              border-2 border-[#f5c451]
+              bg-gradient-to-br from-[#f5c451]/[0.13] via-[#171105] to-[#0d0d11]
+              shadow-[0_0_34px_rgba(245,196,81,0.15)]
+              hover:shadow-[0_0_64px_rgba(245,196,81,0.30)]
+              ink-gold-card-pulse
             `
             : isPro
               ? `
-                border-2 border-slate-300
-                bg-gradient-to-br from-white/[0.05] via-[#101116] to-[#0d0d11]
-                hover:border-white
+                border-2 border-[#d8dee8]
+                bg-gradient-to-br from-white/[0.075] via-[#111319] to-[#0d0d11]
+                shadow-[0_0_24px_rgba(226,232,240,0.10)]
+                hover:shadow-[0_0_48px_rgba(226,232,240,0.22)]
+                ink-silver-card-pulse
               `
               : `
                 border border-white/10 bg-[#0d0d11]
@@ -2129,121 +2373,232 @@ function ArtistCard({ artist, index, isNew, onClick }) {
         }
       `}
     >
+      {/* PREMIUM ALIVE EFFECTS */}
+      {isPro && (
+        <>
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div className="ink-silver-shine absolute -left-1/2 top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="ink-premium-float absolute -right-12 -top-12 h-40 w-40 rounded-full bg-slate-200/[0.08] blur-3xl" />
+            <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-70" />
+          </div>
+        </>
+      )}
+
+      {isVerified && (
+        <>
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div className="ink-gold-shine absolute -left-1/2 top-0 h-full w-[26%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
+            <div className="ink-premium-float absolute -right-12 -top-10 h-44 w-44 rounded-full bg-[#f5c451]/[0.14] blur-3xl" />
+            <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ffe69a] to-transparent opacity-90" />
+
+            <span className="ink-premium-dot absolute right-8 top-24 h-1.5 w-1.5 rounded-full bg-[#ffd86b] shadow-[0_0_12px_rgba(255,216,107,0.95)]" />
+            <span className="ink-premium-dot absolute right-16 top-40 h-1 w-1 rounded-full bg-[#fff0b2] shadow-[0_0_10px_rgba(255,240,178,0.9)] [animation-delay:0.55s]" />
+            <span className="ink-premium-dot absolute left-8 top-36 h-1 w-1 rounded-full bg-[#f5c451] shadow-[0_0_10px_rgba(245,196,81,0.9)] [animation-delay:1.05s]" />
+          </div>
+        </>
+      )}
+
       {/* PLAN STRIP */}
       <div
         className={`
-          flex items-center justify-between gap-3 px-5 py-3 border-b
+          relative z-10 flex items-center justify-between gap-3 px-5 py-3 border-b
           ${
             isVerified
-              ? "border-purple-400/20 bg-purple-500/[0.07]"
-              : "border-white/10"
+              ? "border-[#f5c451]/25 bg-[#f5c451]/[0.08]"
+              : isPro
+                ? "border-white/15 bg-white/[0.035]"
+                : "border-white/10"
           }
         `}
       >
         <div className="flex items-center gap-2 min-w-0">
-          {isVerified ? (
-            <Sparkles size={13} className="text-purple-400 shrink-0" />
-          ) : (
-            <Sparkles
-              size={12}
-              className={
-                isPro ? "text-slate-300 shrink-0" : "text-purple-500 shrink-0"
-              }
-            />
-          )}
+          <Sparkles
+            size={12}
+            className={
+              isVerified
+                ? "text-[#f5c451] shrink-0"
+                : isPro
+                  ? "text-slate-200 shrink-0"
+                  : "text-gray-600 shrink-0"
+            }
+          />
 
           <span
             className={`
-              text-[8px] font-black tracking-[0.13em] uppercase truncate
+              text-[7px] font-black tracking-[0.12em] uppercase truncate
               ${
                 isVerified
-                  ? "text-purple-300"
+                  ? "text-[#ffe39a]"
                   : isPro
-                    ? "text-slate-200"
+                    ? "text-slate-100"
                     : "text-gray-500"
               }
             `}
           >
-            {getPlanLabel(plan)}
+            {getPlanLabel(normalizedArtist)}
           </span>
         </div>
 
-        {isVerified && (
-          <span className="text-[7px] font-black tracking-[0.12em] text-purple-300 border border-purple-400/30 rounded-full px-2.5 py-1 whitespace-nowrap">
-            ✓ VERIFIED
+        {isPro && (
+          <span className="relative overflow-hidden text-[7px] font-black tracking-[0.12em] text-slate-100 border border-slate-200/35 bg-white/[0.05] rounded-full px-2.5 py-1 whitespace-nowrap shadow-[0_0_14px_rgba(226,232,240,0.12)]">
+            <span className="relative z-10">SILVER PRO</span>
           </span>
+        )}
+
+        {isVerified && (
+          <div className="flex items-center gap-2">
+            <span className="text-[7px] font-black tracking-[0.12em] text-[#221500] bg-gradient-to-r from-[#dcae37] via-[#ffe58d] to-[#c8911f] rounded-full px-2.5 py-1 whitespace-nowrap shadow-[0_0_18px_rgba(245,196,81,0.35)]">
+              ★ GOLD VERIFIED
+            </span>
+            <span className="hidden 2xl:inline text-[7px] font-black tracking-[0.12em] text-[#ffe39a] border border-[#f5c451]/30 rounded-full px-2.5 py-1 whitespace-nowrap">
+              HALL OF FAME
+            </span>
+          </div>
         )}
       </div>
 
       {/* PROFILE HEADER */}
-      <div className="flex items-center gap-4 p-5 border-b border-white/10">
+      <div className="relative z-10 flex items-center gap-4 p-5 border-b border-white/10">
         <div
           className={`
-            w-16 h-16 rounded-full overflow-hidden shrink-0 bg-black border-2
+            relative w-16 h-16 rounded-full overflow-hidden shrink-0 bg-black border-2
             ${
               isVerified
-                ? "border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.25)]"
+                ? "border-[#f5c451] shadow-[0_0_28px_rgba(245,196,81,0.38)]"
                 : isPro
-                  ? "border-slate-300"
+                  ? "border-[#d8dee8] shadow-[0_0_18px_rgba(226,232,240,0.16)]"
                   : "border-white/10"
             }
           `}
         >
-          {normalizedArtist.profileImage ? (
+          {isVerified && normalizedArtist.profileImage ? (
             <img
               src={normalizedArtist.profileImage}
               alt={normalizedArtist.name || "Artist"}
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center font-black text-xl text-gray-400">
+            <div
+              className={`w-full h-full flex items-center justify-center font-black text-xl ${
+                isVerified
+                  ? "text-[#f5c451] bg-[#f5c451]/[0.05]"
+                  : isPro
+                    ? "text-slate-200 bg-white/[0.03]"
+                    : "text-gray-400"
+              }`}
+            >
               {normalizedArtist.name?.charAt(0)?.toUpperCase() || "A"}
             </div>
+          )}
+
+          {(isPro || isVerified) && (
+            <span
+              className={`absolute right-1 top-1 h-2 w-2 rounded-full ${
+                isVerified
+                  ? "bg-[#ffd86b] shadow-[0_0_10px_rgba(255,216,107,1)]"
+                  : "bg-white shadow-[0_0_9px_rgba(255,255,255,0.85)]"
+              } animate-pulse`}
+            />
           )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[8px] font-mono tracking-widest text-gray-600 mb-1">
+          <p
+            className={`text-[8px] font-mono tracking-widest mb-1 ${
+              isVerified
+                ? "text-[#caa33d]"
+                : isPro
+                  ? "text-slate-500"
+                  : "text-gray-600"
+            }`}
+          >
             INK CONVENTION DIRECTORY
           </p>
 
-          <h3 className="text-xl font-black uppercase truncate">
-            {normalizedArtist.name || "Participant Artist"}
+          <h3
+            className={`text-xl font-black uppercase truncate ${
+              isVerified ? "text-[#fff1bc]" : "text-white"
+            }`}
+          >
+            {normalizedArtist.name || "Tattoo Artist"}
           </h3>
 
           <div className="flex items-center gap-1.5 mt-2 text-[11px] text-gray-400">
-            <MapPin size={11} className="shrink-0" />
-            <span className="truncate">{locationText || "India"}</span>
+            <MapPin
+              size={11}
+              className={
+                isVerified
+                  ? "text-[#f5c451] shrink-0"
+                  : isPro
+                    ? "text-slate-300 shrink-0"
+                    : "shrink-0"
+              }
+            />
+            <span className="truncate">
+              {isBasic
+                ? normalizedArtist.state || "India"
+                : locationText || "India"}
+            </span>
           </div>
         </div>
       </div>
 
       {/* DETAILS */}
-      <div className="px-5 pt-4 pb-5 flex flex-col flex-1 min-h-0">
-        {isFree && (
-          <div className="space-y-3">
-            <InfoRow title="CITY" value={normalizedArtist.city || "-"} />
+      <div className="relative z-10 px-5 pt-5 pb-5 flex flex-col flex-1 min-h-0">
+        {isBasic && (
+          <div className="space-y-4">
+            <InfoRow
+              title="ARTIST / STUDIO"
+              value={normalizedArtist.name || normalizedArtist.studio || "-"}
+            />
             <InfoRow title="STATE" value={normalizedArtist.state || "-"} />
-            <InfoRow title="STUDIO" value={normalizedArtist.studio || "-"} />
 
-            <div className="mt-4 rounded-xl border border-purple-500/15 bg-purple-500/[0.035] p-4">
-              <div className="flex items-center gap-2 text-purple-400">
-                <Sparkles size={13} />
-                <span className="text-[8px] font-black tracking-[0.12em]">
-                  CONTACT DETAILS MASKED
+            <div className="rounded-xl border border-white/[0.07] bg-black/20 p-4">
+              <p className="text-[8px] font-black tracking-[0.12em] text-gray-500">
+                {normalizedArtist.claimed
+                  ? "OWNER UPDATED PROFILE"
+                  : "EXISTING DIRECTORY DATA"}
+              </p>
+
+              <p className="mt-2 text-[10px] text-gray-600 leading-relaxed">
+                The owner can verify the registered number by OTP and update
+                this card. The phone number cannot be changed before ownership
+                is verified.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isPro && (
+          <div className="space-y-3">
+            <InfoRow title="NAME" value={normalizedArtist.name} />
+            <InfoRow title="EMAIL" value={normalizedArtist.email} />
+            <InfoRow title="CITY" value={normalizedArtist.city} />
+            <InfoRow title="STATE" value={normalizedArtist.state} />
+
+            <div className="relative overflow-hidden rounded-xl border border-slate-200/20 bg-gradient-to-r from-white/[0.03] via-white/[0.06] to-white/[0.025] p-4">
+              <div className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+              <div className="relative z-10 flex items-center justify-between gap-3 mb-3">
+                <p className="text-[8px] font-black tracking-[0.14em] text-slate-100">
+                  SILVER PRO ACTIVE
+                </p>
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-100 opacity-45" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
                 </span>
               </div>
 
-              <div className="mt-3 space-y-1.5 text-[10px] font-mono text-gray-600">
-                <p>PHONE · ••••••••••</p>
-                <p>EMAIL · ••••••••••</p>
-                <p>INSTAGRAM · ••••••••</p>
+              <div className="relative z-10 space-y-1.5 text-[9px] font-mono text-gray-400">
+                <p>✓ CITY-WISE SEARCH VISIBILITY</p>
+                <p>✓ HIGHER DIRECTORY VISIBILITY</p>
+                <p>✓ RECOMMENDED PROFILE</p>
               </div>
             </div>
           </div>
         )}
 
-        {(isPro || isVerified) && (
+        {isVerified && (
           <div className="space-y-2.5">
             <InfoRow title="PHONE" value={normalizedArtist.phone} />
             <InfoRow title="EMAIL" value={normalizedArtist.email} />
@@ -2252,30 +2607,96 @@ function ArtistCard({ artist, index, isNew, onClick }) {
             <InfoRow title="STUDIO" value={normalizedArtist.studio} />
             <InfoRow title="EXPERIENCE" value={normalizedArtist.experience} />
             <InfoRow title="INSTAGRAM" value={normalizedArtist.instagram} />
+
+            <div className="relative overflow-hidden rounded-xl border border-[#f5c451]/25 bg-gradient-to-r from-[#f5c451]/[0.07] via-[#f5c451]/[0.12] to-[#f5c451]/[0.04] px-4 py-3">
+              <div className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
+
+              <div className="relative z-10 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[8px] font-black tracking-[0.13em] text-[#ffe39a]">
+                    ★ GOLD VERIFIED SPOTLIGHT
+                  </p>
+                  <p className="mt-1 text-[8px] font-mono text-[#b79b52]">
+                    HALL OF FAME · HIGHEST PRIORITY
+                  </p>
+                </div>
+
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f5c451] opacity-50" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#ffe58d] shadow-[0_0_12px_rgba(255,229,141,0.95)]" />
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
-        <div className="mt-auto">
-          <p className="py-3 text-[8px] font-mono tracking-widest text-gray-600 group-hover:text-gray-400 transition">
-            {isFree ? "CLICK TO VIEW LISTING" : "CLICK TO VIEW FULL PROFILE"}
-          </p>
+        <div className="mt-auto pt-5">
+          {isBasic ? (
+            <Link
+              to="/Enter"
+              state={updateState}
+              onClick={(event) => event.stopPropagation()}
+              className="
+                w-full rounded-xl px-4 py-3.5 flex items-center justify-center gap-2
+                text-[9px] font-black tracking-[0.12em] transition
+                bg-white/5 hover:bg-purple-600 border border-white/10
+                hover:border-purple-500 text-white
+              "
+            >
+              UPDATE YOUR CARD
+              <ArrowRight size={13} />
+            </Link>
+          ) : isPro ? (
+            <div
+              className="
+                relative overflow-hidden w-full rounded-xl px-4 py-3.5 flex items-center justify-center gap-2
+                text-[9px] font-black tracking-[0.12em]
+                bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black
+                border border-white/70 shadow-[0_0_18px_rgba(226,232,240,0.18)] cursor-default
+              "
+            >
+              <span className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+              <span className="relative z-10">✓ ALREADY PRO · SILVER</span>
+            </div>
+          ) : (
+            <div
+              className="
+                relative overflow-hidden w-full rounded-xl px-4 py-3.5 flex items-center justify-center gap-2
+                text-[9px] font-black tracking-[0.12em]
+                bg-gradient-to-r from-[#b47d12] via-[#ffe58d] to-[#b47d12]
+                text-[#211400] border border-[#ffe7a0]/70
+                shadow-[0_0_24px_rgba(245,196,81,0.34)] cursor-default
+              "
+            >
+              <span className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+              <span className="relative z-10">★ ALREADY VERIFIED · GOLD</span>
+            </div>
+          )}
 
-          <div className="border-t border-white/10 pt-3 flex items-center justify-between gap-3">
+          <div className="border-t border-white/10 mt-4 pt-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-[8px] font-mono text-gray-600 min-w-0">
               <Sparkles
                 size={10}
                 className={
                   isVerified
-                    ? "text-purple-400"
+                    ? "text-[#f5c451]"
                     : isPro
                       ? "text-slate-300"
-                      : "text-purple-500"
+                      : "text-gray-600"
                 }
               />
               <span className="truncate">INK CONVENTION</span>
             </div>
 
-            <span className="text-[8px] font-mono text-gray-600 whitespace-nowrap">
+            <span
+              className={`text-[8px] font-mono whitespace-nowrap ${
+                isVerified
+                  ? "text-[#b79b52]"
+                  : isPro
+                    ? "text-slate-500"
+                    : "text-gray-600"
+              }`}
+            >
               #{String(index + 1).padStart(2, "0")}
             </span>
           </div>
@@ -2296,7 +2717,7 @@ function ArtistModal({ artist, onClose }) {
 
   const isVerified = plan === "verified";
   const isPro = plan === "pro";
-  const isFree = plan === "free";
+  const isBasic = plan === "basic";
 
   React.useEffect(() => {
     if (!modalRef.current) return undefined;
@@ -2336,6 +2757,18 @@ function ArtistModal({ artist, onClose }) {
     if (event.target === event.currentTarget) closeModal();
   };
 
+  const updateState = {
+    claimArtistId: normalizedArtist.id,
+    artist: {
+      id: normalizedArtist.id,
+      name: normalizedArtist.name || "",
+      studio: normalizedArtist.studio || "",
+      city: normalizedArtist.city || "",
+      state: normalizedArtist.state || "",
+      maskedPhone: maskPhone(normalizedArtist.phone),
+    },
+  };
+
   return (
     <div
       onMouseDown={handleBackdropClick}
@@ -2344,77 +2777,128 @@ function ArtistModal({ artist, onClose }) {
       <div
         ref={modalRef}
         className={`
-          relative w-full max-w-[1000px] max-h-[90vh] overflow-y-auto
-          rounded-[30px] bg-[#0c0c0f] text-white
+          relative w-full max-w-[1050px] max-h-[92vh] overflow-y-auto rounded-[30px]
           ${
             isVerified
-              ? "border-2 border-purple-400 shadow-[0_0_80px_rgba(168,85,247,0.18)]"
+              ? "border-2 border-[#f5c451] bg-[#110d05] shadow-[0_0_90px_rgba(245,196,81,0.24)] ink-gold-card-pulse"
               : isPro
-                ? "border-2 border-slate-300 shadow-[0_0_60px_rgba(226,232,240,0.08)]"
-                : "border border-white/10 shadow-[0_0_60px_rgba(168,85,247,0.08)]"
+                ? "border-2 border-[#d8dee8] bg-[#0e1015] shadow-[0_0_70px_rgba(226,232,240,0.13)] ink-silver-card-pulse"
+                : "border border-white/10 bg-[#0d0d11]"
           }
         `}
       >
+        {(isPro || isVerified) && (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div
+              className={`absolute -right-20 -top-20 h-72 w-72 rounded-full blur-[90px] ${
+                isVerified ? "bg-[#f5c451]/[0.12]" : "bg-white/[0.055]"
+              } ink-premium-float`}
+            />
+
+            <div
+              className={`absolute -left-1/2 top-0 h-full w-[18%] bg-gradient-to-r from-transparent to-transparent ${
+                isVerified
+                  ? "via-[#fff2a8]/25 ink-gold-shine"
+                  : "via-white/15 ink-silver-shine"
+              }`}
+            />
+          </div>
+        )}
+
         <button
           type="button"
           onClick={closeModal}
           aria-label="Close profile"
-          className="absolute top-5 right-5 z-30 w-12 h-12 rounded-full bg-black/70 border border-white/15 hover:bg-white hover:text-black flex items-center justify-center text-3xl transition"
+          className="absolute top-5 right-5 z-30 w-12 h-12 rounded-full bg-black/70 border border-white/15 hover:bg-white hover:text-black flex items-center justify-center transition"
         >
-          ×
+          <X size={18} />
         </button>
 
         {/* HEADER */}
-        <div className="p-6 sm:p-10 pr-20 border-b border-white/10">
+        <div className="relative z-10 p-6 sm:p-10 pr-20 border-b border-white/10">
           <div className="flex flex-col sm:flex-row sm:items-center gap-6">
             <div
               className={`
-                w-28 h-28 sm:w-36 sm:h-36 shrink-0 rounded-full overflow-hidden bg-black border-[3px]
+                relative w-28 h-28 sm:w-36 sm:h-36 shrink-0 rounded-full overflow-hidden bg-black border-[3px]
                 ${
                   isVerified
-                    ? "border-purple-400 shadow-[0_0_30px_rgba(168,85,247,0.25)]"
+                    ? "border-[#f5c451] shadow-[0_0_36px_rgba(245,196,81,0.40)]"
                     : isPro
-                      ? "border-slate-300"
+                      ? "border-[#d8dee8] shadow-[0_0_28px_rgba(226,232,240,0.18)]"
                       : "border-white/10"
                 }
               `}
             >
-              {normalizedArtist.profileImage ? (
+              {isVerified && normalizedArtist.profileImage ? (
                 <img
                   src={normalizedArtist.profileImage}
                   alt={normalizedArtist.name || "Artist"}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-4xl font-black text-gray-400">
+                <div
+                  className={`w-full h-full flex items-center justify-center text-4xl font-black ${
+                    isVerified
+                      ? "text-[#f5c451] bg-[#f5c451]/[0.05]"
+                      : isPro
+                        ? "text-slate-200 bg-white/[0.03]"
+                        : "text-gray-400"
+                  }`}
+                >
                   {normalizedArtist.name?.charAt(0)?.toUpperCase() || "A"}
                 </div>
+              )}
+
+              {(isPro || isVerified) && (
+                <span
+                  className={`absolute right-3 top-3 h-3 w-3 rounded-full ${
+                    isVerified
+                      ? "bg-[#ffe58d] shadow-[0_0_14px_rgba(255,229,141,1)]"
+                      : "bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]"
+                  } animate-pulse`}
+                />
               )}
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-3">
                 <p
-                  className={`text-[10px] font-mono tracking-[0.2em] ${
+                  className={`text-[9px] font-mono tracking-[0.16em] ${
                     isVerified
-                      ? "text-purple-400"
+                      ? "text-[#d0aa43]"
                       : isPro
                         ? "text-slate-300"
                         : "text-gray-500"
                   }`}
                 >
-                  {getPlanLabel(plan)}
+                  {getPlanLabel(normalizedArtist)}
                 </p>
 
-                {isVerified && (
-                  <span className="inline-flex items-center gap-1.5 bg-purple-600/15 border border-purple-400/30 rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-purple-300">
-                    <Sparkles size={11} /> VERIFIED
+                {isPro && (
+                  <span className="inline-flex items-center gap-1.5 bg-white/[0.05] border border-slate-200/35 rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-slate-100 shadow-[0_0_16px_rgba(226,232,240,0.12)]">
+                    <Sparkles size={11} /> SILVER PRO
                   </span>
+                )}
+
+                {isVerified && (
+                  <>
+                    <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#b47d12] via-[#ffe58d] to-[#b47d12] rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-[#201300] shadow-[0_0_20px_rgba(245,196,81,0.35)]">
+                      <Sparkles size={11} /> GOLD VERIFIED
+                    </span>
+
+                    <span className="inline-flex items-center gap-1.5 bg-[#f5c451]/10 border border-[#f5c451]/25 rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-[#ffe39a]">
+                      ★ HALL OF FAME
+                    </span>
+                  </>
                 )}
               </div>
 
-              <h2 className="text-4xl sm:text-6xl font-black uppercase tracking-[-0.05em] leading-none break-words">
-                {normalizedArtist.name || "Participant Artist"}
+              <h2
+                className={`text-4xl sm:text-6xl font-black uppercase tracking-[-0.05em] leading-none break-words ${
+                  isVerified ? "text-[#fff1bc]" : "text-white"
+                }`}
+              >
+                {normalizedArtist.name || "Tattoo Artist"}
               </h2>
 
               <div className="flex items-center gap-2 mt-5 text-gray-400">
@@ -2422,150 +2906,223 @@ function ArtistModal({ artist, onClose }) {
                   size={14}
                   className={
                     isVerified
-                      ? "text-purple-400"
+                      ? "text-[#f5c451]"
                       : isPro
                         ? "text-slate-300"
-                        : "text-purple-500"
+                        : "text-gray-600"
                   }
                 />
 
-                {[normalizedArtist.city, normalizedArtist.state]
-                  .filter(Boolean)
-                  .join(", ") || "India"}
+                {isBasic
+                  ? normalizedArtist.state || "India"
+                  : [normalizedArtist.city, normalizedArtist.state]
+                      .filter(Boolean)
+                      .join(", ") || "India"}
               </div>
             </div>
           </div>
         </div>
 
         {/* BODY */}
-        <div className="p-6 sm:p-10">
-          {isFree && (
+        <div className="relative z-10 p-6 sm:p-10">
+          {isBasic && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
                 <ModalInfo
-                  title="CITY"
-                  value={normalizedArtist.city}
-                  accent="purple"
+                  title="ARTIST / STUDIO"
+                  value={normalizedArtist.name || normalizedArtist.studio}
                 />
-                <ModalInfo
-                  title="STATE"
-                  value={normalizedArtist.state}
-                  accent="purple"
-                />
-                <ModalInfo
-                  title="STUDIO"
-                  value={normalizedArtist.studio}
-                  accent="purple"
-                />
+                <ModalInfo title="STATE" value={normalizedArtist.state} />
               </div>
 
               <div className="mt-8 border border-purple-500/20 bg-purple-500/[0.04] rounded-[22px] p-6 sm:p-7">
                 <div className="flex items-center gap-3 text-purple-400">
                   <Sparkles size={17} />
                   <h3 className="text-sm font-black tracking-[0.12em]">
-                    CONTACT DETAILS ARE MASKED
+                    UPDATE / CLAIM THIS CARD
                   </h3>
                 </div>
 
                 <p className="mt-3 max-w-2xl text-sm text-gray-500 leading-relaxed">
-                  This artist is currently on the Lifetime Free listing. Phone,
-                  email and Instagram are hidden on the public directory.
+                  Ownership is verified using an OTP sent to the phone number
+                  already stored for this directory record. The owner cannot
+                  replace that number before verification.
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
-                  <LockedContact label="PHONE" />
-                  <LockedContact label="EMAIL" />
-                  <LockedContact label="INSTAGRAM" />
+                <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+                  <span className="text-[8px] font-mono tracking-widest text-gray-600">
+                    REGISTERED NUMBER
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {maskPhone(normalizedArtist.phone)}
+                  </span>
                 </div>
               </div>
             </>
           )}
 
-          {(isPro || isVerified) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
-              <ModalInfo
-                title="PHONE"
-                value={normalizedArtist.phone}
-                accent={isVerified ? "verified" : "pro"}
-              />
-              <ModalInfo
-                title="EMAIL"
-                value={normalizedArtist.email}
-                accent={isVerified ? "verified" : "pro"}
-              />
-              <ModalInfo
-                title="CITY"
-                value={normalizedArtist.city}
-                accent={isVerified ? "verified" : "pro"}
-              />
-              <ModalInfo
-                title="STATE"
-                value={normalizedArtist.state}
-                accent={isVerified ? "verified" : "pro"}
-              />
-              <ModalInfo
-                title="STUDIO"
-                value={normalizedArtist.studio}
-                accent={isVerified ? "verified" : "pro"}
-              />
-              <ModalInfo
-                title="EXPERIENCE"
-                value={normalizedArtist.experience}
-                accent={isVerified ? "verified" : "pro"}
-              />
-              <ModalInfo
-                title="INSTAGRAM"
-                value={normalizedArtist.instagram}
-                accent={isVerified ? "verified" : "pro"}
-              />
-            </div>
-          )}
-
           {isPro && (
-            <div className="mt-8 border border-slate-300/20 bg-white/[0.025] rounded-[22px] p-6">
-              <p className="text-[9px] font-black tracking-[0.15em] text-slate-200">
-                PRO LISTING BENEFITS ACTIVE
-              </p>
-              <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                Contact details are visible and this profile receives higher
-                directory placement plus SEO and discovery benefits.
-              </p>
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
+                <ModalInfo
+                  title="NAME"
+                  value={normalizedArtist.name}
+                  accent="pro"
+                />
+                <ModalInfo
+                  title="EMAIL"
+                  value={normalizedArtist.email}
+                  accent="pro"
+                />
+                <ModalInfo
+                  title="CITY"
+                  value={normalizedArtist.city}
+                  accent="pro"
+                />
+                <ModalInfo
+                  title="STATE"
+                  value={normalizedArtist.state}
+                  accent="pro"
+                />
+              </div>
+
+              <div className="relative overflow-hidden mt-8 border border-slate-200/25 bg-gradient-to-r from-white/[0.03] via-white/[0.07] to-white/[0.025] rounded-[22px] p-6">
+                <div className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[18%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                <div className="relative z-10 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[9px] font-black tracking-[0.15em] text-slate-100">
+                      SILVER PRO · ₹1,499 / YEAR
+                    </p>
+                    <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+                      City-wise search visibility, higher directory visibility
+                      and a Recommended profile position are active.
+                    </p>
+                  </div>
+
+                  <span className="relative flex h-3 w-3 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-100 opacity-45" />
+                    <span className="relative inline-flex h-3 w-3 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]" />
+                  </span>
+                </div>
+              </div>
+            </>
           )}
 
           {isVerified && (
-            <div className="mt-8 border border-purple-400/25 bg-purple-500/[0.05] rounded-[22px] p-6">
-              <div className="flex items-center gap-2 text-purple-300">
-                <Sparkles size={16} />
-                <p className="text-[9px] font-black tracking-[0.15em]">
-                  VERIFIED SPOTLIGHT
-                </p>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
+                <ModalInfo
+                  title="PHONE"
+                  value={normalizedArtist.phone}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="EMAIL"
+                  value={normalizedArtist.email}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="CITY"
+                  value={normalizedArtist.city}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="STATE"
+                  value={normalizedArtist.state}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="STUDIO"
+                  value={normalizedArtist.studio}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="EXPERIENCE"
+                  value={normalizedArtist.experience}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="INSTAGRAM"
+                  value={normalizedArtist.instagram}
+                  accent="verified"
+                />
               </div>
 
-              <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                This profile has the highest directory priority, verified status
-                and Spotlight visibility.
-              </p>
-            </div>
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative overflow-hidden border border-[#f5c451]/30 bg-gradient-to-br from-[#f5c451]/[0.10] via-[#f5c451]/[0.05] to-transparent rounded-[22px] p-6">
+                  <div className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
+
+                  <div className="relative z-10 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-[#ffe39a]">
+                        <Sparkles size={16} />
+                        <p className="text-[9px] font-black tracking-[0.15em]">
+                          GOLD VERIFIED · ₹2,999 / YEAR
+                        </p>
+                      </div>
+
+                      <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+                        Highest directory priority, complete profile visibility
+                        and maximum digital visibility.
+                      </p>
+                    </div>
+
+                    <span className="relative flex h-3 w-3 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f5c451] opacity-50" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-[#ffe58d] shadow-[0_0_14px_rgba(255,229,141,0.95)]" />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative overflow-hidden border border-[#f5c451]/22 bg-[#f5c451]/[0.045] rounded-[22px] p-6">
+                  <span className="ink-premium-dot absolute right-6 top-6 h-1.5 w-1.5 rounded-full bg-[#ffe58d] shadow-[0_0_10px_rgba(255,229,141,0.9)]" />
+                  <span className="ink-premium-dot absolute right-12 top-12 h-1 w-1 rounded-full bg-[#f5c451] [animation-delay:0.7s]" />
+
+                  <p className="text-[9px] font-black tracking-[0.15em] text-[#ffe39a]">
+                    ★ HALL OF FAME
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+                    Gold Verified profiles receive Hall of Fame and premium
+                    featured placement according to your directory rules.
+                  </p>
+                </div>
+              </div>
+            </>
           )}
 
-          <div className="mt-10 pt-6 border-t border-white/10 flex justify-end">
+          <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-end gap-3">
             <button
               type="button"
               onClick={closeModal}
-              className={`
-                px-7 py-4 text-[10px] font-black tracking-widest transition
-                ${
-                  isVerified
-                    ? "bg-purple-600 hover:bg-purple-500 text-white"
-                    : isPro
-                      ? "bg-slate-100 hover:bg-white text-black"
-                      : "bg-white/10 hover:bg-white hover:text-black text-white"
-                }
-              `}
+              className="px-7 py-4 text-[10px] font-black tracking-widest bg-white/5 hover:bg-white/10 border border-white/10 text-white transition"
             >
-              CLOSE PROFILE
+              CLOSE
             </button>
+
+            {isBasic ? (
+              <Link
+                to="/Enter"
+                state={updateState}
+                onClick={closeModal}
+                className="
+                  px-7 py-4 text-center text-[10px] font-black tracking-widest transition
+                  bg-purple-600 hover:bg-purple-500 text-white
+                "
+              >
+                UPDATE YOUR CARD
+              </Link>
+            ) : isPro ? (
+              <div className="relative overflow-hidden px-7 py-4 text-center text-[10px] font-black tracking-widest bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black border border-white/70 cursor-default">
+                <span className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                <span className="relative z-10">✓ ALREADY PRO · SILVER</span>
+              </div>
+            ) : (
+              <div className="relative overflow-hidden px-7 py-4 text-center text-[10px] font-black tracking-widest bg-gradient-to-r from-[#b47d12] via-[#ffe58d] to-[#b47d12] text-[#211400] border border-[#ffe7a0]/70 cursor-default shadow-[0_0_22px_rgba(245,196,81,0.26)]">
+                <span className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+                <span className="relative z-10">★ ALREADY VERIFIED · GOLD</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -2592,24 +3149,6 @@ function InfoRow({ title, value }) {
 }
 
 /* =========================================================
-   LOCKED CONTACT
-========================================================= */
-
-function LockedContact({ label }) {
-  return (
-    <div className="border border-white/[0.06] bg-black/20 rounded-xl p-4">
-      <p className="text-[7px] font-mono tracking-[0.16em] text-gray-600">
-        {label}
-      </p>
-      <div className="mt-2 flex items-center gap-2 text-gray-500">
-        <Sparkles size={12} className="text-purple-500" />
-        <span className="text-xs font-mono">••••••••••</span>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
    MODAL INFO
 ========================================================= */
 
@@ -2617,7 +3156,7 @@ function ModalInfo({ title, value, accent = "purple" }) {
   let accentClass = "text-purple-400";
 
   if (accent === "pro") accentClass = "text-slate-300";
-  if (accent === "verified") accentClass = "text-purple-300";
+  if (accent === "verified") accentClass = "text-[#f5c451]";
 
   return (
     <div className="min-w-0 border-b border-white/10 pb-5">
