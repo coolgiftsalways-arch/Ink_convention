@@ -30,6 +30,7 @@ const nodemailer = require("nodemailer");
 const paymentRoutes = require("./routes/payment");
 const clientRoutes = require("./routes/ClientRoutes");
 const tattooStudioRoutes = require("./routes/tattooStudioRoutes");
+const claimRoutes = require("./routes/claimRoutes");
 
 // =====================================================
 // MODELS
@@ -277,6 +278,7 @@ app.get("/api/health", (req, res) => {
 // =====================================================
 
 app.use("/api/payment", paymentRoutes);
+app.use("/api/claim", claimRoutes);
 
 // =====================================================
 // CLIENT ROUTES

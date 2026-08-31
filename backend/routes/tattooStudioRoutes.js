@@ -10,14 +10,10 @@ const router = express.Router();
 
 /* =========================================================
    REGEX ESCAPE HELPER
-   Prevents special characters from breaking filters
 ========================================================= */
 
 const escapeRegex = (value) => {
-  return String(value).replace(
-    /[.*+?^${}()|[\]\\]/g,
-    "\\$&",
-  );
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 
 /* =========================================================
@@ -51,15 +47,9 @@ const storage = multer.diskStorage({
 ========================================================= */
 
 const fileFilter = (req, file, cb) => {
-  const allowedExtensions = [
-    ".xlsx",
-    ".xls",
-    ".csv",
-  ];
+  const allowedExtensions = [".xlsx", ".xls", ".csv"];
 
-  const extension = path
-    .extname(file.originalname)
-    .toLowerCase();
+  const extension = path.extname(file.originalname).toLowerCase();
 
   if (!allowedExtensions.includes(extension)) {
     return cb(
@@ -82,23 +72,20 @@ const upload = multer({
   fileFilter,
 
   limits: {
-    // 200 MB maximum for directory imports
     fileSize: 200 * 1024 * 1024,
   },
 });
 
 /* =========================================================
    IMPORT EXCEL DATA
-=========================================================
 
-   POST /api/admin/tattoo-studios/import
-
-   Form-data:
-   file = Excel file
+   POST
+   /api/admin/tattoo-studios/import
 ========================================================= */
 
 router.post(
   "/import",
+
   upload.single("file"),
 
   async (req, res) => {
@@ -106,15 +93,11 @@ router.post(
 
     try {
       console.log("");
-      console.log(
-        "==============================================",
-      );
-      console.log(
-        "📥 TATTOO DIRECTORY IMPORT REQUEST",
-      );
-      console.log(
-        "==============================================",
-      );
+      console.log("==============================================");
+
+      console.log("📥 TATTOO DIRECTORY IMPORT REQUEST");
+
+      console.log("==============================================");
 
       /* =====================================================
          DATABASE CHECK
@@ -123,6 +106,7 @@ router.post(
       if (TattooStudio.db.readyState !== 1) {
         return res.status(503).json({
           success: false,
+
           message: "Database is not connected.",
         });
       }
@@ -134,31 +118,24 @@ router.post(
       if (!req.file) {
         return res.status(400).json({
           success: false,
+
           message: "Please upload an Excel file.",
         });
       }
 
       uploadedFilePath = req.file.path;
 
-      console.log(
-        `📁 File: ${req.file.originalname}`,
-      );
+      console.log(`📁 File: ${req.file.originalname}`);
 
-      console.log(
-        `📦 Size: ${req.file.size} bytes`,
-      );
+      console.log(`📦 Size: ${req.file.size} bytes`);
 
-      console.log(
-        `📍 Saved: ${uploadedFilePath}`,
-      );
+      console.log(`📍 Saved: ${uploadedFilePath}`);
 
       /* =====================================================
          IMPORT
       ===================================================== */
 
-      const result = await importExcelFile(
-        uploadedFilePath,
-      );
+      const result = await importExcelFile(uploadedFilePath);
 
       /* =====================================================
          DELETE TEMPORARY EXCEL FILE
@@ -168,9 +145,7 @@ router.post(
         if (fs.existsSync(uploadedFilePath)) {
           fs.unlinkSync(uploadedFilePath);
 
-          console.log(
-            "🗑️ Temporary Excel file deleted.",
-          );
+          console.log("🗑️ Temporary Excel file deleted.");
         }
       } catch (deleteError) {
         console.error(
@@ -183,60 +158,44 @@ router.post(
          RESPONSE
       ===================================================== */
 
-      console.log(
-        "==============================================",
-      );
+      console.log("==============================================");
 
-      console.log(
-        "✅ IMPORT REQUEST FINISHED",
-      );
+      console.log("✅ IMPORT REQUEST FINISHED");
 
-      console.log(
-        "==============================================",
-      );
+      console.log("==============================================");
 
       return res.status(200).json({
         success: true,
 
-        message:
-          "Tattoo directory imported successfully.",
+        message: "Tattoo directory imported successfully.",
 
         file: {
           name: req.file.originalname,
+
           size: req.file.size,
         },
 
         ...result,
       });
     } catch (error) {
-      console.error(
-        "❌ Tattoo directory import error:",
-        error,
-      );
+      console.error("❌ Tattoo directory import error:", error);
 
       /* =====================================================
          CLEANUP IF IMPORT FAILED
       ===================================================== */
 
-      if (
-        uploadedFilePath &&
-        fs.existsSync(uploadedFilePath)
-      ) {
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
         try {
           fs.unlinkSync(uploadedFilePath);
         } catch (cleanupError) {
-          console.error(
-            "⚠️ Cleanup error:",
-            cleanupError.message,
-          );
+          console.error("⚠️ Cleanup error:", cleanupError.message);
         }
       }
 
       return res.status(500).json({
         success: false,
 
-        message:
-          "Failed to import tattoo directory.",
+        message: "Failed to import tattoo directory.",
 
         error: error.message,
       });
@@ -246,354 +205,387 @@ router.post(
 
 /* =========================================================
    GET DIRECTORY DATA
-=========================================================
 
-   GET /api/admin/tattoo-studios
+   GET
+   /api/admin/tattoo-studios
 
-   Supports:
+   EXAMPLES
 
-   ?page=1
-   ?limit=20
+   /api/admin/tattoo-studios?page=1&limit=1000
 
-   ?city=Mumbai
-   ?state=Maharashtra
-   ?category=Tattoo shop
+   /api/admin/tattoo-studios?city=Mumbai
 
-   ?plan=free
-   ?verified=true
-   ?minRating=4.5
+   /api/admin/tattoo-studios?state=Maharashtra
 
-   ?search=ink
+   /api/admin/tattoo-studios?search=ink
+
+   /api/admin/tattoo-studios?plan=free
+
 ========================================================= */
 
-router.get("/", async (req, res) => {
-  try {
-    const page = Math.max(
-      parseInt(req.query.page, 10) || 1,
-      1,
-    );
+router.get(
+  "/",
 
-    const requestedLimit =
-      parseInt(req.query.limit, 10) || 20;
+  async (req, res) => {
+    try {
+      /* =====================================================
+         PAGE
+      ===================================================== */
 
-    const limit = Math.min(
-      Math.max(requestedLimit, 1),
-      100,
-    );
+      const page = Math.max(
+        parseInt(req.query.page, 10) || 1,
 
-    const skip = (page - 1) * limit;
+        1,
+      );
 
-    const {
-      city,
-      state,
-      category,
-      plan,
-      verified,
-      minRating,
-      search,
-    } = req.query;
+      /* =====================================================
+         LIMIT
 
-    const filter = {};
+         Supports maximum 1000 records
+         per request.
+      ===================================================== */
 
-    /* =====================================================
-       CITY FILTER
-       Exact city match
-       
-       Mumbai → Mumbai
-       Navi Mumbai → Navi Mumbai
-    ===================================================== */
+      const requestedLimit = parseInt(req.query.limit, 10) || 20;
 
-    if (city && String(city).trim()) {
-      const cityValue = String(city).trim();
+      const limit = Math.min(
+        Math.max(requestedLimit, 1),
 
-      filter.city = {
-        $regex: `^${escapeRegex(cityValue)}$`,
-        $options: "i",
-      };
-    }
+        1000,
+      );
 
-    /* =====================================================
-       STATE FILTER
-       Exact state match
-    ===================================================== */
+      const skip = (page - 1) * limit;
 
-    if (state && String(state).trim()) {
-      const stateValue = String(state).trim();
+      /* =====================================================
+         QUERY FILTERS
+      ===================================================== */
 
-      filter.state = {
-        $regex: `^${escapeRegex(stateValue)}$`,
-        $options: "i",
-      };
-    }
+      const { city, state, category, plan, verified, minRating, search } =
+        req.query;
 
-    /* =====================================================
-       CATEGORY FILTER
-       Exact category match
-    ===================================================== */
+      const filter = {};
 
-    if (category && String(category).trim()) {
-      const categoryValue =
-        String(category).trim();
+      /* =====================================================
+         CITY FILTER
+      ===================================================== */
 
-      filter.category = {
-        $regex: `^${escapeRegex(categoryValue)}$`,
-        $options: "i",
-      };
-    }
+      if (city && String(city).trim()) {
+        const cityValue = String(city).trim();
 
-    /* =====================================================
-       PLAN FILTER
-       
-       free
-       pro
-       verified
-    ===================================================== */
+        filter.city = {
+          $regex: `^${escapeRegex(cityValue)}$`,
 
-    if (plan && String(plan).trim()) {
-      const planValue = String(plan)
-        .trim()
-        .toLowerCase();
-
-      if (
-        [
-          "free",
-          "pro",
-          "verified",
-        ].includes(planValue)
-      ) {
-        filter.plan = planValue;
-      }
-    }
-
-    /* =====================================================
-       VERIFIED FILTER
-       
-       ?verified=true
-       ?verified=false
-    ===================================================== */
-
-    if (
-      verified !== undefined &&
-      String(verified).trim() !== ""
-    ) {
-      const verifiedValue =
-        String(verified).toLowerCase();
-
-      if (verifiedValue === "true") {
-        filter.verified = true;
-      }
-
-      if (verifiedValue === "false") {
-        filter.verified = false;
-      }
-    }
-
-    /* =====================================================
-       MINIMUM RATING FILTER
-       
-       ?minRating=4
-       ?minRating=4.5
-       ?minRating=5
-    ===================================================== */
-
-    if (
-      minRating !== undefined &&
-      String(minRating).trim() !== ""
-    ) {
-      const rating = Number(minRating);
-
-      if (
-        Number.isFinite(rating) &&
-        rating >= 0 &&
-        rating <= 5
-      ) {
-        filter.rating = {
-          $gte: rating,
+          $options: "i",
         };
       }
-    }
 
-    /* =====================================================
-       SEARCH
-       
-       Searches:
-       - studio name
-       - city
-       - state
-       - category
-    ===================================================== */
+      /* =====================================================
+         STATE FILTER
+      ===================================================== */
 
-    if (
-      search &&
-      String(search).trim()
-    ) {
-      const searchText =
-        String(search).trim();
+      if (state && String(state).trim()) {
+        const stateValue = String(state).trim();
 
-      const escapedSearch =
-        escapeRegex(searchText);
+        filter.state = {
+          $regex: `^${escapeRegex(stateValue)}$`,
 
-      filter.$or = [
-        {
-          name: {
-            $regex: escapedSearch,
-            $options: "i",
+          $options: "i",
+        };
+      }
+
+      /* =====================================================
+         CATEGORY FILTER
+      ===================================================== */
+
+      if (category && String(category).trim()) {
+        const categoryValue = String(category).trim();
+
+        filter.category = {
+          $regex: `^${escapeRegex(categoryValue)}$`,
+
+          $options: "i",
+        };
+      }
+
+      /* =====================================================
+         PLAN FILTER
+
+         free
+         basic
+         silver
+         pro
+         gold
+         verified
+      ===================================================== */
+
+      if (plan && String(plan).trim()) {
+        let planValue = String(plan).trim().toLowerCase();
+
+        if (planValue === "basic") {
+          planValue = "free";
+        }
+
+        if (planValue === "silver") {
+          planValue = "pro";
+        }
+
+        if (planValue === "gold") {
+          planValue = "verified";
+        }
+
+        if (["free", "pro", "verified"].includes(planValue)) {
+          filter.plan = planValue;
+        }
+      }
+
+      /* =====================================================
+         VERIFIED FILTER
+      ===================================================== */
+
+      if (verified !== undefined && String(verified).trim() !== "") {
+        const verifiedValue = String(verified).toLowerCase();
+
+        if (verifiedValue === "true") {
+          filter.verified = true;
+        }
+
+        if (verifiedValue === "false") {
+          filter.verified = false;
+        }
+      }
+
+      /* =====================================================
+         RATING FILTER
+      ===================================================== */
+
+      if (minRating !== undefined && String(minRating).trim() !== "") {
+        const rating = Number(minRating);
+
+        if (Number.isFinite(rating) && rating >= 0 && rating <= 5) {
+          filter.rating = {
+            $gte: rating,
+          };
+        }
+      }
+
+      /* =====================================================
+         SEARCH
+
+         Search:
+         name
+         city
+         state
+         category
+         address
+         phone
+      ===================================================== */
+
+      if (search && String(search).trim()) {
+        const searchText = String(search).trim();
+
+        const escapedSearch = escapeRegex(searchText);
+
+        filter.$or = [
+          {
+            name: {
+              $regex: escapedSearch,
+
+              $options: "i",
+            },
           },
-        },
 
-        {
-          city: {
-            $regex: escapedSearch,
-            $options: "i",
+          {
+            city: {
+              $regex: escapedSearch,
+
+              $options: "i",
+            },
           },
-        },
 
-        {
-          state: {
-            $regex: escapedSearch,
-            $options: "i",
+          {
+            state: {
+              $regex: escapedSearch,
+
+              $options: "i",
+            },
           },
-        },
 
-        {
-          category: {
-            $regex: escapedSearch,
-            $options: "i",
+          {
+            category: {
+              $regex: escapedSearch,
+
+              $options: "i",
+            },
           },
-        },
 
-        {
-          address: {
-            $regex: escapedSearch,
-            $options: "i",
+          {
+            address: {
+              $regex: escapedSearch,
+
+              $options: "i",
+            },
           },
-        },
-      ];
-    }
 
-    /* =====================================================
-       DATABASE QUERY
-    ===================================================== */
+          {
+            phone: {
+              $regex: escapedSearch,
 
-    const [studios, total] =
-      await Promise.all([
+              $options: "i",
+            },
+          },
+        ];
+      }
+
+      /* =====================================================
+         FETCH DATA + TOTAL
+      ===================================================== */
+
+      const [studios, total] = await Promise.all([
         TattooStudio.find(filter)
+
           .sort({
             verified: -1,
+
             spotlight: -1,
+
             rating: -1,
+
             reviews: -1,
+
             name: 1,
           })
+
           .skip(skip)
+
           .limit(limit)
+
           .lean(),
 
         TattooStudio.countDocuments(filter),
       ]);
 
-    const totalPages =
-      Math.ceil(total / limit) || 1;
+      /* =====================================================
+         TOTAL PAGES
+      ===================================================== */
 
-    return res.status(200).json({
-      success: true,
+      const totalPages = Math.ceil(total / limit) || 1;
 
-      data: studios,
+      /* =====================================================
+         RESPONSE
 
-      pagination: {
-        page,
-        limit,
+         data = old/admin compatibility
+
+         artists = Artists.jsx compatibility
+      ===================================================== */
+
+      return res.status(200).json({
+        success: true,
+
+        count: studios.length,
+
         total,
-        totalPages,
 
-        hasNextPage:
-          page < totalPages,
+        data: studios,
 
-        hasPreviousPage:
-          page > 1,
-      },
-    });
-  } catch (error) {
-    console.error(
-      "❌ Fetch tattoo studios error:",
-      error,
-    );
+        artists: studios,
 
-    return res.status(500).json({
-      success: false,
+        pagination: {
+          page,
 
-      message:
-        "Server error while fetching tattoo studios.",
+          limit,
 
-      error: error.message,
-    });
-  }
-});
+          total,
+
+          totalPages,
+
+          hasNextPage: page < totalPages,
+
+          hasPreviousPage: page > 1,
+        },
+      });
+    } catch (error) {
+      console.error("❌ Fetch tattoo studios error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Server error while fetching tattoo studios.",
+
+        error: error.message,
+      });
+    }
+  },
+);
 
 /* =========================================================
    GET DIRECTORY FILTER OPTIONS
-=========================================================
 
-   GET /api/admin/tattoo-studios/filters
-
-   Returns unique values directly from MongoDB.
-
-   New cities/states/categories added through future
-   Excel uploads automatically become available.
+   GET
+   /api/admin/tattoo-studios/filters
 ========================================================= */
 
 router.get(
   "/filters",
+
   async (req, res) => {
     try {
-      const [
-        states,
-        cities,
-        categories,
-      ] = await Promise.all([
-        TattooStudio.distinct("state", {
-          state: {
-            $exists: true,
-            $nin: ["", null],
-          },
-        }),
+      const [states, cities, categories] = await Promise.all([
+        TattooStudio.distinct(
+          "state",
 
-        TattooStudio.distinct("city", {
-          city: {
-            $exists: true,
-            $nin: ["", null],
-          },
-        }),
+          {
+            state: {
+              $exists: true,
 
-        TattooStudio.distinct("category", {
-          category: {
-            $exists: true,
-            $nin: ["", null],
+              $nin: ["", null],
+            },
           },
-        }),
+        ),
+
+        TattooStudio.distinct(
+          "city",
+
+          {
+            city: {
+              $exists: true,
+
+              $nin: ["", null],
+            },
+          },
+        ),
+
+        TattooStudio.distinct(
+          "category",
+
+          {
+            category: {
+              $exists: true,
+
+              $nin: ["", null],
+            },
+          },
+        ),
       ]);
 
       /* =====================================================
-         CLEAN + SORT VALUES
+         CLEAN + SORT
       ===================================================== */
 
-      const cleanSort = (values) =>
-        values
-          .map((value) =>
-            String(value).trim(),
-          )
+      const cleanSort = (values) => {
+        return values
+
+          .map((value) => String(value).trim())
+
           .filter(Boolean)
+
           .filter(
             (value, index, array) =>
               array.findIndex(
-                (item) =>
-                  item.toLowerCase() ===
-                  value.toLowerCase(),
+                (item) => item.toLowerCase() === value.toLowerCase(),
               ) === index,
           )
-          .sort((a, b) =>
-            a.localeCompare(b),
-          );
+
+          .sort((a, b) => a.localeCompare(b));
+      };
 
       return res.status(200).json({
         success: true,
@@ -603,40 +595,22 @@ router.get(
 
           cities: cleanSort(cities),
 
-          categories:
-            cleanSort(categories),
+          categories: cleanSort(categories),
 
-          plans: [
-            "free",
-            "pro",
-            "verified",
-          ],
+          plans: ["free", "pro", "verified"],
 
-          ratings: [
-            5,
-            4.5,
-            4,
-            3.5,
-            3,
-          ],
+          ratings: [5, 4.5, 4, 3.5, 3],
 
-          verified: [
-            true,
-            false,
-          ],
+          verified: [true, false],
         },
       });
     } catch (error) {
-      console.error(
-        "❌ Tattoo directory filters error:",
-        error,
-      );
+      console.error("❌ Tattoo directory filters error:", error);
 
       return res.status(500).json({
         success: false,
 
-        message:
-          "Server error while fetching directory filters.",
+        message: "Server error while fetching directory filters.",
 
         error: error.message,
       });
@@ -645,26 +619,30 @@ router.get(
 );
 
 /* =========================================================
-   GET DIRECTORY COUNTS
-=========================================================
+   GET DIRECTORY STATS
 
-   GET /api/admin/tattoo-studios/stats
+   GET
+   /api/admin/tattoo-studios/stats
 ========================================================= */
 
 router.get(
   "/stats",
+
   async (req, res) => {
     try {
-      const [
-        total,
-        verified,
-        pro,
-        free,
-      ] = await Promise.all([
+      const [total, verified, pro, free] = await Promise.all([
         TattooStudio.countDocuments(),
 
         TattooStudio.countDocuments({
-          verified: true,
+          $or: [
+            {
+              verified: true,
+            },
+
+            {
+              plan: "verified",
+            },
+          ],
         }),
 
         TattooStudio.countDocuments({
@@ -672,7 +650,21 @@ router.get(
         }),
 
         TattooStudio.countDocuments({
-          plan: "free",
+          $or: [
+            {
+              plan: "free",
+            },
+
+            {
+              plan: {
+                $exists: false,
+              },
+            },
+
+            {
+              plan: "",
+            },
+          ],
         }),
       ]);
 
@@ -681,22 +673,203 @@ router.get(
 
         stats: {
           total,
+
           verified,
+
           pro,
+
           free,
         },
       });
     } catch (error) {
-      console.error(
-        "❌ Tattoo studio stats error:",
-        error,
-      );
+      console.error("❌ Tattoo studio stats error:", error);
 
       return res.status(500).json({
         success: false,
 
-        message:
-          "Server error while fetching directory statistics.",
+        message: "Server error while fetching directory statistics.",
+
+        error: error.message,
+      });
+    }
+  },
+);
+
+/* =========================================================
+   GET ONE DIRECTORY RECORD
+
+   GET
+   /api/admin/tattoo-studios/:id
+========================================================= */
+
+router.get(
+  "/:id",
+
+  async (req, res) => {
+    try {
+      const studio = await TattooStudio.findById(req.params.id).lean();
+
+      if (!studio) {
+        return res.status(404).json({
+          success: false,
+
+          message: "Tattoo studio not found.",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+
+        data: studio,
+
+        artist: studio,
+
+        studio,
+      });
+    } catch (error) {
+      console.error("❌ Fetch tattoo studio error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Server error while fetching tattoo studio.",
+
+        error: error.message,
+      });
+    }
+  },
+);
+
+/* =========================================================
+   UPDATE DIRECTORY RECORD
+
+   PATCH
+   /api/admin/tattoo-studios/:id
+========================================================= */
+
+router.patch(
+  "/:id",
+
+  async (req, res) => {
+    try {
+      const allowedFields = [
+        "name",
+        "rating",
+        "reviews",
+        "address",
+        "city",
+        "state",
+        "country",
+        "website",
+        "phone",
+        "items",
+        "mapsUrl",
+        "category",
+        "plan",
+        "verified",
+        "spotlight",
+        "claimed",
+        "phoneVerified",
+        "updatedByOwner",
+        "email",
+        "instagram",
+        "experience",
+        "studioName",
+        "profileImage",
+        "hallOfFameEligible",
+        "paymentStatus",
+      ];
+
+      const update = {};
+
+      allowedFields.forEach((field) => {
+        if (req.body[field] !== undefined) {
+          update[field] = req.body[field];
+        }
+      });
+
+      /* =====================================================
+         NORMALIZE PLAN
+      ===================================================== */
+
+      if (update.plan !== undefined) {
+        let planValue = String(update.plan || "free")
+          .trim()
+          .toLowerCase();
+
+        if (planValue === "basic") {
+          planValue = "free";
+        }
+
+        if (planValue === "silver") {
+          planValue = "pro";
+        }
+
+        if (planValue === "gold") {
+          planValue = "verified";
+        }
+
+        if (!["free", "pro", "verified"].includes(planValue)) {
+          return res.status(400).json({
+            success: false,
+
+            message: "Invalid membership plan.",
+          });
+        }
+
+        update.plan = planValue;
+
+        if (planValue === "verified") {
+          update.verified = true;
+
+          update.spotlight = true;
+
+          update.hallOfFameEligible = true;
+        }
+      }
+
+      update.updatedAt = new Date();
+
+      const updatedStudio = await TattooStudio.findByIdAndUpdate(
+        req.params.id,
+
+        {
+          $set: update,
+        },
+
+        {
+          new: true,
+
+          runValidators: true,
+        },
+      );
+
+      if (!updatedStudio) {
+        return res.status(404).json({
+          success: false,
+
+          message: "Tattoo studio not found.",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+
+        message: "Tattoo studio updated successfully.",
+
+        data: updatedStudio,
+
+        artist: updatedStudio,
+
+        studio: updatedStudio,
+      });
+    } catch (error) {
+      console.error("❌ Update tattoo studio error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Server error while updating tattoo studio.",
 
         error: error.message,
       });
@@ -706,48 +879,38 @@ router.get(
 
 /* =========================================================
    DELETE DIRECTORY RECORD
-=========================================================
 
-   DELETE /api/admin/tattoo-studios/:id
-
-   This deletes ONLY an Excel directory record.
-   It does NOT touch your User collection.
+   DELETE
+   /api/admin/tattoo-studios/:id
 ========================================================= */
 
 router.delete(
   "/:id",
+
   async (req, res) => {
     try {
-      const deletedStudio =
-        await TattooStudio.findByIdAndDelete(
-          req.params.id,
-        );
+      const deletedStudio = await TattooStudio.findByIdAndDelete(req.params.id);
 
       if (!deletedStudio) {
         return res.status(404).json({
           success: false,
-          message:
-            "Tattoo studio not found.",
+
+          message: "Tattoo studio not found.",
         });
       }
 
       return res.status(200).json({
         success: true,
 
-        message:
-          "Tattoo studio deleted successfully.",
+        message: "Tattoo studio deleted successfully.",
       });
     } catch (error) {
-      console.error(
-        "❌ Delete tattoo studio error:",
-        error,
-      );
+      console.error("❌ Delete tattoo studio error:", error);
 
       return res.status(500).json({
         success: false,
 
-        message:
-          "Server error while deleting tattoo studio.",
+        message: "Server error while deleting tattoo studio.",
 
         error: error.message,
       });
@@ -759,35 +922,32 @@ router.delete(
    MULTER ERROR HANDLER
 ========================================================= */
 
-router.use(
-  (error, req, res, next) => {
-    if (error instanceof multer.MulterError) {
-      if (
-        error.code === "LIMIT_FILE_SIZE"
-      ) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "Excel file is too large. Maximum size is 200 MB.",
-        });
-      }
-
+router.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === "LIMIT_FILE_SIZE") {
       return res.status(400).json({
         success: false,
-        message: error.message,
+
+        message: "Excel file is too large. Maximum size is 200 MB.",
       });
     }
 
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-      });
-    }
+    return res.status(400).json({
+      success: false,
 
-    next();
-  },
-);
+      message: error.message,
+    });
+  }
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+
+      message: error.message,
+    });
+  }
+
+  next();
+});
 
 module.exports = router;

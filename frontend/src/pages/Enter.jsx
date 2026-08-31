@@ -239,6 +239,30 @@ export default function Enter() {
     setError("");
     setSuccess("");
   };
+    const resetToFind = () => {
+    setScreen("find");
+    setSelectedArtist(null);
+
+    setOtp("");
+    setOtpSent(false);
+    setResendSeconds(0);
+
+    setCurrentProfile(null);
+    setFormData(EMPTY_FORM);
+    setProfileImage("");
+
+    setChangePhoneOpen(false);
+    setNewPhone("");
+    setNewPhoneOtp("");
+    setNewPhoneOtpSent(false);
+
+    clearMessages();
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
   const handleSearch = async (event) => {
     event.preventDefault();
@@ -740,7 +764,7 @@ export default function Enter() {
 
     setCurrentProfile(null);
 
-    setFormData(emptyForm);
+    setFormData(EMPTY_FORM);
 
     setProfileImage("");
 

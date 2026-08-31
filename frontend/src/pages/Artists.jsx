@@ -16,6 +16,7 @@ import gsap from "gsap";
 ========================================================= */
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
+const INITIAL_DAY_INDEX = Math.floor(Date.now() / ONE_DAY);
 const CITY_COUNTER_KEY = "inkConventionCityCounters";
 
 /* Maximum cards visible at one time */
@@ -469,12 +470,15 @@ export default function Artists() {
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedCity, setSelectedCity] = React.useState("ALL");
-  const [localArtists, setLocalArtists] = React.useState([]);
+
+  
+
   const [backendArtists, setBackendArtists] = React.useState([]);
   const [backendTotal, setBackendTotal] = React.useState(0);
   const [counterIndex, setCounterIndex] = React.useState(0);
   const [selectedArtist, setSelectedArtist] = React.useState(null);
   const [artistPage, setArtistPage] = React.useState(0);
+  const [dayIndex, setDayIndex] = React.useState(INITIAL_DAY_INDEX);
 
   const [cityCounts, setCityCounts] = React.useState(() => {
     const data = getUpdatedCounterData();
@@ -559,6 +563,7 @@ export default function Artists() {
     const checkCounter = () => {
       const data = getUpdatedCounterData();
       setCityCounts(data.counts);
+      setDayIndex(Math.floor(Date.now() / ONE_DAY));
     };
 
     const interval = setInterval(checkCounter, 60 * 1000);
@@ -578,123 +583,145 @@ export default function Artists() {
   }, []);
 
   /* =========================================================
-     LOAD LOCAL DIRECTORY
+     LOAD IMPORTED TATTOO DIRECTORY
+
+     IMPORTANT:
+     Your Excel importer stores records in the TattooStudio collection.
+     The backend exposes that collection at:
+
+       GET /api/admin/tattoo-studios
+
+     We load every page in chunks so all imported MongoDB records can
+     participate in the directory, while the UI still renders only
+     ARTISTS_PER_PAGE cards at one time.
   ========================================================= */
 
   React.useEffect(() => {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem("inkConventionDirectoryArtists") || "[]",
-      );
-
-      const normalized = Array.isArray(saved)
-        ? saved.map((artist) => normalizeArtist(artist))
-        : [];
-
-      setLocalArtists(normalized);
-    } catch (error) {
-      console.error("Local artist error:", error);
-      setLocalArtists([]);
-    }
-  }, []);
-
-  /* =========================================================
-     LOAD BACKEND ARTISTS
-
-     New public endpoint expected:
-     GET /api/artists
-
-     It also keeps temporary compatibility with the old
-     /api/admin/users response while your backend is being migrated.
-  ========================================================= */
-
-  React.useEffect(() => {
+    const controller = new AbortController();
     let cancelled = false;
 
-    const mapBackendUser = (user, index) => {
+    const mapDirectoryStudio = (studio, index) => {
       const plan = normalizePlan(
-        user.plan || user.membershipPlan || user.directoryPlan || "basic",
+        studio.plan || studio.membershipPlan || studio.directoryPlan || "basic",
       );
 
       return normalizeArtist({
-        id: user._id || user.id || `backend-${index}`,
+        id: studio._id || studio.id || studio.profileId || `studio-${index}`,
         plan,
+
+        // Imported Excel records use `name` for the tattoo studio/business.
         name:
-          user.professionalName ||
-          user.artistName ||
-          user.name ||
-          `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-          "Tattoo Artist",
-        profileImage: user.profileImage || "",
-        phone: user.phone || user.phoneNumber || "",
-        email: user.email || "",
-        city: user.city || "",
-        state: user.state || "",
-        studio: user.studio || user.studioName || user.brandName || "",
-        experience: user.experience || "",
-        instagram: user.instagram || "",
+          studio.professionalName ||
+          studio.artistName ||
+          studio.name ||
+          "Tattoo Studio",
+
+        profileImage: studio.profileImage || studio.image || studio.photo || "",
+
+        phone: studio.phone || studio.phoneNumber || "",
+        email: studio.email || studio.gmail || "",
+        city: studio.city || "",
+        state: studio.state || "",
+
+        // Keep a separate studio field when one exists. The imported
+        // business name is already available through `name`.
+        studio:
+          studio.studio ||
+          studio.studioName ||
+          studio.brandName ||
+          studio.name ||
+          "",
+
+        experience: studio.experience || "",
+        instagram: studio.instagram || "",
+        website: studio.website || "",
+        mapsUrl: studio.mapsUrl || "",
+        address: studio.address || "",
+        category: studio.category || "",
+        rating: studio.rating ?? null,
+        reviews: studio.reviews ?? 0,
+        country: studio.country || "India",
+
         claimed: Boolean(
-          user.claimed || user.phoneVerified || user.updatedByOwner,
+          studio.claimed || studio.phoneVerified || studio.updatedByOwner,
         ),
-        phoneVerified: Boolean(user.phoneVerified),
-        verified: user.verified || plan === "verified",
-        spotlight: user.spotlight || plan === "verified",
-        hallOfFameEligible: user.hallOfFameEligible || plan === "verified",
-        updatedAt: user.updatedAt || "",
-        createdAt: user.createdAt || "",
+        phoneVerified: Boolean(studio.phoneVerified),
+        verified: Boolean(studio.verified || plan === "verified"),
+        spotlight: Boolean(studio.spotlight || plan === "verified"),
+        hallOfFameEligible: Boolean(
+          studio.hallOfFameEligible || plan === "verified",
+        ),
+        paymentStatus: studio.paymentStatus || studio.payment?.status || "",
+        updatedAt:
+          studio.updatedAt || studio.importedAt || studio.createdAt || "",
+        createdAt: studio.createdAt || studio.importedAt || "",
         year: "2026",
       });
     };
 
     const loadArtists = async () => {
-      const apiBase =
-        import.meta.env.VITE_API_URL || "https://api.inkconvention.com";
+      const apiBase = (
+        import.meta.env.VITE_API_URL || "http://localhost:5000"
+      ).replace(/\/$/, "");
+
+      const PAGE_SIZE = 1000;
+      let page = 1;
+      let totalPages;
+      let total;
+      const allStudios = [];
 
       try {
-        /* New public directory API. */
-        const response = await fetch(`${apiBase}/api/artists?page=1&limit=200`);
-
-        if (!response.ok) {
-          throw new Error(`Public artists HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        const list = Array.isArray(data?.artists) ? data.artists : [];
-
-        if (!cancelled) {
-          setBackendArtists(list.map(mapBackendUser));
-          setBackendTotal(
-            Number(
-              data?.total || data?.count || data?.totalArtists || list.length,
-            ),
+        do {
+          const response = await fetch(
+            `${apiBase}/api/admin/tattoo-studios?page=${page}&limit=${PAGE_SIZE}`,
+            { signal: controller.signal },
           );
-        }
 
-        return;
-      } catch (publicError) {
-        console.warn(
-          "Public artist API unavailable, trying legacy API:",
-          publicError,
+          if (!response.ok) {
+            throw new Error(`Tattoo directory API HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          const pageStudios = Array.isArray(data?.artists)
+            ? data.artists
+            : Array.isArray(data?.data)
+              ? data.data
+              : [];
+
+          allStudios.push(...pageStudios);
+
+          total = Number(
+            data?.total || data?.pagination?.total || allStudios.length,
+          );
+
+          totalPages = Math.max(1, Number(data?.pagination?.totalPages || 1));
+
+          console.log(
+            `✅ Directory page ${page}/${totalPages}: ${pageStudios.length} records`,
+          );
+
+          page += 1;
+        } while (
+          page <= totalPages &&
+          !cancelled &&
+          !controller.signal.aborted
         );
-      }
 
-      try {
-        /* Temporary fallback while your old backend is still active. */
-        const response = await fetch(`${apiBase}/api/admin/users`);
+        if (cancelled || controller.signal.aborted) return;
 
-        if (!response.ok) {
-          throw new Error(`Legacy artists HTTP ${response.status}`);
-        }
+        const normalized = allStudios.map(mapDirectoryStudio);
 
-        const data = await response.json();
-        const list = Array.isArray(data?.users) ? data.users : [];
+        setBackendArtists(normalized);
+        setBackendTotal(total || normalized.length);
 
-        if (!cancelled) {
-          setBackendArtists(list.map(mapBackendUser));
-          setBackendTotal(list.length);
-        }
-      } catch (legacyError) {
-        console.error("Backend artist error:", legacyError);
+        console.log(
+          `✅ TOTAL IMPORTED DIRECTORY RECORDS LOADED: ${normalized.length}`,
+        );
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+
+        console.error("Backend tattoo directory error:", error);
 
         if (!cancelled) {
           setBackendArtists([]);
@@ -703,10 +730,11 @@ export default function Artists() {
       }
     };
 
-    loadArtists();
+    void loadArtists();
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, []);
 
@@ -756,20 +784,8 @@ export default function Artists() {
   ========================================================= */
 
   const allArtists = React.useMemo(() => {
-    const combined = [...localArtists, ...backendArtists].map((artist) =>
-      normalizeArtist(artist),
-    );
-
-    /* Remove duplicate IDs when the same profile is available locally + API */
-    const seen = new Set();
-
-    return combined.filter((artist) => {
-      const key = String(artist.id || `${artist.name}-${artist.city}`);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [localArtists, backendArtists]);
+  return backendArtists.map((artist) => normalizeArtist(artist));
+}, [backendArtists]);
 
   /* =========================================================
      CITY FILTER OPTIONS
@@ -890,9 +906,15 @@ export default function Artists() {
     filteredArtists.length,
   );
 
-  React.useEffect(() => {
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
     setArtistPage(0);
-  }, [searchQuery, selectedCity]);
+  };
+
+  const handleCityChange = (city) => {
+    setSelectedCity(city);
+    setArtistPage(0);
+  };
 
   React.useEffect(() => {
     if (totalArtistPages <= 1) return undefined;
@@ -934,10 +956,7 @@ export default function Artists() {
 
   const currentCounter = communityCounters[counterIndex];
   const currentCount = cityCounts[currentCounter.city] ?? currentCounter.count;
-  const todayIncrement = getDailyIncrement(
-    currentCounter.city,
-    Math.floor(Date.now() / ONE_DAY),
-  );
+  const todayIncrement = getDailyIncrement(currentCounter.city, dayIndex);
 
   return (
     <>
@@ -1048,7 +1067,7 @@ export default function Artists() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onChange={handleSearchChange}
                   placeholder="SEARCH ARTIST OR STUDIO NAME..."
                   className="w-full bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl pl-11 pr-4 py-4 text-xs text-white outline-none placeholder:text-gray-700 transition"
                 />
@@ -1062,7 +1081,7 @@ export default function Artists() {
 
                 <select
                   value={selectedCity}
-                  onChange={(event) => setSelectedCity(event.target.value)}
+                  onChange={(event) => handleCityChange(event.target.value)}
                   className="w-full appearance-none bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl pl-10 pr-10 py-4 text-[10px] font-black tracking-widest text-white outline-none cursor-pointer"
                 >
                   {cityOptions.map((city) => (
@@ -1091,7 +1110,7 @@ export default function Artists() {
                   <button
                     key={city}
                     type="button"
-                    onClick={() => setSelectedCity(city)}
+                    onClick={() => handleCityChange(city)}
                     className={`shrink-0 rounded-full border px-4 py-2 text-[8px] font-black tracking-widest transition ${
                       selectedCity === city
                         ? "border-purple-400 bg-purple-500/15 text-purple-300"
@@ -1250,18 +1269,11 @@ function CommunityMapBox({
   ======================================================= */
 
   React.useEffect(() => {
-    if (!exploredCity) {
-      setFeaturedImage("");
-      setFeaturedImageLoading(false);
-      return undefined;
-    }
+    if (!exploredCity) return undefined;
 
     const controller = new AbortController();
 
     const loadPlaceImage = async () => {
-      setFeaturedImage("");
-      setFeaturedImageLoading(true);
-
       try {
         const searchText = `${featuredPlace.name} ${exploredCityData.city} India`;
 
@@ -1429,7 +1441,16 @@ function CommunityMapBox({
   const openCurrentCity = () => {
     if (isTransitioning || exploredCity) return;
 
-    setExploredCity(currentCounter.city);
+    const city = currentCounter.city;
+
+    setFeaturedImage("");
+    setFeaturedImageLoading(true);
+
+    if (CITY_COORDINATES[city]) {
+      setIsTransitioning(true);
+    }
+
+    setExploredCity(city);
   };
 
   /* =======================================================
@@ -1464,8 +1485,6 @@ function CommunityMapBox({
       gsap.set(baseViewRef.current, { opacity: 0 });
       return undefined;
     }
-
-    setIsTransitioning(true);
 
     const [x, y] = projectCoordinate(coordinates);
     const originX = (x / MAP_WIDTH) * 100;
@@ -1716,6 +1735,8 @@ function CommunityMapBox({
           });
         }
 
+        setFeaturedImage("");
+        setFeaturedImageLoading(false);
         setExploredCity(null);
         setIsTransitioning(false);
       },
