@@ -104,12 +104,7 @@ function Navbar() {
                     Upcoming
                   </Link>
                  
-                  <Link
-                    to="/Upload"
-                    className="px-5 py-3 text-gray-400 hover:text-white hover:bg-white/5 transition"
-                  >
-                    Expo 2026 Form
-                  </Link>
+                
                 </div>
               </div>
             </div>
@@ -279,20 +274,8 @@ function Navbar() {
                 >
                   Upcoming
                 </Link>
-                <Link
-                  to="/client-login"
-                  onClick={closeMenu}
-                  className="text-gray-400 hover:text-[#a855f7] transition text-lg"
-                >
-                  Client
-                </Link>
-                <Link
-                  to="/Upload"
-                  onClick={closeMenu}
-                  className="text-gray-400 hover:text-[#a855f7] transition text-lg"
-                >
-                  Expo 2026 Form
-                </Link>
+               
+                
               </div>
             </div>
 

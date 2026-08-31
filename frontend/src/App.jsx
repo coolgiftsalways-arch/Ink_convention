@@ -4,24 +4,26 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  Navigate,
   useLocation,
 } from "react-router-dom";
 
 import Lenis from "lenis";
 import gsap from "gsap";
 
-/* ================================
+/* =========================================================
    COMPONENTS
-================================ */
+========================================================= */
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import PageTransition from "./components/PageTransition";
 import ScrollToTop from "./components/ScrollToTop";
+import Payment from "./components/Payment";
 
-/* ================================
-   PAGES
-================================ */
+/* =========================================================
+   PUBLIC PAGES
+========================================================= */
 
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -32,39 +34,56 @@ import Enter from "./pages/Enter";
 import Upload from "./pages/Upload";
 import TOP from "./pages/TOP";
 import Upcoming from "./pages/Upcomeing";
-import Payment from "./components/Payment";
 import ClientLogin from "./pages/ClientLogin";
 
-/* ================================
-   ADMIN
-================================ */
+/* =========================================================
+   ADMIN PAGES
+========================================================= */
 
 import Dashboard from "./admin/Dashboard";
 import Clients from "./admin/Clients";
+import AdminStalls from "./admin/AdminStalls";
+import AdminArtists from "./admin/Adminartists";
+import AdminLogin from "./admin/Login";
 
-/* ================================
+/*
+  DO NOT import AdminSidebar here.
+
+  AdminSidebar is already used inside your admin pages.
+
+  src/admin/AdminSidebar.jsx
+  is a component, not a separate page.
+*/
+
+/* =========================================================
    STYLES
-================================ */
+========================================================= */
 
 import "./Style/SmoothScroll.css";
 import "./Style/BarbaTransitions.css";
 import "./Style/PageTransition.css";
 
-/* ======================================================
+/* =========================================================
    LAYOUT
-====================================================== */
+========================================================= */
 
 function Layout() {
   const location = useLocation();
 
-  /* ================================
-     HIDE NAVBAR + FOOTER
-     ON ADMIN PAGES
-  ================================ */
+  /* =======================================================
+     HIDE WEBSITE NAVBAR + FOOTER
+     ON EVERY ADMIN PAGE
 
-  const isExcludedNavFooter =
-    location.pathname === "/admin/dashboard" ||
-    location.pathname === "/admin/clients";
+     /admin/dashboard
+     /admin/clients
+     /admin/stalls
+     /admin/artists
+     /admin/login
+  ======================================================= */
+
+  const isAdminPage =
+    location.pathname === "/dashboard" ||
+    location.pathname.startsWith("/admin");
 
   return (
     <div
@@ -79,21 +98,21 @@ function Layout() {
         selection:text-white
       "
     >
-      {/* ================================
-          NAVBAR
-      ================================ */}
+      {/* ===================================================
+          PUBLIC NAVBAR
+      =================================================== */}
 
-      {!isExcludedNavFooter && <Navbar />}
+      {!isAdminPage && <Navbar />}
 
-      {/* ================================
-          MAIN CONTENT
-      ================================ */}
+      {/* ===================================================
+          ROUTES
+      =================================================== */}
 
       <div className="flex-grow w-full">
         <Routes location={location} key={location.pathname}>
-          {/* ================================
+          {/* =================================================
               HOME
-          ================================ */}
+          ================================================= */}
 
           <Route
             path="/"
@@ -104,9 +123,9 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               ABOUT
-          ================================ */}
+          ================================================= */}
 
           <Route
             path="/about"
@@ -117,9 +136,9 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               GALLERY
-          ================================ */}
+          ================================================= */}
 
           <Route
             path="/gallery"
@@ -130,9 +149,9 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               SERVICES
-          ================================ */}
+          ================================================= */}
 
           <Route
             path="/services"
@@ -143,9 +162,11 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               HALL OF FAME
-          ================================ */}
+
+              ₹2,999 VERIFIED ARTISTS
+          ================================================= */}
 
           <Route
             path="/hall-of-fame"
@@ -156,9 +177,13 @@ function Layout() {
             }
           />
 
-          {/* ================================
-              ARTISTS
-          ================================ */}
+          {/* =================================================
+              ARTISTS DIRECTORY
+
+              BASIC
+              ₹1,499 SILVER
+              ₹2,999 GOLD
+          ================================================= */}
 
           <Route
             path="/artists"
@@ -169,11 +194,9 @@ function Layout() {
             }
           />
 
-          {/* =========================================
-              ENTER / ARTIST REGISTRATION
-              
-              THIS WAS MISSING IN YOUR OLD APP.JSX
-          ========================================= */}
+          {/* =================================================
+              ARTIST CLAIM / UPDATE
+          ================================================= */}
 
           <Route
             path="/Enter"
@@ -184,8 +207,6 @@ function Layout() {
             }
           />
 
-          {/* Also support lowercase */}
-
           <Route
             path="/enter"
             element={
@@ -195,9 +216,9 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               TOP
-          ================================ */}
+          ================================================= */}
 
           <Route
             path="/top"
@@ -208,9 +229,9 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               UPCOMING EVENTS
-          ================================ */}
+          ================================================= */}
 
           <Route
             path="/upcoming"
@@ -221,9 +242,9 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               CONTACT
-          ================================ */}
+          ================================================= */}
 
           <Route
             path="/contact"
@@ -234,9 +255,9 @@ function Layout() {
             }
           />
 
-          {/* ================================
-              UPLOAD
-          ================================ */}
+          {/* =================================================
+              COMPETITION UPLOAD
+          ================================================= */}
 
           <Route
             path="/Upload"
@@ -247,8 +268,6 @@ function Layout() {
             }
           />
 
-          {/* Lowercase upload */}
-
           <Route
             path="/upload"
             element={
@@ -258,9 +277,9 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               PAYMENT
-          ================================ */}
+          ================================================= */}
 
           <Route
             path="/payment"
@@ -271,9 +290,9 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               CLIENT LOGIN
-          ================================ */}
+          ================================================= */}
 
           <Route
             path="/client-login"
@@ -284,9 +303,55 @@ function Layout() {
             }
           />
 
-          {/* ================================
-              ADMIN DASHBOARD
-          ================================ */}
+          {/* =================================================
+              ADMIN ROOT
+
+              /admin
+                    ↓
+              /admin/dashboard
+          ================================================= */}
+
+          <Route
+            path="/admin"
+            element={<Navigate to="/admin/dashboard" replace />}
+          />
+
+          {/* =================================================
+              ADMIN LOGIN
+
+              FILE:
+              src/admin/Login.jsx
+
+              URL:
+              /admin/login
+          ================================================= */}
+
+          <Route path="/admin/login" element={<AdminLogin />} />
+
+          {/* =================================================
+              OLD LOGIN REDIRECT SUPPORT
+
+              Your Admin Login.jsx currently navigates to:
+              /dashboard
+
+              So this redirects it to:
+              /admin/dashboard
+          ================================================= */}
+
+          <Route
+            path="/dashboard"
+            element={<Navigate to="/admin/dashboard" replace />}
+          />
+
+          {/* =================================================
+              ADMIN COMPETITION DASHBOARD
+
+              FILE:
+              src/admin/Dashboard.jsx
+
+              URL:
+              /admin/dashboard
+          ================================================= */}
 
           <Route
             path="/admin/dashboard"
@@ -297,9 +362,15 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
               ADMIN CLIENTS
-          ================================ */}
+
+              FILE:
+              src/admin/Clients.jsx
+
+              URL:
+              /admin/clients
+          ================================================= */}
 
           <Route
             path="/admin/clients"
@@ -310,26 +381,69 @@ function Layout() {
             }
           />
 
-          {/* ================================
+          {/* =================================================
+              ADMIN STALL BOOKINGS
+
+              FILE:
+              src/admin/AdminStalls.jsx
+
+              URL:
+              /admin/stalls
+          ================================================= */}
+
+          <Route
+            path="/admin/stalls"
+            element={
+              <PageTransition>
+                <AdminStalls />
+              </PageTransition>
+            }
+          />
+
+          {/* =================================================
+              ADMIN ARTISTS
+
+              FILE:
+              src/admin/Adminartists.jsx
+
+              Shows:
+              BASIC artists
+              ₹1,499 SILVER / PRO
+              ₹2,999 GOLD / VERIFIED
+
+              URL:
+              /admin/artists
+          ================================================= */}
+
+          <Route
+            path="/admin/artists"
+            element={
+              <PageTransition>
+                <AdminArtists />
+              </PageTransition>
+            }
+          />
+
+          {/* =================================================
               404
-          ================================ */}
+          ================================================= */}
 
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
 
-      {/* ================================
-          FOOTER
-      ================================ */}
+      {/* ===================================================
+          PUBLIC FOOTER
+      =================================================== */}
 
-      {!isExcludedNavFooter && <Footer />}
+      {!isAdminPage && <Footer />}
     </div>
   );
 }
 
-/* ======================================================
+/* =========================================================
    404 PAGE
-====================================================== */
+========================================================= */
 
 function NotFound() {
   return (
@@ -374,15 +488,15 @@ function NotFound() {
   );
 }
 
-/* ======================================================
+/* =========================================================
    APP
-====================================================== */
+========================================================= */
 
 export default function App() {
   useEffect(() => {
-    /* ================================
-       LENIS
-    ================================ */
+    /* =====================================================
+       LENIS SMOOTH SCROLL
+    ===================================================== */
 
     const lenis = new Lenis({
       duration: 1.2,
@@ -390,9 +504,9 @@ export default function App() {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
 
-    /* ================================
+    /* =====================================================
        GSAP + LENIS
-    ================================ */
+    ===================================================== */
 
     const raf = (time) => {
       lenis.raf(time * 1000);
@@ -402,9 +516,9 @@ export default function App() {
 
     gsap.ticker.lagSmoothing(0);
 
-    /* ================================
+    /* =====================================================
        CLEANUP
-    ================================ */
+    ===================================================== */
 
     return () => {
       gsap.ticker.remove(raf);
