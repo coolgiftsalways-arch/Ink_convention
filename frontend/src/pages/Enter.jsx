@@ -11,6 +11,13 @@ import {
   Users,
 } from "lucide-react";
 import gsap from "gsap";
+import {
+  initMsg91Otp,
+  sendMsg91Otp,
+  verifyMsg91Otp,
+  resendMsg91Otp,
+  getMsg91AccessToken,
+} from "../utils/msg91Otp";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -26,10 +33,7 @@ function getStoredArray(key) {
 
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
-    console.error(
-      `Failed to read localStorage key: ${key}`,
-      error
-    );
+    console.error(`Failed to read localStorage key: ${key}`, error);
 
     return [];
   }
@@ -46,8 +50,6 @@ const DIRECTORY_KEY = "inkConventionDirectoryArtists";
 const CURRENT_USER_KEY = "inkConventionCurrentUserId";
 
 const PENDING_MEMBERSHIP_KEY = "inkConventionPendingMembership";
-
-
 
 const PLANS = [
   {
@@ -131,7 +133,9 @@ function updateDirectory(updatedProfile) {
 
     const updatedDirectory = directory.map((artist) =>
       String(artist.id || artist._id || artist.profileId) ===
-      String(updatedProfile.id || updatedProfile._id || updatedProfile.profileId)
+      String(
+        updatedProfile.id || updatedProfile._id || updatedProfile.profileId,
+      )
         ? {
             ...artist,
             ...updatedProfile,
@@ -140,10 +144,7 @@ function updateDirectory(updatedProfile) {
         : artist,
     );
 
-    localStorage.setItem(
-      DIRECTORY_KEY,
-      JSON.stringify(updatedDirectory),
-    );
+    localStorage.setItem(DIRECTORY_KEY, JSON.stringify(updatedDirectory));
 
     console.log("✅ Directory updated successfully");
   } catch (error) {
@@ -270,6 +271,24 @@ export default function Enter() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    if (screen !== "verify") {
+      return;
+    }
+
+    initMsg91Otp()
+      .then(() => {
+        console.log("✅ MSG91 OTP READY");
+      })
+      .catch((error) => {
+        console.error("❌ MSG91 initialization error:", error);
+
+        setError(
+          "OTP service could not be initialized. Please refresh the page.",
+        );
+      });
+  }, [screen]);
 
   useEffect(() => {
     const context = gsap.context(() => {
@@ -409,18 +428,36 @@ export default function Enter() {
       return;
     }
 
-    if (otpLoading || resendSeconds > 0) return;
+    if (otpLoading) return;
 
     setOtpLoading(true);
     clearMessages();
 
     try {
+      // ============================================
+      // STEP 1: GET REGISTERED PHONE FROM BACKEND
+      // ============================================
+
       const data = await apiRequest("/api/claim/send-otp", {
         method: "POST",
         body: {
           profileId: selectedArtist.id,
         },
       });
+
+      const identifier = data.identifier;
+
+      if (!identifier) {
+        throw new Error("Registered mobile number was not returned.");
+      }
+
+      // ============================================
+      // STEP 2: MSG91 ACTUALLY SENDS THE OTP
+      // ============================================
+
+      await sendMsg91Otp(identifier);
+
+      console.log("✅ MSG91 OTP sent successfully");
 
       setMaskedPhone(
         data.maskedPhone ||
@@ -429,15 +466,43 @@ export default function Enter() {
           "REGISTERED NUMBER",
       );
 
+      setOtp("");
+
       setOtpSent(true);
 
-      setResendSeconds(Number(data.resendAfterSeconds || 60));
+      setResendSeconds(60);
 
       setSuccess("OTP sent to the registered mobile number.");
     } catch (sendError) {
-      console.error(sendError);
+      console.error("❌ Send OTP error:", sendError);
 
       setError(sendError.message || "Unable to send OTP.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+  const resendOtp = async () => {
+    if (!otpSent || otpLoading || resendSeconds > 0) {
+      return;
+    }
+
+    setOtpLoading(true);
+    clearMessages();
+
+    try {
+      await resendMsg91Otp();
+
+      setOtp("");
+
+      setResendSeconds(60);
+
+      setSuccess("OTP resent successfully.");
+
+      console.log("✅ MSG91 OTP resent successfully");
+    } catch (resendError) {
+      console.error("❌ Resend OTP error:", resendError);
+
+      setError(resendError.message || "Unable to resend OTP.");
     } finally {
       setOtpLoading(false);
     }
@@ -451,8 +516,8 @@ export default function Enter() {
       return;
     }
 
-    if (!/^\d{6}$/.test(otp)) {
-      setError("Enter the 6-digit OTP.");
+    if (!/^\d{4}$/.test(otp)) {
+      setError("Enter the 4-digit OTP.");
       return;
     }
 
@@ -460,13 +525,43 @@ export default function Enter() {
     clearMessages();
 
     try {
+      // ============================================
+      // STEP 1: VERIFY OTP WITH MSG91
+      // ============================================
+
+      const msg91Result = await verifyMsg91Otp(otp);
+
+      console.log("✅ MSG91 OTP verified");
+
+      // ============================================
+      // STEP 2: GET MSG91 ACCESS TOKEN
+      // ============================================
+
+      const accessToken = getMsg91AccessToken(msg91Result);
+
+      if (!accessToken) {
+        console.error("MSG91 verification response:", msg91Result);
+
+        throw new Error("MSG91 verification token was not returned.");
+      }
+
+      // ============================================
+      // STEP 3: VERIFY TOKEN ON OUR BACKEND
+      // ============================================
+
       const verifyData = await apiRequest("/api/claim/verify-otp", {
         method: "POST",
+
         body: {
           profileId: selectedArtist.id,
-          otp,
+
+          accessToken,
         },
       });
+
+      // ============================================
+      // KEEP YOUR EXISTING PROFILE LOGIC
+      // ============================================
 
       let profile = verifyData.profile || verifyData.artist || null;
 
@@ -498,7 +593,7 @@ export default function Enter() {
         behavior: "smooth",
       });
     } catch (verifyError) {
-      console.error(verifyError);
+      console.error("❌ Verify OTP error:", verifyError);
 
       setError(verifyError.message || "Incorrect or expired OTP.");
     } finally {
@@ -678,7 +773,7 @@ export default function Enter() {
 
       setSuccess("Profile updated successfully.");
 
-      setScreen("plans");
+      setScreen("edit");
 
       window.scrollTo({
         top: 0,
@@ -776,278 +871,196 @@ export default function Enter() {
   };
 
   const startPaidPlan = async (planId) => {
-  if (!currentProfile) {
-    setError("Profile information is missing.");
-    return;
-  }
-
-  const selectedPlan = PLANS.find(
-    (plan) => plan.id === planId
-  );
-
-  if (!selectedPlan) {
-    setError("Invalid membership plan.");
-    return;
-  }
-
-  try {
-    setSaving(true);
-    clearMessages();
-
-    // =====================================================
-    // LOAD RAZORPAY CHECKOUT
-    // =====================================================
-
-    const razorpayLoaded = await loadRazorpayScript();
-
-    if (!razorpayLoaded) {
-      throw new Error(
-        "Razorpay checkout could not be loaded. Please check your internet connection."
-      );
+    if (!currentProfile) {
+      setError("Profile information is missing.");
+      return;
     }
 
-    // =====================================================
-    // CREATE ORDER ON BACKEND
-    // =====================================================
+    const selectedPlan = PLANS.find((plan) => plan.id === planId);
 
-    console.log("💳 Creating Razorpay order...");
-    console.log("📦 Plan:", selectedPlan.id);
-    console.log("💰 Amount:", selectedPlan.amount);
+    if (!selectedPlan) {
+      setError("Invalid membership plan.");
+      return;
+    }
 
-    const orderData = await apiRequest(
-      "/api/payment/create-order",
-      {
+    try {
+      setSaving(true);
+      clearMessages();
+
+      // =====================================================
+      // LOAD RAZORPAY CHECKOUT
+      // =====================================================
+
+      const razorpayLoaded = await loadRazorpayScript();
+
+      if (!razorpayLoaded) {
+        throw new Error(
+          "Razorpay checkout could not be loaded. Please check your internet connection.",
+        );
+      }
+
+      // =====================================================
+      // CREATE ORDER ON BACKEND
+      // =====================================================
+
+      console.log("💳 Creating Razorpay order...");
+      console.log("📦 Plan:", selectedPlan.id);
+      console.log("💰 Amount:", selectedPlan.amount);
+
+      const orderData = await apiRequest("/api/payment/create-order", {
         method: "POST",
         body: {
           amount: selectedPlan.amount,
           packageId: selectedPlan.id,
-          email:
-            currentProfile.email ||
-            formData.email ||
-            "",
-          phone:
-            currentProfile.phone ||
-            currentProfile.mobile ||
-            "",
-          name:
-            currentProfile.name ||
-            formData.name ||
-            "",
+          email: currentProfile.email || formData.email || "",
+          phone: currentProfile.phone || currentProfile.mobile || "",
+          name: currentProfile.name || formData.name || "",
         },
+      });
+
+      console.log("✅ Razorpay order created:", orderData);
+
+      if (!orderData.success) {
+        throw new Error(orderData.message || "Unable to create payment order.");
       }
-    );
 
-    console.log("✅ Razorpay order created:", orderData);
+      // =====================================================
+      // OPEN RAZORPAY
+      // =====================================================
 
-    if (!orderData.success) {
-      throw new Error(
-        orderData.message ||
-          "Unable to create payment order."
-      );
-    }
+      const options = {
+        key: orderData.key,
 
-    // =====================================================
-    // OPEN RAZORPAY
-    // =====================================================
+        amount: orderData.amount,
 
-    const options = {
-      key: orderData.key,
+        currency: orderData.currency || "INR",
 
-      amount: orderData.amount,
+        name: "INK CONVENTION 2026",
 
-      currency: orderData.currency || "INR",
+        description: selectedPlan.name,
 
-      name: "INK CONVENTION 2026",
+        order_id: orderData.orderId,
 
-      description: selectedPlan.name,
+        prefill: {
+          name: currentProfile.name || formData.name || "",
+          email: currentProfile.email || formData.email || "",
+          contact: currentProfile.phone || currentProfile.mobile || "",
+        },
 
-      order_id: orderData.orderId,
+        theme: {
+          color: "#a855f7",
+        },
 
-      prefill: {
-        name:
-          currentProfile.name ||
-          formData.name ||
-          "",
-        email:
-          currentProfile.email ||
-          formData.email ||
-          "",
-        contact:
-          currentProfile.phone ||
-          currentProfile.mobile ||
-          "",
-      },
+        handler: async function (response) {
+          try {
+            console.log("💳 Razorpay payment response:", response);
 
-      theme: {
-        color: "#a855f7",
-      },
+            setSaving(true);
+            clearMessages();
 
-      handler: async function (response) {
-        try {
-          console.log(
-            "💳 Razorpay payment response:",
-            response
-          );
+            // =================================================
+            // VERIFY PAYMENT ON BACKEND
+            // =================================================
 
-          setSaving(true);
-          clearMessages();
-
-          // =================================================
-          // VERIFY PAYMENT ON BACKEND
-          // =================================================
-
-          const verifyData = await apiRequest(
-            "/api/payment/verify",
-            {
+            const verifyData = await apiRequest("/api/payment/verify", {
               method: "POST",
               body: {
-                razorpay_order_id:
-                  response.razorpay_order_id,
+                razorpay_order_id: response.razorpay_order_id,
 
-                razorpay_payment_id:
-                  response.razorpay_payment_id,
+                razorpay_payment_id: response.razorpay_payment_id,
 
-                razorpay_signature:
-                  response.razorpay_signature,
-              },
-            }
-          );
-
-          console.log(
-            "🔐 Payment verification:",
-            verifyData
-          );
-
-          if (!verifyData.success) {
-            throw new Error(
-              verifyData.message ||
-                "Payment verification failed."
-            );
-          }
-
-          // =================================================
-          // PAYMENT SUCCESS
-          // =================================================
-
-          const upgradedProfile = {
-            ...currentProfile,
-            plan: selectedPlan.id,
-            paymentId:
-              response.razorpay_payment_id,
-            orderId:
-              response.razorpay_order_id,
-            updatedAt:
-              new Date().toISOString(),
-          };
-
-          // Save locally for your current frontend setup
-          const profiles =
-            getStoredArray(PROFILE_KEY);
-
-          const updatedProfiles =
-            profiles.map((profile) =>
-              String(profile.id) ===
-              String(currentProfile.id)
-                ? upgradedProfile
-                : profile
-            );
-
-          localStorage.setItem(
-            PROFILE_KEY,
-            JSON.stringify(updatedProfiles)
-          );
-
-          updateDirectory(upgradedProfile);
-
-          setCurrentProfile(upgradedProfile);
-
-          setSuccess(
-            `${selectedPlan.name} activated successfully!`
-          );
-
-          console.log(
-            "✅ Membership upgraded:",
-            selectedPlan.id
-          );
-
-          // Small delay so user sees success message
-          setTimeout(() => {
-            navigate("/artists", {
-              state: {
-                newArtistId:
-                  upgradedProfile.id,
+                razorpay_signature: response.razorpay_signature,
               },
             });
-          }, 1200);
 
-        } catch (verifyError) {
-          console.error(
-            "❌ Payment verification error:",
-            verifyError
-          );
+            console.log("🔐 Payment verification:", verifyData);
 
-          setError(
-            verifyError.message ||
-              "Payment verification failed."
-          );
-        } finally {
-          setSaving(false);
-        }
-      },
+            if (!verifyData.success) {
+              throw new Error(
+                verifyData.message || "Payment verification failed.",
+              );
+            }
 
-      modal: {
-        ondismiss: function () {
-          console.log(
-            "ℹ️ Razorpay checkout closed."
-          );
+            // =================================================
+            // PAYMENT SUCCESS
+            // =================================================
 
-          setSaving(false);
+            const upgradedProfile = {
+              ...currentProfile,
+              plan: selectedPlan.id,
+              paymentId: response.razorpay_payment_id,
+              orderId: response.razorpay_order_id,
+              updatedAt: new Date().toISOString(),
+            };
+
+            // Save locally for your current frontend setup
+            const profiles = getStoredArray(PROFILE_KEY);
+
+            const updatedProfiles = profiles.map((profile) =>
+              String(profile.id) === String(currentProfile.id)
+                ? upgradedProfile
+                : profile,
+            );
+
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfiles));
+
+            updateDirectory(upgradedProfile);
+
+            setCurrentProfile(upgradedProfile);
+
+            setSuccess(`${selectedPlan.name} activated successfully!`);
+
+            console.log("✅ Membership upgraded:", selectedPlan.id);
+
+            // Small delay so user sees success message
+            setTimeout(() => {
+              navigate("/artists", {
+                state: {
+                  newArtistId: upgradedProfile.id,
+                },
+              });
+            }, 1200);
+          } catch (verifyError) {
+            console.error("❌ Payment verification error:", verifyError);
+
+            setError(verifyError.message || "Payment verification failed.");
+          } finally {
+            setSaving(false);
+          }
         },
-      },
-    };
 
-    console.log(
-      "🚀 Opening Razorpay checkout..."
-    );
+        modal: {
+          ondismiss: function () {
+            console.log("ℹ️ Razorpay checkout closed.");
 
-    const razorpay =
-      new window.Razorpay(options);
+            setSaving(false);
+          },
+        },
+      };
 
-    razorpay.on(
-      "payment.failed",
-      function (response) {
-        console.error(
-          "❌ Razorpay payment failed:",
-          response
-        );
+      console.log("🚀 Opening Razorpay checkout...");
+
+      const razorpay = new window.Razorpay(options);
+
+      razorpay.on("payment.failed", function (response) {
+        console.error("❌ Razorpay payment failed:", response);
 
         setError(
-          response.error?.description ||
-            "Payment failed. Please try again."
+          response.error?.description || "Payment failed. Please try again.",
         );
 
         setSaving(false);
-      }
-    );
+      });
 
-    razorpay.open();
+      razorpay.open();
+    } catch (error) {
+      console.error("❌ Razorpay initialization error:", error);
 
-  } catch (error) {
-    console.error(
-      "❌ Razorpay initialization error:",
-      error
-    );
+      setError(error.message || "Unable to start payment.");
 
-    setError(
-      error.message ||
-        "Unable to start payment."
-    );
-
-    setSaving(false);
-  }
-};
-
-
+      setSaving(false);
+    }
+  };
 
   const upgradePlan = (nextPlan) => {
     if (!currentProfile) {
@@ -1144,7 +1157,7 @@ export default function Enter() {
     setFormData(makeForm(testProfile));
     setProfileImage("");
     clearMessages();
-    setScreen("plans");
+    setScreen("edit");
 
     window.scrollTo({
       top: 0,
@@ -1294,6 +1307,8 @@ export default function Enter() {
               </p>
             </div>
 
+            <div id="msg91-captcha" className="mt-5 flex justify-center"></div>
+
             {!otpSent ? (
               <button
                 type="button"
@@ -1306,24 +1321,24 @@ export default function Enter() {
             ) : (
               <form onSubmit={verifyOtp} className="mt-6">
                 <label className="block text-[9px] font-mono text-gray-500 mb-2">
-                  ENTER 6-DIGIT OTP
+                  ENTER 4-DIGIT OTP
                 </label>
 
                 <input
                   type="text"
                   value={otp}
                   onChange={(event) =>
-                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
+                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 4))
                   }
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  placeholder="000000"
+                  placeholder="0000"
                   className="w-full text-center tracking-[0.55em] bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl px-5 py-5 outline-none text-xl font-black"
                 />
 
                 <button
                   type="submit"
-                  disabled={otpLoading || otp.length !== 6}
+                  disabled={otpLoading || otp.length !== 4}
                   className="mt-4 w-full bg-white hover:bg-slate-200 text-black disabled:opacity-50 rounded-xl p-4 font-black text-[10px] tracking-widest transition"
                 >
                   {otpLoading ? "VERIFYING..." : "VERIFY OTP & OPEN PROFILE"}
@@ -1331,7 +1346,7 @@ export default function Enter() {
 
                 <button
                   type="button"
-                  onClick={sendOtp}
+                  onClick={resendOtp}
                   disabled={otpLoading || resendSeconds > 0}
                   className="mt-4 w-full text-[9px] font-mono text-purple-400 disabled:text-gray-700"
                 >

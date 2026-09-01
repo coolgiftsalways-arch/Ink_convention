@@ -26,28 +26,6 @@ const ARTISTS_PER_PAGE = 20;
 const ARTIST_ROTATE_MS = 4000;
 
 /* =========================================================
-   DIRECTORY LOCATION FILTERS
-
-   Only these locations appear in the dropdown.
-   MongoDB local-area / address values are NOT added.
-========================================================= */
-
-const LOCATION_FILTERS = [
-  { label: "Mumbai", value: "MUMBAI", type: "city" },
-  { label: "Pune", value: "PUNE", type: "city" },
-  { label: "Nashik", value: "NASHIK", type: "city" },
-  { label: "Nagpur", value: "NAGPUR", type: "city" },
-  { label: "Kolhapur", value: "KOLHAPUR", type: "city" },
-  { label: "Navi Mumbai", value: "NAVI MUMBAI", type: "city" },
-  { label: "Thane", value: "THANE", type: "city" },
-  { label: "Panvel", value: "PANVEL", type: "city" },
-  { label: "Madhya Pradesh", value: "MADHYA PRADESH", type: "state" },
-  { label: "Gujarat", value: "GUJARAT", type: "state" },
-  { label: "Rajasthan", value: "RAJASTHAN", type: "state" },
-  { label: "Punjab", value: "PUNJAB", type: "state" },
-];
-
-/* =========================================================
    COMMUNITY CITIES
 ========================================================= */
 
@@ -325,13 +303,25 @@ function geometryToPath(geometry) {
 const safeText = (value) => String(value || "").toLowerCase();
 
 function normalizePlan(plan) {
-  const value = safeText(plan);
+  const value = safeText(plan).trim();
 
-  if (value === "gold" || value === "verified" || value === "spotlight") {
+  if (
+    value === "gold" ||
+    value === "verified" ||
+    value === "spotlight" ||
+    value.includes("gold") ||
+    value.includes("verified") ||
+    value.includes("spotlight")
+  ) {
     return "verified";
   }
 
-  if (value === "silver" || value === "pro") {
+  if (
+    value === "silver" ||
+    value === "pro" ||
+    value.includes("silver") ||
+    value.includes("pro")
+  ) {
     return "pro";
   }
 
@@ -492,7 +482,8 @@ export default function Artists() {
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedCity, setSelectedCity] = React.useState("ALL");
-  const [locationOpen, setLocationOpen] = React.useState(false);
+
+  
 
   const [backendArtists, setBackendArtists] = React.useState([]);
   const [backendTotal, setBackendTotal] = React.useState(0);
@@ -509,34 +500,6 @@ export default function Artists() {
   const artistSectionRef = React.useRef(null);
   const artistGridRef = React.useRef(null);
   const entryButtonRef = React.useRef(null);
-  const locationFilterRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (!locationOpen) return undefined;
-
-    const handleOutsideClick = (event) => {
-      if (
-        locationFilterRef.current &&
-        !locationFilterRef.current.contains(event.target)
-      ) {
-        setLocationOpen(false);
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setLocationOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    window.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [locationOpen]);
 
   /* =========================================================
      UPDATE CARD BUTTON ANIMATION
@@ -779,13 +742,28 @@ export default function Artists() {
       }
     };
 
+        // Initial directory load
     void loadArtists();
 
-    return () => {
+    // Refresh directory whenever the user comes back to this tab/window.
+    // This allows newly purchased Gold/Silver plans to appear
+    // without requiring another Excel upload.
+    const handleFocus = () => {
+      if (!cancelled && !controller.signal.aborted) {
+        console.log("🔄 User returned to Artists page — refreshing directory...");
+        void loadArtists();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+       return () => {
       cancelled = true;
       controller.abort();
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
+
 
   /* =========================================================
      AUTO SCROLL TO NEW ARTIST
@@ -833,12 +811,27 @@ export default function Artists() {
   ========================================================= */
 
   const allArtists = React.useMemo(() => {
-    return backendArtists.map((artist) => normalizeArtist(artist));
-  }, [backendArtists]);
+  return backendArtists.map((artist) => normalizeArtist(artist));
+}, [backendArtists]);
 
   /* =========================================================
      CITY FILTER OPTIONS
   ========================================================= */
+
+  const cityOptions = React.useMemo(() => {
+    const cities = new Set();
+
+    allArtists.forEach((artist) => {
+      const city = String(artist.city || "").trim();
+      if (city) cities.add(city.toUpperCase());
+    });
+
+    communityCounters.forEach((item) => {
+      if (item.city) cities.add(String(item.city).toUpperCase());
+    });
+
+    return ["ALL", ...Array.from(cities).sort((a, b) => a.localeCompare(b))];
+  }, [allArtists]);
 
   const directoryTotal = Math.max(backendTotal, allArtists.length);
 
@@ -853,39 +846,38 @@ export default function Artists() {
   ========================================================= */
 
   const filteredArtists = React.useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+  const query = searchQuery.trim().toLowerCase();
 
-    let results = allArtists;
+  /*
+   * =========================================================
+   * ALL FILTER
+   *
+   * ONLY PREMIUM ARTISTS ARE ALLOWED HERE.
+   *
+   * Priority:
+   * 1. GOLD / VERIFIED
+   * 2. SILVER / PRO
+   *
+   * Maximum = 6 cards.
+   *
+   * BASIC / FREE ARTISTS ARE NEVER SHOWN IN ALL.
+   * =========================================================
+   */
 
-    if (selectedCity !== "ALL") {
-      const selectedLocation = LOCATION_FILTERS.find(
-        (item) => item.value === selectedCity,
-      );
+  if (selectedCity === "ALL") {
+    let premiumArtists = allArtists.filter((artist) => {
+      const plan = normalizePlan(artist.plan);
 
-      if (selectedLocation) {
-        results = results.filter((artist) => {
-          const artistCity = String(artist.city || "")
-            .trim()
-            .toUpperCase();
+      return plan === "verified" || plan === "pro";
+    });
 
-          const artistState = String(artist.state || "")
-            .trim()
-            .toUpperCase();
-
-          if (selectedLocation.type === "state") {
-            return artistState === selectedLocation.value;
-          }
-
-          return artistCity === selectedLocation.value;
-        });
-      }
-    }
-
+    /*
+     * Search inside premium artists only.
+     */
     if (query) {
-      results = results.filter((artist) => {
+      premiumArtists = premiumArtists.filter((artist) => {
         const plan = normalizePlan(artist.plan);
 
-        /* Basic public search can match the directory identity fields. */
         const publicSearchText = [
           artist.name,
           artist.studio,
@@ -893,12 +885,16 @@ export default function Artists() {
           artist.state,
         ];
 
-        /* Pro adds email to public/searchable information. */
+        /*
+         * Pro can search email.
+         */
         if (plan === "pro") {
           publicSearchText.push(artist.email);
         }
 
-        /* Verified can expose the complete profile. */
+        /*
+         * Gold gets complete searchable profile.
+         */
         if (plan === "verified") {
           publicSearchText.push(
             artist.phone,
@@ -914,7 +910,14 @@ export default function Artists() {
       });
     }
 
-    return [...results].sort((a, b) => {
+    /*
+     * GOLD FIRST
+     * SILVER SECOND
+     *
+     * Then newest updated profile first within
+     * the same plan.
+     */
+    premiumArtists.sort((a, b) => {
       const priorityA = getArtistPriority(a);
       const priorityB = getArtistPriority(b);
 
@@ -922,12 +925,105 @@ export default function Artists() {
         return priorityA - priorityB;
       }
 
-      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
-      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime() || 0;
+      const dateA =
+        new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
+
+      const dateB =
+        new Date(b.updatedAt || b.createdAt || 0).getTime() || 0;
 
       return dateB - dateA;
     });
-  }, [allArtists, searchQuery, selectedCity]);
+
+    /*
+     * VERY IMPORTANT:
+     * ALL FILTER CAN NEVER HAVE MORE THAN 6 CARDS.
+     */
+    return premiumArtists.slice(0, 6);
+  }
+
+  /*
+   * =========================================================
+   * CITY FILTER
+   *
+   * CITY FILTER SHOWS EVERY ARTIST IN THAT CITY:
+   *
+   * GOLD
+   * SILVER
+   * UPDATED BASIC
+   * EXISTING BASIC
+   *
+   * =========================================================
+   */
+
+  let results = allArtists.filter(
+    (artist) =>
+      safeText(artist.city).toUpperCase() === selectedCity,
+  );
+
+  /*
+   * SEARCH WITHIN CITY
+   */
+  if (query) {
+    results = results.filter((artist) => {
+      const plan = normalizePlan(artist.plan);
+
+      const publicSearchText = [
+        artist.name,
+        artist.studio,
+        artist.city,
+        artist.state,
+      ];
+
+      /*
+       * Pro can search email.
+       */
+      if (plan === "pro") {
+        publicSearchText.push(artist.email);
+      }
+
+      /*
+       * Gold can search complete profile.
+       */
+      if (plan === "verified") {
+        publicSearchText.push(
+          artist.phone,
+          artist.email,
+          artist.instagram,
+          artist.experience,
+        );
+      }
+
+      return publicSearchText.some((value) =>
+        safeText(value).includes(query),
+      );
+    });
+  }
+
+  /*
+   * CITY ORDER:
+   *
+   * 1. GOLD
+   * 2. SILVER
+   * 3. UPDATED BASIC
+   * 4. EXISTING BASIC
+   */
+  return [...results].sort((a, b) => {
+    const priorityA = getArtistPriority(a);
+    const priorityB = getArtistPriority(b);
+
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
+    const dateA =
+      new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
+
+    const dateB =
+      new Date(b.updatedAt || b.createdAt || 0).getTime() || 0;
+
+    return dateB - dateA;
+  });
+}, [allArtists, searchQuery, selectedCity]);
 
   /* =========================================================
      20-CARD AUTO ROTATION
@@ -1125,182 +1221,23 @@ export default function Artists() {
                 />
               </div>
 
-              <div
-                ref={locationFilterRef}
-                className="relative w-full lg:w-[290px] shrink-0"
-              >
-                <button
-                  type="button"
-                  onClick={() => setLocationOpen((previous) => !previous)}
-                  className={`
-                    group w-full min-h-[52px] flex items-center justify-between gap-3
-                    rounded-xl border px-4 bg-black/40 backdrop-blur-xl
-                    transition-all duration-300 cursor-pointer
-                    ${
-                      locationOpen
-                        ? "border-purple-500 shadow-[0_0_28px_rgba(168,85,247,0.16)]"
-                        : "border-white/10 hover:border-purple-500/50"
-                    }
-                  `}
+              <div className="relative min-w-[220px]">
+                <MapPin
+                  size={14}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400 pointer-events-none"
+                />
+
+                <select
+                  value={selectedCity}
+                  onChange={(event) => handleCityChange(event.target.value)}
+                  className="w-full appearance-none bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl pl-10 pr-10 py-4 text-[10px] font-black tracking-widest text-white outline-none cursor-pointer"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
-                      <MapPin size={14} className="text-purple-400" />
-                    </div>
-
-                    <div className="text-left min-w-0">
-                      <p className="text-[7px] font-mono tracking-[0.18em] text-gray-600 uppercase mb-0.5">
-                        Location
-                      </p>
-
-                      <p className="text-[10px] font-black tracking-[0.08em] text-white truncate">
-                        {selectedCity === "ALL"
-                          ? "ALL LOCATIONS"
-                          : LOCATION_FILTERS.find(
-                              (item) => item.value === selectedCity,
-                            )?.label.toUpperCase() || "SELECT LOCATION"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={`shrink-0 text-gray-500 transition-transform duration-300 ${
-                      locationOpen ? "rotate-180 text-purple-400" : ""
-                    }`}
-                  >
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-
-                {locationOpen && (
-                  <div className="absolute top-[calc(100%+8px)] right-0 z-[120] w-[520px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-[#0b0b0f]/98 backdrop-blur-2xl shadow-[0_25px_80px_rgba(0,0,0,0.72)] overflow-hidden">
-                    <div className="px-4 py-3 border-b border-white/10 bg-white/[0.015]">
-                      <p className="text-[8px] font-black tracking-[0.18em] text-purple-400">
-                        SELECT LOCATION
-                      </p>
-
-                      <p className="text-[8px] text-gray-600 mt-1">
-                        City or state
-                      </p>
-                    </div>
-
-                    <div className="p-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleCityChange("ALL");
-                          setLocationOpen(false);
-                        }}
-                        className={`
-                          w-full flex items-center justify-between rounded-xl px-4 py-3.5
-                          text-left transition-all duration-200 cursor-pointer
-                          ${
-                            selectedCity === "ALL"
-                              ? "bg-purple-500/15 text-purple-300"
-                              : "text-gray-400 hover:bg-white/[0.05] hover:text-white"
-                          }
-                        `}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-lg border border-white/10 bg-white/[0.03] flex items-center justify-center">
-                            <MapPinned
-                              size={13}
-                              className={
-                                selectedCity === "ALL"
-                                  ? "text-purple-400"
-                                  : "text-gray-600"
-                              }
-                            />
-                          </div>
-
-                          <span className="text-[10px] font-black tracking-[0.08em]">
-                            ALL LOCATIONS
-                          </span>
-                        </div>
-
-                        {selectedCity === "ALL" && (
-                          <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.9)]" />
-                        )}
-                      </button>
-
-                      <div className="my-2 border-t border-white/[0.06]" />
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                        {LOCATION_FILTERS.map((locationItem) => {
-                          const active = selectedCity === locationItem.value;
-
-                          return (
-                            <button
-                              key={locationItem.value}
-                              type="button"
-                              onClick={() => {
-                                handleCityChange(locationItem.value);
-                                setLocationOpen(false);
-                              }}
-                              className={`
-                                group w-full flex items-center justify-between gap-4
-                                rounded-xl px-4 py-3 text-left transition-all duration-200 cursor-pointer
-                                ${
-                                  active
-                                    ? "bg-purple-500/15 text-purple-300"
-                                    : "text-gray-400 hover:bg-white/[0.05] hover:text-white"
-                                }
-                              `}
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div
-                                  className={`
-                                    w-7 h-7 rounded-lg border flex items-center justify-center shrink-0
-                                    ${
-                                      active
-                                        ? "border-purple-500/30 bg-purple-500/10"
-                                        : "border-white/10 bg-white/[0.02] group-hover:border-purple-500/20"
-                                    }
-                                  `}
-                                >
-                                  <MapPin
-                                    size={12}
-                                    className={
-                                      active
-                                        ? "text-purple-400"
-                                        : "text-gray-600 group-hover:text-purple-400"
-                                    }
-                                  />
-                                </div>
-
-                                <span className="text-[10px] font-black tracking-[0.07em] truncate">
-                                  {locationItem.label.toUpperCase()}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span
-                                  className={`text-[7px] font-mono tracking-[0.12em] uppercase ${
-                                    active ? "text-purple-400" : "text-gray-700"
-                                  }`}
-                                >
-                                  {locationItem.type}
-                                </span>
-
-                                {active && (
-                                  <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.9)]" />
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  {cityOptions.map((city) => (
+                    <option key={city} value={city}>
+                      {city === "ALL" ? "ALL CITIES" : city}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <Link
@@ -1316,7 +1253,7 @@ export default function Artists() {
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {["ALL", "MUMBAI", "PUNE", "NASHIK", "NAGPUR", "KOLHAPUR"].map(
+              {["ALL", "MUMBAI", "PUNE", "DELHI", "BENGALURU", "HYDERABAD"].map(
                 (city) => (
                   <button
                     key={city}
@@ -1389,7 +1326,7 @@ export default function Artists() {
             ) : (
               <div
                 ref={artistGridRef}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 items-start"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 items-stretch"
               >
                 {visibleArtists.map((artist, index) => {
                   const globalIndex = artistPageStart + index;
@@ -1439,64 +1376,6 @@ function CommunityMapBox({
   const [featuredImage, setFeaturedImage] = React.useState("");
   const [featuredImageLoading, setFeaturedImageLoading] = React.useState(false);
 
-  /*
-    Time-aware photo mode.
-
-    This uses the visitor's browser time:
-    05:00-11:59 -> morning
-    12:00-16:59 -> day
-    17:00-19:59 -> evening
-    20:00-04:59 -> night
-  */
-  const [timeSnapshot, setTimeSnapshot] = React.useState(() => new Date());
-
-  const timePeriod = React.useMemo(() => {
-    const hour = timeSnapshot.getHours();
-
-    if (hour >= 5 && hour < 12) {
-      return {
-        key: "morning",
-        label: "MORNING",
-        searchWord: "morning sunrise",
-        icon: "🌅",
-      };
-    }
-
-    if (hour >= 12 && hour < 17) {
-      return {
-        key: "day",
-        label: "DAY",
-        searchWord: "daytime sunny",
-        icon: "☀️",
-      };
-    }
-
-    if (hour >= 17 && hour < 20) {
-      return {
-        key: "evening",
-        label: "EVENING",
-        searchWord: "evening sunset dusk",
-        icon: "🌇",
-      };
-    }
-
-    return {
-      key: "night",
-      label: "NIGHT",
-      searchWord: "night illuminated lights",
-      icon: "🌃",
-    };
-  }, [timeSnapshot]);
-
-  const currentTimeLabel = React.useMemo(
-    () =>
-      timeSnapshot.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    [timeSnapshot],
-  );
-
   const contentRef = React.useRef(null);
   const numberRef = React.useRef(null);
   const glowRef = React.useRef(null);
@@ -1526,30 +1405,15 @@ function CommunityMapBox({
     exploredCityData?.count ??
     currentCount;
 
-  /* Keep the time mode fresh if the visitor leaves the page open. */
-  React.useEffect(() => {
-    const updateClock = () => {
-      setTimeSnapshot(new Date());
-    };
-
-    updateClock();
-
-    const interval = window.setInterval(updateClock, 30 * 1000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, []);
-
   /* =======================================================
-     TIME-MATCHED REAL PHOTO
+     LOAD REAL IMAGE FOR THE CITY'S FEATURED PLACE
 
-     The photo is NOT a live CCTV feed.
-     It is a real Wikimedia photo searched to match the visitor's
-     current time period: morning / day / evening / night.
+     MUMBAI -> GATEWAY OF INDIA
+     DELHI -> INDIA GATE
+     JAIPUR -> HAWA MAHAL
+     ...and the same system for every city.
 
-     If a time-specific photo cannot be found, the code falls back
-     to a normal photo of the same famous place.
+     Images are fetched automatically from Wikipedia/Wikimedia.
   ======================================================= */
 
   React.useEffect(() => {
@@ -1557,112 +1421,42 @@ function CommunityMapBox({
 
     const controller = new AbortController();
 
-    const getCommonsImage = async (searchText) => {
-      const url =
-        "https://commons.wikimedia.org/w/api.php" +
-        "?action=query&generator=search" +
-        `&gsrsearch=${encodeURIComponent(searchText)}` +
-        "&gsrnamespace=6&gsrlimit=12" +
-        "&prop=imageinfo&iiprop=url&iiurlwidth=1600" +
-        "&format=json&origin=*";
-
-      const response = await fetch(url, {
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Wikimedia image HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      const pages = Object.values(data?.query?.pages || {});
-
-      const photoPage = pages.find((page) => {
-        const title = String(page?.title || "");
-        const imageInfo = page?.imageinfo?.[0];
-
-        return (
-          /\.(jpe?g|png|webp)$/i.test(title) &&
-          Boolean(imageInfo?.thumburl || imageInfo?.url)
-        );
-      });
-
-      const imageInfo = photoPage?.imageinfo?.[0];
-
-      return imageInfo?.thumburl || imageInfo?.url || "";
-    };
-
-    const getWikipediaFallback = async () => {
-      const searchText = `${featuredPlace.name} ${exploredCityData.city} India`;
-
-      const url =
-        "https://en.wikipedia.org/w/api.php" +
-        `?action=query&generator=search&gsrsearch=${encodeURIComponent(searchText)}` +
-        "&gsrlimit=5&prop=pageimages&piprop=thumbnail%7Coriginal" +
-        "&pithumbsize=1600&format=json&origin=*";
-
-      const response = await fetch(url, {
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        return "";
-      }
-
-      const data = await response.json();
-      const pages = Object.values(data?.query?.pages || {});
-
-      const pageWithImage =
-        pages.find((page) => page?.original?.source) ||
-        pages.find((page) => page?.thumbnail?.source);
-
-      return (
-        pageWithImage?.original?.source ||
-        pageWithImage?.thumbnail?.source ||
-        ""
-      );
-    };
-
     const loadPlaceImage = async () => {
-      setFeaturedImage("");
-      setFeaturedImageLoading(true);
-
       try {
-        const searches = [
-          `${featuredPlace.name} ${exploredCityData.city} India ${timePeriod.searchWord}`,
-          `${exploredCityData.city} India ${timePeriod.searchWord} landmark`,
-          `${featuredPlace.name} ${exploredCityData.city} India`,
-        ];
+        const searchText = `${featuredPlace.name} ${exploredCityData.city} India`;
 
-        let imageSource = "";
+        const url =
+          "https://en.wikipedia.org/w/api.php" +
+          `?action=query&generator=search&gsrsearch=${encodeURIComponent(searchText)}` +
+          "&gsrlimit=5&prop=pageimages&piprop=thumbnail%7Coriginal" +
+          "&pithumbsize=1400&format=json&origin=*";
 
-        for (const searchText of searches) {
-          if (controller.signal.aborted) return;
+        const response = await fetch(url, {
+          signal: controller.signal,
+        });
 
-          try {
-            imageSource = await getCommonsImage(searchText);
-          } catch (error) {
-            if (error?.name === "AbortError") {
-              throw error;
-            }
-
-            console.warn("Wikimedia search failed:", searchText, error);
-          }
-
-          if (imageSource) break;
+        if (!response.ok) {
+          throw new Error(`Place image HTTP ${response.status}`);
         }
 
-        if (!imageSource && !controller.signal.aborted) {
-          imageSource = await getWikipediaFallback();
-        }
+        const data = await response.json();
+        const pages = Object.values(data?.query?.pages || {});
+
+        const pageWithImage =
+          pages.find((page) => page?.original?.source) ||
+          pages.find((page) => page?.thumbnail?.source);
+
+        const imageSource =
+          pageWithImage?.original?.source ||
+          pageWithImage?.thumbnail?.source ||
+          "";
 
         if (!controller.signal.aborted) {
           setFeaturedImage(imageSource);
         }
       } catch (error) {
         if (error?.name !== "AbortError") {
-          console.error("Time-matched place image error:", error);
-          setFeaturedImage("");
+          console.error("Featured place image error:", error);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -1671,18 +1465,12 @@ function CommunityMapBox({
       }
     };
 
-    void loadPlaceImage();
+    loadPlaceImage();
 
     return () => {
       controller.abort();
     };
-  }, [
-    exploredCity,
-    exploredCityData.city,
-    featuredPlace.name,
-    timePeriod.key,
-    timePeriod.searchWord,
-  ]);
+  }, [exploredCity, exploredCityData.city, featuredPlace.name]);
 
   /* =======================================================
      LOAD INDIA MAP
@@ -2532,17 +2320,6 @@ function CommunityMapBox({
                     <p className="mt-2 text-[8px] font-mono tracking-[0.13em] text-purple-400 uppercase">
                       {featuredPlace.area}
                     </p>
-
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[7px] font-mono tracking-[0.12em] text-gray-300">
-                        <span aria-hidden="true">{timePeriod.icon}</span>
-                        {timePeriod.label} VIEW
-                      </span>
-
-                      <span className="inline-flex items-center rounded-full border border-purple-500/20 bg-purple-500/[0.06] px-3 py-1.5 text-[7px] font-mono tracking-[0.12em] text-purple-300">
-                        YOUR TIME · {currentTimeLabel}
-                      </span>
-                    </div>
                   </div>
                 </div>
 
@@ -2555,27 +2332,19 @@ function CommunityMapBox({
                     <img
                       src={featuredImage}
                       alt={`${featuredPlace.name} - ${exploredCityData.city}`}
-                      className={`
+                      className="
                         absolute
                         inset-0
                         w-full
                         h-full
                         object-cover
+                        opacity-80
                         scale-[1.03]
-                        transition-all
+                        transition-transform
                         duration-[1800ms]
                         ease-out
                         group-hover:scale-[1.09]
-                        ${
-                          timePeriod.key === "night"
-                            ? "opacity-75 brightness-[0.62] saturate-[0.9] contrast-125"
-                            : timePeriod.key === "evening"
-                              ? "opacity-82 brightness-[0.82] saturate-125 contrast-110"
-                              : timePeriod.key === "morning"
-                                ? "opacity-85 brightness-[0.98] saturate-110"
-                                : "opacity-85 brightness-100 saturate-100"
-                        }
-                      `}
+                      "
                     />
                   )}
 
@@ -2592,8 +2361,7 @@ function CommunityMapBox({
                       </span>
 
                       <p className="text-[8px] font-mono tracking-[0.15em] text-gray-600 uppercase">
-                        Loading {timePeriod.label.toLowerCase()} view ·{" "}
-                        {featuredPlace.name}
+                        Loading {featuredPlace.name}
                       </p>
                     </div>
                   )}
@@ -2604,42 +2372,17 @@ function CommunityMapBox({
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_42%,rgba(168,85,247,0.22),transparent_45%),linear-gradient(135deg,#14141a,#08080a)]" />
                   )}
 
-                  {/* TIME-AWARE CINEMATIC OVERLAYS */}
+                  {/* CINEMATIC OVERLAY */}
 
-                  <div className="absolute inset-0 z-[2] bg-gradient-to-t from-[#07070a] via-black/20 to-black/10 pointer-events-none" />
+                  <div className="absolute inset-0 z-[2] bg-gradient-to-t from-[#07070a] via-black/20 to-black/20 pointer-events-none" />
                   <div className="absolute inset-0 z-[2] bg-gradient-to-r from-black/25 via-transparent to-purple-950/10 pointer-events-none" />
 
-                  {timePeriod.key === "morning" && (
-                    <div className="absolute inset-0 z-[2] bg-gradient-to-br from-amber-200/10 via-transparent to-sky-200/5 pointer-events-none" />
-                  )}
-
-                  {timePeriod.key === "day" && (
-                    <div className="absolute inset-0 z-[2] bg-gradient-to-br from-sky-200/[0.04] via-transparent to-white/[0.03] pointer-events-none" />
-                  )}
-
-                  {timePeriod.key === "evening" && (
-                    <div className="absolute inset-0 z-[2] bg-gradient-to-br from-orange-500/12 via-transparent to-purple-950/20 pointer-events-none" />
-                  )}
-
-                  {timePeriod.key === "night" && (
-                    <div className="absolute inset-0 z-[2] bg-gradient-to-br from-indigo-950/35 via-black/10 to-black/35 pointer-events-none" />
-                  )}
-
-                  {/* TIME + SOURCE BADGES */}
-
-                  <div className="absolute top-4 left-4 z-30 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/60 backdrop-blur-md px-3 py-1.5">
-                    <span className="text-[9px]" aria-hidden="true">
-                      {timePeriod.icon}
-                    </span>
-                    <span className="text-[6px] sm:text-[7px] font-mono tracking-[0.11em] text-white uppercase">
-                      {timePeriod.label} · {currentTimeLabel}
-                    </span>
-                  </div>
+                  {/* SOURCE BADGE */}
 
                   {featuredImage && (
                     <div className="absolute top-4 right-4 z-30 rounded-full border border-white/10 bg-black/55 backdrop-blur-md px-3 py-1.5">
                       <span className="text-[6px] sm:text-[7px] font-mono tracking-[0.11em] text-gray-400 uppercase">
-                        Time-matched photo • Wikimedia
+                        Photo • Wikipedia / Wikimedia
                       </span>
                     </div>
                   )}
@@ -2716,7 +2459,7 @@ function CommunityMapBox({
 
               <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between gap-4">
                 <span className="text-[7px] sm:text-[8px] font-mono tracking-[0.12em] text-gray-600">
-                  {timePeriod.label} VIEW · {featuredPlace.name}
+                  FEATURED PLACE IN {exploredCityData.city}
                 </span>
 
                 <button
@@ -2768,23 +2511,23 @@ function ArtistCard({ artist, index, isNew, onClick }) {
     <article
       onClick={onClick}
       className={`
-        group relative w-full h-fit rounded-[18px] overflow-hidden flex flex-col
-        cursor-pointer transition-all duration-400 hover:-translate-y-1.5
+        group relative w-full min-h-[520px] rounded-[24px] overflow-hidden flex flex-col
+        cursor-pointer transition-all duration-500 hover:-translate-y-2
         ${
           isVerified
             ? `
               border-2 border-[#f5c451]
               bg-gradient-to-br from-[#f5c451]/[0.13] via-[#171105] to-[#0d0d11]
-              shadow-[0_0_24px_rgba(245,196,81,0.13)]
-              hover:shadow-[0_0_42px_rgba(245,196,81,0.26)]
+              shadow-[0_0_34px_rgba(245,196,81,0.15)]
+              hover:shadow-[0_0_64px_rgba(245,196,81,0.30)]
               ink-gold-card-pulse
             `
             : isPro
               ? `
                 border-2 border-[#d8dee8]
                 bg-gradient-to-br from-white/[0.075] via-[#111319] to-[#0d0d11]
-                shadow-[0_0_18px_rgba(226,232,240,0.09)]
-                hover:shadow-[0_0_36px_rgba(226,232,240,0.19)]
+                shadow-[0_0_24px_rgba(226,232,240,0.10)]
+                hover:shadow-[0_0_48px_rgba(226,232,240,0.22)]
                 ink-silver-card-pulse
               `
               : `
@@ -2794,36 +2537,40 @@ function ArtistCard({ artist, index, isNew, onClick }) {
         }
         ${
           isNew
-            ? "ring-2 ring-purple-500 ring-offset-2 ring-offset-[#08080a]"
+            ? "ring-2 ring-purple-500 ring-offset-4 ring-offset-[#08080a]"
             : ""
         }
       `}
     >
       {/* PREMIUM ALIVE EFFECTS */}
       {isPro && (
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="ink-silver-shine absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          <div className="ink-premium-float absolute -right-10 -top-10 h-32 w-32 rounded-full bg-slate-200/[0.08] blur-3xl" />
-          <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-70" />
-        </div>
+        <>
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div className="ink-silver-shine absolute -left-1/2 top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="ink-premium-float absolute -right-12 -top-12 h-40 w-40 rounded-full bg-slate-200/[0.08] blur-3xl" />
+            <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-70" />
+          </div>
+        </>
       )}
 
       {isVerified && (
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="ink-gold-shine absolute -left-1/2 top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
-          <div className="ink-premium-float absolute -right-10 -top-8 h-36 w-36 rounded-full bg-[#f5c451]/[0.14] blur-3xl" />
-          <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ffe69a] to-transparent opacity-90" />
+        <>
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div className="ink-gold-shine absolute -left-1/2 top-0 h-full w-[26%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
+            <div className="ink-premium-float absolute -right-12 -top-10 h-44 w-44 rounded-full bg-[#f5c451]/[0.14] blur-3xl" />
+            <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ffe69a] to-transparent opacity-90" />
 
-          <span className="ink-premium-dot absolute right-7 top-20 h-1.5 w-1.5 rounded-full bg-[#ffd86b] shadow-[0_0_12px_rgba(255,216,107,0.95)]" />
-          <span className="ink-premium-dot absolute right-14 top-32 h-1 w-1 rounded-full bg-[#fff0b2] shadow-[0_0_10px_rgba(255,240,178,0.9)] [animation-delay:0.55s]" />
-          <span className="ink-premium-dot absolute left-7 top-28 h-1 w-1 rounded-full bg-[#f5c451] shadow-[0_0_10px_rgba(245,196,81,0.9)] [animation-delay:1.05s]" />
-        </div>
+            <span className="ink-premium-dot absolute right-8 top-24 h-1.5 w-1.5 rounded-full bg-[#ffd86b] shadow-[0_0_12px_rgba(255,216,107,0.95)]" />
+            <span className="ink-premium-dot absolute right-16 top-40 h-1 w-1 rounded-full bg-[#fff0b2] shadow-[0_0_10px_rgba(255,240,178,0.9)] [animation-delay:0.55s]" />
+            <span className="ink-premium-dot absolute left-8 top-36 h-1 w-1 rounded-full bg-[#f5c451] shadow-[0_0_10px_rgba(245,196,81,0.9)] [animation-delay:1.05s]" />
+          </div>
+        </>
       )}
 
-      {/* PLAN STRIP - compact, but nothing hidden */}
+      {/* PLAN STRIP */}
       <div
         className={`
-          relative z-10 flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 border-b
+          relative z-10 flex items-center justify-between gap-3 px-5 py-3 border-b
           ${
             isVerified
               ? "border-[#f5c451]/25 bg-[#f5c451]/[0.08]"
@@ -2833,22 +2580,21 @@ function ArtistCard({ artist, index, isNew, onClick }) {
           }
         `}
       >
-        <div className="flex items-start gap-1.5 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0">
           <Sparkles
-            size={10}
+            size={12}
             className={
               isVerified
-                ? "text-[#f5c451] shrink-0 mt-0.5"
+                ? "text-[#f5c451] shrink-0"
                 : isPro
-                  ? "text-slate-200 shrink-0 mt-0.5"
-                  : "text-gray-600 shrink-0 mt-0.5"
+                  ? "text-slate-200 shrink-0"
+                  : "text-gray-600 shrink-0"
             }
           />
 
           <span
             className={`
-              text-[6.5px] sm:text-[7px] leading-[1.35] font-black tracking-[0.09em]
-              uppercase break-words [overflow-wrap:anywhere]
+              text-[7px] font-black tracking-[0.12em] uppercase truncate
               ${
                 isVerified
                   ? "text-[#ffe39a]"
@@ -2863,33 +2609,33 @@ function ArtistCard({ artist, index, isNew, onClick }) {
         </div>
 
         {isPro && (
-          <span className="relative overflow-hidden text-[6.5px] font-black tracking-[0.09em] text-slate-100 border border-slate-200/35 bg-white/[0.05] rounded-full px-2 py-1 whitespace-nowrap shadow-[0_0_12px_rgba(226,232,240,0.12)]">
+          <span className="relative overflow-hidden text-[7px] font-black tracking-[0.12em] text-slate-100 border border-slate-200/35 bg-white/[0.05] rounded-full px-2.5 py-1 whitespace-nowrap shadow-[0_0_14px_rgba(226,232,240,0.12)]">
             <span className="relative z-10">SILVER PRO</span>
           </span>
         )}
 
         {isVerified && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[6.5px] font-black tracking-[0.09em] text-[#221500] bg-gradient-to-r from-[#dcae37] via-[#ffe58d] to-[#c8911f] rounded-full px-2 py-1 whitespace-nowrap shadow-[0_0_14px_rgba(245,196,81,0.30)]">
+          <div className="flex items-center gap-2">
+            <span className="text-[7px] font-black tracking-[0.12em] text-[#221500] bg-gradient-to-r from-[#dcae37] via-[#ffe58d] to-[#c8911f] rounded-full px-2.5 py-1 whitespace-nowrap shadow-[0_0_18px_rgba(245,196,81,0.35)]">
               ★ GOLD VERIFIED
             </span>
-            <span className="text-[6.5px] font-black tracking-[0.09em] text-[#ffe39a] border border-[#f5c451]/30 rounded-full px-2 py-1 whitespace-nowrap">
+            <span className="hidden 2xl:inline text-[7px] font-black tracking-[0.12em] text-[#ffe39a] border border-[#f5c451]/30 rounded-full px-2.5 py-1 whitespace-nowrap">
               HALL OF FAME
             </span>
           </div>
         )}
       </div>
 
-      {/* PROFILE HEADER - smaller, all text visible */}
-      <div className="relative z-10 flex items-start gap-3 p-3.5 border-b border-white/10">
+      {/* PROFILE HEADER */}
+      <div className="relative z-10 flex items-center gap-4 p-5 border-b border-white/10">
         <div
           className={`
-            relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 bg-black border-2
+            relative w-16 h-16 rounded-full overflow-hidden shrink-0 bg-black border-2
             ${
               isVerified
-                ? "border-[#f5c451] shadow-[0_0_22px_rgba(245,196,81,0.32)]"
+                ? "border-[#f5c451] shadow-[0_0_28px_rgba(245,196,81,0.38)]"
                 : isPro
-                  ? "border-[#d8dee8] shadow-[0_0_15px_rgba(226,232,240,0.14)]"
+                  ? "border-[#d8dee8] shadow-[0_0_18px_rgba(226,232,240,0.16)]"
                   : "border-white/10"
             }
           `}
@@ -2902,7 +2648,7 @@ function ArtistCard({ artist, index, isNew, onClick }) {
             />
           ) : (
             <div
-              className={`w-full h-full flex items-center justify-center font-black text-base sm:text-lg ${
+              className={`w-full h-full flex items-center justify-center font-black text-xl ${
                 isVerified
                   ? "text-[#f5c451] bg-[#f5c451]/[0.05]"
                   : isPro
@@ -2925,9 +2671,9 @@ function ArtistCard({ artist, index, isNew, onClick }) {
           )}
         </div>
 
-        <div className="flex-1 min-w-0 pt-0.5">
+        <div className="flex-1 min-w-0">
           <p
-            className={`text-[6.5px] sm:text-[7px] font-mono tracking-[0.12em] mb-1 ${
+            className={`text-[8px] font-mono tracking-widest mb-1 ${
               isVerified
                 ? "text-[#caa33d]"
                 : isPro
@@ -2939,25 +2685,25 @@ function ArtistCard({ artist, index, isNew, onClick }) {
           </p>
 
           <h3
-            className={`text-[15px] sm:text-base font-black uppercase leading-[1.15] break-words [overflow-wrap:anywhere] ${
+            className={`text-xl font-black uppercase truncate ${
               isVerified ? "text-[#fff1bc]" : "text-white"
             }`}
           >
             {normalizedArtist.name || "Tattoo Artist"}
           </h3>
 
-          <div className="flex items-start gap-1.5 mt-1.5 text-[9px] sm:text-[10px] leading-snug text-gray-400">
+          <div className="flex items-center gap-1.5 mt-2 text-[11px] text-gray-400">
             <MapPin
-              size={10}
+              size={11}
               className={
                 isVerified
-                  ? "text-[#f5c451] shrink-0 mt-0.5"
+                  ? "text-[#f5c451] shrink-0"
                   : isPro
-                    ? "text-slate-300 shrink-0 mt-0.5"
-                    : "shrink-0 mt-0.5"
+                    ? "text-slate-300 shrink-0"
+                    : "shrink-0"
               }
             />
-            <span className="break-words [overflow-wrap:anywhere]">
+            <span className="truncate">
               {isBasic
                 ? normalizedArtist.state || "India"
                 : locationText || "India"}
@@ -2966,26 +2712,24 @@ function ArtistCard({ artist, index, isNew, onClick }) {
         </div>
       </div>
 
-      {/* DETAILS - compact layout, no field removed */}
-      <div className="relative z-10 px-3.5 pt-3.5 pb-3.5 flex flex-col">
+      {/* DETAILS */}
+      <div className="relative z-10 px-5 pt-5 pb-5 flex flex-col flex-1 min-h-0">
         {isBasic && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 gap-2.5">
-              <InfoRow
-                title="ARTIST / STUDIO"
-                value={normalizedArtist.name || normalizedArtist.studio || "-"}
-              />
-              <InfoRow title="STATE" value={normalizedArtist.state || "-"} />
-            </div>
+          <div className="space-y-4">
+            <InfoRow
+              title="ARTIST / STUDIO"
+              value={normalizedArtist.name || normalizedArtist.studio || "-"}
+            />
+            <InfoRow title="STATE" value={normalizedArtist.state || "-"} />
 
-            <div className="rounded-lg border border-white/[0.07] bg-black/20 p-3">
-              <p className="text-[7px] font-black tracking-[0.1em] text-gray-500">
+            <div className="rounded-xl border border-white/[0.07] bg-black/20 p-4">
+              <p className="text-[8px] font-black tracking-[0.12em] text-gray-500">
                 {normalizedArtist.claimed
                   ? "OWNER UPDATED PROFILE"
                   : "EXISTING DIRECTORY DATA"}
               </p>
 
-              <p className="mt-1.5 text-[9px] text-gray-600 leading-[1.45]">
+              <p className="mt-2 text-[10px] text-gray-600 leading-relaxed">
                 The owner can verify the registered number by OTP and update
                 this card. The phone number cannot be changed before ownership
                 is verified.
@@ -2996,27 +2740,25 @@ function ArtistCard({ artist, index, isNew, onClick }) {
 
         {isPro && (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
-              <InfoRow title="NAME" value={normalizedArtist.name} />
-              <InfoRow title="EMAIL" value={normalizedArtist.email} />
-              <InfoRow title="CITY" value={normalizedArtist.city} />
-              <InfoRow title="STATE" value={normalizedArtist.state} />
-            </div>
+            <InfoRow title="NAME" value={normalizedArtist.name} />
+            <InfoRow title="EMAIL" value={normalizedArtist.email} />
+            <InfoRow title="CITY" value={normalizedArtist.city} />
+            <InfoRow title="STATE" value={normalizedArtist.state} />
 
-            <div className="relative overflow-hidden rounded-lg border border-slate-200/20 bg-gradient-to-r from-white/[0.03] via-white/[0.06] to-white/[0.025] p-3">
+            <div className="relative overflow-hidden rounded-xl border border-slate-200/20 bg-gradient-to-r from-white/[0.03] via-white/[0.06] to-white/[0.025] p-4">
               <div className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-              <div className="relative z-10 flex items-center justify-between gap-2 mb-2">
-                <p className="text-[7px] font-black tracking-[0.11em] text-slate-100">
+              <div className="relative z-10 flex items-center justify-between gap-3 mb-3">
+                <p className="text-[8px] font-black tracking-[0.14em] text-slate-100">
                   SILVER PRO ACTIVE
                 </p>
-                <span className="relative flex h-2 w-2 shrink-0">
+                <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-100 opacity-45" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
                 </span>
               </div>
 
-              <div className="relative z-10 space-y-1 text-[7.5px] sm:text-[8px] leading-snug font-mono text-gray-400">
+              <div className="relative z-10 space-y-1.5 text-[9px] font-mono text-gray-400">
                 <p>✓ CITY-WISE SEARCH VISIBILITY</p>
                 <p>✓ HIGHER DIRECTORY VISIBILITY</p>
                 <p>✓ RECOMMENDED PROFILE</p>
@@ -3026,28 +2768,24 @@ function ArtistCard({ artist, index, isNew, onClick }) {
         )}
 
         {isVerified && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
-              <InfoRow title="PHONE" value={normalizedArtist.phone} />
-              <InfoRow title="EMAIL" value={normalizedArtist.email} />
-              <InfoRow title="CITY" value={normalizedArtist.city} />
-              <InfoRow title="STATE" value={normalizedArtist.state} />
-              <InfoRow title="STUDIO" value={normalizedArtist.studio} />
-              <InfoRow title="EXPERIENCE" value={normalizedArtist.experience} />
-              <div className="col-span-2">
-                <InfoRow title="INSTAGRAM" value={normalizedArtist.instagram} />
-              </div>
-            </div>
+          <div className="space-y-2.5">
+            <InfoRow title="PHONE" value={normalizedArtist.phone} />
+            <InfoRow title="EMAIL" value={normalizedArtist.email} />
+            <InfoRow title="CITY" value={normalizedArtist.city} />
+            <InfoRow title="STATE" value={normalizedArtist.state} />
+            <InfoRow title="STUDIO" value={normalizedArtist.studio} />
+            <InfoRow title="EXPERIENCE" value={normalizedArtist.experience} />
+            <InfoRow title="INSTAGRAM" value={normalizedArtist.instagram} />
 
-            <div className="relative overflow-hidden rounded-lg border border-[#f5c451]/25 bg-gradient-to-r from-[#f5c451]/[0.07] via-[#f5c451]/[0.12] to-[#f5c451]/[0.04] px-3 py-2.5">
+            <div className="relative overflow-hidden rounded-xl border border-[#f5c451]/25 bg-gradient-to-r from-[#f5c451]/[0.07] via-[#f5c451]/[0.12] to-[#f5c451]/[0.04] px-4 py-3">
               <div className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
 
-              <div className="relative z-10 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-[7px] font-black tracking-[0.1em] text-[#ffe39a] break-words">
+              <div className="relative z-10 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[8px] font-black tracking-[0.13em] text-[#ffe39a]">
                     ★ GOLD VERIFIED SPOTLIGHT
                   </p>
-                  <p className="mt-1 text-[7px] font-mono text-[#b79b52] break-words">
+                  <p className="mt-1 text-[8px] font-mono text-[#b79b52]">
                     HALL OF FAME · HIGHEST PRIORITY
                   </p>
                 </div>
@@ -3061,71 +2799,66 @@ function ArtistCard({ artist, index, isNew, onClick }) {
           </div>
         )}
 
-        {/* ACTIONS */}
-        <div className="pt-3.5">
+        <div className="mt-auto pt-5">
           {isBasic ? (
             <Link
               to="/Enter"
               state={updateState}
               onClick={(event) => event.stopPropagation()}
               className="
-                w-full rounded-lg px-3 py-2.5 flex items-center justify-center gap-2
-                text-[8px] font-black tracking-[0.1em] transition
+                w-full rounded-xl px-4 py-3.5 flex items-center justify-center gap-2
+                text-[9px] font-black tracking-[0.12em] transition
                 bg-white/5 hover:bg-purple-600 border border-white/10
                 hover:border-purple-500 text-white
               "
             >
               UPDATE YOUR CARD
-              <ArrowRight size={11} />
+              <ArrowRight size={13} />
             </Link>
           ) : isPro ? (
             <div
               className="
-                relative overflow-hidden w-full rounded-lg px-3 py-2.5 flex items-center justify-center gap-2
-                text-[8px] font-black tracking-[0.1em]
+                relative overflow-hidden w-full rounded-xl px-4 py-3.5 flex items-center justify-center gap-2
+                text-[9px] font-black tracking-[0.12em]
                 bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black
-                border border-white/70 shadow-[0_0_15px_rgba(226,232,240,0.16)] cursor-default
+                border border-white/70 shadow-[0_0_18px_rgba(226,232,240,0.18)] cursor-default
               "
             >
               <span className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-              <span className="relative z-10 text-center">
-                ✓ ALREADY PRO · SILVER
-              </span>
+              <span className="relative z-10">✓ ALREADY PRO · SILVER</span>
             </div>
           ) : (
             <div
               className="
-                relative overflow-hidden w-full rounded-lg px-3 py-2.5 flex items-center justify-center gap-2
-                text-[8px] font-black tracking-[0.1em]
+                relative overflow-hidden w-full rounded-xl px-4 py-3.5 flex items-center justify-center gap-2
+                text-[9px] font-black tracking-[0.12em]
                 bg-gradient-to-r from-[#b47d12] via-[#ffe58d] to-[#b47d12]
                 text-[#211400] border border-[#ffe7a0]/70
-                shadow-[0_0_18px_rgba(245,196,81,0.30)] cursor-default
+                shadow-[0_0_24px_rgba(245,196,81,0.34)] cursor-default
               "
             >
               <span className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
-              <span className="relative z-10 text-center">
-                ★ ALREADY VERIFIED · GOLD
-              </span>
+              <span className="relative z-10">★ ALREADY VERIFIED · GOLD</span>
             </div>
           )}
 
-          <div className="border-t border-white/10 mt-3 pt-2.5 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-[7px] font-mono text-gray-600 min-w-0">
+          <div className="border-t border-white/10 mt-4 pt-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[8px] font-mono text-gray-600 min-w-0">
               <Sparkles
-                size={9}
+                size={10}
                 className={
                   isVerified
-                    ? "text-[#f5c451] shrink-0"
+                    ? "text-[#f5c451]"
                     : isPro
-                      ? "text-slate-300 shrink-0"
-                      : "text-gray-600 shrink-0"
+                      ? "text-slate-300"
+                      : "text-gray-600"
                 }
               />
-              <span className="break-words">INK CONVENTION</span>
+              <span className="truncate">INK CONVENTION</span>
             </div>
 
             <span
-              className={`text-[7px] font-mono whitespace-nowrap ${
+              className={`text-[8px] font-mono whitespace-nowrap ${
                 isVerified
                   ? "text-[#b79b52]"
                   : isPro
@@ -3208,25 +2941,12 @@ function ArtistModal({ artist, onClose }) {
   return (
     <div
       onMouseDown={handleBackdropClick}
-      data-lenis-prevent
-      data-lenis-prevent-wheel
-      data-lenis-prevent-touch
-      className="fixed inset-0 z-[9999] h-[100dvh] bg-black/85 backdrop-blur-xl overflow-x-hidden overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      style={{
-        scrollbarWidth: "none",
-        msOverflowStyle: "none",
-        WebkitOverflowScrolling: "touch",
-        touchAction: "pan-y",
-      }}
+      className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-xl p-4 sm:p-8 flex items-center justify-center overflow-y-auto"
     >
       <div
-        onMouseDown={handleBackdropClick}
-        className="w-full min-h-max flex items-start justify-center px-4 py-6 sm:px-8 sm:py-10"
-      >
-        <div
-          ref={modalRef}
-          className={`
-          relative w-full max-w-[1050px] h-fit shrink-0 rounded-[30px] overflow-hidden
+        ref={modalRef}
+        className={`
+          relative w-full max-w-[1050px] max-h-[92vh] overflow-y-auto rounded-[30px]
           ${
             isVerified
               ? "border-2 border-[#f5c451] bg-[#110d05] shadow-[0_0_90px_rgba(245,196,81,0.24)] ink-gold-card-pulse"
@@ -3235,39 +2955,39 @@ function ArtistModal({ artist, onClose }) {
                 : "border border-white/10 bg-[#0d0d11]"
           }
         `}
+      >
+        {(isPro || isVerified) && (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div
+              className={`absolute -right-20 -top-20 h-72 w-72 rounded-full blur-[90px] ${
+                isVerified ? "bg-[#f5c451]/[0.12]" : "bg-white/[0.055]"
+              } ink-premium-float`}
+            />
+
+            <div
+              className={`absolute -left-1/2 top-0 h-full w-[18%] bg-gradient-to-r from-transparent to-transparent ${
+                isVerified
+                  ? "via-[#fff2a8]/25 ink-gold-shine"
+                  : "via-white/15 ink-silver-shine"
+              }`}
+            />
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={closeModal}
+          aria-label="Close profile"
+          className="absolute top-5 right-5 z-30 w-12 h-12 rounded-full bg-black/70 border border-white/15 hover:bg-white hover:text-black flex items-center justify-center transition"
         >
-          {(isPro || isVerified) && (
-            <div className="pointer-events-none absolute inset-0 overflow-hidden">
-              <div
-                className={`absolute -right-20 -top-20 h-72 w-72 rounded-full blur-[90px] ${
-                  isVerified ? "bg-[#f5c451]/[0.12]" : "bg-white/[0.055]"
-                } ink-premium-float`}
-              />
+          <X size={18} />
+        </button>
 
-              <div
-                className={`absolute -left-1/2 top-0 h-full w-[18%] bg-gradient-to-r from-transparent to-transparent ${
-                  isVerified
-                    ? "via-[#fff2a8]/25 ink-gold-shine"
-                    : "via-white/15 ink-silver-shine"
-                }`}
-              />
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={closeModal}
-            aria-label="Close profile"
-            className="absolute top-5 right-5 z-30 w-12 h-12 rounded-full bg-black/70 border border-white/15 hover:bg-white hover:text-black flex items-center justify-center transition"
-          >
-            <X size={18} />
-          </button>
-
-          {/* HEADER */}
-          <div className="relative z-10 p-6 sm:p-10 pr-20 border-b border-white/10">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-              <div
-                className={`
+        {/* HEADER */}
+        <div className="relative z-10 p-6 sm:p-10 pr-20 border-b border-white/10">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+            <div
+              className={`
                 relative w-28 h-28 sm:w-36 sm:h-36 shrink-0 rounded-full overflow-hidden bg-black border-[3px]
                 ${
                   isVerified
@@ -3277,304 +2997,301 @@ function ArtistModal({ artist, onClose }) {
                       : "border-white/10"
                 }
               `}
-              >
-                {isVerified && normalizedArtist.profileImage ? (
-                  <img
-                    src={normalizedArtist.profileImage}
-                    alt={normalizedArtist.name || "Artist"}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className={`w-full h-full flex items-center justify-center text-4xl font-black ${
-                      isVerified
-                        ? "text-[#f5c451] bg-[#f5c451]/[0.05]"
-                        : isPro
-                          ? "text-slate-200 bg-white/[0.03]"
-                          : "text-gray-400"
-                    }`}
-                  >
-                    {normalizedArtist.name?.charAt(0)?.toUpperCase() || "A"}
-                  </div>
+            >
+              {isVerified && normalizedArtist.profileImage ? (
+                <img
+                  src={normalizedArtist.profileImage}
+                  alt={normalizedArtist.name || "Artist"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className={`w-full h-full flex items-center justify-center text-4xl font-black ${
+                    isVerified
+                      ? "text-[#f5c451] bg-[#f5c451]/[0.05]"
+                      : isPro
+                        ? "text-slate-200 bg-white/[0.03]"
+                        : "text-gray-400"
+                  }`}
+                >
+                  {normalizedArtist.name?.charAt(0)?.toUpperCase() || "A"}
+                </div>
+              )}
+
+              {(isPro || isVerified) && (
+                <span
+                  className={`absolute right-3 top-3 h-3 w-3 rounded-full ${
+                    isVerified
+                      ? "bg-[#ffe58d] shadow-[0_0_14px_rgba(255,229,141,1)]"
+                      : "bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]"
+                  } animate-pulse`}
+                />
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                <p
+                  className={`text-[9px] font-mono tracking-[0.16em] ${
+                    isVerified
+                      ? "text-[#d0aa43]"
+                      : isPro
+                        ? "text-slate-300"
+                        : "text-gray-500"
+                  }`}
+                >
+                  {getPlanLabel(normalizedArtist)}
+                </p>
+
+                {isPro && (
+                  <span className="inline-flex items-center gap-1.5 bg-white/[0.05] border border-slate-200/35 rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-slate-100 shadow-[0_0_16px_rgba(226,232,240,0.12)]">
+                    <Sparkles size={11} /> SILVER PRO
+                  </span>
                 )}
 
-                {(isPro || isVerified) && (
-                  <span
-                    className={`absolute right-3 top-3 h-3 w-3 rounded-full ${
-                      isVerified
-                        ? "bg-[#ffe58d] shadow-[0_0_14px_rgba(255,229,141,1)]"
-                        : "bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]"
-                    } animate-pulse`}
-                  />
+                {isVerified && (
+                  <>
+                    <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#b47d12] via-[#ffe58d] to-[#b47d12] rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-[#201300] shadow-[0_0_20px_rgba(245,196,81,0.35)]">
+                      <Sparkles size={11} /> GOLD VERIFIED
+                    </span>
+
+                    <span className="inline-flex items-center gap-1.5 bg-[#f5c451]/10 border border-[#f5c451]/25 rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-[#ffe39a]">
+                      ★ HALL OF FAME
+                    </span>
+                  </>
                 )}
               </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-3 mb-3">
-                  <p
-                    className={`text-[9px] font-mono tracking-[0.16em] ${
-                      isVerified
-                        ? "text-[#d0aa43]"
-                        : isPro
-                          ? "text-slate-300"
-                          : "text-gray-500"
-                    }`}
-                  >
-                    {getPlanLabel(normalizedArtist)}
-                  </p>
+              <h2
+                className={`text-4xl sm:text-6xl font-black uppercase tracking-[-0.05em] leading-none break-words ${
+                  isVerified ? "text-[#fff1bc]" : "text-white"
+                }`}
+              >
+                {normalizedArtist.name || "Tattoo Artist"}
+              </h2>
 
-                  {isPro && (
-                    <span className="inline-flex items-center gap-1.5 bg-white/[0.05] border border-slate-200/35 rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-slate-100 shadow-[0_0_16px_rgba(226,232,240,0.12)]">
-                      <Sparkles size={11} /> SILVER PRO
-                    </span>
-                  )}
+              <div className="flex items-center gap-2 mt-5 text-gray-400">
+                <MapPin
+                  size={14}
+                  className={
+                    isVerified
+                      ? "text-[#f5c451]"
+                      : isPro
+                        ? "text-slate-300"
+                        : "text-gray-600"
+                  }
+                />
 
-                  {isVerified && (
-                    <>
-                      <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#b47d12] via-[#ffe58d] to-[#b47d12] rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-[#201300] shadow-[0_0_20px_rgba(245,196,81,0.35)]">
-                        <Sparkles size={11} /> GOLD VERIFIED
-                      </span>
-
-                      <span className="inline-flex items-center gap-1.5 bg-[#f5c451]/10 border border-[#f5c451]/25 rounded-full px-3 py-1.5 text-[8px] font-black tracking-[0.12em] text-[#ffe39a]">
-                        ★ HALL OF FAME
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                <h2
-                  className={`text-4xl sm:text-6xl font-black uppercase tracking-[-0.05em] leading-none break-words ${
-                    isVerified ? "text-[#fff1bc]" : "text-white"
-                  }`}
-                >
-                  {normalizedArtist.name || "Tattoo Artist"}
-                </h2>
-
-                <div className="flex items-center gap-2 mt-5 text-gray-400">
-                  <MapPin
-                    size={14}
-                    className={
-                      isVerified
-                        ? "text-[#f5c451]"
-                        : isPro
-                          ? "text-slate-300"
-                          : "text-gray-600"
-                    }
-                  />
-
-                  {isBasic
-                    ? normalizedArtist.state || "India"
-                    : [normalizedArtist.city, normalizedArtist.state]
-                        .filter(Boolean)
-                        .join(", ") || "India"}
-                </div>
+                {isBasic
+                  ? normalizedArtist.state || "India"
+                  : [normalizedArtist.city, normalizedArtist.state]
+                      .filter(Boolean)
+                      .join(", ") || "India"}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* BODY */}
-          <div className="relative z-10 p-6 sm:p-10">
-            {isBasic && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
-                  <ModalInfo
-                    title="ARTIST / STUDIO"
-                    value={normalizedArtist.name || normalizedArtist.studio}
-                  />
-                  <ModalInfo title="STATE" value={normalizedArtist.state} />
+        {/* BODY */}
+        <div className="relative z-10 p-6 sm:p-10">
+          {isBasic && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
+                <ModalInfo
+                  title="ARTIST / STUDIO"
+                  value={normalizedArtist.name || normalizedArtist.studio}
+                />
+                <ModalInfo title="STATE" value={normalizedArtist.state} />
+              </div>
+
+              <div className="mt-8 border border-purple-500/20 bg-purple-500/[0.04] rounded-[22px] p-6 sm:p-7">
+                <div className="flex items-center gap-3 text-purple-400">
+                  <Sparkles size={17} />
+                  <h3 className="text-sm font-black tracking-[0.12em]">
+                    UPDATE / CLAIM THIS CARD
+                  </h3>
                 </div>
 
-                <div className="mt-8 border border-purple-500/20 bg-purple-500/[0.04] rounded-[22px] p-6 sm:p-7">
-                  <div className="flex items-center gap-3 text-purple-400">
-                    <Sparkles size={17} />
-                    <h3 className="text-sm font-black tracking-[0.12em]">
-                      UPDATE / CLAIM THIS CARD
-                    </h3>
+                <p className="mt-3 max-w-2xl text-sm text-gray-500 leading-relaxed">
+                  Ownership is verified using an OTP sent to the phone number
+                  already stored for this directory record. The owner cannot
+                  replace that number before verification.
+                </p>
+
+                <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+                  <span className="text-[8px] font-mono tracking-widest text-gray-600">
+                    REGISTERED NUMBER
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {maskPhone(normalizedArtist.phone)}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {isPro && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
+                <ModalInfo
+                  title="NAME"
+                  value={normalizedArtist.name}
+                  accent="pro"
+                />
+                <ModalInfo
+                  title="EMAIL"
+                  value={normalizedArtist.email}
+                  accent="pro"
+                />
+                <ModalInfo
+                  title="CITY"
+                  value={normalizedArtist.city}
+                  accent="pro"
+                />
+                <ModalInfo
+                  title="STATE"
+                  value={normalizedArtist.state}
+                  accent="pro"
+                />
+              </div>
+
+              <div className="relative overflow-hidden mt-8 border border-slate-200/25 bg-gradient-to-r from-white/[0.03] via-white/[0.07] to-white/[0.025] rounded-[22px] p-6">
+                <div className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[18%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                <div className="relative z-10 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[9px] font-black tracking-[0.15em] text-slate-100">
+                      SILVER PRO · ₹1,499 / YEAR
+                    </p>
+                    <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+                      City-wise search visibility, higher directory visibility
+                      and a Recommended profile position are active.
+                    </p>
                   </div>
 
-                  <p className="mt-3 max-w-2xl text-sm text-gray-500 leading-relaxed">
-                    Ownership is verified using an OTP sent to the phone number
-                    already stored for this directory record. The owner cannot
-                    replace that number before verification.
-                  </p>
-
-                  <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
-                    <span className="text-[8px] font-mono tracking-widest text-gray-600">
-                      REGISTERED NUMBER
-                    </span>
-                    <span className="text-xs font-black text-white">
-                      {maskPhone(normalizedArtist.phone)}
-                    </span>
-                  </div>
+                  <span className="relative flex h-3 w-3 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-100 opacity-45" />
+                    <span className="relative inline-flex h-3 w-3 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]" />
+                  </span>
                 </div>
-              </>
-            )}
+              </div>
+            </>
+          )}
 
-            {isPro && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
-                  <ModalInfo
-                    title="NAME"
-                    value={normalizedArtist.name}
-                    accent="pro"
-                  />
-                  <ModalInfo
-                    title="EMAIL"
-                    value={normalizedArtist.email}
-                    accent="pro"
-                  />
-                  <ModalInfo
-                    title="CITY"
-                    value={normalizedArtist.city}
-                    accent="pro"
-                  />
-                  <ModalInfo
-                    title="STATE"
-                    value={normalizedArtist.state}
-                    accent="pro"
-                  />
-                </div>
+          {isVerified && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
+                <ModalInfo
+                  title="PHONE"
+                  value={normalizedArtist.phone}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="EMAIL"
+                  value={normalizedArtist.email}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="CITY"
+                  value={normalizedArtist.city}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="STATE"
+                  value={normalizedArtist.state}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="STUDIO"
+                  value={normalizedArtist.studio}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="EXPERIENCE"
+                  value={normalizedArtist.experience}
+                  accent="verified"
+                />
+                <ModalInfo
+                  title="INSTAGRAM"
+                  value={normalizedArtist.instagram}
+                  accent="verified"
+                />
+              </div>
 
-                <div className="relative overflow-hidden mt-8 border border-slate-200/25 bg-gradient-to-r from-white/[0.03] via-white/[0.07] to-white/[0.025] rounded-[22px] p-6">
-                  <div className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[18%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative overflow-hidden border border-[#f5c451]/30 bg-gradient-to-br from-[#f5c451]/[0.10] via-[#f5c451]/[0.05] to-transparent rounded-[22px] p-6">
+                  <div className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
 
                   <div className="relative z-10 flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-[9px] font-black tracking-[0.15em] text-slate-100">
-                        SILVER PRO · ₹1,499 / YEAR
-                      </p>
+                      <div className="flex items-center gap-2 text-[#ffe39a]">
+                        <Sparkles size={16} />
+                        <p className="text-[9px] font-black tracking-[0.15em]">
+                          GOLD VERIFIED · ₹2,999 / YEAR
+                        </p>
+                      </div>
+
                       <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                        City-wise search visibility, higher directory visibility
-                        and a Recommended profile position are active.
+                        Highest directory priority, complete profile visibility
+                        and maximum digital visibility.
                       </p>
                     </div>
 
                     <span className="relative flex h-3 w-3 shrink-0">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-100 opacity-45" />
-                      <span className="relative inline-flex h-3 w-3 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]" />
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f5c451] opacity-50" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-[#ffe58d] shadow-[0_0_14px_rgba(255,229,141,0.95)]" />
                     </span>
                   </div>
                 </div>
-              </>
-            )}
 
-            {isVerified && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
-                  <ModalInfo
-                    title="PHONE"
-                    value={normalizedArtist.phone}
-                    accent="verified"
-                  />
-                  <ModalInfo
-                    title="EMAIL"
-                    value={normalizedArtist.email}
-                    accent="verified"
-                  />
-                  <ModalInfo
-                    title="CITY"
-                    value={normalizedArtist.city}
-                    accent="verified"
-                  />
-                  <ModalInfo
-                    title="STATE"
-                    value={normalizedArtist.state}
-                    accent="verified"
-                  />
-                  <ModalInfo
-                    title="STUDIO"
-                    value={normalizedArtist.studio}
-                    accent="verified"
-                  />
-                  <ModalInfo
-                    title="EXPERIENCE"
-                    value={normalizedArtist.experience}
-                    accent="verified"
-                  />
-                  <ModalInfo
-                    title="INSTAGRAM"
-                    value={normalizedArtist.instagram}
-                    accent="verified"
-                  />
+                <div className="relative overflow-hidden border border-[#f5c451]/22 bg-[#f5c451]/[0.045] rounded-[22px] p-6">
+                  <span className="ink-premium-dot absolute right-6 top-6 h-1.5 w-1.5 rounded-full bg-[#ffe58d] shadow-[0_0_10px_rgba(255,229,141,0.9)]" />
+                  <span className="ink-premium-dot absolute right-12 top-12 h-1 w-1 rounded-full bg-[#f5c451] [animation-delay:0.7s]" />
+
+                  <p className="text-[9px] font-black tracking-[0.15em] text-[#ffe39a]">
+                    ★ HALL OF FAME
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500 leading-relaxed">
+                    Gold Verified profiles receive Hall of Fame and premium
+                    featured placement according to your directory rules.
+                  </p>
                 </div>
+              </div>
+            </>
+          )}
 
-                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="relative overflow-hidden border border-[#f5c451]/30 bg-gradient-to-br from-[#f5c451]/[0.10] via-[#f5c451]/[0.05] to-transparent rounded-[22px] p-6">
-                    <div className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
+          <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-end gap-3">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="px-7 py-4 text-[10px] font-black tracking-widest bg-white/5 hover:bg-white/10 border border-white/10 text-white transition"
+            >
+              CLOSE
+            </button>
 
-                    <div className="relative z-10 flex items-center justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 text-[#ffe39a]">
-                          <Sparkles size={16} />
-                          <p className="text-[9px] font-black tracking-[0.15em]">
-                            GOLD VERIFIED · ₹2,999 / YEAR
-                          </p>
-                        </div>
-
-                        <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                          Highest directory priority, complete profile
-                          visibility and maximum digital visibility.
-                        </p>
-                      </div>
-
-                      <span className="relative flex h-3 w-3 shrink-0">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f5c451] opacity-50" />
-                        <span className="relative inline-flex h-3 w-3 rounded-full bg-[#ffe58d] shadow-[0_0_14px_rgba(255,229,141,0.95)]" />
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="relative overflow-hidden border border-[#f5c451]/22 bg-[#f5c451]/[0.045] rounded-[22px] p-6">
-                    <span className="ink-premium-dot absolute right-6 top-6 h-1.5 w-1.5 rounded-full bg-[#ffe58d] shadow-[0_0_10px_rgba(255,229,141,0.9)]" />
-                    <span className="ink-premium-dot absolute right-12 top-12 h-1 w-1 rounded-full bg-[#f5c451] [animation-delay:0.7s]" />
-
-                    <p className="text-[9px] font-black tracking-[0.15em] text-[#ffe39a]">
-                      ★ HALL OF FAME
-                    </p>
-                    <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                      Gold Verified profiles receive Hall of Fame and premium
-                      featured placement according to your directory rules.
-                    </p>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-end gap-3">
-              <button
-                type="button"
+            {isBasic ? (
+              <Link
+                to="/Enter"
+                state={updateState}
                 onClick={closeModal}
-                className="px-7 py-4 text-[10px] font-black tracking-widest bg-white/5 hover:bg-white/10 border border-white/10 text-white transition"
-              >
-                CLOSE
-              </button>
-
-              {isBasic ? (
-                <Link
-                  to="/Enter"
-                  state={updateState}
-                  onClick={closeModal}
-                  className="
+                className="
                   px-7 py-4 text-center text-[10px] font-black tracking-widest transition
                   bg-purple-600 hover:bg-purple-500 text-white
                 "
-                >
-                  UPDATE YOUR CARD
-                </Link>
-              ) : isPro ? (
-                <div className="relative overflow-hidden px-7 py-4 text-center text-[10px] font-black tracking-widest bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black border border-white/70 cursor-default">
-                  <span className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-                  <span className="relative z-10">✓ ALREADY PRO · SILVER</span>
-                </div>
-              ) : (
-                <div className="relative overflow-hidden px-7 py-4 text-center text-[10px] font-black tracking-widest bg-gradient-to-r from-[#b47d12] via-[#ffe58d] to-[#b47d12] text-[#211400] border border-[#ffe7a0]/70 cursor-default shadow-[0_0_22px_rgba(245,196,81,0.26)]">
-                  <span className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
-                  <span className="relative z-10">
-                    ★ ALREADY VERIFIED · GOLD
-                  </span>
-                </div>
-              )}
-            </div>
+              >
+                UPDATE YOUR CARD
+              </Link>
+            ) : isPro ? (
+              <div className="relative overflow-hidden px-7 py-4 text-center text-[10px] font-black tracking-widest bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black border border-white/70 cursor-default">
+                <span className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                <span className="relative z-10">✓ ALREADY PRO · SILVER</span>
+              </div>
+            ) : (
+              <div className="relative overflow-hidden px-7 py-4 text-center text-[10px] font-black tracking-widest bg-gradient-to-r from-[#b47d12] via-[#ffe58d] to-[#b47d12] text-[#211400] border border-[#ffe7a0]/70 cursor-default shadow-[0_0_22px_rgba(245,196,81,0.26)]">
+                <span className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+                <span className="relative z-10">★ ALREADY VERIFIED · GOLD</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -3589,11 +3306,11 @@ function ArtistModal({ artist, onClose }) {
 function InfoRow({ title, value }) {
   return (
     <div className="min-w-0">
-      <p className="text-[6.5px] font-mono tracking-[0.12em] text-gray-600 mb-0.5">
+      <p className="text-[7px] font-mono tracking-[0.16em] text-gray-600 mb-1">
         {title}
       </p>
 
-      <p className="text-[9.5px] sm:text-[10px] leading-snug text-gray-300 break-words [overflow-wrap:anywhere]">
+      <p className="text-[12px] text-gray-300 truncate" title={value || "-"}>
         {value || "-"}
       </p>
     </div>

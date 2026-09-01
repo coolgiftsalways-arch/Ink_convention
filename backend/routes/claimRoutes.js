@@ -1,14 +1,15 @@
 const express = require("express");
-const crypto = require("crypto");
+
 
 const TattooStudio = require("../models/TattooStudio");
-const ClaimOtp = require("../models/ClaimOtp");
+
+const {
+  verifyMsg91AccessToken,
+} = require("../services/msg91OtpService");
 
 const router = express.Router();
 
-const OTP_EXPIRY_MINUTES = 5;
-const RESEND_SECONDS = 60;
-const MAX_ATTEMPTS = 5;
+
 
 /* =========================================================
    HELPERS
@@ -19,25 +20,36 @@ function normalizePhone(phone) {
 
   let value = String(phone).trim();
 
-  // Remove spaces, brackets, hyphens, etc.
+  // Remove spaces, brackets, hyphens etc.
   value = value.replace(/[^\d+]/g, "");
 
-  // Convert 0091XXXXXXXXXX -> +91XXXXXXXXXX
+  // 0091XXXXXXXXXX -> +91XXXXXXXXXX
   if (value.startsWith("0091")) {
     value = "+" + value.substring(2);
   }
 
-  // Convert 91XXXXXXXXXX -> +91XXXXXXXXXX
+  // 91XXXXXXXXXX -> +91XXXXXXXXXX
   if (/^91\d{10}$/.test(value)) {
     value = "+" + value;
   }
 
-  // Convert 10-digit Indian number -> +91XXXXXXXXXX
+  // XXXXXXXXXX -> +91XXXXXXXXXX
   if (/^\d{10}$/.test(value)) {
     value = "+91" + value;
   }
 
   return value;
+}
+
+function phoneDigits(phone) {
+  let digits = String(phone || "").replace(/\D/g, "");
+
+  // Convert 10 digit number to 91XXXXXXXXXX
+  if (digits.length === 10) {
+    digits = `91${digits}`;
+  }
+
+  return digits;
 }
 
 function maskPhone(phone) {
@@ -50,73 +62,39 @@ function maskPhone(phone) {
   return `${digits.slice(0, 2)}XXXXXX${digits.slice(-2)}`;
 }
 
-function generateOtp() {
-  return crypto.randomInt(100000, 1000000).toString();
-}
-
-function hashOtp(otp) {
-  return crypto
-    .createHash("sha256")
-    .update(String(otp))
-    .digest("hex");
-}
-
 /* =========================================================
-   SEND SMS USING FAST2SMS
+   GET VERIFIED IDENTIFIER FROM MSG91 RESPONSE
 ========================================================= */
 
-async function sendSms(phone, otp) {
-  const apiKey = process.env.FAST2SMS_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("FAST2SMS_API_KEY is missing in .env");
+function getVerifiedIdentifier(data) {
+  if (!data || typeof data !== "object") {
+    return "";
   }
 
-  const cleanPhone = phone.replace(/\D/g, "");
-
-  const message =
-    `Your Ink Convention verification OTP is ${otp}. ` +
-    `It is valid for ${OTP_EXPIRY_MINUTES} minutes. ` +
-    `Do not share this OTP with anyone.`;
-
-  const response = await fetch(
-    "https://www.fast2sms.com/dev/bulkV2",
-    {
-      method: "POST",
-
-      headers: {
-        Authorization: apiKey,
-        "Content-Type": "application/json",
-      },
-
-      body: JSON.stringify({
-        route: "q",
-        message,
-        numbers: cleanPhone,
-      }),
-    }
+  return (
+    data.identifier ||
+    data.mobile ||
+    data.phone ||
+    data.mobileNumber ||
+    data.mobile_number ||
+    data?.data?.identifier ||
+    data?.data?.mobile ||
+    data?.data?.phone ||
+    data?.data?.mobileNumber ||
+    data?.data?.mobile_number ||
+    ""
   );
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok || data.return === false) {
-    console.error("Fast2SMS error:", data);
-
-    throw new Error(
-      data.message ||
-        "Unable to send SMS. Please try again."
-    );
-  }
-
-  console.log(
-    `📱 OTP SMS sent to ${maskPhone(phone)}`
-  );
-
-  return data;
 }
 
 /* =========================================================
    POST /api/claim/send-otp
+
+   NO LONGER SENDS OTP.
+
+   MSG91 Web SDK handles sending OTP from frontend.
+
+   We keep this endpoint temporarily so your existing frontend
+   doesn't immediately get a 404 while we update Enter.jsx.
 ========================================================= */
 
 router.post("/send-otp", async (req, res) => {
@@ -130,7 +108,9 @@ router.post("/send-otp", async (req, res) => {
       });
     }
 
-    const studio = await TattooStudio.findById(profileId);
+    const studio = await TattooStudio.findById(
+      profileId
+    ).lean();
 
     if (!studio) {
       return res.status(404).json({
@@ -149,177 +129,196 @@ router.post("/send-otp", async (req, res) => {
       });
     }
 
-    // Check whether a recently generated OTP exists
-    const existingOtp = await ClaimOtp.findOne({
-      profileId: studio._id,
-      verified: false,
-      expiresAt: { $gt: new Date() },
-    }).sort({ createdAt: -1 });
+    /*
+      IMPORTANT:
 
-    if (existingOtp) {
-      const secondsSinceCreation =
-        Math.floor(
-          (Date.now() - existingOtp.createdAt.getTime()) /
-            1000
-        );
+      This endpoint DOES NOT send OTP anymore.
 
-      if (secondsSinceCreation < RESEND_SECONDS) {
-        return res.status(429).json({
-          success: false,
-          message: "Please wait before requesting another OTP.",
-          resendAfterSeconds:
-            RESEND_SECONDS - secondsSinceCreation,
-        });
-      }
+      Enter.jsx will call:
+      window.sendOtp(...)
 
-      await ClaimOtp.deleteMany({
-        profileId: studio._id,
-        verified: false,
-      });
-    }
-
-    // Generate OUR OWN OTP
-    const otp = generateOtp();
-
-    const otpHash = hashOtp(otp);
-
-    const expiresAt = new Date(
-      Date.now() +
-        OTP_EXPIRY_MINUTES * 60 * 1000
-    );
-
-    // Store only the HASH, not the actual OTP
-    await ClaimOtp.create({
-      profileId: studio._id,
-      phone,
-      otpHash,
-      expiresAt,
-      attempts: 0,
-      verified: false,
-    });
-
-    // Send the actual OTP to the phone
-    await sendSms(phone, otp);
+      through the MSG91 Widget.
+    */
 
     return res.status(200).json({
       success: true,
-      message: "OTP sent successfully.",
+
+      message:
+        "Registered phone number found.",
+
+      /*
+        Frontend needs the identifier because MSG91
+        custom Web SDK sends OTP from the browser.
+
+        MSG91 wants country code WITHOUT +
+        Example: 919876543210
+      */
+      identifier: phoneDigits(phone),
+
       maskedPhone: maskPhone(phone),
-      resendAfterSeconds: RESEND_SECONDS,
     });
+
   } catch (error) {
     console.error(
-      "❌ Send OTP error:",
+      "❌ Get claim phone error:",
       error
     );
 
     return res.status(500).json({
       success: false,
       message:
-        error.message ||
-        "Unable to send OTP.",
+        "Unable to prepare OTP verification.",
     });
   }
 });
 
 /* =========================================================
    POST /api/claim/verify-otp
+
+   FRONTEND WILL SEND:
+
+   {
+      profileId,
+      accessToken
+   }
+
 ========================================================= */
 
 router.post("/verify-otp", async (req, res) => {
   try {
-    const { profileId, otp } = req.body;
-
-    if (!profileId || !otp) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "profileId and OTP are required.",
-      });
-    }
-
-    if (!/^\d{6}$/.test(String(otp))) {
-      return res.status(400).json({
-        success: false,
-        message: "Enter the 6-digit OTP.",
-      });
-    }
-
-    const otpRecord = await ClaimOtp.findOne({
+    const {
       profileId,
-      verified: false,
-    }).sort({ createdAt: -1 });
+      accessToken,
+    } = req.body;
 
-    if (!otpRecord) {
+    /* =============================================
+       VALIDATE REQUEST
+    ============================================= */
+
+    if (!profileId) {
+      return res.status(400).json({
+        success: false,
+        message: "profileId is required.",
+      });
+    }
+
+    if (!accessToken) {
       return res.status(400).json({
         success: false,
         message:
-          "OTP not found. Please request a new OTP.",
+          "OTP verification token is required.",
       });
     }
 
-    if (otpRecord.expiresAt < new Date()) {
-      await ClaimOtp.deleteOne({
-        _id: otpRecord._id,
-      });
+    /* =============================================
+       FIND PROFILE
+    ============================================= */
 
-      return res.status(400).json({
-        success: false,
-        message:
-          "OTP has expired. Please request a new OTP.",
-      });
-    }
-
-    if (otpRecord.attempts >= MAX_ATTEMPTS) {
-      await ClaimOtp.deleteOne({
-        _id: otpRecord._id,
-      });
-
-      return res.status(429).json({
-        success: false,
-        message:
-          "Too many incorrect attempts. Please request a new OTP.",
-      });
-    }
-
-    const incomingHash = hashOtp(otp);
-
-    if (incomingHash !== otpRecord.otpHash) {
-      otpRecord.attempts += 1;
-      await otpRecord.save();
-
-      return res.status(400).json({
-        success: false,
-        message: "Incorrect OTP.",
-        attemptsRemaining:
-          MAX_ATTEMPTS - otpRecord.attempts,
-      });
-    }
-
-    // OTP is correct
-    otpRecord.verified = true;
-    await otpRecord.save();
-
-    const studio = await TattooStudio.findById(
-      profileId
-    ).lean();
+    const studio =
+      await TattooStudio.findById(
+        profileId
+      ).lean();
 
     if (!studio) {
       return res.status(404).json({
         success: false,
-        message: "Artist profile not found.",
+        message:
+          "Artist profile not found.",
       });
     }
 
+    if (!studio.phone) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This artist does not have a registered phone number.",
+      });
+    }
+
+    /* =============================================
+       VERIFY ACCESS TOKEN WITH MSG91
+    ============================================= */
+
+    let msg91Result;
+
+    try {
+      msg91Result =
+        await verifyMsg91AccessToken(
+          accessToken
+        );
+    } catch (error) {
+      console.error(
+        "❌ MSG91 verification failed:",
+        error.message
+      );
+
+      return res.status(401).json({
+        success: false,
+        message:
+          "OTP verification failed or expired.",
+      });
+    }
+
+    console.log(
+      "✅ MSG91 access token verified"
+    );
+
+    /* =============================================
+       SECURITY CHECK
+
+       Make sure the phone verified by MSG91 is
+       the SAME phone belonging to this profile.
+    ============================================= */
+
+    const verifiedIdentifier =
+      getVerifiedIdentifier(
+        msg91Result
+      );
+
+    if (verifiedIdentifier) {
+      const profilePhone =
+        phoneDigits(studio.phone);
+
+      const verifiedPhone =
+        phoneDigits(
+          verifiedIdentifier
+        );
+
+      if (
+        profilePhone !==
+        verifiedPhone
+      ) {
+        console.error(
+          "❌ Verified phone does not match profile phone"
+        );
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "Verified phone number does not match this artist profile.",
+        });
+      }
+    }
+
+    /* =============================================
+       OTP IS NOW VERIFIED ✅
+
+       Your previous route only returned the studio,
+       so we preserve that same behavior.
+    ============================================= */
+
     return res.status(200).json({
       success: true,
+
       message:
         "OTP verified successfully.",
+
       profile: studio,
-      maskedPhone: maskPhone(
-        studio.phone
-      ),
+
+      maskedPhone:
+        maskPhone(studio.phone),
     });
+
   } catch (error) {
     console.error(
       "❌ Verify OTP error:",
@@ -334,6 +333,103 @@ router.post("/verify-otp", async (req, res) => {
   }
 });
 
+
+/* =========================================================
+   POST /api/claim/update
+========================================================= */
+
+router.post("/update", async (req, res) => {
+  try {
+    const {
+      profileId,
+      name,
+      email,
+      city,
+      state,
+      studio,
+      experience,
+      instagram,
+      profileImage,
+    } = req.body;
+
+    if (!profileId) {
+      return res.status(400).json({
+        success: false,
+        message: "profileId is required.",
+      });
+    }
+
+    const artist = await TattooStudio.findById(profileId);
+
+    if (!artist) {
+      return res.status(404).json({
+        success: false,
+        message: "Artist profile not found.",
+      });
+    }
+
+    // ============================================
+    // UPDATE ALLOWED FIELDS
+    // ============================================
+
+    if (typeof name === "string") {
+      artist.name = name.trim();
+    }
+
+    if (typeof email === "string") {
+      artist.email = email.trim().toLowerCase();
+    }
+
+    if (typeof city === "string") {
+      artist.city = city.trim();
+    }
+
+    if (typeof state === "string") {
+      artist.state = state.trim();
+    }
+
+    if (typeof studio === "string") {
+      artist.studio = studio.trim();
+    }
+
+    if (typeof experience === "string") {
+      artist.experience = experience.trim();
+    }
+
+    if (typeof instagram === "string") {
+      artist.instagram = instagram.trim();
+    }
+
+    if (
+      typeof profileImage === "string" &&
+      profileImage.trim()
+    ) {
+      artist.profileImage = profileImage;
+    }
+
+    await artist.save();
+
+    const updatedProfile = artist.toObject();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      profile: updatedProfile,
+    });
+  } catch (error) {
+    console.error(
+      "❌ Update profile error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Unable to update profile.",
+    });
+  }
+});
 /* =========================================================
    GET /api/claim/me
 ========================================================= */
