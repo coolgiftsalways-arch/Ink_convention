@@ -177,6 +177,15 @@ export default function HallOfFame() {
 
   /* =======================================================
      LOAD ₹2,999 VERIFIED ARTISTS
+
+     IMPORTANT:
+     The tattoo directory is stored in TattooStudio and your
+     backend exposes it through:
+
+       GET /api/admin/tattoo-studios
+
+     This loads every backend page and then keeps only
+     Verified / Gold Hall Of Fame profiles.
   ======================================================= */
 
   useEffect(() => {
@@ -184,48 +193,43 @@ export default function HallOfFame() {
 
     const loadHallOfFame = async () => {
       setLoading(true);
-
       setError("");
 
       try {
-        /*
-          Your backend should only change:
+        const PAGE_SIZE = 1000;
+        let page = 1;
+        let totalPages = 1;
+        const allDirectoryArtists = [];
 
-          plan: "verified"
+        do {
+          const data = await apiRequest(
+            `/api/admin/tattoo-studios?page=${page}&limit=${PAGE_SIZE}`,
+          );
 
-          AFTER Razorpay ₹2,999 payment
-          has been successfully verified.
+          if (cancelled) {
+            return;
+          }
 
-          Artists.jsx can continue using:
-          GET /api/artists
+          const pageArtists = getArtistsArray(data);
+          allDirectoryArtists.push(...pageArtists);
 
-          HallOfFame.jsx uses:
-          GET /api/artists?plan=verified
-        */
+          totalPages = Math.max(
+            1,
+            Number(data?.pagination?.totalPages || data?.totalPages || 1),
+          );
 
-        const data = await apiRequest("/api/artists?plan=verified&limit=500");
+          page += 1;
+        } while (page <= totalPages && !cancelled);
 
         if (cancelled) {
           return;
         }
 
-        const rawArtists = getArtistsArray(data);
-
-        const verifiedArtists = rawArtists
+        const verifiedArtists = allDirectoryArtists
           .map((artist) => normalizeArtist(artist))
-
-          /* =============================================
-             ONLY ₹2,999 VERIFIED
-          ============================================= */
-
           .filter((artist) => {
             return artist.plan === "verified" && artist.hallOfFameEligible;
           })
-
-          /* =============================================
-             NEWEST UPDATED FIRST
-          ============================================= */
-
           .sort((first, second) => {
             const firstTime = new Date(
               first.updatedAt || first.createdAt || 0,
@@ -244,7 +248,6 @@ export default function HallOfFame() {
 
         if (!cancelled) {
           setArtists([]);
-
           setError(loadError.message || "Unable to load Hall of Fame.");
         }
       } finally {
@@ -254,7 +257,7 @@ export default function HallOfFame() {
       }
     };
 
-    loadHallOfFame();
+    void loadHallOfFame();
 
     return () => {
       cancelled = true;

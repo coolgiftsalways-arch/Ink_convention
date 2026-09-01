@@ -1389,7 +1389,7 @@ export default function Artists() {
             ) : (
               <div
                 ref={artistGridRef}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 items-stretch"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 items-start"
               >
                 {visibleArtists.map((artist, index) => {
                   const globalIndex = artistPageStart + index;
@@ -2768,23 +2768,23 @@ function ArtistCard({ artist, index, isNew, onClick }) {
     <article
       onClick={onClick}
       className={`
-        group relative w-full min-h-[520px] rounded-[24px] overflow-hidden flex flex-col
-        cursor-pointer transition-all duration-500 hover:-translate-y-2
+        group relative w-full h-fit rounded-[18px] overflow-hidden flex flex-col
+        cursor-pointer transition-all duration-400 hover:-translate-y-1.5
         ${
           isVerified
             ? `
               border-2 border-[#f5c451]
               bg-gradient-to-br from-[#f5c451]/[0.13] via-[#171105] to-[#0d0d11]
-              shadow-[0_0_34px_rgba(245,196,81,0.15)]
-              hover:shadow-[0_0_64px_rgba(245,196,81,0.30)]
+              shadow-[0_0_24px_rgba(245,196,81,0.13)]
+              hover:shadow-[0_0_42px_rgba(245,196,81,0.26)]
               ink-gold-card-pulse
             `
             : isPro
               ? `
                 border-2 border-[#d8dee8]
                 bg-gradient-to-br from-white/[0.075] via-[#111319] to-[#0d0d11]
-                shadow-[0_0_24px_rgba(226,232,240,0.10)]
-                hover:shadow-[0_0_48px_rgba(226,232,240,0.22)]
+                shadow-[0_0_18px_rgba(226,232,240,0.09)]
+                hover:shadow-[0_0_36px_rgba(226,232,240,0.19)]
                 ink-silver-card-pulse
               `
               : `
@@ -2794,40 +2794,36 @@ function ArtistCard({ artist, index, isNew, onClick }) {
         }
         ${
           isNew
-            ? "ring-2 ring-purple-500 ring-offset-4 ring-offset-[#08080a]"
+            ? "ring-2 ring-purple-500 ring-offset-2 ring-offset-[#08080a]"
             : ""
         }
       `}
     >
       {/* PREMIUM ALIVE EFFECTS */}
       {isPro && (
-        <>
-          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-            <div className="ink-silver-shine absolute -left-1/2 top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-            <div className="ink-premium-float absolute -right-12 -top-12 h-40 w-40 rounded-full bg-slate-200/[0.08] blur-3xl" />
-            <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-70" />
-          </div>
-        </>
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="ink-silver-shine absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          <div className="ink-premium-float absolute -right-10 -top-10 h-32 w-32 rounded-full bg-slate-200/[0.08] blur-3xl" />
+          <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-70" />
+        </div>
       )}
 
       {isVerified && (
-        <>
-          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-            <div className="ink-gold-shine absolute -left-1/2 top-0 h-full w-[26%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
-            <div className="ink-premium-float absolute -right-12 -top-10 h-44 w-44 rounded-full bg-[#f5c451]/[0.14] blur-3xl" />
-            <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ffe69a] to-transparent opacity-90" />
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="ink-gold-shine absolute -left-1/2 top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
+          <div className="ink-premium-float absolute -right-10 -top-8 h-36 w-36 rounded-full bg-[#f5c451]/[0.14] blur-3xl" />
+          <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ffe69a] to-transparent opacity-90" />
 
-            <span className="ink-premium-dot absolute right-8 top-24 h-1.5 w-1.5 rounded-full bg-[#ffd86b] shadow-[0_0_12px_rgba(255,216,107,0.95)]" />
-            <span className="ink-premium-dot absolute right-16 top-40 h-1 w-1 rounded-full bg-[#fff0b2] shadow-[0_0_10px_rgba(255,240,178,0.9)] [animation-delay:0.55s]" />
-            <span className="ink-premium-dot absolute left-8 top-36 h-1 w-1 rounded-full bg-[#f5c451] shadow-[0_0_10px_rgba(245,196,81,0.9)] [animation-delay:1.05s]" />
-          </div>
-        </>
+          <span className="ink-premium-dot absolute right-7 top-20 h-1.5 w-1.5 rounded-full bg-[#ffd86b] shadow-[0_0_12px_rgba(255,216,107,0.95)]" />
+          <span className="ink-premium-dot absolute right-14 top-32 h-1 w-1 rounded-full bg-[#fff0b2] shadow-[0_0_10px_rgba(255,240,178,0.9)] [animation-delay:0.55s]" />
+          <span className="ink-premium-dot absolute left-7 top-28 h-1 w-1 rounded-full bg-[#f5c451] shadow-[0_0_10px_rgba(245,196,81,0.9)] [animation-delay:1.05s]" />
+        </div>
       )}
 
-      {/* PLAN STRIP */}
+      {/* PLAN STRIP - compact, but nothing hidden */}
       <div
         className={`
-          relative z-10 flex items-center justify-between gap-3 px-5 py-3 border-b
+          relative z-10 flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 border-b
           ${
             isVerified
               ? "border-[#f5c451]/25 bg-[#f5c451]/[0.08]"
@@ -2837,21 +2833,22 @@ function ArtistCard({ artist, index, isNew, onClick }) {
           }
         `}
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-start gap-1.5 min-w-0 flex-1">
           <Sparkles
-            size={12}
+            size={10}
             className={
               isVerified
-                ? "text-[#f5c451] shrink-0"
+                ? "text-[#f5c451] shrink-0 mt-0.5"
                 : isPro
-                  ? "text-slate-200 shrink-0"
-                  : "text-gray-600 shrink-0"
+                  ? "text-slate-200 shrink-0 mt-0.5"
+                  : "text-gray-600 shrink-0 mt-0.5"
             }
           />
 
           <span
             className={`
-              text-[7px] font-black tracking-[0.12em] uppercase truncate
+              text-[6.5px] sm:text-[7px] leading-[1.35] font-black tracking-[0.09em]
+              uppercase break-words [overflow-wrap:anywhere]
               ${
                 isVerified
                   ? "text-[#ffe39a]"
@@ -2866,33 +2863,33 @@ function ArtistCard({ artist, index, isNew, onClick }) {
         </div>
 
         {isPro && (
-          <span className="relative overflow-hidden text-[7px] font-black tracking-[0.12em] text-slate-100 border border-slate-200/35 bg-white/[0.05] rounded-full px-2.5 py-1 whitespace-nowrap shadow-[0_0_14px_rgba(226,232,240,0.12)]">
+          <span className="relative overflow-hidden text-[6.5px] font-black tracking-[0.09em] text-slate-100 border border-slate-200/35 bg-white/[0.05] rounded-full px-2 py-1 whitespace-nowrap shadow-[0_0_12px_rgba(226,232,240,0.12)]">
             <span className="relative z-10">SILVER PRO</span>
           </span>
         )}
 
         {isVerified && (
-          <div className="flex items-center gap-2">
-            <span className="text-[7px] font-black tracking-[0.12em] text-[#221500] bg-gradient-to-r from-[#dcae37] via-[#ffe58d] to-[#c8911f] rounded-full px-2.5 py-1 whitespace-nowrap shadow-[0_0_18px_rgba(245,196,81,0.35)]">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[6.5px] font-black tracking-[0.09em] text-[#221500] bg-gradient-to-r from-[#dcae37] via-[#ffe58d] to-[#c8911f] rounded-full px-2 py-1 whitespace-nowrap shadow-[0_0_14px_rgba(245,196,81,0.30)]">
               ★ GOLD VERIFIED
             </span>
-            <span className="hidden 2xl:inline text-[7px] font-black tracking-[0.12em] text-[#ffe39a] border border-[#f5c451]/30 rounded-full px-2.5 py-1 whitespace-nowrap">
+            <span className="text-[6.5px] font-black tracking-[0.09em] text-[#ffe39a] border border-[#f5c451]/30 rounded-full px-2 py-1 whitespace-nowrap">
               HALL OF FAME
             </span>
           </div>
         )}
       </div>
 
-      {/* PROFILE HEADER */}
-      <div className="relative z-10 flex items-center gap-4 p-5 border-b border-white/10">
+      {/* PROFILE HEADER - smaller, all text visible */}
+      <div className="relative z-10 flex items-start gap-3 p-3.5 border-b border-white/10">
         <div
           className={`
-            relative w-16 h-16 rounded-full overflow-hidden shrink-0 bg-black border-2
+            relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 bg-black border-2
             ${
               isVerified
-                ? "border-[#f5c451] shadow-[0_0_28px_rgba(245,196,81,0.38)]"
+                ? "border-[#f5c451] shadow-[0_0_22px_rgba(245,196,81,0.32)]"
                 : isPro
-                  ? "border-[#d8dee8] shadow-[0_0_18px_rgba(226,232,240,0.16)]"
+                  ? "border-[#d8dee8] shadow-[0_0_15px_rgba(226,232,240,0.14)]"
                   : "border-white/10"
             }
           `}
@@ -2905,7 +2902,7 @@ function ArtistCard({ artist, index, isNew, onClick }) {
             />
           ) : (
             <div
-              className={`w-full h-full flex items-center justify-center font-black text-xl ${
+              className={`w-full h-full flex items-center justify-center font-black text-base sm:text-lg ${
                 isVerified
                   ? "text-[#f5c451] bg-[#f5c451]/[0.05]"
                   : isPro
@@ -2928,9 +2925,9 @@ function ArtistCard({ artist, index, isNew, onClick }) {
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pt-0.5">
           <p
-            className={`text-[8px] font-mono tracking-widest mb-1 ${
+            className={`text-[6.5px] sm:text-[7px] font-mono tracking-[0.12em] mb-1 ${
               isVerified
                 ? "text-[#caa33d]"
                 : isPro
@@ -2942,25 +2939,25 @@ function ArtistCard({ artist, index, isNew, onClick }) {
           </p>
 
           <h3
-            className={`text-xl font-black uppercase truncate ${
+            className={`text-[15px] sm:text-base font-black uppercase leading-[1.15] break-words [overflow-wrap:anywhere] ${
               isVerified ? "text-[#fff1bc]" : "text-white"
             }`}
           >
             {normalizedArtist.name || "Tattoo Artist"}
           </h3>
 
-          <div className="flex items-center gap-1.5 mt-2 text-[11px] text-gray-400">
+          <div className="flex items-start gap-1.5 mt-1.5 text-[9px] sm:text-[10px] leading-snug text-gray-400">
             <MapPin
-              size={11}
+              size={10}
               className={
                 isVerified
-                  ? "text-[#f5c451] shrink-0"
+                  ? "text-[#f5c451] shrink-0 mt-0.5"
                   : isPro
-                    ? "text-slate-300 shrink-0"
-                    : "shrink-0"
+                    ? "text-slate-300 shrink-0 mt-0.5"
+                    : "shrink-0 mt-0.5"
               }
             />
-            <span className="truncate">
+            <span className="break-words [overflow-wrap:anywhere]">
               {isBasic
                 ? normalizedArtist.state || "India"
                 : locationText || "India"}
@@ -2969,24 +2966,26 @@ function ArtistCard({ artist, index, isNew, onClick }) {
         </div>
       </div>
 
-      {/* DETAILS */}
-      <div className="relative z-10 px-5 pt-5 pb-5 flex flex-col flex-1 min-h-0">
+      {/* DETAILS - compact layout, no field removed */}
+      <div className="relative z-10 px-3.5 pt-3.5 pb-3.5 flex flex-col">
         {isBasic && (
-          <div className="space-y-4">
-            <InfoRow
-              title="ARTIST / STUDIO"
-              value={normalizedArtist.name || normalizedArtist.studio || "-"}
-            />
-            <InfoRow title="STATE" value={normalizedArtist.state || "-"} />
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-2.5">
+              <InfoRow
+                title="ARTIST / STUDIO"
+                value={normalizedArtist.name || normalizedArtist.studio || "-"}
+              />
+              <InfoRow title="STATE" value={normalizedArtist.state || "-"} />
+            </div>
 
-            <div className="rounded-xl border border-white/[0.07] bg-black/20 p-4">
-              <p className="text-[8px] font-black tracking-[0.12em] text-gray-500">
+            <div className="rounded-lg border border-white/[0.07] bg-black/20 p-3">
+              <p className="text-[7px] font-black tracking-[0.1em] text-gray-500">
                 {normalizedArtist.claimed
                   ? "OWNER UPDATED PROFILE"
                   : "EXISTING DIRECTORY DATA"}
               </p>
 
-              <p className="mt-2 text-[10px] text-gray-600 leading-relaxed">
+              <p className="mt-1.5 text-[9px] text-gray-600 leading-[1.45]">
                 The owner can verify the registered number by OTP and update
                 this card. The phone number cannot be changed before ownership
                 is verified.
@@ -2997,25 +2996,27 @@ function ArtistCard({ artist, index, isNew, onClick }) {
 
         {isPro && (
           <div className="space-y-3">
-            <InfoRow title="NAME" value={normalizedArtist.name} />
-            <InfoRow title="EMAIL" value={normalizedArtist.email} />
-            <InfoRow title="CITY" value={normalizedArtist.city} />
-            <InfoRow title="STATE" value={normalizedArtist.state} />
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+              <InfoRow title="NAME" value={normalizedArtist.name} />
+              <InfoRow title="EMAIL" value={normalizedArtist.email} />
+              <InfoRow title="CITY" value={normalizedArtist.city} />
+              <InfoRow title="STATE" value={normalizedArtist.state} />
+            </div>
 
-            <div className="relative overflow-hidden rounded-xl border border-slate-200/20 bg-gradient-to-r from-white/[0.03] via-white/[0.06] to-white/[0.025] p-4">
+            <div className="relative overflow-hidden rounded-lg border border-slate-200/20 bg-gradient-to-r from-white/[0.03] via-white/[0.06] to-white/[0.025] p-3">
               <div className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-              <div className="relative z-10 flex items-center justify-between gap-3 mb-3">
-                <p className="text-[8px] font-black tracking-[0.14em] text-slate-100">
+              <div className="relative z-10 flex items-center justify-between gap-2 mb-2">
+                <p className="text-[7px] font-black tracking-[0.11em] text-slate-100">
                   SILVER PRO ACTIVE
                 </p>
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-2 w-2 shrink-0">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-100 opacity-45" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
                 </span>
               </div>
 
-              <div className="relative z-10 space-y-1.5 text-[9px] font-mono text-gray-400">
+              <div className="relative z-10 space-y-1 text-[7.5px] sm:text-[8px] leading-snug font-mono text-gray-400">
                 <p>✓ CITY-WISE SEARCH VISIBILITY</p>
                 <p>✓ HIGHER DIRECTORY VISIBILITY</p>
                 <p>✓ RECOMMENDED PROFILE</p>
@@ -3025,24 +3026,28 @@ function ArtistCard({ artist, index, isNew, onClick }) {
         )}
 
         {isVerified && (
-          <div className="space-y-2.5">
-            <InfoRow title="PHONE" value={normalizedArtist.phone} />
-            <InfoRow title="EMAIL" value={normalizedArtist.email} />
-            <InfoRow title="CITY" value={normalizedArtist.city} />
-            <InfoRow title="STATE" value={normalizedArtist.state} />
-            <InfoRow title="STUDIO" value={normalizedArtist.studio} />
-            <InfoRow title="EXPERIENCE" value={normalizedArtist.experience} />
-            <InfoRow title="INSTAGRAM" value={normalizedArtist.instagram} />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+              <InfoRow title="PHONE" value={normalizedArtist.phone} />
+              <InfoRow title="EMAIL" value={normalizedArtist.email} />
+              <InfoRow title="CITY" value={normalizedArtist.city} />
+              <InfoRow title="STATE" value={normalizedArtist.state} />
+              <InfoRow title="STUDIO" value={normalizedArtist.studio} />
+              <InfoRow title="EXPERIENCE" value={normalizedArtist.experience} />
+              <div className="col-span-2">
+                <InfoRow title="INSTAGRAM" value={normalizedArtist.instagram} />
+              </div>
+            </div>
 
-            <div className="relative overflow-hidden rounded-xl border border-[#f5c451]/25 bg-gradient-to-r from-[#f5c451]/[0.07] via-[#f5c451]/[0.12] to-[#f5c451]/[0.04] px-4 py-3">
+            <div className="relative overflow-hidden rounded-lg border border-[#f5c451]/25 bg-gradient-to-r from-[#f5c451]/[0.07] via-[#f5c451]/[0.12] to-[#f5c451]/[0.04] px-3 py-2.5">
               <div className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-[#fff2a8]/35 to-transparent" />
 
-              <div className="relative z-10 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[8px] font-black tracking-[0.13em] text-[#ffe39a]">
+              <div className="relative z-10 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[7px] font-black tracking-[0.1em] text-[#ffe39a] break-words">
                     ★ GOLD VERIFIED SPOTLIGHT
                   </p>
-                  <p className="mt-1 text-[8px] font-mono text-[#b79b52]">
+                  <p className="mt-1 text-[7px] font-mono text-[#b79b52] break-words">
                     HALL OF FAME · HIGHEST PRIORITY
                   </p>
                 </div>
@@ -3056,66 +3061,71 @@ function ArtistCard({ artist, index, isNew, onClick }) {
           </div>
         )}
 
-        <div className="mt-auto pt-5">
+        {/* ACTIONS */}
+        <div className="pt-3.5">
           {isBasic ? (
             <Link
               to="/Enter"
               state={updateState}
               onClick={(event) => event.stopPropagation()}
               className="
-                w-full rounded-xl px-4 py-3.5 flex items-center justify-center gap-2
-                text-[9px] font-black tracking-[0.12em] transition
+                w-full rounded-lg px-3 py-2.5 flex items-center justify-center gap-2
+                text-[8px] font-black tracking-[0.1em] transition
                 bg-white/5 hover:bg-purple-600 border border-white/10
                 hover:border-purple-500 text-white
               "
             >
               UPDATE YOUR CARD
-              <ArrowRight size={13} />
+              <ArrowRight size={11} />
             </Link>
           ) : isPro ? (
             <div
               className="
-                relative overflow-hidden w-full rounded-xl px-4 py-3.5 flex items-center justify-center gap-2
-                text-[9px] font-black tracking-[0.12em]
+                relative overflow-hidden w-full rounded-lg px-3 py-2.5 flex items-center justify-center gap-2
+                text-[8px] font-black tracking-[0.1em]
                 bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black
-                border border-white/70 shadow-[0_0_18px_rgba(226,232,240,0.18)] cursor-default
+                border border-white/70 shadow-[0_0_15px_rgba(226,232,240,0.16)] cursor-default
               "
             >
               <span className="ink-silver-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[20%] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-              <span className="relative z-10">✓ ALREADY PRO · SILVER</span>
+              <span className="relative z-10 text-center">
+                ✓ ALREADY PRO · SILVER
+              </span>
             </div>
           ) : (
             <div
               className="
-                relative overflow-hidden w-full rounded-xl px-4 py-3.5 flex items-center justify-center gap-2
-                text-[9px] font-black tracking-[0.12em]
+                relative overflow-hidden w-full rounded-lg px-3 py-2.5 flex items-center justify-center gap-2
+                text-[8px] font-black tracking-[0.1em]
                 bg-gradient-to-r from-[#b47d12] via-[#ffe58d] to-[#b47d12]
                 text-[#211400] border border-[#ffe7a0]/70
-                shadow-[0_0_24px_rgba(245,196,81,0.34)] cursor-default
+                shadow-[0_0_18px_rgba(245,196,81,0.30)] cursor-default
               "
             >
               <span className="ink-gold-shine pointer-events-none absolute -left-1/2 top-0 h-full w-[22%] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
-              <span className="relative z-10">★ ALREADY VERIFIED · GOLD</span>
+              <span className="relative z-10 text-center">
+                ★ ALREADY VERIFIED · GOLD
+              </span>
             </div>
           )}
 
-          <div className="border-t border-white/10 mt-4 pt-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[8px] font-mono text-gray-600 min-w-0">
+          <div className="border-t border-white/10 mt-3 pt-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-[7px] font-mono text-gray-600 min-w-0">
               <Sparkles
-                size={10}
+                size={9}
                 className={
                   isVerified
-                    ? "text-[#f5c451]"
+                    ? "text-[#f5c451] shrink-0"
                     : isPro
-                      ? "text-slate-300"
-                      : "text-gray-600"
+                      ? "text-slate-300 shrink-0"
+                      : "text-gray-600 shrink-0"
                 }
               />
-              <span className="truncate">INK CONVENTION</span>
+              <span className="break-words">INK CONVENTION</span>
             </div>
 
             <span
-              className={`text-[8px] font-mono whitespace-nowrap ${
+              className={`text-[7px] font-mono whitespace-nowrap ${
                 isVerified
                   ? "text-[#b79b52]"
                   : isPro
@@ -3198,12 +3208,20 @@ function ArtistModal({ artist, onClose }) {
   return (
     <div
       onMouseDown={handleBackdropClick}
-      className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-xl overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      data-lenis-prevent
+      data-lenis-prevent-wheel
+      data-lenis-prevent-touch
+      className="fixed inset-0 z-[9999] h-[100dvh] bg-black/85 backdrop-blur-xl overflow-x-hidden overflow-y-auto overscroll-y-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      style={{
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+        WebkitOverflowScrolling: "touch",
+        touchAction: "pan-y",
+      }}
     >
       <div
         onMouseDown={handleBackdropClick}
-        className="min-h-full w-full flex items-start justify-center px-4 py-8 sm:px-8 sm:py-12"
+        className="w-full min-h-max flex items-start justify-center px-4 py-6 sm:px-8 sm:py-10"
       >
         <div
           ref={modalRef}
@@ -3571,11 +3589,11 @@ function ArtistModal({ artist, onClose }) {
 function InfoRow({ title, value }) {
   return (
     <div className="min-w-0">
-      <p className="text-[7px] font-mono tracking-[0.16em] text-gray-600 mb-1">
+      <p className="text-[6.5px] font-mono tracking-[0.12em] text-gray-600 mb-0.5">
         {title}
       </p>
 
-      <p className="text-[12px] text-gray-300 truncate" title={value || "-"}>
+      <p className="text-[9.5px] sm:text-[10px] leading-snug text-gray-300 break-words [overflow-wrap:anywhere]">
         {value || "-"}
       </p>
     </div>

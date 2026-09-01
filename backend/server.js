@@ -1,20 +1,7 @@
-// =====================================================
-// DNS
-// =====================================================
-
 const dns = require("dns");
-
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
-// =====================================================
-// ENVIRONMENT VARIABLES
-// =====================================================
-
 require("dotenv").config();
-
-// =====================================================
-// IMPORTS
-// =====================================================
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -31,6 +18,7 @@ const paymentRoutes = require("./routes/payment");
 const clientRoutes = require("./routes/ClientRoutes");
 const tattooStudioRoutes = require("./routes/tattooStudioRoutes");
 const claimRoutes = require("./routes/claimRoutes");
+const stallBookingRoutes = require("./routes/stallBookingRoutes");
 
 // =====================================================
 // MODELS
@@ -39,37 +27,29 @@ const claimRoutes = require("./routes/claimRoutes");
 const User = require("./models/User");
 
 // =====================================================
-// EXPRESS APP
+// APP
 // =====================================================
 
 const app = express();
-
 const PORT = process.env.PORT || 5000;
 
 // =====================================================
-// CORS CONFIGURATION
+// CORS
 // =====================================================
 
 const allowedOrigins = [
-  // Production frontend
   "https://brown-walrus-852933.hostingersite.com",
   "https://inkconvention.com",
   "https://www.inkconvention.com",
-
-  // API domain
   "https://api.inkconvention.com",
 
-  // Local development
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:3000",
+
   "http://127.0.0.1:5173",
   "http://127.0.0.1:5174",
 ];
-
-// =====================================================
-// CORS MIDDLEWARE
-// =====================================================
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -93,12 +73,7 @@ app.use((req, res, next) => {
   );
 
   res.setHeader("Access-Control-Allow-Credentials", "true");
-
   res.setHeader("Vary", "Origin");
-
-  // ===================================================
-  // PREFLIGHT
-  // ===================================================
 
   if (req.method === "OPTIONS") {
     return res.status(204).end();
@@ -108,10 +83,8 @@ app.use((req, res, next) => {
 });
 
 // =====================================================
-// BODY PARSERS
+// BODY
 // =====================================================
-
-// Increased because profile images may be sent as base64.
 
 app.use(
   express.json({
@@ -127,7 +100,7 @@ app.use(
 );
 
 // =====================================================
-// UPLOAD DIRECTORY
+// UPLOADS
 // =====================================================
 
 const uploadDir = path.join(__dirname, "uploads");
@@ -138,15 +111,7 @@ if (!fs.existsSync(uploadDir)) {
   });
 }
 
-// =====================================================
-// SERVE UPLOADED FILES
-// =====================================================
-
 app.use("/uploads", express.static(uploadDir));
-
-// =====================================================
-// MULTER STORAGE
-// =====================================================
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -162,10 +127,6 @@ const storage = multer.diskStorage({
   },
 });
 
-// =====================================================
-// MULTER
-// =====================================================
-
 const upload = multer({
   storage,
 
@@ -175,11 +136,11 @@ const upload = multer({
 });
 
 // =====================================================
-// DATABASE CONNECTION
+// MONGODB
 // =====================================================
 
 if (!process.env.MONGO_URI) {
-  console.error("❌ ERROR: MONGO_URI is missing from .env");
+  console.error("❌ MONGO_URI missing in .env");
 } else {
   mongoose
     .connect(process.env.MONGO_URI, {
@@ -193,10 +154,6 @@ if (!process.env.MONGO_URI) {
     });
 }
 
-// =====================================================
-// MONGOOSE EVENTS
-// =====================================================
-
 mongoose.connection.on("error", (error) => {
   console.error("❌ MongoDB error:", error.message);
 });
@@ -206,26 +163,19 @@ mongoose.connection.on("disconnected", () => {
 });
 
 // =====================================================
-// SMTP SETUP
+// EMAIL
 // =====================================================
 
 const transporter = nodemailer.createTransport({
   host: "smtp.hostinger.com",
-
   port: 465,
-
   secure: true,
 
   auth: {
     user: process.env.EMAIL_USER,
-
     pass: process.env.EMAIL_PASS,
   },
 });
-
-// =====================================================
-// VERIFY SMTP
-// =====================================================
 
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   transporter.verify((error) => {
@@ -235,92 +185,68 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       console.log("✅ Hostinger SMTP server is ready!");
     }
   });
-} else {
-  console.warn("⚠️ EMAIL_USER or EMAIL_PASS missing from .env");
 }
 
 // =====================================================
-// ROOT API
+// ROOT
 // =====================================================
 
-app.get(
-  "/",
-
-  (req, res) => {
-    return res.status(200).json({
-      success: true,
-
-      message: "Ink Convention backend API is running successfully!",
-
-      environment: process.env.NODE_ENV || "development",
-    });
-  },
-);
+app.get("/", (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "Ink Convention API running",
+  });
+});
 
 // =====================================================
-// HEALTH CHECK
+// HEALTH
 // =====================================================
 
-app.get(
-  "/api/health",
+app.get("/api/health", (req, res) => {
+  return res.status(200).json({
+    success: true,
 
-  (req, res) => {
-    return res.status(200).json({
-      success: true,
+    database:
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
 
-      message: "Server is healthy",
-
-      database:
-        mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-
-      timestamp: new Date().toISOString(),
-    });
-  },
-);
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // =====================================================
-// PAYMENT ROUTES
+// PAYMENT
 // =====================================================
 
 app.use("/api/payment", paymentRoutes);
-app.use("/api/claim", claimRoutes);
 
 // =====================================================
-// CLIENT ROUTES
+// CLIENTS
 // =====================================================
 
 app.use("/api/clients", clientRoutes);
 
 // =====================================================
-// TATTOO DIRECTORY ROUTES
+// STALL BOOKINGS
+// VERY IMPORTANT
+// =====================================================
+
+app.use("/api/stall-bookings", stallBookingRoutes);
+
+// Old route also supported
+app.use("/api/stalls", stallBookingRoutes);
+
+console.log("✅ Stall booking routes mounted at /api/stall-bookings");
+
+console.log("✅ Stall booking alias mounted at /api/stalls");
+
+// =====================================================
+// DIRECTORY
 // =====================================================
 
 app.use("/api/admin/tattoo-studios", tattooStudioRoutes);
 
 // =====================================================
-// CLAIM / UPDATE ARTIST ROUTES
-//
-// IMPORTANT:
-// MUST BE BEFORE THE /api 404 HANDLER.
-//
-// Routes:
-//
-// GET  /api/claim
-// GET  /api/claim/search
-//
-// POST /api/claim/send-otp
-// POST /api/claim/verify-otp
-//
-// GET  /api/claim/profile
-// PUT  /api/claim/profile
-//
-// POST /api/claim/phone/send-old-otp
-// POST /api/claim/phone/verify-old-otp
-//
-// POST /api/claim/phone/send-new-otp
-// POST /api/claim/phone/verify-new-otp
-//
-// POST /api/claim/logout
+// CLAIM
 // =====================================================
 
 app.use("/api/claim", claimRoutes);
@@ -331,51 +257,43 @@ console.log("✅ Claim routes mounted at /api/claim");
 // ADMIN LOGIN
 // =====================================================
 
-app.post(
-  "/api/login",
+app.post("/api/login", (req, res) => {
+  try {
+    const { gmail, password } = req.body;
 
-  (req, res) => {
-    try {
-      const { gmail, password } = req.body;
-
-      if (!gmail || !password) {
-        return res.status(400).json({
-          success: false,
-
-          message: "Email and password are required.",
-        });
-      }
-
-      if (
-        gmail === process.env.ADMIN_EMAIL &&
-        password === process.env.ADMIN_PASSWORD
-      ) {
-        return res.status(200).json({
-          success: true,
-
-          message: "Login successful!",
-        });
-      }
-
-      return res.status(401).json({
+    if (!gmail || !password) {
+      return res.status(400).json({
         success: false,
-
-        message: "Invalid email or password.",
-      });
-    } catch (error) {
-      console.error("❌ Admin login error:", error);
-
-      return res.status(500).json({
-        success: false,
-
-        message: "Server error during login.",
+        message: "Email and password are required.",
       });
     }
-  },
-);
+
+    if (
+      gmail === process.env.ADMIN_EMAIL &&
+      password === process.env.ADMIN_PASSWORD
+    ) {
+      return res.status(200).json({
+        success: true,
+        message: "Login successful!",
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: "Invalid email or password.",
+    });
+  } catch (error) {
+    console.error("❌ Admin login:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error.",
+    });
+  }
+});
 
 // =====================================================
-// TATTOO ARTIST SIGNUP / COMPETITION SUBMISSION
+// COMPETITION SIGNUP
 // =====================================================
 
 app.post(
@@ -397,42 +315,42 @@ app.post(
     try {
       console.log("📥 Artist signup request received");
 
-      // =================================================
-      // BODY DATA
-      // =================================================
-
       const {
         category,
         entryPackage,
+
         firstName,
         lastName,
+
         professionalName,
+
         gmail,
         phone,
+
         instagram,
         studio,
+
         city,
         state,
         country,
+
         primaryStyle,
         experience,
+
         tattooTitle,
         description,
         placement,
         size,
+
         isOriginal,
+
         declarationOriginal,
         declarationConsent,
         termsAccepted,
 
-        // Razorpay
         razorpay_order_id,
         razorpay_payment_id,
       } = req.body;
-
-      // =================================================
-      // REQUIRED VALIDATION
-      // =================================================
 
       if (
         !category ||
@@ -451,27 +369,14 @@ app.post(
         });
       }
 
-      // =================================================
-      // DATABASE CHECK
-      // =================================================
-
       if (mongoose.connection.readyState !== 1) {
         return res.status(503).json({
           success: false,
-
-          message: "Database not connected yet.",
+          message: "Database not connected.",
         });
       }
 
-      // =================================================
-      // EMAIL
-      // =================================================
-
       const cleanEmail = gmail.trim().toLowerCase();
-
-      // =================================================
-      // DUPLICATE
-      // =================================================
 
       const existingUser = await User.findOne({
         gmail: cleanEmail,
@@ -485,61 +390,30 @@ app.post(
         });
       }
 
-      // =================================================
-      // IMAGES
-      // =================================================
+      const imagePaths = req.files?.images
+        ? req.files.images.map((file) => `uploads/${file.filename}`)
+        : [];
 
-      const imagePaths =
-        req.files && req.files.images
-          ? req.files.images.map((file) => `uploads/${file.filename}`)
-          : [];
-
-      // =================================================
-      // VIDEOS
-      // =================================================
-
-      const videoPaths =
-        req.files && req.files.videos
-          ? req.files.videos.map((file) => `uploads/${file.filename}`)
-          : [];
-
-      // =================================================
-      // REQUIRE IMAGE
-      // =================================================
+      const videoPaths = req.files?.videos
+        ? req.files.videos.map((file) => `uploads/${file.filename}`)
+        : [];
 
       if (imagePaths.length === 0) {
         return res.status(400).json({
           success: false,
 
-          message: "Please upload at least 1 image of the tattoo.",
+          message: "Please upload at least 1 image.",
         });
       }
 
-      // =================================================
-      // ENTRY ID
-      // =================================================
+      const entryId = `INK26-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      const generatedEntryId = `INK26-${Math.floor(
-        100000 + Math.random() * 900000,
-      )}`;
-
-      // =================================================
-      // BOOLEAN
-      // =================================================
-
-      const toBoolean = (value) => {
-        return value === true || value === "true";
-      };
-
-      // =================================================
-      // CREATE USER
-      // =================================================
+      const toBoolean = (value) => value === true || value === "true";
 
       const newUser = new User({
-        entryId: generatedEntryId,
+        entryId,
 
         category,
-
         entryPackage,
 
         firstName: firstName.trim(),
@@ -585,176 +459,60 @@ app.post(
         images: imagePaths,
 
         videos: videoPaths,
-      });
 
-      // =================================================
-      // SAVE USER
-      // =================================================
+        razorpay_order_id: razorpay_order_id || "",
+
+        razorpay_payment_id: razorpay_payment_id || "",
+      });
 
       await newUser.save();
 
-      console.log(`✅ Artist saved with Entry ID: ${generatedEntryId}`);
-
-      // =================================================
-      // PAYMENT LOG
-      // =================================================
-
-      if (razorpay_payment_id) {
-        console.log("💳 Razorpay Payment:", razorpay_payment_id);
-      }
-
-      if (razorpay_order_id) {
-        console.log("💳 Razorpay Order:", razorpay_order_id);
-      }
-
-      // =================================================
-      // SEND EMAIL
-      // =================================================
+      console.log("✅ Artist saved:", entryId);
 
       let emailSent = false;
 
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         try {
-          const mailOptions = {
+          await transporter.sendMail({
             from: `"Ink Convention" <${process.env.EMAIL_USER}>`,
 
             to: cleanEmail,
 
-            subject: "Registration & Entry Successful - Ink Convention",
+            subject: "Ink Convention Registration Successful",
 
             html: `
-              <div
-                style="
-                  max-width:600px;
-                  margin:0 auto;
-                  padding:30px;
-                  background:#08080a;
-                  color:#ffffff;
-                  font-family:Arial,Helvetica,sans-serif;
-                  border-radius:16px;
-                "
-              >
-
-                <h1
-                  style="
-                    color:#a855f7;
-                    margin-bottom:20px;
-                  "
-                >
+              <div style="font-family:Arial;padding:30px;background:#08080a;color:white">
+                <h1 style="color:#a855f7">
                   INK CONVENTION 2026
                 </h1>
-
-                <h2>
-                  Entry Received!
-                </h2>
 
                 <p>
                   Hi ${firstName},
                 </p>
 
-                <p
-                  style="
-                    color:#cccccc;
-                    line-height:1.6;
-                  "
-                >
-                  Your competition entry has been received successfully.
-                </p>
-
-                <div
-                  style="
-                    margin:25px 0;
-                    padding:20px;
-                    background:#111116;
-                    border:1px solid #a855f7;
-                    border-radius:12px;
-                  "
-                >
-
-                  <p
-                    style="
-                      margin:0 0 8px;
-                      color:#999;
-                    "
-                  >
-                    Official Entry ID
-                  </p>
-
-                  <strong
-                    style="
-                      font-size:24px;
-                      color:#a855f7;
-                    "
-                  >
-                    ${generatedEntryId}
-                  </strong>
-
-                </div>
-
                 <p>
-                  Category:
-                  <strong>
-                    ${category}
-                  </strong>
+                  Your entry has been received successfully.
                 </p>
 
-                <p>
-                  Package:
-                  <strong>
-                    ${entryPackage}
-                  </strong>
-                </p>
-
-                ${
-                  razorpay_payment_id
-                    ? `
-                      <p>
-                        Payment ID:
-                        <strong>
-                          ${razorpay_payment_id}
-                        </strong>
-                      </p>
-                    `
-                    : ""
-                }
-
-                <p
-                  style="
-                    margin-top:30px;
-                    color:#777;
-                    font-size:12px;
-                  "
-                >
-                  Ink Convention 2026
-                </p>
-
+                <h2>
+                  Entry ID: ${entryId}
+                </h2>
               </div>
             `,
-          };
-
-          await transporter.sendMail(mailOptions);
+          });
 
           emailSent = true;
-
-          console.log(`✅ Registration email sent to ${cleanEmail}`);
         } catch (emailError) {
-          console.error("❌ Email dispatch failed:", emailError.message);
+          console.error("❌ Email:", emailError.message);
         }
       }
 
-      // =================================================
-      // RESPONSE
-      // =================================================
-
       return res.status(201).json({
         success: true,
-
         message: "User registered successfully!",
 
-        entryId: generatedEntryId,
-
+        entryId,
         emailSent,
-
         user: newUser,
       });
     } catch (error) {
@@ -772,9 +530,7 @@ app.post(
 );
 
 // =====================================================
-// GET ALL COMPETITION ARTIST ENTRIES
-//
-// GET /api/admin/users
+// ADMIN USERS
 // =====================================================
 
 app.get(
@@ -782,43 +538,26 @@ app.get(
 
   async (req, res) => {
     try {
-      if (mongoose.connection.readyState !== 1) {
-        return res.status(503).json({
-          success: false,
-
-          message: "Database not connected.",
-        });
-      }
-
       const users = await User.find().sort({
         createdAt: -1,
       });
 
-      return res.status(200).json({
+      return res.json({
         success: true,
-
         count: users.length,
-
         users,
       });
     } catch (error) {
-      console.error("❌ Fetch users error:", error);
-
       return res.status(500).json({
         success: false,
-
-        message: "Server error while fetching users.",
-
-        error: error.message,
+        message: "Unable to load users.",
       });
     }
   },
 );
 
 // =====================================================
-// GET SINGLE ARTIST
-//
-// GET /api/admin/users/:id
+// SINGLE USER
 // =====================================================
 
 app.get(
@@ -831,34 +570,25 @@ app.get(
       if (!user) {
         return res.status(404).json({
           success: false,
-
           message: "User not found.",
         });
       }
 
-      return res.status(200).json({
+      return res.json({
         success: true,
-
         user,
       });
     } catch (error) {
-      console.error("❌ Fetch single user error:", error);
-
       return res.status(500).json({
         success: false,
-
-        message: "Server error while fetching user.",
-
-        error: error.message,
+        message: "Unable to load user.",
       });
     }
   },
 );
 
 // =====================================================
-// UPDATE ARTIST STATUS
-//
-// PATCH /api/admin/users/:id/status
+// UPDATE USER STATUS
 // =====================================================
 
 app.patch(
@@ -868,15 +598,7 @@ app.patch(
     try {
       const { status } = req.body;
 
-      if (!status) {
-        return res.status(400).json({
-          success: false,
-
-          message: "Status is required.",
-        });
-      }
-
-      const updatedUser = await User.findByIdAndUpdate(
+      const updated = await User.findByIdAndUpdate(
         req.params.id,
 
         {
@@ -888,39 +610,28 @@ app.patch(
         },
       );
 
-      if (!updatedUser) {
+      if (!updated) {
         return res.status(404).json({
           success: false,
-
           message: "User not found.",
         });
       }
 
-      return res.status(200).json({
+      return res.json({
         success: true,
-
-        message: "Status updated successfully.",
-
-        updated: updatedUser,
+        updated,
       });
     } catch (error) {
-      console.error("❌ Status update error:", error);
-
       return res.status(500).json({
         success: false,
-
-        message: "Server error while updating status.",
-
-        error: error.message,
+        message: "Unable to update user.",
       });
     }
   },
 );
 
 // =====================================================
-// DELETE ARTIST ENTRY
-//
-// DELETE /api/admin/users/:id
+// DELETE USER
 // =====================================================
 
 app.delete(
@@ -928,98 +639,57 @@ app.delete(
 
   async (req, res) => {
     try {
-      const deletedUser = await User.findByIdAndDelete(req.params.id);
+      const user = await User.findByIdAndDelete(req.params.id);
 
-      if (!deletedUser) {
+      if (!user) {
         return res.status(404).json({
           success: false,
-
           message: "User not found.",
         });
       }
 
-      // =================================================
-      // DELETE ASSOCIATED FILES
-      // =================================================
-
-      const filesToDelete = [
-        ...(deletedUser.images || []),
-
-        ...(deletedUser.videos || []),
-      ];
-
-      filesToDelete.forEach((filePath) => {
-        try {
-          const absolutePath = path.join(__dirname, filePath);
-
-          if (fs.existsSync(absolutePath)) {
-            fs.unlinkSync(absolutePath);
-          }
-        } catch (fileError) {
-          console.error("⚠️ Unable to delete file:", fileError.message);
-        }
-      });
-
-      return res.status(200).json({
+      return res.json({
         success: true,
-
         message: "User deleted successfully.",
       });
     } catch (error) {
-      console.error("❌ Delete user error:", error);
-
       return res.status(500).json({
         success: false,
-
-        message: "Server error while deleting user.",
-
-        error: error.message,
+        message: "Unable to delete user.",
       });
     }
   },
 );
 
 // =====================================================
-// 404 API HANDLER
-//
-// IMPORTANT:
-// THIS MUST ALWAYS STAY AFTER EVERY API ROUTE.
+// API 404
+// KEEP THIS AFTER ALL ROUTES
 // =====================================================
 
-app.use(
-  "/api",
+app.use("/api", (req, res) => {
+  return res.status(404).json({
+    success: false,
 
-  (req, res) => {
-    return res.status(404).json({
-      success: false,
-
-      message: `API route not found: ${req.method} ${req.originalUrl}`,
-    });
-  },
-);
+    message: `API route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
 
 // =====================================================
-// GLOBAL ERROR HANDLER
+// GLOBAL ERROR
 // =====================================================
 
 app.use((error, req, res, next) => {
-  console.error("❌ Unhandled server error:", error);
-
-  // =================================================
-  // MULTER ERROR
-  // =================================================
+  console.error("❌ Server error:", error);
 
   if (error instanceof multer.MulterError) {
     return res.status(400).json({
       success: false,
-
       message: error.message,
     });
   }
 
   return res.status(500).json({
     success: false,
-
     message: "Internal server error.",
 
     error: process.env.NODE_ENV === "production" ? undefined : error.message,
@@ -1030,28 +700,26 @@ app.use((error, req, res, next) => {
 // START SERVER
 // =====================================================
 
-app.listen(
-  PORT,
+app.listen(PORT, () => {
+  console.log("==============================================");
 
-  () => {
-    console.log("==============================================");
+  console.log(`🚀 Server is running on port ${PORT}`);
 
-    console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`🌐 Local API: http://localhost:${PORT}`);
 
-    console.log(`🌐 Local API: http://localhost:${PORT}`);
+  console.log(`❤️ Health: http://localhost:${PORT}/api/health`);
 
-    console.log(`❤️ Health: http://localhost:${PORT}/api/health`);
+  console.log(`👤 Clients: http://localhost:${PORT}/api/clients`);
 
-    console.log(`👤 Clients: http://localhost:${PORT}/api/clients`);
+  console.log(`🏪 Stall Bookings: http://localhost:${PORT}/api/stall-bookings`);
 
-    console.log(
-      `🎨 Directory: http://localhost:${PORT}/api/admin/tattoo-studios`,
-    );
+  console.log(
+    `🎨 Directory: http://localhost:${PORT}/api/admin/tattoo-studios`,
+  );
 
-    console.log(`🔐 Claim API: http://localhost:${PORT}/api/claim`);
+  console.log(`🔐 Claim API: http://localhost:${PORT}/api/claim`);
 
-    console.log(`💳 Payment: http://localhost:${PORT}/api/payment`);
+  console.log(`💳 Payment: http://localhost:${PORT}/api/payment`);
 
-    console.log("==============================================");
-  },
-);
+  console.log("==============================================");
+});

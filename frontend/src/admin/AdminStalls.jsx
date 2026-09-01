@@ -1,15 +1,23 @@
 import React from "react";
-import { Search, Store, X, User, Sparkles } from "lucide-react";
+import { Search, Store, X, User, Sparkles, RefreshCw } from "lucide-react";
 
-const STALL_STORAGE_KEY = "inkConventionStallBookings";
+// =====================================================
+// API
+// =====================================================
+
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/$/, "");
+
+// =====================================================
+// STATUS
+// =====================================================
 
 const STATUS_OPTIONS = ["NEW", "CONTACTED", "CONFIRMED", "PAID", "CANCELLED"];
 
-const PACKAGE_PRICES = {
-  essential: 4999,
-  pro: 7499,
-  spotlight: 12499,
-};
+// =====================================================
+// HELPERS
+// =====================================================
 
 function safeText(value) {
   return String(value || "").toLowerCase();
@@ -17,11 +25,14 @@ function safeText(value) {
 
 function formatPrice(value) {
   const amount = Number(value) || 0;
+
   return `₹${amount.toLocaleString("en-IN")}`;
 }
 
 function formatDate(value) {
-  if (!value) return "-";
+  if (!value) {
+    return "-";
+  }
 
   const date = new Date(value);
 
@@ -29,90 +40,190 @@ function formatDate(value) {
     return String(value);
   }
 
-  return date.toLocaleString("en-IN");
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-function readLocalBookings() {
-  try {
-    const value = JSON.parse(localStorage.getItem(STALL_STORAGE_KEY) || "[]");
+function getFallbackPackagePrice(duration) {
+  const value = String(duration || "1");
 
-    return Array.isArray(value) ? value : [];
-  } catch (error) {
-    console.error("Unable to read stall bookings:", error);
-    return [];
+  if (value === "2") {
+    return 8999;
   }
+
+  if (value === "3") {
+    return 12499;
+  }
+
+  return 4999;
 }
+
+// =====================================================
+// NORMALIZE MONGODB BOOKING
+// =====================================================
 
 function normalizeBooking(booking, index) {
-  const packageId = safeText(
-    booking.packageId || booking.package || booking.stallPackage || "essential",
+  const duration = String(
+    booking.duration || booking.days || booking.stallDuration || "1",
   );
 
+  const fallbackPrice = getFallbackPackagePrice(duration);
+
   const packagePrice =
-    Number(booking.packagePrice || booking.totalAmount || booking.price) ||
-    PACKAGE_PRICES[packageId] ||
-    4999;
+    Number(
+      booking.packagePrice ||
+        booking.totalAmount ||
+        booking.price ||
+        booking.totalPrice,
+    ) || fallbackPrice;
+
+  const advanceAmount =
+    Number(booking.advanceAmount || booking.paidAmount || booking.amount) ||
+    1499;
+
+  const rawStatus = booking.status || booking.bookingStatus || "CONFIRMED";
+
+  const rawPaymentStatus =
+    booking.paymentStatus || booking.payment?.status || "PENDING";
 
   return {
     id: booking._id || booking.id || booking.bookingId || `stall-${index + 1}`,
+
     bookingId:
       booking.bookingId ||
       booking._id ||
       booking.id ||
       `STALL-${String(index + 1).padStart(4, "0")}`,
+
     studioName:
-      booking.studioName || booking.brandName || booking.studio || "-",
-    ownerName: booking.ownerName || booking.owner || booking.name || "-",
-    phone: booking.phone || booking.phoneNumber || "-",
-    email: booking.email || booking.gmail || "-",
+      booking.studioName ||
+      booking.brandName ||
+      booking.company ||
+      booking.studio ||
+      "-",
+
+    ownerName:
+      booking.ownerName ||
+      booking.fullName ||
+      booking.owner ||
+      booking.name ||
+      "-",
+
+    phone: booking.phone || booking.phoneNumber || booking.mobile || "-",
+
+    email: booking.email || booking.gmail || booking.customerEmail || "-",
+
     city: booking.city || booking.userCity || "-",
+
     expoCity:
-      booking.expoCity || booking.preferredExpoCity || booking.eventCity || "-",
-    packageId,
+      booking.expoCity ||
+      booking.preferredExpoCity ||
+      booking.eventCity ||
+      booking.city ||
+      "-",
+
+    duration,
+
+    packageId:
+      booking.packageId ||
+      booking.package ||
+      booking.stallPackage ||
+      `${duration}-day`,
+
     packageName:
-      booking.packageName || String(packageId || "essential").toUpperCase(),
+      booking.packageName ||
+      booking.stallType ||
+      booking.stallName ||
+      `${duration} Day${duration === "1" ? "" : "s"} Stall`,
+
     packagePrice,
-    advanceAmount:
-      Number(booking.advanceAmount || booking.paidAmount || 1499) || 1499,
-    paymentStatus: String(
-      booking.paymentStatus || booking.payment?.status || "PENDING",
-    ).toUpperCase(),
+
+    advanceAmount,
+
+    paymentStatus: String(rawPaymentStatus).toUpperCase(),
+
+    status: String(rawStatus).toUpperCase(),
+
     paymentId:
       booking.paymentId ||
       booking.razorpayPaymentId ||
       booking.razorpay_payment_id ||
       "-",
+
     orderId:
       booking.orderId ||
       booking.razorpayOrderId ||
       booking.razorpay_order_id ||
       "-",
+
     instagram: booking.instagram || booking.instagramId || "-",
+
     message: booking.message || booking.note || booking.notes || "-",
-    status: String(
-      booking.status || booking.bookingStatus || "NEW",
-    ).toUpperCase(),
+
     createdAt:
-      booking.createdAt || booking.bookingDate || new Date().toISOString(),
+      booking.createdAt || booking.bookingDate || booking.updatedAt || "",
   };
 }
 
+// =====================================================
+// MAIN COMPONENT
+// =====================================================
+
 export default function AdminStalls() {
   const [bookings, setBookings] = React.useState([]);
+
   const [searchQuery, setSearchQuery] = React.useState("");
+
   const [statusFilter, setStatusFilter] = React.useState("ALL");
+
   const [selectedBooking, setSelectedBooking] = React.useState(null);
+
   const [loading, setLoading] = React.useState(true);
+
+  const [error, setError] = React.useState("");
+
+  // ===================================================
+  // LOAD BOOKINGS FROM MONGODB
+  // ===================================================
 
   const loadBookings = React.useCallback(async () => {
     try {
-      const response = await fetch("https://api.inkconvention.com/api/stalls");
+      setError("");
+
+      const url = `${API_URL}/api/stall-bookings`;
+
+      console.log("======================================");
+      console.log("🏪 ADMIN STALL REQUEST");
+      console.log("URL:", url);
+      console.log("======================================");
+
+      const response = await fetch(url, {
+        method: "GET",
+
+        headers: {
+          Accept: "application/json",
+        },
+
+        cache: "no-store",
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      console.log("======================================");
+      console.log("📦 STALL API RESPONSE");
+      console.log(data);
+      console.log("======================================");
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(
+          data.message || `Backend returned HTTP ${response.status}`,
+        );
       }
-
-      const data = await response.json();
 
       const list = Array.isArray(data)
         ? data
@@ -122,22 +233,30 @@ export default function AdminStalls() {
             ? data.stalls
             : [];
 
-      setBookings(list.map((item, index) => normalizeBooking(item, index)));
-    } catch (error) {
-      console.warn(
-        "Backend stall route unavailable. Using local storage.",
-        error,
+      console.log("✅ TOTAL BOOKINGS FOUND:", list.length);
+
+      const normalizedBookings = list.map((booking, index) =>
+        normalizeBooking(booking, index),
       );
 
-      const localBookings = readLocalBookings();
+      console.log("✅ NORMALIZED BOOKINGS:", normalizedBookings);
 
-      setBookings(
-        localBookings.map((item, index) => normalizeBooking(item, index)),
-      );
+      setBookings(normalizedBookings);
+    } catch (fetchError) {
+      console.error("❌ ADMIN STALL FETCH ERROR:", fetchError);
+
+      setBookings([]);
+
+      setError(fetchError.message || "Unable to load stall bookings.");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // ===================================================
+  // INITIAL LOAD
+  // FIXES react-hooks/set-state-in-effect
+  // ===================================================
 
   React.useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -148,6 +267,20 @@ export default function AdminStalls() {
       window.clearTimeout(timer);
     };
   }, [loadBookings]);
+
+  // ===================================================
+  // REFRESH
+  // ===================================================
+
+  const handleRefresh = () => {
+    setLoading(true);
+
+    void loadBookings();
+  };
+
+  // ===================================================
+  // FILTER BOOKINGS
+  // ===================================================
 
   const filteredBookings = React.useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -164,6 +297,8 @@ export default function AdminStalls() {
           booking.city,
           booking.expoCity,
           booking.packageName,
+          booking.paymentId,
+          booking.orderId,
         ].some((value) => safeText(value).includes(query));
 
       const matchesStatus =
@@ -172,6 +307,10 @@ export default function AdminStalls() {
       return matchesSearch && matchesStatus;
     });
   }, [bookings, searchQuery, statusFilter]);
+
+  // ===================================================
+  // STATS
+  // ===================================================
 
   const stats = React.useMemo(() => {
     const total = bookings.length;
@@ -186,8 +325,11 @@ export default function AdminStalls() {
     ).length;
 
     const pending = bookings.filter(
-      (booking) =>
-        booking.paymentStatus !== "PAID" && booking.status !== "PAID",
+      (booking) => booking.paymentStatus !== "PAID",
+    ).length;
+
+    const cancelled = bookings.filter(
+      (booking) => booking.status === "CANCELLED",
     ).length;
 
     const advanceCollected = bookings.reduce((totalAmount, booking) => {
@@ -206,54 +348,85 @@ export default function AdminStalls() {
       confirmed,
       paid,
       pending,
+      cancelled,
       advanceCollected,
     };
   }, [bookings]);
 
-  const updateStatus = (bookingId, nextStatus) => {
-    setBookings((previous) =>
-      previous.map((booking) =>
-        String(booking.id) === String(bookingId)
-          ? {
-              ...booking,
-              status: nextStatus,
-            }
-          : booking,
-      ),
-    );
+  // ===================================================
+  // UPDATE STATUS
+  // ===================================================
 
-    setSelectedBooking((previous) => {
-      if (!previous || String(previous.id) !== String(bookingId)) {
-        return previous;
+  const updateStatus = async (bookingId, nextStatus) => {
+    try {
+      console.log("🔄 UPDATING STATUS:", bookingId, nextStatus);
+
+      const response = await fetch(
+        `${API_URL}/api/stall-bookings/${bookingId}`,
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            bookingStatus: nextStatus.toLowerCase(),
+
+            status: nextStatus,
+          }),
+        },
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      console.log("📦 STATUS RESPONSE:", data);
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP ${response.status}`);
       }
 
-      return {
-        ...previous,
-        status: nextStatus,
-      };
-    });
+      setBookings((previous) =>
+        previous.map((booking) => {
+          if (String(booking.id) !== String(bookingId)) {
+            return booking;
+          }
 
-    try {
-      const localBookings = readLocalBookings();
+          return {
+            ...booking,
 
-      const updatedLocal = localBookings.map((booking) => {
-        const id = booking._id || booking.id || booking.bookingId;
+            status: nextStatus,
 
-        if (String(id) !== String(bookingId)) {
-          return booking;
+            paymentStatus:
+              nextStatus === "PAID" ? "PAID" : booking.paymentStatus,
+          };
+        }),
+      );
+
+      setSelectedBooking((previous) => {
+        if (!previous || String(previous.id) !== String(bookingId)) {
+          return previous;
         }
 
         return {
-          ...booking,
+          ...previous,
+
           status: nextStatus,
+
+          paymentStatus:
+            nextStatus === "PAID" ? "PAID" : previous.paymentStatus,
         };
       });
+    } catch (updateError) {
+      console.error("❌ STATUS UPDATE ERROR:", updateError);
 
-      localStorage.setItem(STALL_STORAGE_KEY, JSON.stringify(updatedLocal));
-    } catch (error) {
-      console.error("Unable to save booking status:", error);
+      window.alert(updateError.message || "Unable to update booking status.");
     }
   };
+
+  // ===================================================
+  // UI
+  // ===================================================
 
   return (
     <>
@@ -272,6 +445,8 @@ export default function AdminStalls() {
         "
       >
         <div className="max-w-[1700px] mx-auto">
+          {/* HEADER */}
+
           <section className="border-b border-white/10 pb-10">
             <div className="flex items-center gap-2 text-purple-400">
               <Store size={14} />
@@ -281,35 +456,80 @@ export default function AdminStalls() {
               </span>
             </div>
 
-            <h1 className="mt-5 text-[clamp(3rem,6vw,6rem)] font-black uppercase tracking-[-0.065em] leading-[0.85]">
+            <h1
+              className="
+                mt-5
+                text-[clamp(3rem,6vw,6rem)]
+                font-black
+                uppercase
+                tracking-[-0.065em]
+                leading-[0.85]
+              "
+            >
               BOOK
               <br />
               <span className="text-purple-500">STALL.</span>
             </h1>
 
             <p className="mt-6 max-w-2xl text-sm text-gray-500 leading-relaxed">
-              Every stall booking will appear here with customer, package,
-              payment and expo-city details.
+              Stall bookings saved in MongoDB will automatically appear here.
             </p>
+
+            <div className="mt-4">
+              <p className="text-[9px] font-mono text-gray-700">API</p>
+
+              <p className="mt-1 text-[10px] font-mono text-purple-400 break-all">
+                {API_URL}/api/stall-bookings
+              </p>
+            </div>
           </section>
 
-          <section className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-8">
-            <StatCard label="TOTAL BOOKINGS" value={stats.total} />
+          {/* STATS */}
+
+          <section className="grid grid-cols-2 lg:grid-cols-6 gap-3 mt-8">
+            <StatCard label="TOTAL" value={stats.total} />
+
             <StatCard label="CONFIRMED" value={stats.confirmed} />
+
             <StatCard label="PAID" value={stats.paid} />
+
             <StatCard label="PENDING" value={stats.pending} />
+
+            <StatCard label="CANCELLED" value={stats.cancelled} />
+
             <StatCard
-              label="ADVANCE COLLECTED"
+              label="ADVANCE"
               value={formatPrice(stats.advanceCollected)}
               highlight
             />
           </section>
 
-          <section className="mt-8 bg-[#0d0d11] border border-white/10 rounded-2xl p-4 flex flex-col md:flex-row gap-3">
+          {/* SEARCH */}
+
+          <section
+            className="
+              mt-8
+              bg-[#0d0d11]
+              border
+              border-white/10
+              rounded-2xl
+              p-4
+              flex
+              flex-col
+              md:flex-row
+              gap-3
+            "
+          >
             <div className="relative flex-1">
               <Search
                 size={16}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
+                className="
+                  absolute
+                  left-4
+                  top-1/2
+                  -translate-y-1/2
+                  text-gray-600
+                "
               />
 
               <input
@@ -317,14 +537,37 @@ export default function AdminStalls() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="SEARCH STUDIO, OWNER, PHONE, EMAIL OR CITY..."
-                className="w-full bg-black/30 border border-white/10 focus:border-purple-500 rounded-xl pl-11 pr-4 py-4 outline-none text-xs placeholder:text-gray-700"
+                className="
+                  w-full
+                  bg-black/30
+                  border
+                  border-white/10
+                  focus:border-purple-500
+                  rounded-xl
+                  pl-11
+                  pr-4
+                  py-4
+                  outline-none
+                  text-xs
+                  placeholder:text-gray-700
+                "
               />
             </div>
 
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="bg-black/30 border border-white/10 rounded-xl px-4 py-4 outline-none text-[9px] font-mono"
+              className="
+                bg-black/30
+                border
+                border-white/10
+                rounded-xl
+                px-4
+                py-4
+                outline-none
+                text-[9px]
+                font-mono
+              "
             >
               <option value="ALL">ALL STATUS</option>
 
@@ -337,25 +580,100 @@ export default function AdminStalls() {
 
             <button
               type="button"
-              onClick={() => {
-                setLoading(true);
-                loadBookings();
-              }}
-              className="border border-white/10 hover:border-purple-500/40 rounded-xl px-5 py-4 text-[9px] font-black tracking-widest transition"
+              onClick={handleRefresh}
+              className="
+                border
+                border-purple-500/30
+                bg-purple-500/10
+                hover:bg-purple-500
+                hover:text-white
+                rounded-xl
+                px-5
+                py-4
+                text-[9px]
+                font-black
+                tracking-widest
+                transition
+                flex
+                items-center
+                justify-center
+                gap-2
+              "
             >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               REFRESH
             </button>
           </section>
 
+          {/* ERROR */}
+
+          {error && (
+            <section
+              className="
+                mt-5
+                border
+                border-red-500/30
+                bg-red-500/10
+                rounded-2xl
+                p-5
+              "
+            >
+              <p className="text-xs font-black text-red-400">
+                ERROR LOADING BOOKINGS
+              </p>
+
+              <p className="mt-2 text-xs text-red-300">{error}</p>
+
+              <p className="mt-3 text-[10px] text-gray-500">
+                Make sure your backend is running on {API_URL}
+              </p>
+            </section>
+          )}
+
+          {/* BOOKINGS */}
+
           <section className="mt-7">
             {loading ? (
-              <div className="min-h-[320px] border border-white/10 rounded-3xl flex items-center justify-center">
-                <p className="text-[9px] font-mono text-gray-600 tracking-widest">
+              <div
+                className="
+                  min-h-[320px]
+                  border
+                  border-white/10
+                  rounded-3xl
+                  flex
+                  flex-col
+                  items-center
+                  justify-center
+                "
+              >
+                <RefreshCw
+                  size={28}
+                  className="
+                    animate-spin
+                    text-purple-500
+                  "
+                />
+
+                <p className="mt-4 text-[9px] font-mono text-gray-600 tracking-widest">
                   LOADING STALL BOOKINGS...
                 </p>
               </div>
             ) : filteredBookings.length === 0 ? (
-              <div className="min-h-[320px] border border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center text-center p-6">
+              <div
+                className="
+                  min-h-[320px]
+                  border
+                  border-dashed
+                  border-white/10
+                  rounded-3xl
+                  flex
+                  flex-col
+                  items-center
+                  justify-center
+                  text-center
+                  p-6
+                "
+              >
                 <Store size={36} className="text-gray-700" />
 
                 <h2 className="mt-5 text-xl font-black uppercase">
@@ -363,8 +681,25 @@ export default function AdminStalls() {
                 </h2>
 
                 <p className="mt-2 text-xs text-gray-600">
-                  New user stall bookings will show here.
+                  Backend loaded {bookings.length} booking(s).
                 </p>
+
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="
+                    mt-5
+                    bg-purple-600
+                    hover:bg-purple-500
+                    px-5
+                    py-3
+                    rounded-xl
+                    text-xs
+                    font-black
+                  "
+                >
+                  REFRESH AGAIN
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
@@ -373,9 +708,9 @@ export default function AdminStalls() {
                     key={booking.id}
                     booking={booking}
                     onOpen={() => setSelectedBooking(booking)}
-                    onStatusChange={(status) =>
-                      updateStatus(booking.id, status)
-                    }
+                    onStatusChange={(status) => {
+                      void updateStatus(booking.id, status);
+                    }}
                   />
                 ))}
               </div>
@@ -384,25 +719,44 @@ export default function AdminStalls() {
         </div>
       </main>
 
+      {/* MODAL */}
+
       {selectedBooking && (
         <BookingModal
           booking={selectedBooking}
           onClose={() => setSelectedBooking(null)}
-          onStatusChange={(status) => updateStatus(selectedBooking.id, status)}
+          onStatusChange={(status) => {
+            void updateStatus(selectedBooking.id, status);
+          }}
         />
       )}
     </>
   );
 }
 
+// =====================================================
+// BOOKING CARD
+// =====================================================
+
 function BookingCard({ booking, onOpen, onStatusChange }) {
   const isPaid = booking.paymentStatus === "PAID" || booking.status === "PAID";
 
   return (
-    <article className="bg-[#0d0d11] border border-white/10 hover:border-purple-500/30 rounded-[24px] p-5 sm:p-6 transition">
+    <article
+      className="
+        bg-[#0d0d11]
+        border
+        border-white/10
+        hover:border-purple-500/30
+        rounded-[24px]
+        p-5
+        sm:p-6
+        transition
+      "
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[8px] font-mono tracking-widest text-purple-400">
+          <p className="text-[8px] font-mono tracking-widest text-purple-400 break-all">
             {booking.bookingId}
           </p>
 
@@ -412,6 +766,7 @@ function BookingCard({ booking, onOpen, onStatusChange }) {
 
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
             <User size={12} />
+
             <span>{booking.ownerName}</span>
           </div>
         </div>
@@ -433,29 +788,58 @@ function BookingCard({ booking, onOpen, onStatusChange }) {
             }
           `}
         >
-          {isPaid ? "PAID" : "PENDING"}
+          {isPaid ? "PAID" : booking.paymentStatus}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mt-6">
+        <SmallInfo label="CUSTOMER CITY" value={booking.city} />
+
         <SmallInfo label="EXPO CITY" value={booking.expoCity} />
+
         <SmallInfo label="PACKAGE" value={booking.packageName} />
+
         <SmallInfo
           label="TOTAL PRICE"
           value={formatPrice(booking.packagePrice)}
         />
+
         <SmallInfo
           label="ADVANCE"
           value={formatPrice(booking.advanceAmount)}
           highlight
         />
+
+        <SmallInfo label="STATUS" value={booking.status} />
       </div>
 
-      <div className="mt-5 pt-5 border-t border-white/10 flex flex-col sm:flex-row gap-3">
+      <div
+        className="
+          mt-5
+          pt-5
+          border-t
+          border-white/10
+          flex
+          flex-col
+          sm:flex-row
+          gap-3
+        "
+      >
         <select
           value={booking.status}
           onChange={(event) => onStatusChange(event.target.value)}
-          className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none text-[9px] font-mono"
+          className="
+            flex-1
+            bg-black/30
+            border
+            border-white/10
+            rounded-xl
+            px-4
+            py-3
+            outline-none
+            text-[9px]
+            font-mono
+          "
         >
           {STATUS_OPTIONS.map((status) => (
             <option key={status} value={status}>
@@ -467,7 +851,17 @@ function BookingCard({ booking, onOpen, onStatusChange }) {
         <button
           type="button"
           onClick={onOpen}
-          className="bg-purple-600 hover:bg-purple-500 rounded-xl px-5 py-3 text-[9px] font-black tracking-widest transition"
+          className="
+            bg-purple-600
+            hover:bg-purple-500
+            rounded-xl
+            px-5
+            py-3
+            text-[9px]
+            font-black
+            tracking-widest
+            transition
+          "
         >
           VIEW DETAILS
         </button>
@@ -475,6 +869,10 @@ function BookingCard({ booking, onOpen, onStatusChange }) {
     </article>
   );
 }
+
+// =====================================================
+// BOOKING MODAL
+// =====================================================
 
 function BookingModal({ booking, onClose, onStatusChange }) {
   React.useEffect(() => {
@@ -490,25 +888,71 @@ function BookingModal({ booking, onClose, onStatusChange }) {
 
     return () => {
       document.body.style.overflow = "";
+
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
 
   return (
     <div
+      data-lenis-prevent
+      data-lenis-prevent-wheel
+      data-lenis-prevent-touch
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
         }
       }}
-      className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-xl p-4 flex items-center justify-center overflow-y-auto"
+      className="
+        fixed
+        inset-0
+        z-[9999]
+        h-[100dvh]
+        bg-black/85
+        backdrop-blur-xl
+        p-4
+        flex
+        items-center
+        justify-center
+        overflow-y-auto
+      "
     >
-      <div className="relative w-full max-w-[950px] max-h-[90vh] overflow-y-auto bg-[#0d0d11] border border-purple-500/20 rounded-[30px] p-6 sm:p-9">
+      <div
+        className="
+          relative
+          w-full
+          max-w-[950px]
+          max-h-[90vh]
+          overflow-y-auto
+          bg-[#0d0d11]
+          border
+          border-purple-500/20
+          rounded-[30px]
+          p-6
+          sm:p-9
+        "
+      >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close booking details"
-          className="absolute top-5 right-5 w-11 h-11 rounded-full border border-white/10 bg-black/40 hover:bg-white hover:text-black flex items-center justify-center transition"
+          className="
+            absolute
+            top-5
+            right-5
+            w-11
+            h-11
+            rounded-full
+            border
+            border-white/10
+            bg-black/40
+            hover:bg-white
+            hover:text-black
+            flex
+            items-center
+            justify-center
+            transition
+          "
         >
           <X size={17} />
         </button>
@@ -526,35 +970,78 @@ function BookingModal({ booking, onClose, onStatusChange }) {
             {booking.studioName}
           </h2>
 
-          <p className="mt-2 text-[9px] font-mono text-gray-600">
+          <p className="mt-2 text-[9px] font-mono text-gray-600 break-all">
             {booking.bookingId}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-7 mt-9 pt-8 border-t border-white/10">
+        <div
+          className="
+            grid
+            grid-cols-1
+            sm:grid-cols-2
+            lg:grid-cols-3
+            gap-x-8
+            gap-y-7
+            mt-9
+            pt-8
+            border-t
+            border-white/10
+          "
+        >
           <Detail label="OWNER NAME" value={booking.ownerName} />
+
           <Detail label="PHONE" value={booking.phone} />
+
           <Detail label="EMAIL" value={booking.email} />
+
           <Detail label="CUSTOMER CITY" value={booking.city} />
+
           <Detail label="EXPO CITY" value={booking.expoCity} highlight />
+
+          <Detail
+            label="DURATION"
+            value={`${booking.duration} Day${
+              booking.duration === "1" ? "" : "s"
+            }`}
+          />
+
           <Detail label="STALL PACKAGE" value={booking.packageName} />
+
           <Detail
             label="PACKAGE PRICE"
             value={formatPrice(booking.packagePrice)}
           />
+
           <Detail
             label="ADVANCE"
             value={formatPrice(booking.advanceAmount)}
             highlight
           />
+
           <Detail label="PAYMENT STATUS" value={booking.paymentStatus} />
+
+          <Detail label="BOOKING STATUS" value={booking.status} />
+
           <Detail label="PAYMENT ID" value={booking.paymentId} />
+
           <Detail label="ORDER ID" value={booking.orderId} />
+
           <Detail label="INSTAGRAM" value={booking.instagram} />
+
           <Detail label="BOOKING DATE" value={formatDate(booking.createdAt)} />
         </div>
 
-        <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-5">
+        <div
+          className="
+            mt-8
+            rounded-2xl
+            border
+            border-white/10
+            bg-black/20
+            p-5
+          "
+        >
           <p className="text-[8px] font-mono tracking-widest text-gray-600">
             MESSAGE
           </p>
@@ -564,7 +1051,16 @@ function BookingModal({ booking, onClose, onStatusChange }) {
           </p>
         </div>
 
-        <div className="mt-8 rounded-2xl border border-purple-500/20 bg-purple-500/[0.04] p-5">
+        <div
+          className="
+            mt-8
+            rounded-2xl
+            border
+            border-purple-500/20
+            bg-purple-500/[0.04]
+            p-5
+          "
+        >
           <p className="text-[8px] font-mono tracking-widest text-purple-400">
             UPDATE STATUS
           </p>
@@ -572,7 +1068,18 @@ function BookingModal({ booking, onClose, onStatusChange }) {
           <select
             value={booking.status}
             onChange={(event) => onStatusChange(event.target.value)}
-            className="mt-3 w-full bg-[#08080a] border border-purple-500/20 rounded-xl px-4 py-4 outline-none text-sm"
+            className="
+              mt-3
+              w-full
+              bg-[#08080a]
+              border
+              border-purple-500/20
+              rounded-xl
+              px-4
+              py-4
+              outline-none
+              text-sm
+            "
           >
             {STATUS_OPTIONS.map((status) => (
               <option key={status} value={status}>
@@ -586,9 +1093,21 @@ function BookingModal({ booking, onClose, onStatusChange }) {
   );
 }
 
+// =====================================================
+// SMALL INFO
+// =====================================================
+
 function SmallInfo({ label, value, highlight = false }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
+    <div
+      className="
+        rounded-xl
+        border
+        border-white/[0.06]
+        bg-black/20
+        p-4
+      "
+    >
       <p className="text-[7px] font-mono tracking-wider text-gray-700">
         {label}
       </p>
@@ -599,6 +1118,7 @@ function SmallInfo({ label, value, highlight = false }) {
           text-xs
           font-black
           uppercase
+          break-words
           ${highlight ? "text-purple-400" : "text-gray-300"}
         `}
       >
@@ -607,6 +1127,10 @@ function SmallInfo({ label, value, highlight = false }) {
     </div>
   );
 }
+
+// =====================================================
+// DETAIL
+// =====================================================
 
 function Detail({ label, value, highlight = false }) {
   return (
@@ -628,6 +1152,10 @@ function Detail({ label, value, highlight = false }) {
     </div>
   );
 }
+
+// =====================================================
+// STAT CARD
+// =====================================================
 
 function StatCard({ label, value, highlight = false }) {
   return (
