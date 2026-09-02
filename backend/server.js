@@ -19,6 +19,8 @@ const clientRoutes = require("./routes/ClientRoutes");
 const tattooStudioRoutes = require("./routes/tattooStudioRoutes");
 const claimRoutes = require("./routes/claimRoutes");
 const stallBookingRoutes = require("./routes/stallBookingRoutes");
+const artistBookingRoutes = require("./routes/artistBookingRoutes");
+
 
 // =====================================================
 // MODELS
@@ -253,6 +255,15 @@ app.use("/api/claim", claimRoutes);
 
 console.log("✅ Claim routes mounted at /api/claim");
 
+// =====================================================
+// ARTIST BOOKING ROUTES
+// =====================================================
+
+app.use("/api/artist-bookings", artistBookingRoutes);
+
+console.log(
+  "✅ Artist booking routes mounted at /api/artist-bookings"
+);
 // =====================================================
 // ADMIN LOGIN
 // =====================================================

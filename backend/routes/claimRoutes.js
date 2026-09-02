@@ -1,15 +1,14 @@
 const express = require("express");
 
-
 const TattooStudio = require("../models/TattooStudio");
 
 const {
   verifyMsg91AccessToken,
 } = require("../services/msg91OtpService");
 
+const TATTOO_CATEGORIES = require("../constants/tattooCategories");
+
 const router = express.Router();
-
-
 
 /* =========================================================
    HELPERS
@@ -63,6 +62,33 @@ function maskPhone(phone) {
 }
 
 /* =========================================================
+   TATTOO STYLE HELPERS
+========================================================= */
+
+function normalizeTattooStyles(styles) {
+  if (!Array.isArray(styles)) {
+    return [];
+  }
+
+  const allowedMap = new Map(
+    TATTOO_CATEGORIES.map((category) => [
+      category.toLowerCase(),
+      category,
+    ]),
+  );
+
+  const cleanedStyles = styles
+    .map((style) => String(style || "").trim())
+    .filter(Boolean)
+    .map((style) => {
+      return allowedMap.get(style.toLowerCase()) || null;
+    })
+    .filter(Boolean);
+
+  return [...new Set(cleanedStyles)];
+}
+
+/* =========================================================
    GET VERIFIED IDENTIFIER FROM MSG91 RESPONSE
 ========================================================= */
 
@@ -108,9 +134,7 @@ router.post("/send-otp", async (req, res) => {
       });
     }
 
-    const studio = await TattooStudio.findById(
-      profileId
-    ).lean();
+    const studio = await TattooStudio.findById(profileId).lean();
 
     if (!studio) {
       return res.status(404).json({
@@ -135,6 +159,7 @@ router.post("/send-otp", async (req, res) => {
       This endpoint DOES NOT send OTP anymore.
 
       Enter.jsx will call:
+
       window.sendOtp(...)
 
       through the MSG91 Widget.
@@ -151,21 +176,24 @@ router.post("/send-otp", async (req, res) => {
         custom Web SDK sends OTP from the browser.
 
         MSG91 wants country code WITHOUT +
-        Example: 919876543210
+
+        Example:
+        919876543210
       */
+
       identifier: phoneDigits(phone),
 
       maskedPhone: maskPhone(phone),
     });
-
   } catch (error) {
     console.error(
       "❌ Get claim phone error:",
-      error
+      error,
     );
 
     return res.status(500).json({
       success: false,
+
       message:
         "Unable to prepare OTP verification.",
     });
@@ -181,7 +209,6 @@ router.post("/send-otp", async (req, res) => {
       profileId,
       accessToken
    }
-
 ========================================================= */
 
 router.post("/verify-otp", async (req, res) => {
@@ -205,6 +232,7 @@ router.post("/verify-otp", async (req, res) => {
     if (!accessToken) {
       return res.status(400).json({
         success: false,
+
         message:
           "OTP verification token is required.",
       });
@@ -216,12 +244,13 @@ router.post("/verify-otp", async (req, res) => {
 
     const studio =
       await TattooStudio.findById(
-        profileId
+        profileId,
       ).lean();
 
     if (!studio) {
       return res.status(404).json({
         success: false,
+
         message:
           "Artist profile not found.",
       });
@@ -230,6 +259,7 @@ router.post("/verify-otp", async (req, res) => {
     if (!studio.phone) {
       return res.status(400).json({
         success: false,
+
         message:
           "This artist does not have a registered phone number.",
       });
@@ -244,23 +274,24 @@ router.post("/verify-otp", async (req, res) => {
     try {
       msg91Result =
         await verifyMsg91AccessToken(
-          accessToken
+          accessToken,
         );
     } catch (error) {
       console.error(
         "❌ MSG91 verification failed:",
-        error.message
+        error.message,
       );
 
       return res.status(401).json({
         success: false,
+
         message:
           "OTP verification failed or expired.",
       });
     }
 
     console.log(
-      "✅ MSG91 access token verified"
+      "✅ MSG91 access token verified",
     );
 
     /* =============================================
@@ -272,7 +303,7 @@ router.post("/verify-otp", async (req, res) => {
 
     const verifiedIdentifier =
       getVerifiedIdentifier(
-        msg91Result
+        msg91Result,
       );
 
     if (verifiedIdentifier) {
@@ -281,7 +312,7 @@ router.post("/verify-otp", async (req, res) => {
 
       const verifiedPhone =
         phoneDigits(
-          verifiedIdentifier
+          verifiedIdentifier,
         );
 
       if (
@@ -289,11 +320,12 @@ router.post("/verify-otp", async (req, res) => {
         verifiedPhone
       ) {
         console.error(
-          "❌ Verified phone does not match profile phone"
+          "❌ Verified phone does not match profile phone",
         );
 
         return res.status(403).json({
           success: false,
+
           message:
             "Verified phone number does not match this artist profile.",
         });
@@ -301,10 +333,7 @@ router.post("/verify-otp", async (req, res) => {
     }
 
     /* =============================================
-       OTP IS NOW VERIFIED ✅
-
-       Your previous route only returned the studio,
-       so we preserve that same behavior.
+       OTP IS VERIFIED
     ============================================= */
 
     return res.status(200).json({
@@ -318,21 +347,20 @@ router.post("/verify-otp", async (req, res) => {
       maskedPhone:
         maskPhone(studio.phone),
     });
-
   } catch (error) {
     console.error(
       "❌ Verify OTP error:",
-      error
+      error,
     );
 
     return res.status(500).json({
       success: false,
+
       message:
         "Unable to verify OTP.",
     });
   }
 });
-
 
 /* =========================================================
    POST /api/claim/update
@@ -342,94 +370,238 @@ router.post("/update", async (req, res) => {
   try {
     const {
       profileId,
+
       name,
+
       email,
+
       city,
+
       state,
+
       studio,
+
       experience,
+
       instagram,
+
       profileImage,
+
+      // NEW
+      tattooStyles,
     } = req.body;
+
+    /* =====================================================
+       VALIDATE PROFILE
+    ===================================================== */
 
     if (!profileId) {
       return res.status(400).json({
         success: false,
-        message: "profileId is required.",
+
+        message:
+          "profileId is required.",
       });
     }
 
-    const artist = await TattooStudio.findById(profileId);
+    const artist =
+      await TattooStudio.findById(
+        profileId,
+      );
 
     if (!artist) {
       return res.status(404).json({
         success: false,
-        message: "Artist profile not found.",
+
+        message:
+          "Artist profile not found.",
       });
     }
 
-    // ============================================
-    // UPDATE ALLOWED FIELDS
-    // ============================================
+    /* =====================================================
+       UPDATE NAME
+    ===================================================== */
 
     if (typeof name === "string") {
-      artist.name = name.trim();
+      artist.name =
+        name.trim();
     }
+
+    /* =====================================================
+       UPDATE EMAIL
+    ===================================================== */
 
     if (typeof email === "string") {
-      artist.email = email.trim().toLowerCase();
+      artist.email =
+        email
+          .trim()
+          .toLowerCase();
     }
+
+    /* =====================================================
+       UPDATE CITY
+    ===================================================== */
 
     if (typeof city === "string") {
-      artist.city = city.trim();
+      artist.city =
+        city.trim();
     }
+
+    /* =====================================================
+       UPDATE STATE
+    ===================================================== */
 
     if (typeof state === "string") {
-      artist.state = state.trim();
+      artist.state =
+        state.trim();
     }
+
+    /* =====================================================
+       UPDATE STUDIO
+    ===================================================== */
 
     if (typeof studio === "string") {
-      artist.studio = studio.trim();
+      artist.studio =
+        studio.trim();
+
+      artist.studioName =
+        studio.trim();
     }
 
-    if (typeof experience === "string") {
-      artist.experience = experience.trim();
-    }
-
-    if (typeof instagram === "string") {
-      artist.instagram = instagram.trim();
-    }
+    /* =====================================================
+       UPDATE EXPERIENCE
+    ===================================================== */
 
     if (
-      typeof profileImage === "string" &&
+      typeof experience ===
+      "string"
+    ) {
+      artist.experience =
+        experience.trim();
+    }
+
+    /* =====================================================
+       UPDATE INSTAGRAM
+    ===================================================== */
+
+    if (
+      typeof instagram ===
+      "string"
+    ) {
+      artist.instagram =
+        instagram.trim();
+    }
+
+    /* =====================================================
+       UPDATE PROFILE IMAGE
+    ===================================================== */
+
+    if (
+      typeof profileImage ===
+        "string" &&
       profileImage.trim()
     ) {
-      artist.profileImage = profileImage;
+      artist.profileImage =
+        profileImage;
     }
+
+    /* =====================================================
+       UPDATE TATTOO STYLES
+
+       Example frontend sends:
+
+       tattooStyles: [
+         "Anime",
+         "Realism",
+         "Black & Grey"
+       ]
+    ===================================================== */
+
+    if (Array.isArray(tattooStyles)) {
+      const normalizedStyles =
+        normalizeTattooStyles(
+          tattooStyles,
+        );
+
+      /*
+        User selected styles but none match
+        our allowed list.
+      */
+
+      if (
+        tattooStyles.length > 0 &&
+        normalizedStyles.length === 0
+      ) {
+        return res.status(400).json({
+          success: false,
+
+          message:
+            "Please select valid tattoo styles.",
+        });
+      }
+
+      artist.tattooStyles =
+        normalizedStyles;
+    }
+
+    /* =====================================================
+       MARK PROFILE UPDATED
+    ===================================================== */
+
+    artist.claimed = true;
+
+    artist.phoneVerified = true;
+
+    artist.updatedByOwner = true;
+
+    /* =====================================================
+       SAVE
+    ===================================================== */
 
     await artist.save();
 
-    const updatedProfile = artist.toObject();
+    const updatedProfile =
+      artist.toObject();
+
+    console.log(
+      "✅ Artist profile updated:",
+      artist._id.toString(),
+    );
+
+    console.log(
+      "🎨 Tattoo styles:",
+      artist.tattooStyles,
+    );
 
     return res.status(200).json({
       success: true,
-      message: "Profile updated successfully.",
-      profile: updatedProfile,
+
+      message:
+        "Profile updated successfully.",
+
+      profile:
+        updatedProfile,
+
+      tattooStyles:
+        updatedProfile.tattooStyles ||
+        [],
     });
   } catch (error) {
     console.error(
       "❌ Update profile error:",
-      error
+      error,
     );
 
     return res.status(500).json({
       success: false,
+
       message:
         error.message ||
         "Unable to update profile.",
     });
   }
 });
+
 /* =========================================================
    GET /api/claim/me
 ========================================================= */
@@ -437,9 +609,14 @@ router.post("/update", async (req, res) => {
 router.get("/me", async (req, res) => {
   return res.status(401).json({
     success: false,
+
     message:
       "No active claim session.",
   });
 });
+
+/* =========================================================
+   EXPORT ROUTER
+========================================================= */
 
 module.exports = router;

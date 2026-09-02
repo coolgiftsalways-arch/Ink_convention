@@ -18,6 +18,7 @@ import {
   resendMsg91Otp,
   getMsg91AccessToken,
 } from "../utils/msg91Otp";
+import { TATTOO_CATEGORIES } from "../data/tattooCategories";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -100,6 +101,7 @@ const EMPTY_FORM = {
   studio: "",
   experience: "",
   instagram: "",
+  tattooStyles: [],
 };
 
 function normalizePlan(value) {
@@ -161,6 +163,9 @@ function normalizeArtist(source = {}) {
     state: source.state || "",
     maskedPhone: source.maskedPhone || source.phoneMasked || "",
     profileImage: source.profileImage || source.image || "",
+    tattooStyles: Array.isArray(source.tattooStyles)
+      ? source.tattooStyles
+      : [],
     plan: normalizePlan(source.plan || source.membershipPlan),
   };
 }
@@ -174,6 +179,9 @@ function makeForm(profile = {}) {
     studio: profile.studio || profile.studioName || "",
     experience: profile.experience || "",
     instagram: profile.instagram || "",
+    tattooStyles: Array.isArray(profile.tattooStyles)
+      ? profile.tattooStyles
+      : [],
   };
 }
 
@@ -612,6 +620,29 @@ export default function Enter() {
     clearMessages();
   };
 
+  /* =========================================================
+     TATTOO SPECIALITIES
+  ========================================================= */
+
+  const toggleTattooStyle = (style) => {
+    setFormData((previous) => {
+      const currentStyles = Array.isArray(previous.tattooStyles)
+        ? previous.tattooStyles
+        : [];
+
+      const alreadySelected = currentStyles.includes(style);
+
+      return {
+        ...previous,
+        tattooStyles: alreadySelected
+          ? currentStyles.filter((item) => item !== style)
+          : [...currentStyles, style],
+      };
+    });
+
+    clearMessages();
+  };
+
   const compressImage = (file, maxSize = 800, quality = 0.72) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -720,6 +751,14 @@ export default function Enter() {
       return false;
     }
 
+    if (
+      !Array.isArray(formData.tattooStyles) ||
+      formData.tattooStyles.length === 0
+    ) {
+      setError("Please select at least one tattoo speciality.");
+      return false;
+    }
+
     return true;
   };
 
@@ -738,20 +777,14 @@ export default function Enter() {
           profileId: selectedArtist?.id,
 
           name: formData.name.trim(),
-
           email: formData.email.trim(),
-
           city: formData.city.trim(),
-
           state: formData.state.trim(),
-
           studio: formData.studio.trim(),
-
           experience: formData.experience.trim(),
-
           instagram: formData.instagram.trim(),
-
           profileImage,
+          tattooStyles: formData.tattooStyles,
         },
       });
 
@@ -773,14 +806,16 @@ export default function Enter() {
 
       setSuccess("Profile updated successfully.");
 
-      setScreen("edit");
+      // ✅ IMPORTANT:
+      // Go to Silver / Gold plan section
+      setScreen("plans");
 
       window.scrollTo({
         top: 0,
         behavior: "smooth",
       });
     } catch (saveError) {
-      console.error(saveError);
+      console.error("❌ Profile update error:", saveError);
 
       if (saveError.status === 401 || saveError.status === 403) {
         setError("Your verification expired. Please verify OTP again.");
@@ -1014,10 +1049,12 @@ export default function Enter() {
 
             // Small delay so user sees success message
             setTimeout(() => {
-              navigate("/artists", {
-                state: {
-                  newArtistId: upgradedProfile.id,
-                },
+              localStorage.removeItem(CURRENT_USER_KEY);
+              localStorage.removeItem("inkConventionLoggedUser");
+
+              navigate("/Enter", {
+                replace: true,
+                state: null,
               });
             }, 1200);
           } catch (verifyError) {
@@ -1149,6 +1186,7 @@ export default function Enter() {
       studio: "Test Tattoo Studio",
       experience: "5 Years",
       instagram: "@testartist",
+      tattooStyles: ["Anime", "Realism", "Fine Line"],
       plan: "basic",
     };
 
@@ -1565,6 +1603,78 @@ export default function Enter() {
                 onChange={handleChange}
                 placeholder="Your tattoo studio"
               />
+
+              {/* =====================================================
+                  TATTOO SPECIALITIES
+              ===================================================== */}
+
+              <div>
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <p className="text-[9px] font-mono text-gray-500">
+                      TATTOO SPECIALITIES *
+                    </p>
+
+                    <p className="mt-1 text-[10px] text-gray-700">
+                      Select every tattoo style you specialise in. These styles
+                      are used to match you with customers on Book Your Artist.
+                    </p>
+                  </div>
+
+                  <span className="shrink-0 text-[8px] font-mono text-purple-400">
+                    {formData.tattooStyles?.length || 0} SELECTED
+                  </span>
+                </div>
+
+                <div className="border border-white/10 bg-[#0d0d11] rounded-2xl p-4 sm:p-5">
+                  <div className="flex flex-wrap gap-2">
+                    {TATTOO_CATEGORIES.map((style) => {
+                      const selected =
+                        Array.isArray(formData.tattooStyles) &&
+                        formData.tattooStyles.includes(style);
+
+                      return (
+                        <button
+                          key={style}
+                          type="button"
+                          onClick={() => toggleTattooStyle(style)}
+                          aria-pressed={selected}
+                          className={`rounded-full border px-3 sm:px-4 py-2.5 text-[8px] font-black tracking-[0.08em] transition-all duration-200 ${
+                            selected
+                              ? "border-purple-400 bg-purple-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.25)]"
+                              : "border-white/10 bg-black/30 text-gray-500 hover:border-purple-500/40 hover:text-purple-300"
+                          }`}
+                        >
+                          {selected ? "✓ " : ""}
+                          {style}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {formData.tattooStyles?.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {formData.tattooStyles.map((style) => (
+                      <span
+                        key={style}
+                        className="inline-flex items-center gap-2 rounded-lg border border-purple-500/20 bg-purple-500/[0.06] px-3 py-2 text-[8px] font-black text-purple-300"
+                      >
+                        {style}
+
+                        <button
+                          type="button"
+                          onClick={() => toggleTattooStyle(style)}
+                          aria-label={`Remove ${style}`}
+                          className="text-purple-500 hover:text-white transition"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <InputField
                 label="EXPERIENCE"

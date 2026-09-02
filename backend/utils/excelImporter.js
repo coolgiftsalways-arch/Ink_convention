@@ -93,36 +93,45 @@ function getColumnFromObject(row, possibleNames) {
 ========================================================= */
 
 function createDuplicateKey(data) {
-  /*
-    Google Maps URL is the strongest identifier when available.
-  */
+  const name = normalizeText(data.name);
+  const address = normalizeText(data.address);
+  const city = normalizeText(data.city);
+  const state = normalizeText(data.state);
+
+  const phone = cleanText(data.phone)
+    .replace(/\D/g, "")
+    .trim();
+
+  // ✅ Main duplicate identity
+  if (name) {
+    return [
+      "studio",
+      name,
+      address,
+      city,
+      state,
+    ].join("|");
+  }
+
+  // ✅ Fallback
+  if (phone) {
+    return `phone:${phone}`;
+  }
 
   if (data.mapsUrl) {
     return `maps:${normalizeText(data.mapsUrl)}`;
   }
 
-  /*
-    Website is another useful identifier.
-  */
-
   if (data.website) {
     return `website:${normalizeText(data.website)}`;
   }
-
-  /*
-    Fallback:
-    studio name + address + city + state
-
-    This prevents the same studio from being inserted
-    repeatedly when future Excel files are uploaded.
-  */
+  
 
   return [
-    "location",
-    normalizeText(data.name),
-    normalizeText(data.address),
-    normalizeText(data.city),
-    normalizeText(data.state),
+    "unknown",
+    address,
+    city,
+    state,
   ].join("|");
 }
 
@@ -596,6 +605,7 @@ async function importExcelFile(filePath) {
 
             imported += result.imported;
             updated += result.updated;
+            skipped += result.skipped;
             errors += result.errors;
 
             batch = [];
@@ -658,6 +668,7 @@ async function importExcelFile(filePath) {
 
             imported += result.imported;
             updated += result.updated;
+            skipped += result.skipped;
             errors += result.errors;
 
             batch = [];
@@ -692,6 +703,7 @@ async function importExcelFile(filePath) {
 
       imported += result.imported;
       updated += result.updated;
+      skipped += result.skipped;
       errors += result.errors;
     }
 
@@ -738,77 +750,87 @@ async function processBatch(batch) {
     return {
       imported: 0,
       updated: 0,
+      skipped: 0,
       errors: 0,
     };
   }
 
-  const operations = batch.map((studio) => ({
-    updateOne: {
-      filter: {
-        duplicateKey: studio.duplicateKey,
-      },
-
-      update: {
-        $set: {
-          sourceRowId: studio.sourceRowId,
-          name: studio.name,
-          rating: studio.rating,
-          reviews: studio.reviews,
-          address: studio.address,
-          city: studio.city,
-          state: studio.state,
-          country: studio.country,
-          website: studio.website,
-          phone: studio.phone,
-          items: studio.items,
-          mapsUrl: studio.mapsUrl,
-          category: studio.category,
-          sourceSheet: studio.sourceSheet,
-          importedAt: new Date(),
-        },
-
-        $setOnInsert: {
-          plan: "free",
-          verified: false,
-          spotlight: false,
-        },
-      },
-
-      upsert: true,
-    },
-  }));
-
   try {
-    const result = await TattooStudio.bulkWrite(
-      operations,
+    // Remove duplicates inside the uploaded Excel itself
+    const uniqueMap = new Map();
+
+    for (const studio of batch) {
+      if (!uniqueMap.has(studio.duplicateKey)) {
+        uniqueMap.set(studio.duplicateKey, studio);
+      }
+    }
+
+    const uniqueStudios = [...uniqueMap.values()];
+
+    const duplicateKeys = uniqueStudios.map(
+      (studio) => studio.duplicateKey
+    );
+
+    // Find records that already exist in MongoDB
+    const existingStudios = await TattooStudio.find(
+      {
+        duplicateKey: {
+          $in: duplicateKeys,
+        },
+      },
+      {
+        duplicateKey: 1,
+      }
+    ).lean();
+
+    const existingKeys = new Set(
+      existingStudios.map(
+        (studio) => studio.duplicateKey
+      )
+    );
+
+    // ONLY keep completely new studios
+    const newStudios = uniqueStudios.filter(
+      (studio) =>
+        !existingKeys.has(studio.duplicateKey)
+    );
+
+    if (newStudios.length === 0) {
+      return {
+        imported: 0,
+        updated: 0,
+        skipped: batch.length,
+        errors: 0,
+      };
+    }
+
+    await TattooStudio.insertMany(
+      newStudios,
       {
         ordered: false,
-      },
+      }
     );
 
     return {
-      /*
-        These are genuinely new MongoDB documents.
-      */
-      imported: result.upsertedCount || 0,
+      imported: newStudios.length,
+      updated: 0,
 
-      /*
-        matchedCount represents existing records
-        that matched our duplicateKey.
-      */
-      updated: result.matchedCount || 0,
+      // ✅ Existing MongoDB duplicates
+      // + duplicates inside same Excel are counted as skipped
+      skipped: batch.length - newStudios.length,
 
       errors: 0,
     };
   } catch (error) {
     console.error(
       "❌ MongoDB batch error:",
-      error.message,
+      error.message
     );
 
     return {
       imported: 0,
       updated: 0,
+      skipped: 0,
       errors: batch.length,
     };
   }
