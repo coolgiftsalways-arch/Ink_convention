@@ -109,22 +109,7 @@ const artistBookingSchema = new mongoose.Schema(
       },
     ],
 
-    selectedArtistId: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "TattooStudio",
-  default: null,
-  index: true,
-},
-
-notificationSent: {
-  type: Boolean,
-  default: false,
-},
-
-notifiedAt: {
-  type: Date,
-  default: null,
-},
+    
 
     /* =====================================================
        SELECTED ARTIST
