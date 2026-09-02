@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import fs from "node:fs";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -11,13 +10,11 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
 
-    allowedHosts: ["test.inkconvention.com", "localhost", "127.0.0.1"],
-
-    https: {
-      key: fs.readFileSync(new URL("./certs/local-key.pem", import.meta.url)),
-
-      cert: fs.readFileSync(new URL("./certs/local-cert.pem", import.meta.url)),
-    },
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "test.inkconvention.com",
+    ],
 
     proxy: {
       "/api": {
