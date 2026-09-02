@@ -14,11 +14,7 @@ const API_URL = (
 ).replace(/\/$/, "");
 
 /* =========================================================
-   PLAN NORMALIZER
-
-   BASIC
-   ₹1,499 -> PRO / SILVER
-   ₹2,999 -> VERIFIED / GOLD
+   NORMALIZE PLAN
 ========================================================= */
 
 function normalizePlan(value) {
@@ -96,7 +92,7 @@ function normalizeArtist(source = {}) {
 }
 
 /* =========================================================
-   GET ARTISTS ARRAY
+   GET ARTIST ARRAY
 ========================================================= */
 
 function getArtistsArray(data) {
@@ -151,19 +147,6 @@ async function apiRequest(path) {
 
 /* =========================================================
    HALL OF FAME
-
-   BASIC:
-   Artists.jsx only
-
-   ₹1,499 PRO:
-   Artists.jsx only
-
-   ₹2,999 VERIFIED:
-   Artists.jsx ✅
-   HallOfFame.jsx ✅
-
-   IMPORTANT:
-   Hall Of Fame does NOT remove artist from Artists.jsx.
 ========================================================= */
 
 export default function HallOfFame() {
@@ -176,16 +159,7 @@ export default function HallOfFame() {
   const [error, setError] = useState("");
 
   /* =======================================================
-     LOAD ₹2,999 VERIFIED ARTISTS
-
-     IMPORTANT:
-     The tattoo directory is stored in TattooStudio and your
-     backend exposes it through:
-
-       GET /api/admin/tattoo-studios
-
-     This loads every backend page and then keeps only
-     Verified / Gold Hall Of Fame profiles.
+     LOAD GOLD VERIFIED ARTISTS
   ======================================================= */
 
   useEffect(() => {
@@ -197,8 +171,11 @@ export default function HallOfFame() {
 
       try {
         const PAGE_SIZE = 1000;
+
         let page = 1;
+
         let totalPages = 1;
+
         const allDirectoryArtists = [];
 
         do {
@@ -211,10 +188,12 @@ export default function HallOfFame() {
           }
 
           const pageArtists = getArtistsArray(data);
+
           allDirectoryArtists.push(...pageArtists);
 
           totalPages = Math.max(
             1,
+
             Number(data?.pagination?.totalPages || data?.totalPages || 1),
           );
 
@@ -227,9 +206,9 @@ export default function HallOfFame() {
 
         const verifiedArtists = allDirectoryArtists
           .map((artist) => normalizeArtist(artist))
-          .filter((artist) => {
-            return artist.plan === "verified" && artist.hallOfFameEligible;
-          })
+          .filter(
+            (artist) => artist.plan === "verified" && artist.hallOfFameEligible,
+          )
           .sort((first, second) => {
             const firstTime = new Date(
               first.updatedAt || first.createdAt || 0,
@@ -248,6 +227,7 @@ export default function HallOfFame() {
 
         if (!cancelled) {
           setArtists([]);
+
           setError(loadError.message || "Unable to load Hall of Fame.");
         }
       } finally {
@@ -266,11 +246,6 @@ export default function HallOfFame() {
 
   /* =======================================================
      OPEN ARTIST
-
-     If standalone verified profile exists:
-     /artist/rahul-tattoo-123
-
-     Otherwise go Artists.jsx
   ======================================================= */
 
   const handleArtistClick = (artist) => {
@@ -294,42 +269,28 @@ export default function HallOfFame() {
         w-full
         min-h-screen
         overflow-hidden
-
         bg-[#08080a]
         text-white
-
         pt-32
         pb-24
-
         px-4
         sm:px-6
         lg:px-12
-
-        select-none
       "
     >
-      {/* ===================================================
-          BACKGROUND GOLD LIGHT
-      =================================================== */}
+      {/* GOLD BACKGROUND GLOW */}
 
       <div
         className="
           pointer-events-none
-
           absolute
-
           top-[-180px]
           left-1/2
-
           -translate-x-1/2
-
           w-[950px]
           h-[600px]
-
           rounded-full
-
           bg-yellow-400/[0.045]
-
           blur-[150px]
         "
       />
@@ -338,9 +299,7 @@ export default function HallOfFame() {
         className="
           relative
           z-10
-
           max-w-[1700px]
-
           mx-auto
         "
       >
@@ -352,7 +311,6 @@ export default function HallOfFame() {
           className="
             border-b
             border-white/10
-
             pb-12
           "
         >
@@ -360,28 +318,18 @@ export default function HallOfFame() {
             className="
               inline-flex
               items-center
-
               gap-2
-
               rounded-full
-
               border
               border-yellow-300/20
-
               bg-yellow-400/[0.06]
-
               px-4
               py-2
-
               text-[9px]
-
               font-mono
               font-black
-
               tracking-[0.16em]
-
               text-yellow-300
-
               uppercase
             "
           >
@@ -392,15 +340,11 @@ export default function HallOfFame() {
           <div
             className="
               mt-8
-
               flex
               flex-col
-
               xl:flex-row
               xl:items-end
-
               justify-between
-
               gap-10
             "
           >
@@ -408,13 +352,9 @@ export default function HallOfFame() {
               <h1
                 className="
                   text-[clamp(4rem,9vw,9rem)]
-
                   font-black
-
                   uppercase
-
                   tracking-[-0.075em]
-
                   leading-[0.78]
                 "
               >
@@ -423,11 +363,8 @@ export default function HallOfFame() {
                 <span
                   className="
                     text-transparent
-
                     bg-clip-text
-
                     bg-gradient-to-r
-
                     from-yellow-100
                     via-yellow-400
                     to-amber-600
@@ -440,14 +377,10 @@ export default function HallOfFame() {
               <p
                 className="
                   mt-8
-
                   max-w-2xl
-
                   text-sm
                   sm:text-base
-
                   text-gray-500
-
                   leading-relaxed
                 "
               >
@@ -457,31 +390,23 @@ export default function HallOfFame() {
               </p>
             </div>
 
-            {/* =============================================
-                VERIFIED COUNT
-            ============================================= */}
+            {/* VERIFIED COUNT */}
 
             <div
               className="
-                min-w-[240px]
-
-                rounded-[26px]
-
+                min-w-[220px]
+                rounded-[22px]
                 border
                 border-yellow-300/20
-
                 bg-yellow-400/[0.035]
-
-                p-7
+                p-6
               "
             >
               <div
                 className="
                   flex
                   items-center
-
                   gap-2
-
                   text-yellow-400
                 "
               >
@@ -490,9 +415,7 @@ export default function HallOfFame() {
                 <p
                   className="
                     text-[8px]
-
                     font-mono
-
                     tracking-[0.16em]
                   "
                 >
@@ -503,18 +426,14 @@ export default function HallOfFame() {
               <div
                 className="
                   mt-3
-
                   flex
                   items-end
-
                   gap-3
                 "
               >
                 <span
                   className="
                     text-5xl
-                    sm:text-6xl
-
                     font-black
                   "
                 >
@@ -523,12 +442,9 @@ export default function HallOfFame() {
 
                 <span
                   className="
-                    mb-2
-
+                    mb-1
                     text-[8px]
-
                     font-mono
-
                     text-gray-600
                   "
                 >
@@ -546,12 +462,9 @@ export default function HallOfFame() {
         <section
           className="
             mt-8
-
             grid
-
             grid-cols-1
             md:grid-cols-3
-
             gap-3
           "
         >
@@ -581,17 +494,12 @@ export default function HallOfFame() {
         {loading && (
           <section
             className="
-              mt-16
-
-              min-h-[360px]
-
-              rounded-[30px]
-
+              mt-12
+              min-h-[300px]
+              rounded-[26px]
               border
               border-white/[0.06]
-
               bg-[#0b0b0f]
-
               flex
               items-center
               justify-center
@@ -600,31 +508,23 @@ export default function HallOfFame() {
             <div className="text-center">
               <div
                 className="
-                  w-14
-                  h-14
-
+                  w-12
+                  h-12
                   mx-auto
-
                   rounded-full
-
                   border-2
                   border-yellow-400/10
                   border-t-yellow-400
-
                   animate-spin
                 "
               />
 
               <p
                 className="
-                  mt-6
-
+                  mt-5
                   text-[9px]
-
                   font-mono
-
                   tracking-[0.16em]
-
                   text-gray-600
                 "
               >
@@ -641,46 +541,34 @@ export default function HallOfFame() {
         {!loading && error && (
           <section
             className="
-              mt-16
-
-              max-w-3xl
-
-              mx-auto
-
-              rounded-[26px]
-
-              border
-              border-red-500/20
-
-              bg-red-500/[0.035]
-
-              p-8
-
-              text-center
-            "
+                mt-12
+                max-w-3xl
+                mx-auto
+                rounded-[24px]
+                border
+                border-red-500/20
+                bg-red-500/[0.035]
+                p-8
+                text-center
+              "
           >
             <p
               className="
-                text-lg
-
-                font-black
-
-                text-red-400
-
-                uppercase
-              "
+                  text-lg
+                  font-black
+                  text-red-400
+                  uppercase
+                "
             >
               Unable To Load Hall Of Fame
             </p>
 
             <p
               className="
-                mt-3
-
-                text-sm
-
-                text-gray-500
-              "
+                  mt-3
+                  text-sm
+                  text-gray-500
+                "
             >
               {error}
             </p>
@@ -695,46 +583,30 @@ export default function HallOfFame() {
           <section
             className="
                 relative
-
-                mt-16
-
+                mt-12
                 max-w-4xl
-
                 mx-auto
-
                 overflow-hidden
-
-                rounded-[30px]
-
+                rounded-[26px]
                 border
                 border-yellow-300/10
-
                 bg-[#0b0b0f]
-
                 p-10
                 sm:p-14
-
                 text-center
               "
           >
             <div
               className="
                   pointer-events-none
-
                   absolute
-
                   top-[-80px]
                   left-1/2
-
                   -translate-x-1/2
-
                   w-80
                   h-80
-
                   rounded-full
-
                   bg-yellow-400/[0.08]
-
                   blur-[90px]
                 "
             />
@@ -742,40 +614,29 @@ export default function HallOfFame() {
             <div
               className="
                   relative
-
-                  w-20
-                  h-20
-
+                  w-16
+                  h-16
                   mx-auto
-
-                  rounded-[22px]
-
+                  rounded-[18px]
                   border
                   border-yellow-300/20
-
                   bg-yellow-400/[0.07]
-
                   flex
                   items-center
                   justify-center
-
                   text-yellow-400
                 "
             >
-              <Trophy size={35} />
+              <Trophy size={30} />
             </div>
 
             <h2
               className="
                   relative
-
-                  mt-7
-
+                  mt-6
                   text-2xl
                   sm:text-4xl
-
                   font-black
-
                   uppercase
                 "
             >
@@ -785,17 +646,11 @@ export default function HallOfFame() {
             <p
               className="
                   relative
-
                   mt-4
-
                   max-w-xl
-
                   mx-auto
-
                   text-sm
-
                   text-gray-500
-
                   leading-relaxed
                 "
             >
@@ -811,19 +666,15 @@ export default function HallOfFame() {
         ================================================= */}
 
         {!loading && !error && artists.length > 0 && (
-          <section className="mt-16">
+          <section className="mt-12">
             <div
               className="
-                  mb-10
-
+                  mb-7
                   flex
                   flex-col
-
                   sm:flex-row
                   sm:items-end
-
                   justify-between
-
                   gap-5
                 "
             >
@@ -831,11 +682,8 @@ export default function HallOfFame() {
                 <p
                   className="
                       text-[9px]
-
                       font-mono
-
                       text-yellow-400
-
                       tracking-[0.16em]
                     "
                 >
@@ -845,14 +693,10 @@ export default function HallOfFame() {
                 <h2
                   className="
                       mt-2
-
                       text-3xl
                       sm:text-5xl
-
                       font-black
-
                       uppercase
-
                       tracking-[-0.05em]
                     "
                 >
@@ -863,11 +707,8 @@ export default function HallOfFame() {
               <span
                 className="
                     text-[9px]
-
                     font-mono
-
                     tracking-[0.12em]
-
                     text-gray-600
                   "
               >
@@ -876,19 +717,17 @@ export default function HallOfFame() {
               </span>
             </div>
 
-            {/* ===========================================
-                  GRID
-              =========================================== */}
+            {/* SMALL CARD GRID */}
 
             <div
               className="
                   grid
-
                   grid-cols-1
-                  md:grid-cols-2
-                  xl:grid-cols-3
-
-                  gap-6
+                  sm:grid-cols-2
+                  lg:grid-cols-3
+                  xl:grid-cols-4
+                  gap-4
+                  items-stretch
                 "
             >
               {artists.map((artist, index) => (
@@ -908,7 +747,7 @@ export default function HallOfFame() {
 }
 
 /* =========================================================
-   VERIFIED GOLD ARTIST CARD
+   SMALL GOLD ARTIST CARD
 ========================================================= */
 
 function VerifiedArtistCard({ artist, index, onClick }) {
@@ -916,17 +755,12 @@ function VerifiedArtistCard({ artist, index, onClick }) {
     <article
       className="
         group
-
         relative
-
-        rounded-[30px]
-
+        rounded-[22px]
         p-[1px]
-
         overflow-hidden
 
         bg-gradient-to-br
-
         from-yellow-100
         via-yellow-400
         to-amber-800
@@ -934,41 +768,29 @@ function VerifiedArtistCard({ artist, index, onClick }) {
         transition-all
         duration-500
 
-        hover:-translate-y-2
+        hover:-translate-y-1
 
-        shadow-[0_0_35px_rgba(250,204,21,0.08)]
-
-        hover:shadow-[0_0_70px_rgba(250,204,21,0.20)]
+        shadow-[0_0_22px_rgba(250,204,21,0.07)]
+        hover:shadow-[0_0_38px_rgba(250,204,21,0.16)]
       "
     >
-      {/* =================================================
-          MOVING GOLD SHINE
-      ================================================= */}
+      {/* MOVING GOLD SHINE */}
 
       <div
         className="
           pointer-events-none
-
           absolute
-
           -top-[120%]
           -left-[100%]
-
-          w-[75%]
+          w-[70%]
           h-[350%]
-
           rotate-[25deg]
-
           bg-gradient-to-r
-
           from-transparent
-          via-white/30
+          via-white/25
           to-transparent
-
           transition-transform
-
           duration-[1300ms]
-
           group-hover:translate-x-[500%]
         "
       />
@@ -976,66 +798,45 @@ function VerifiedArtistCard({ artist, index, onClick }) {
       <div
         className="
           relative
-
-          min-h-[600px]
-
-          rounded-[29px]
-
+          min-h-[455px]
+          rounded-[21px]
           overflow-hidden
-
           bg-[#0b0b0f]
-
           flex
           flex-col
         "
       >
-        {/* =================================================
-            GOLD GLOW
-        ================================================= */}
+        {/* GOLD GLOW */}
 
         <div
           className="
             pointer-events-none
-
             absolute
-
-            top-[-100px]
+            top-[-80px]
             left-1/2
-
             -translate-x-1/2
-
-            w-[90%]
-            h-[240px]
-
+            w-[85%]
+            h-[180px]
             rounded-full
-
-            bg-yellow-400/[0.10]
-
-            blur-[75px]
+            bg-yellow-400/[0.08]
+            blur-[65px]
           "
         />
 
-        {/* =================================================
-            CARD HEADER
-        ================================================= */}
+        {/* HEADER */}
 
         <div
           className="
             relative
             z-10
-
             flex
-
             items-center
             justify-between
-
-            gap-3
-
+            gap-2
             border-b
             border-yellow-300/10
-
-            px-5
-            py-4
+            px-4
+            py-3
           "
         >
           <div
@@ -1045,27 +846,20 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               gap-2
             "
           >
-            {/* LIVE GOLD DOT */}
-
             <div
               className="
                 relative
-
-                w-2.5
-                h-2.5
+                w-2
+                h-2
               "
             >
               <span
                 className="
                   absolute
                   inset-0
-
                   rounded-full
-
                   bg-yellow-400
-
                   animate-ping
-
                   opacity-50
                 "
               />
@@ -1073,14 +867,10 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               <span
                 className="
                   relative
-
                   block
-
-                  w-2.5
-                  h-2.5
-
+                  w-2
+                  h-2
                   rounded-full
-
                   bg-yellow-400
                 "
               />
@@ -1088,12 +878,9 @@ function VerifiedArtistCard({ artist, index, onClick }) {
 
             <span
               className="
-                text-[8px]
-
+                text-[7px]
                 font-black
-
-                tracking-[0.14em]
-
+                tracking-[0.12em]
                 text-yellow-300
               "
             >
@@ -1105,45 +892,31 @@ function VerifiedArtistCard({ artist, index, onClick }) {
             className="
               inline-flex
               items-center
-
-              gap-1.5
-
+              gap-1
               rounded-full
-
               border
               border-yellow-300/20
-
               bg-yellow-400/10
-
-              px-3
-              py-1.5
-
-              text-[7px]
-
+              px-2.5
+              py-1
+              text-[6px]
               font-black
-
               tracking-widest
-
               text-yellow-300
             "
           >
-            <Trophy size={10} />
+            <Trophy size={9} />
             HALL OF FAME
           </div>
         </div>
 
-        {/* =================================================
-            IMAGE
-        ================================================= */}
+        {/* IMAGE */}
 
         <div
           className="
             relative
-
-            h-[270px]
-
+            h-[185px]
             overflow-hidden
-
             bg-[#101014]
           "
         >
@@ -1155,12 +928,9 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               className="
                 w-full
                 h-full
-
                 object-cover
-
                 transition-transform
                 duration-700
-
                 group-hover:scale-105
               "
             />
@@ -1169,70 +939,57 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               className="
                 w-full
                 h-full
-
                 flex
                 items-center
                 justify-center
-
                 bg-gradient-to-br
-
                 from-yellow-400/[0.08]
                 via-[#101014]
                 to-[#08080a]
               "
             >
-              <Users size={56} className="text-yellow-300/25" />
+              <Users
+                size={40}
+                className="
+                  text-yellow-300/25
+                "
+              />
             </div>
           )}
-
-          {/* DARK IMAGE GRADIENT */}
 
           <div
             className="
               absolute
               inset-0
-
               bg-gradient-to-t
-
               from-[#0b0b0f]
               via-transparent
               to-transparent
             "
           />
 
-          {/* INDEX */}
-
           <span
             className="
               absolute
-
-              bottom-4
-              right-5
-
-              text-5xl
-
+              bottom-3
+              right-4
+              text-4xl
               font-black
-
-              text-white/[0.12]
+              text-white/[0.10]
             "
           >
             {String(index + 1).padStart(2, "0")}
           </span>
         </div>
 
-        {/* =================================================
-            CONTENT
-        ================================================= */}
+        {/* CONTENT */}
 
         <div
           className="
             relative
             z-10
-
             flex-1
-
-            p-6
-
+            p-4
             flex
             flex-col
           "
@@ -1241,21 +998,17 @@ function VerifiedArtistCard({ artist, index, onClick }) {
             className="
               flex
               items-center
-
               gap-2
-
               text-yellow-400
             "
           >
-            <Sparkles size={12} />
+            <Sparkles size={10} />
 
             <span
               className="
-                text-[8px]
-
+                text-[7px]
                 font-mono
-
-                tracking-[0.14em]
+                tracking-[0.12em]
               "
             >
               ₹2,999 VERIFIED SPOTLIGHT
@@ -1266,19 +1019,13 @@ function VerifiedArtistCard({ artist, index, onClick }) {
 
           <h3
             className="
-              mt-4
-
-              text-3xl
-              sm:text-4xl
-
+              mt-3
+              text-[22px]
+              sm:text-2xl
               font-black
-
               uppercase
-
-              tracking-[-0.045em]
-
+              tracking-[-0.04em]
               leading-[0.9]
-
               break-words
             "
           >
@@ -1290,11 +1037,10 @@ function VerifiedArtistCard({ artist, index, onClick }) {
           {artist.studio && (
             <p
               className="
-                mt-3
-
-                text-sm
-
+                mt-2
+                text-xs
                 text-gray-400
+                truncate
               "
             >
               {artist.studio}
@@ -1305,40 +1051,41 @@ function VerifiedArtistCard({ artist, index, onClick }) {
 
           <div
             className="
-              mt-4
-
+              mt-3
               flex
               items-center
-
               gap-2
-
-              text-xs
-
+              text-[11px]
               text-gray-500
             "
           >
-            <MapPin size={13} className="text-yellow-400" />
+            <MapPin
+              size={11}
+              className="
+                text-yellow-400
+                shrink-0
+              "
+            />
 
-            <span>
+            <span
+              className="
+                truncate
+              "
+            >
               {[artist.city, artist.state].filter(Boolean).join(", ") ||
                 "India"}
             </span>
           </div>
 
-          {/* =================================================
-              PROFILE INFORMATION
-          ================================================= */}
+          {/* DETAILS */}
 
           <div
             className="
-              mt-6
-
-              pt-5
-
+              mt-4
+              pt-3
               border-t
               border-white/[0.07]
-
-              space-y-2.5
+              space-y-1.5
             "
           >
             {artist.experience && (
@@ -1354,38 +1101,27 @@ function VerifiedArtistCard({ artist, index, onClick }) {
             {artist.phone && <ProfileInfo label="PHONE" value={artist.phone} />}
           </div>
 
-          {/* =================================================
-              VIEW PROFILE
-          ================================================= */}
+          {/* VIEW PROFILE */}
 
           <button
             type="button"
             onClick={onClick}
             className="
               group/button
-
               mt-auto
-
-              pt-8
-
+              pt-5
               flex
-
               items-center
               justify-between
-
-              gap-5
-
+              gap-3
               text-left
             "
           >
             <span
               className="
-                text-[9px]
-
+                text-[8px]
                 font-black
-
-                tracking-[0.14em]
-
+                tracking-[0.12em]
                 text-yellow-300
               "
             >
@@ -1394,27 +1130,20 @@ function VerifiedArtistCard({ artist, index, onClick }) {
 
             <span
               className="
-                w-10
-                h-10
-
+                w-9
+                h-9
                 shrink-0
-
                 rounded-full
-
                 bg-yellow-400
-
                 text-black
-
                 flex
                 items-center
                 justify-center
-
                 transition-transform
-
                 group-hover/button:translate-x-1
               "
             >
-              <ArrowRight size={15} />
+              <ArrowRight size={13} />
             </span>
           </button>
         </div>
@@ -1433,16 +1162,11 @@ function InfoBox({ icon, title, text }) {
       className="
         flex
         items-center
-
         gap-4
-
         rounded-2xl
-
         border
         border-white/[0.07]
-
         bg-white/[0.02]
-
         p-5
       "
     >
@@ -1450,18 +1174,12 @@ function InfoBox({ icon, title, text }) {
         className="
           w-11
           h-11
-
           shrink-0
-
           rounded-xl
-
           border
           border-yellow-300/10
-
           bg-yellow-400/[0.07]
-
           text-yellow-400
-
           flex
           items-center
           justify-center
@@ -1474,9 +1192,7 @@ function InfoBox({ icon, title, text }) {
         <p
           className="
             text-[9px]
-
             font-black
-
             tracking-[0.12em]
           "
         >
@@ -1486,9 +1202,7 @@ function InfoBox({ icon, title, text }) {
         <p
           className="
             mt-1
-
             text-[11px]
-
             text-gray-600
           "
         >
@@ -1512,21 +1226,16 @@ function ProfileInfo({ label, value }) {
     <div
       className="
         flex
-
         items-start
         justify-between
-
-        gap-4
+        gap-3
       "
     >
       <span
         className="
-          text-[7px]
-
+          text-[6px]
           font-mono
-
-          tracking-[0.12em]
-
+          tracking-[0.10em]
           text-gray-700
         "
       >
@@ -1535,14 +1244,10 @@ function ProfileInfo({ label, value }) {
 
       <span
         className="
-          max-w-[70%]
-
+          max-w-[68%]
           text-right
-
-          text-[10px]
-
+          text-[9px]
           text-gray-400
-
           break-words
         "
       >

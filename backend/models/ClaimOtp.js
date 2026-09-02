@@ -36,13 +36,10 @@ const claimOtpSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Automatically delete expired OTP documents
-claimOtpSchema.index(
-  { expiresAt: 1 },
-  { expireAfterSeconds: 0 }
-);
+claimOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model("ClaimOtp", claimOtpSchema);

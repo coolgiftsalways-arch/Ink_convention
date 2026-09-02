@@ -4,20 +4,34 @@ const fs = require("fs");
 const multer = require("multer");
 
 const TattooStudio = require("../models/TattooStudio");
+
 const { importExcelFile } = require("../utils/excelImporter");
+
+const {
+  normalizePlan,
+  expireMemberships,
+  serializePublicArtist,
+  startMembershipExpiryWorker,
+} = require("../services/membershipService");
 
 const router = express.Router();
 
 /* =========================================================
-   REGEX ESCAPE HELPER
+   START MEMBERSHIP EXPIRY WORKER
 ========================================================= */
 
-const escapeRegex = (value) => {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-};
+startMembershipExpiryWorker();
 
 /* =========================================================
-   EXCEL UPLOAD STORAGE
+   SAFE REGEX
+========================================================= */
+
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/* =========================================================
+   EXCEL UPLOAD DIRECTORY
 ========================================================= */
 
 const uploadDir = path.join(__dirname, "../uploads/excel");
@@ -27,6 +41,10 @@ if (!fs.existsSync(uploadDir)) {
     recursive: true,
   });
 }
+
+/* =========================================================
+   MULTER STORAGE
+========================================================= */
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -43,15 +61,15 @@ const storage = multer.diskStorage({
 });
 
 /* =========================================================
-   EXCEL FILE FILTER
+   FILE FILTER
 ========================================================= */
 
 const fileFilter = (req, file, cb) => {
-  const allowedExtensions = [".xlsx", ".xls", ".csv"];
-
   const extension = path.extname(file.originalname).toLowerCase();
 
-  if (!allowedExtensions.includes(extension)) {
+  const allowed = [".xlsx", ".xls", ".csv"];
+
+  if (!allowed.includes(extension)) {
     return cb(
       new Error(
         "Invalid file type. Please upload an Excel (.xlsx/.xls) or CSV file.",
@@ -60,7 +78,7 @@ const fileFilter = (req, file, cb) => {
     );
   }
 
-  cb(null, true);
+  return cb(null, true);
 };
 
 /* =========================================================
@@ -69,6 +87,7 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
   storage,
+
   fileFilter,
 
   limits: {
@@ -77,7 +96,7 @@ const upload = multer({
 });
 
 /* =========================================================
-   IMPORT EXCEL DATA
+   IMPORT EXCEL
 
    POST
    /api/admin/tattoo-studios/import
@@ -92,16 +111,9 @@ router.post(
     let uploadedFilePath = null;
 
     try {
-      console.log("");
-      console.log("==============================================");
-
-      console.log("📥 TATTOO DIRECTORY IMPORT REQUEST");
-
-      console.log("==============================================");
-
-      /* =====================================================
+      /* =============================================
          DATABASE CHECK
-      ===================================================== */
+      ============================================= */
 
       if (TattooStudio.db.readyState !== 1) {
         return res.status(503).json({
@@ -111,9 +123,9 @@ router.post(
         });
       }
 
-      /* =====================================================
+      /* =============================================
          FILE CHECK
-      ===================================================== */
+      ============================================= */
 
       if (!req.file) {
         return res.status(400).json({
@@ -125,44 +137,19 @@ router.post(
 
       uploadedFilePath = req.file.path;
 
-      console.log(`📁 File: ${req.file.originalname}`);
-
-      console.log(`📦 Size: ${req.file.size} bytes`);
-
-      console.log(`📍 Saved: ${uploadedFilePath}`);
-
-      /* =====================================================
+      /* =============================================
          IMPORT
-      ===================================================== */
+      ============================================= */
 
       const result = await importExcelFile(uploadedFilePath);
 
-      /* =====================================================
-         DELETE TEMPORARY EXCEL FILE
-      ===================================================== */
+      /* =============================================
+         DELETE TEMP FILE
+      ============================================= */
 
-      try {
-        if (fs.existsSync(uploadedFilePath)) {
-          fs.unlinkSync(uploadedFilePath);
-
-          console.log("🗑️ Temporary Excel file deleted.");
-        }
-      } catch (deleteError) {
-        console.error(
-          "⚠️ Could not delete temporary Excel file:",
-          deleteError.message,
-        );
+      if (fs.existsSync(uploadedFilePath)) {
+        fs.unlinkSync(uploadedFilePath);
       }
-
-      /* =====================================================
-         RESPONSE
-      ===================================================== */
-
-      console.log("==============================================");
-
-      console.log("✅ IMPORT REQUEST FINISHED");
-
-      console.log("==============================================");
 
       return res.status(200).json({
         success: true,
@@ -180,15 +167,15 @@ router.post(
     } catch (error) {
       console.error("❌ Tattoo directory import error:", error);
 
-      /* =====================================================
-         CLEANUP IF IMPORT FAILED
-      ===================================================== */
+      /* =============================================
+         CLEAN TEMP FILE
+      ============================================= */
 
       if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
         try {
           fs.unlinkSync(uploadedFilePath);
         } catch (cleanupError) {
-          console.error("⚠️ Cleanup error:", cleanupError.message);
+          console.error("⚠️ Import cleanup error:", cleanupError.message);
         }
       }
 
@@ -204,23 +191,39 @@ router.post(
 );
 
 /* =========================================================
-   GET DIRECTORY DATA
+   PUBLIC ARTIST DIRECTORY
 
    GET
    /api/admin/tattoo-studios
 
-   EXAMPLES
 
-   /api/admin/tattoo-studios?page=1&limit=1000
+   IMPORTANT FLOW:
 
-   /api/admin/tattoo-studios?city=Mumbai
+   MongoDB REAL DATA
+          ↓
+   CITY FILTER
+          ↓
+   GOLD FIRST
+          ↓
+   SILVER
+          ↓
+   FREE
+          ↓
+   HIDE PRIVATE DATA
 
-   /api/admin/tattoo-studios?state=Maharashtra
 
-   /api/admin/tattoo-studios?search=ink
+   FREE:
+   Name + State
 
-   /api/admin/tattoo-studios?plan=free
+   SILVER:
+   Name
+   State
+   City
+   Profile Image
+   Phone
 
+   GOLD:
+   Full public profile
 ========================================================= */
 
 router.get(
@@ -228,47 +231,61 @@ router.get(
 
   async (req, res) => {
     try {
-      /* =====================================================
-         PAGE
-      ===================================================== */
+      /* =============================================
+         EXPIRE OLD PAID PLANS FIRST
+      ============================================= */
 
-      const page = Math.max(
-        parseInt(req.query.page, 10) || 1,
+      await expireMemberships();
 
-        1,
-      );
+      /* =============================================
+         PAGINATION
+      ============================================= */
 
-      /* =====================================================
-         LIMIT
-
-         Supports maximum 1000 records
-         per request.
-      ===================================================== */
+      const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
 
       const requestedLimit = parseInt(req.query.limit, 10) || 20;
 
-      const limit = Math.min(
-        Math.max(requestedLimit, 1),
-
-        1000,
-      );
+      const limit = Math.min(Math.max(requestedLimit, 1), 1000);
 
       const skip = (page - 1) * limit;
 
-      /* =====================================================
-         QUERY FILTERS
-      ===================================================== */
+      /* =============================================
+         QUERY VALUES
+      ============================================= */
 
-      const { city, state, category, plan, verified, minRating, search } =
-        req.query;
+      const {
+        city,
+        state,
+        category,
+        tattooStyle,
+        plan,
+        verified,
+        minRating,
+        search,
+      } = req.query;
 
       const filter = {};
 
-      /* =====================================================
+      /* =============================================
          CITY FILTER
-      ===================================================== */
 
-      if (city && String(city).trim()) {
+         IMPORTANT:
+
+         This happens BEFORE
+         serializePublicArtist().
+
+         So FREE artists are still found
+         using their REAL MongoDB city.
+
+         But their city is removed from
+         public response later.
+      ============================================= */
+
+      if (
+        city &&
+        String(city).trim() &&
+        String(city).trim().toUpperCase() !== "ALL"
+      ) {
         const cityValue = String(city).trim();
 
         filter.city = {
@@ -278,11 +295,15 @@ router.get(
         };
       }
 
-      /* =====================================================
+      /* =============================================
          STATE FILTER
-      ===================================================== */
+      ============================================= */
 
-      if (state && String(state).trim()) {
+      if (
+        state &&
+        String(state).trim() &&
+        String(state).trim().toUpperCase() !== "ALL"
+      ) {
         const stateValue = String(state).trim();
 
         filter.state = {
@@ -292,11 +313,15 @@ router.get(
         };
       }
 
-      /* =====================================================
-         CATEGORY FILTER
-      ===================================================== */
+      /* =============================================
+         BUSINESS CATEGORY FILTER
+      ============================================= */
 
-      if (category && String(category).trim()) {
+      if (
+        category &&
+        String(category).trim() &&
+        String(category).trim().toUpperCase() !== "ALL"
+      ) {
         const categoryValue = String(category).trim();
 
         filter.category = {
@@ -306,43 +331,47 @@ router.get(
         };
       }
 
-      /* =====================================================
-         PLAN FILTER
+      /* =============================================
+         TATTOO STYLE FILTER
 
-         free
-         basic
-         silver
-         pro
-         gold
-         verified
-      ===================================================== */
+         Example:
+         Anime
+         Realism
+         Black & Grey
+      ============================================= */
 
-      if (plan && String(plan).trim()) {
-        let planValue = String(plan).trim().toLowerCase();
+      if (
+        tattooStyle &&
+        String(tattooStyle).trim() &&
+        String(tattooStyle).trim().toUpperCase() !== "ALL"
+      ) {
+        const styleValue = String(tattooStyle).trim();
 
-        if (planValue === "basic") {
-          planValue = "free";
-        }
+        filter.tattooStyles = {
+          $regex: `^${escapeRegex(styleValue)}$`,
 
-        if (planValue === "silver") {
-          planValue = "pro";
-        }
-
-        if (planValue === "gold") {
-          planValue = "verified";
-        }
-
-        if (["free", "pro", "verified"].includes(planValue)) {
-          filter.plan = planValue;
-        }
+          $options: "i",
+        };
       }
 
-      /* =====================================================
+      /* =============================================
+         PLAN FILTER
+      ============================================= */
+
+      if (
+        plan &&
+        String(plan).trim() &&
+        String(plan).trim().toUpperCase() !== "ALL"
+      ) {
+        filter.plan = normalizePlan(plan);
+      }
+
+      /* =============================================
          VERIFIED FILTER
-      ===================================================== */
+      ============================================= */
 
       if (verified !== undefined && String(verified).trim() !== "") {
-        const verifiedValue = String(verified).toLowerCase();
+        const verifiedValue = String(verified).trim().toLowerCase();
 
         if (verifiedValue === "true") {
           filter.verified = true;
@@ -353,9 +382,9 @@ router.get(
         }
       }
 
-      /* =====================================================
-         RATING FILTER
-      ===================================================== */
+      /* =============================================
+         MINIMUM RATING
+      ============================================= */
 
       if (minRating !== undefined && String(minRating).trim() !== "") {
         const rating = Number(minRating);
@@ -367,126 +396,150 @@ router.get(
         }
       }
 
-      /* =====================================================
+      /* =============================================
          SEARCH
 
-         Search:
-         name
-         city
-         state
-         category
-         address
-         phone
-      ===================================================== */
+         SEARCH REAL DATABASE DATA
+      ============================================= */
 
       if (search && String(search).trim()) {
-        const searchText = String(search).trim();
-
-        const escapedSearch = escapeRegex(searchText);
+        const regex = new RegExp(escapeRegex(String(search).trim()), "i");
 
         filter.$or = [
           {
-            name: {
-              $regex: escapedSearch,
-
-              $options: "i",
-            },
+            name: regex,
           },
 
           {
-            city: {
-              $regex: escapedSearch,
-
-              $options: "i",
-            },
+            professionalName: regex,
           },
 
           {
-            state: {
-              $regex: escapedSearch,
-
-              $options: "i",
-            },
+            artistName: regex,
           },
 
           {
-            category: {
-              $regex: escapedSearch,
-
-              $options: "i",
-            },
+            studio: regex,
           },
 
           {
-            address: {
-              $regex: escapedSearch,
-
-              $options: "i",
-            },
+            studioName: regex,
           },
 
           {
-            phone: {
-              $regex: escapedSearch,
+            city: regex,
+          },
 
-              $options: "i",
-            },
+          {
+            state: regex,
+          },
+
+          {
+            category: regex,
+          },
+
+          {
+            tattooStyles: regex,
           },
         ];
       }
 
-      /* =====================================================
-         FETCH DATA + TOTAL
-      ===================================================== */
+      /* =============================================
+         GET REAL DATA FROM MONGODB
+
+         IMPORTANT SORT:
+
+         plan -1 means:
+
+         verified
+            ↓
+         pro
+            ↓
+         basic
+
+         So:
+
+         GOLD
+            ↓
+         SILVER
+            ↓
+         FREE
+      ============================================= */
 
       const [studios, total] = await Promise.all([
         TattooStudio.find(filter)
-
           .sort({
             verified: -1,
 
+            plan: -1,
+
             spotlight: -1,
 
-            rating: -1,
-
-            reviews: -1,
+            updatedAt: -1,
 
             name: 1,
           })
-
           .skip(skip)
-
           .limit(limit)
-
           .lean(),
 
         TattooStudio.countDocuments(filter),
       ]);
 
-      /* =====================================================
-         TOTAL PAGES
-      ===================================================== */
+      /* =============================================
+         PUBLIC PRIVACY SERIALIZER
+
+         IMPORTANT:
+
+         MongoDB contains all details.
+
+         We filter by city BEFORE this.
+
+         Then this removes details that
+         visitor is not allowed to see.
+      ============================================= */
+
+      const publicStudios = studios.map(serializePublicArtist);
 
       const totalPages = Math.ceil(total / limit) || 1;
 
-      /* =====================================================
+      /* =============================================
          RESPONSE
-
-         data = old/admin compatibility
-
-         artists = Artists.jsx compatibility
-      ===================================================== */
+      ============================================= */
 
       return res.status(200).json({
         success: true,
 
-        count: studios.length,
+        /* ===========================================
+           SAME DATA UNDER MULTIPLE KEYS
+
+           This keeps compatibility with
+           older frontend code.
+        =========================================== */
+
+        data: publicStudios,
+
+        artists: publicStudios,
+
+        users: publicStudios,
 
         total,
 
-        data: studios,
+        /* ===========================================
+           CURRENT FILTER
+        =========================================== */
 
-        artists: studios,
+        selectedCity: city && String(city).trim() ? String(city).trim() : "ALL",
+
+        /* ===========================================
+           DISPLAY ORDER
+        =========================================== */
+
+        order: ["verified", "pro", "basic"],
+
+        /* ===========================================
+           PAGINATION
+        =========================================== */
 
         pagination: {
           page,
@@ -503,7 +556,7 @@ router.get(
         },
       });
     } catch (error) {
-      console.error("❌ Fetch tattoo studios error:", error);
+      console.error("❌ Fetch public tattoo studios error:", error);
 
       return res.status(500).json({
         success: false,
@@ -517,10 +570,79 @@ router.get(
 );
 
 /* =========================================================
-   GET DIRECTORY FILTER OPTIONS
+   PUBLIC SINGLE ARTIST PROFILE
+
+   GET
+   /api/admin/tattoo-studios/public/:id
+========================================================= */
+
+router.get(
+  "/public/:id",
+
+  async (req, res) => {
+    try {
+      /* =============================================
+         EXPIRE MEMBERSHIP FIRST
+      ============================================= */
+
+      await expireMemberships();
+
+      /* =============================================
+         FIND REAL MONGODB PROFILE
+      ============================================= */
+
+      const studio = await TattooStudio.findById(req.params.id).lean();
+
+      if (!studio) {
+        return res.status(404).json({
+          success: false,
+
+          message: "Tattoo studio not found.",
+        });
+      }
+
+      /* =============================================
+         PUBLIC PRIVACY
+      ============================================= */
+
+      const artist = serializePublicArtist(studio);
+
+      return res.status(200).json({
+        success: true,
+
+        artist,
+
+        profile: artist,
+      });
+    } catch (error) {
+      console.error("❌ Public artist fetch error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Unable to load public artist profile.",
+
+        error: error.message,
+      });
+    }
+  },
+);
+
+/* =========================================================
+   FILTER OPTIONS
 
    GET
    /api/admin/tattoo-studios/filters
+
+
+   IMPORTANT:
+
+   Cities come DIRECTLY from MongoDB.
+
+   There are NO fake/hardcoded cities.
+
+   Even if only a FREE artist exists in
+   a city, that city can still appear.
 ========================================================= */
 
 router.get(
@@ -528,64 +650,65 @@ router.get(
 
   async (req, res) => {
     try {
-      const [states, cities, categories] = await Promise.all([
-        TattooStudio.distinct(
-          "state",
+      await expireMemberships();
 
-          {
-            state: {
-              $exists: true,
+      /* =============================================
+         GET REAL VALUES FROM MONGODB
+      ============================================= */
 
-              $nin: ["", null],
-            },
+      const [states, cities, categories, tattooStylesRaw] = await Promise.all([
+        TattooStudio.distinct("state", {
+          state: {
+            $exists: true,
+
+            $nin: ["", null],
           },
-        ),
+        }),
 
-        TattooStudio.distinct(
-          "city",
+        TattooStudio.distinct("city", {
+          city: {
+            $exists: true,
 
-          {
-            city: {
-              $exists: true,
-
-              $nin: ["", null],
-            },
+            $nin: ["", null],
           },
-        ),
+        }),
 
-        TattooStudio.distinct(
-          "category",
+        TattooStudio.distinct("category", {
+          category: {
+            $exists: true,
 
-          {
-            category: {
-              $exists: true,
-
-              $nin: ["", null],
-            },
+            $nin: ["", null],
           },
-        ),
+        }),
+
+        TattooStudio.distinct("tattooStyles", {
+          tattooStyles: {
+            $exists: true,
+
+            $ne: [],
+          },
+        }),
       ]);
 
-      /* =====================================================
-         CLEAN + SORT
-      ===================================================== */
+      /* =============================================
+         CLEAN + REMOVE DUPLICATES
+      ============================================= */
 
-      const cleanSort = (values) => {
-        return values
-
-          .map((value) => String(value).trim())
-
+      const cleanSort = (values) =>
+        values
+          .map((value) => String(value || "").trim())
           .filter(Boolean)
-
           .filter(
             (value, index, array) =>
               array.findIndex(
                 (item) => item.toLowerCase() === value.toLowerCase(),
               ) === index,
           )
-
           .sort((a, b) => a.localeCompare(b));
-      };
+
+      /* =============================================
+         RESPONSE
+      ============================================= */
 
       return res.status(200).json({
         success: true,
@@ -597,7 +720,9 @@ router.get(
 
           categories: cleanSort(categories),
 
-          plans: ["free", "pro", "verified"],
+          tattooStyles: cleanSort(tattooStylesRaw),
+
+          plans: ["basic", "pro", "verified"],
 
           ratings: [5, 4.5, 4, 3.5, 3],
 
@@ -619,7 +744,7 @@ router.get(
 );
 
 /* =========================================================
-   GET DIRECTORY STATS
+   DIRECTORY STATS
 
    GET
    /api/admin/tattoo-studios/stats
@@ -630,19 +755,13 @@ router.get(
 
   async (req, res) => {
     try {
-      const [total, verified, pro, free] = await Promise.all([
+      await expireMemberships();
+
+      const [total, gold, silver, basic] = await Promise.all([
         TattooStudio.countDocuments(),
 
         TattooStudio.countDocuments({
-          $or: [
-            {
-              verified: true,
-            },
-
-            {
-              plan: "verified",
-            },
-          ],
+          plan: "verified",
         }),
 
         TattooStudio.countDocuments({
@@ -650,21 +769,7 @@ router.get(
         }),
 
         TattooStudio.countDocuments({
-          $or: [
-            {
-              plan: "free",
-            },
-
-            {
-              plan: {
-                $exists: false,
-              },
-            },
-
-            {
-              plan: "",
-            },
-          ],
+          plan: "basic",
         }),
       ]);
 
@@ -674,11 +779,20 @@ router.get(
         stats: {
           total,
 
-          verified,
+          /* GOLD */
+          verified: gold,
 
-          pro,
+          gold,
 
-          free,
+          /* SILVER */
+          pro: silver,
+
+          silver,
+
+          /* FREE */
+          free: basic,
+
+          basic,
         },
       });
     } catch (error) {
@@ -688,188 +802,6 @@ router.get(
         success: false,
 
         message: "Server error while fetching directory statistics.",
-
-        error: error.message,
-      });
-    }
-  },
-);
-
-/* =========================================================
-   GET ONE DIRECTORY RECORD
-
-   GET
-   /api/admin/tattoo-studios/:id
-========================================================= */
-
-router.get(
-  "/:id",
-
-  async (req, res) => {
-    try {
-      const studio = await TattooStudio.findById(req.params.id).lean();
-
-      if (!studio) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Tattoo studio not found.",
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-
-        data: studio,
-
-        artist: studio,
-
-        studio,
-      });
-    } catch (error) {
-      console.error("❌ Fetch tattoo studio error:", error);
-
-      return res.status(500).json({
-        success: false,
-
-        message: "Server error while fetching tattoo studio.",
-
-        error: error.message,
-      });
-    }
-  },
-);
-
-/* =========================================================
-   UPDATE DIRECTORY RECORD
-
-   PATCH
-   /api/admin/tattoo-studios/:id
-========================================================= */
-
-router.patch(
-  "/:id",
-
-  async (req, res) => {
-    try {
-      const allowedFields = [
-        "name",
-        "rating",
-        "reviews",
-        "address",
-        "city",
-        "state",
-        "country",
-        "website",
-        "phone",
-        "items",
-        "mapsUrl",
-        "category",
-        "plan",
-        "verified",
-        "spotlight",
-        "claimed",
-        "phoneVerified",
-        "updatedByOwner",
-        "email",
-        "instagram",
-        "experience",
-        "studioName",
-        "profileImage",
-        "hallOfFameEligible",
-        "paymentStatus",
-      ];
-
-      const update = {};
-
-      allowedFields.forEach((field) => {
-        if (req.body[field] !== undefined) {
-          update[field] = req.body[field];
-        }
-      });
-
-      /* =====================================================
-         NORMALIZE PLAN
-      ===================================================== */
-
-      if (update.plan !== undefined) {
-        let planValue = String(update.plan || "free")
-          .trim()
-          .toLowerCase();
-
-        if (planValue === "basic") {
-          planValue = "free";
-        }
-
-        if (planValue === "silver") {
-          planValue = "pro";
-        }
-
-        if (planValue === "gold") {
-          planValue = "verified";
-        }
-
-        if (!["free", "pro", "verified"].includes(planValue)) {
-          return res.status(400).json({
-            success: false,
-
-            message: "Invalid membership plan.",
-          });
-        }
-
-        update.plan = planValue;
-
-        if (planValue === "verified") {
-          update.verified = true;
-
-          update.spotlight = true;
-
-          update.hallOfFameEligible = true;
-        }
-      }
-
-      update.updatedAt = new Date();
-
-      const updatedStudio = await TattooStudio.findByIdAndUpdate(
-        req.params.id,
-
-        {
-          $set: update,
-        },
-
-        {
-          new: true,
-
-          runValidators: true,
-        },
-      );
-
-      if (!updatedStudio) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Tattoo studio not found.",
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-
-        message: "Tattoo studio updated successfully.",
-
-        data: updatedStudio,
-
-        artist: updatedStudio,
-
-        studio: updatedStudio,
-      });
-    } catch (error) {
-      console.error("❌ Update tattoo studio error:", error);
-
-      return res.status(500).json({
-        success: false,
-
-        message: "Server error while updating tattoo studio.",
 
         error: error.message,
       });
@@ -923,6 +855,10 @@ router.delete(
 ========================================================= */
 
 router.use((error, req, res, next) => {
+  /* =============================================
+       MULTER ERROR
+    ============================================= */
+
   if (error instanceof multer.MulterError) {
     if (error.code === "LIMIT_FILE_SIZE") {
       return res.status(400).json({
@@ -939,6 +875,10 @@ router.use((error, req, res, next) => {
     });
   }
 
+  /* =============================================
+       OTHER ERROR
+    ============================================= */
+
   if (error) {
     return res.status(400).json({
       success: false,
@@ -947,7 +887,11 @@ router.use((error, req, res, next) => {
     });
   }
 
-  next();
+  return next();
 });
+
+/* =========================================================
+   EXPORT
+========================================================= */
 
 module.exports = router;

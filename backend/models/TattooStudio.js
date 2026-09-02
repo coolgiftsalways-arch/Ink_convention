@@ -7,17 +7,15 @@ const mongoose = require("mongoose");
 const tattooStudioSchema = new mongoose.Schema(
   {
     /* =====================================================
-       EXCEL / DIRECTORY DATA
+       IMPORT / DIRECTORY DATA
     ===================================================== */
 
-    // Original row number / identifier from the Excel file
     sourceRowId: {
       type: String,
       default: "",
       trim: true,
     },
 
-    // Studio / business name
     name: {
       type: String,
       required: true,
@@ -25,19 +23,34 @@ const tattooStudioSchema = new mongoose.Schema(
       index: true,
     },
 
-    // Google rating
+    /* =====================================================
+       OLD / IMPORTED NAME COMPATIBILITY
+    ===================================================== */
+
+    artistName: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true,
+    },
+
+    professionalName: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true,
+    },
+
     rating: {
       type: Number,
       default: null,
     },
 
-    // Number of reviews
     reviews: {
       type: Number,
       default: 0,
     },
 
-    // Full address
     address: {
       type: String,
       default: "",
@@ -92,35 +105,39 @@ const tattooStudioSchema = new mongoose.Schema(
       lowercase: true,
     },
 
-    instagram: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
     /* =====================================================
-       ARTIST / PROFILE INFORMATION
-    ===================================================== */
+       OWNER PROFILE DETAILS
 
-    professionalName: {
-      type: String,
-      default: "",
-      trim: true,
-    },
+       IMPORTANT:
+
+       ALL THESE VALUES STAY SAVED
+       REGARDLESS OF FREE / SILVER / GOLD.
+
+       membershipService.js controls
+       what public visitors receive.
+    ===================================================== */
 
     studio: {
       type: String,
       default: "",
       trim: true,
+      index: true,
     },
 
     studioName: {
       type: String,
       default: "",
       trim: true,
+      index: true,
     },
 
     experience: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    instagram: {
       type: String,
       default: "",
       trim: true,
@@ -137,15 +154,22 @@ const tattooStudioSchema = new mongoose.Schema(
       default: "",
     },
 
+    portfolioImages: {
+      type: [String],
+      default: [],
+    },
+
     /* =====================================================
        TATTOO SPECIALITIES
+
+       PULLED FEATURE KEPT.
 
        USED BY:
        BOOK YOUR ARTIST
 
        Example:
 
-       tattooStyles: [
+       [
          "Anime",
          "Realism",
          "Black & Grey"
@@ -175,12 +199,14 @@ const tattooStudioSchema = new mongoose.Schema(
     },
 
     /*
-      Keep this as Excel/business category.
+      Keep category as the
+      Excel/business category.
 
       Example:
       "Tattoo shop"
 
-      Anime / Realism etc. goes in tattooStyles.
+      Anime / Realism etc.
+      belongs inside tattooStyles.
     */
 
     category: {
@@ -211,6 +237,9 @@ const tattooStudioSchema = new mongoose.Schema(
 
     /* =====================================================
        CLAIM / OWNERSHIP
+
+       CLAIM DOES NOT EXPIRE WHEN
+       THE MEMBERSHIP EXPIRES.
     ===================================================== */
 
     claimed: {
@@ -240,59 +269,49 @@ const tattooStudioSchema = new mongoose.Schema(
     },
 
     /* =====================================================
-       DIRECTORY LISTING PLAN
+       MEMBERSHIP
 
-       free     = Basic
-       pro      = Silver
-       verified = Gold
+       CANONICAL VALUES:
+
+       basic    = FREE
+       pro      = SILVER
+       verified = GOLD
+
+       Legacy "free" is temporarily
+       accepted so old MongoDB rows
+       don't break.
+
+       When saved:
+       free -> basic
     ===================================================== */
 
     plan: {
       type: String,
 
-      enum: [
-        "free",
-        "pro",
-        "verified",
-      ],
+      enum: ["free", "basic", "pro", "verified"],
 
-      default: "free",
+      default: "basic",
 
       index: true,
-
-      /*
-        Normalize old/new names before validation.
-
-        silver -> pro
-        gold -> verified
-        spotlight -> verified
-        basic -> free
-      */
-      set(value) {
-        const plan = String(
-          value || "free",
-        )
-          .trim()
-          .toLowerCase();
-
-        if (plan === "silver") {
-          return "pro";
-        }
-
-        if (
-          plan === "gold" ||
-          plan === "spotlight"
-        ) {
-          return "verified";
-        }
-
-        if (plan === "basic") {
-          return "free";
-        }
-
-        return plan;
-      },
     },
+
+    /* =====================================================
+       PAYMENT STATUS
+    ===================================================== */
+
+    paymentStatus: {
+      type: String,
+
+      enum: ["unpaid", "pending", "paid", "failed", "refunded"],
+
+      default: "unpaid",
+
+      index: true,
+    },
+
+    /* =====================================================
+       PREMIUM FLAGS
+    ===================================================== */
 
     verified: {
       type: Boolean,
@@ -309,23 +328,65 @@ const tattooStudioSchema = new mongoose.Schema(
     hallOfFameEligible: {
       type: Boolean,
       default: false,
+      index: true,
     },
 
     /* =====================================================
-       PAYMENT
+       RAZORPAY INFORMATION
+
+       DO NOT STORE:
+       CARD NUMBER
+       CVV
+       OTP
     ===================================================== */
 
-    paymentStatus: {
+    razorpayOrderId: {
       type: String,
-
-      enum: [
-        "",
-        "pending",
-        "paid",
-        "failed",
-      ],
-
       default: "",
+      trim: true,
+    },
+
+    razorpayPaymentId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    razorpaySignature: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    paymentAmount: {
+      type: Number,
+      default: 0,
+    },
+
+    paymentCurrency: {
+      type: String,
+      default: "INR",
+      trim: true,
+    },
+
+    paidAt: {
+      type: Date,
+      default: null,
+    },
+
+    /* =====================================================
+       1-YEAR MEMBERSHIP DATES
+    ===================================================== */
+
+    planStartedAt: {
+      type: Date,
+      default: null,
+    },
+
+    planExpiresAt: {
+      type: Date,
+      default: null,
+      index: true,
     },
 
     /* =====================================================
@@ -344,113 +405,161 @@ const tattooStudioSchema = new mongoose.Schema(
 );
 
 /* =========================================================
-   NORMALIZE TATTOO STYLES BEFORE SAVE
+   NORMALIZE PLAN VALUE
 
-   IMPORTANT:
-   NO next()
+   SUPPORT OLD / NEW VALUES
+
+   free      -> basic
+   basic     -> basic
+
+   silver    -> pro
+   pro       -> pro
+
+   gold      -> verified
+   spotlight -> verified
+   verified  -> verified
+========================================================= */
+
+function normalizePlanValue(value) {
+  const plan = String(value || "basic")
+    .trim()
+    .toLowerCase();
+
+  if (plan === "silver") {
+    return "pro";
+  }
+
+  if (plan === "gold" || plan === "spotlight") {
+    return "verified";
+  }
+
+  if (plan === "free") {
+    return "basic";
+  }
+
+  if (plan === "basic" || plan === "pro" || plan === "verified") {
+    return plan;
+  }
+
+  return "basic";
+}
+
+/* =========================================================
+   NORMALIZE TATTOO STYLES
+
+   Remove:
+   duplicates
+   blanks
+   extra spaces
+========================================================= */
+
+function normalizeStyles(styles) {
+  if (!Array.isArray(styles)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      styles.map((style) => String(style || "").trim()).filter(Boolean),
+    ),
+  ];
+}
+
+/* =========================================================
+   MEMBERSHIP FLAGS
+
+   GOLD + PAID
+   =
+   VERIFIED
+   SPOTLIGHT
+   HALL OF FAME
+
+   SILVER / FREE
+   =
+   FLAGS FALSE
+========================================================= */
+
+function applyPlanFlags(target) {
+  const plan = normalizePlanValue(target.plan);
+
+  target.plan = plan;
+
+  if (plan === "verified" && target.paymentStatus === "paid") {
+    target.verified = true;
+
+    target.spotlight = true;
+
+    target.hallOfFameEligible = true;
+
+    return;
+  }
+
+  target.verified = false;
+
+  target.spotlight = false;
+
+  target.hallOfFameEligible = false;
+}
+
+/* =========================================================
+   BEFORE SAVE
+
+   Mongoose newer style:
+   no next() callback needed.
 ========================================================= */
 
 tattooStudioSchema.pre(
   "save",
 
-  function normalizeTattooStyles() {
-    if (
-      Array.isArray(
-        this.tattooStyles,
-      )
-    ) {
-      this.tattooStyles = [
-        ...new Set(
-          this.tattooStyles
-            .map((style) =>
-              String(
-                style || "",
-              ).trim(),
-            )
-            .filter(Boolean),
-        ),
-      ];
+  function normalizeTattooStudio() {
+    /* =============================================
+       PLAN
+    ============================================= */
+
+    this.plan = normalizePlanValue(this.plan);
+
+    /* =============================================
+       TATTOO STYLES
+    ============================================= */
+
+    this.tattooStyles = normalizeStyles(this.tattooStyles);
+
+    /* =============================================
+       MAXIMUM 3 PORTFOLIO IMAGES
+    ============================================= */
+
+    if (Array.isArray(this.portfolioImages)) {
+      this.portfolioImages = this.portfolioImages
+        .map((image) => String(image || "").trim())
+        .filter(Boolean)
+        .slice(0, 3);
+    } else {
+      this.portfolioImages = [];
     }
+
+    /* =============================================
+       PREMIUM FLAGS
+    ============================================= */
+
+    applyPlanFlags(this);
   },
 );
 
 /* =========================================================
-   NORMALIZE MEMBERSHIP FLAGS BEFORE SAVE
+   NORMALIZE findOneAndUpdate
 
-   IMPORTANT:
-   NO next()
-========================================================= */
-
-tattooStudioSchema.pre(
-  "save",
-
-  function normalizeMembershipPlan() {
-    const plan = String(
-      this.plan || "free",
-    )
-      .trim()
-      .toLowerCase();
-
-    /* =============================================
-       GOLD / VERIFIED
-    ============================================= */
-
-    if (plan === "verified") {
-      this.verified = true;
-
-      this.spotlight = true;
-
-      this.hallOfFameEligible =
-        true;
-
-      return;
-    }
-
-    /* =============================================
-       SILVER / PRO
-    ============================================= */
-
-    if (plan === "pro") {
-      this.verified = false;
-
-      this.spotlight = false;
-
-      this.hallOfFameEligible =
-        false;
-
-      return;
-    }
-
-    /* =============================================
-       BASIC / FREE
-    ============================================= */
-
-    this.verified = false;
-
-    this.spotlight = false;
-
-    this.hallOfFameEligible =
-      false;
-  },
-);
-
-/* =========================================================
-   NORMALIZE findOneAndUpdate PLAN
-
-   This makes PATCH / update routes safe too.
+   This protects direct updates too.
 ========================================================= */
 
 tattooStudioSchema.pre(
   "findOneAndUpdate",
 
-  function normalizePlanUpdate() {
-    const update =
-      this.getUpdate() || {};
+  function normalizeStudioUpdate() {
+    const update = this.getUpdate() || {};
 
-    const setData =
-      update.$set || update;
+    const setData = update.$set || update;
 
-    if (!setData) {
+    if (!setData || typeof setData !== "object") {
       return;
     }
 
@@ -458,63 +567,31 @@ tattooStudioSchema.pre(
        PLAN
     ============================================= */
 
-    if (
-      setData.plan !== undefined
-    ) {
-      let plan = String(
-        setData.plan || "free",
-      )
-        .trim()
-        .toLowerCase();
+    if (setData.plan !== undefined) {
+      setData.plan = normalizePlanValue(setData.plan);
 
-      if (plan === "silver") {
-        plan = "pro";
-      }
+      /*
+        Do not allow a route to create
+        Gold premium flags just by
+        changing the plan name.
 
-      if (
-        plan === "gold" ||
-        plan === "spotlight"
-      ) {
-        plan = "verified";
-      }
+        Gold flags require:
+        plan = verified
+        paymentStatus = paid
+      */
 
-      if (plan === "basic") {
-        plan = "free";
-      }
-
-      setData.plan = plan;
-
-      /* GOLD */
-
-      if (plan === "verified") {
+      if (setData.plan === "verified" && setData.paymentStatus === "paid") {
         setData.verified = true;
 
         setData.spotlight = true;
 
-        setData.hallOfFameEligible =
-          true;
-      }
-
-      /* SILVER */
-
-      if (plan === "pro") {
+        setData.hallOfFameEligible = true;
+      } else {
         setData.verified = false;
 
         setData.spotlight = false;
 
-        setData.hallOfFameEligible =
-          false;
-      }
-
-      /* BASIC */
-
-      if (plan === "free") {
-        setData.verified = false;
-
-        setData.spotlight = false;
-
-        setData.hallOfFameEligible =
-          false;
+        setData.hallOfFameEligible = false;
       }
     }
 
@@ -522,22 +599,21 @@ tattooStudioSchema.pre(
        TATTOO STYLES
     ============================================= */
 
-    if (
-      Array.isArray(
-        setData.tattooStyles,
-      )
-    ) {
-      setData.tattooStyles = [
-        ...new Set(
-          setData.tattooStyles
-            .map((style) =>
-              String(
-                style || "",
-              ).trim(),
-            )
-            .filter(Boolean),
-        ),
-      ];
+    if (setData.tattooStyles !== undefined) {
+      setData.tattooStyles = normalizeStyles(setData.tattooStyles);
+    }
+
+    /* =============================================
+       PORTFOLIO MAX 3
+    ============================================= */
+
+    if (setData.portfolioImages !== undefined) {
+      setData.portfolioImages = Array.isArray(setData.portfolioImages)
+        ? setData.portfolioImages
+            .map((image) => String(image || "").trim())
+            .filter(Boolean)
+            .slice(0, 3)
+        : [];
     }
 
     if (update.$set) {
@@ -554,9 +630,6 @@ tattooStudioSchema.pre(
 
 const TattooStudio =
   mongoose.models.TattooStudio ||
-  mongoose.model(
-    "TattooStudio",
-    tattooStudioSchema,
-  );
+  mongoose.model("TattooStudio", tattooStudioSchema);
 
 module.exports = TattooStudio;

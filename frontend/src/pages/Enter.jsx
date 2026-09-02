@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import gsap from "gsap";
+
 import {
   initMsg91Otp,
   sendMsg91Otp,
@@ -18,9 +19,29 @@ import {
   resendMsg91Otp,
   getMsg91AccessToken,
 } from "../utils/msg91Otp";
+
 import { TATTOO_CATEGORIES } from "../data/tattooCategories";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+/* =========================================================
+   API URL
+========================================================= */
+
+const API_URL = import.meta.env.DEV
+  ? ""
+  : String(import.meta.env.VITE_API_URL || "https://api.inkconvention.com")
+      .trim()
+      .replace(/\/$/, "");
+
+/* =========================================================
+   OLD LOCAL CACHE HELPER
+
+   IMPORTANT:
+   SEARCH / OTP / PROFILE UPDATE / PAYMENT
+   STILL COME FROM BACKEND.
+
+   This only keeps compatibility with
+   your older pulled frontend code.
+========================================================= */
 
 function getStoredArray(key) {
   try {
@@ -41,7 +62,7 @@ function getStoredArray(key) {
 }
 
 /* =========================================================
-   STORAGE
+   OLD CACHE KEYS
 ========================================================= */
 
 const PROFILE_KEY = "inkConventionUserProfiles";
@@ -50,59 +71,118 @@ const DIRECTORY_KEY = "inkConventionDirectoryArtists";
 
 const CURRENT_USER_KEY = "inkConventionCurrentUserId";
 
-const PENDING_MEMBERSHIP_KEY = "inkConventionPendingMembership";
+/* =========================================================
+   PLANS
+
+   basic    = FREE
+   pro      = SILVER
+   verified = GOLD
+========================================================= */
 
 const PLANS = [
   {
-    id: "pro",
-    name: "PRO LISTING",
-    price: "₹1,499",
-    amount: 1499,
-    billing: "PER YEAR",
+    id: "basic",
+
+    name: "FREE / BASIC",
+
+    price: "₹0",
+
+    amount: 0,
+
+    billing: "NO PAYMENT",
+
     description:
-      "Higher directory visibility with city-wise discovery and a Recommended tag.",
+      "Keep your full information saved privately while your public card shows only your name and state.",
+
     benefits: [
       "Name visible",
-      "Email visible",
-      "City & state visible",
-      "City-wise search visibility",
-      "Recommended tag",
-      "Higher directory ranking",
+      "State visible",
+      "All other entered details stay saved",
+      "City, image, phone and premium details stay locked publicly",
+      "No payment",
     ],
   },
+
+  {
+    id: "pro",
+
+    name: "SILVER / PRO",
+
+    price: "₹1,999",
+
+    amount: 1999,
+
+    billing: "1 YEAR",
+
+    description:
+      "Show the key contact details clients need while keeping premium profile details locked.",
+
+    benefits: [
+      "Name visible",
+      "State visible",
+      "City visible",
+      "Profile image visible",
+      "Phone number visible",
+      "Email, studio, experience, Instagram, bio and portfolio stay locked",
+      "Active for 1 year",
+    ],
+  },
+
   {
     id: "verified",
-    name: "VERIFIED SPOTLIGHT",
+
+    name: "GOLD / VERIFIED",
+
     price: "₹2,999",
+
     amount: 2999,
-    billing: "PER YEAR",
+
+    billing: "1 YEAR",
+
     description:
-      "Maximum visibility with full profile details, Verified status and Hall of Fame placement.",
+      "Unlock the complete public artist profile, Gold verification and Hall of Fame visibility.",
+
     benefits: [
-      "Everything in Pro",
-      "Photo visible",
-      "Phone visible",
-      "Studio visible",
-      "Experience visible",
-      "Instagram visible",
-      "Verified Spotlight badge",
-      "Highest directory ranking",
-      "Standalone profile page",
+      "Everything visible publicly",
+      "Profile image and phone",
+      "Email and studio",
+      "Experience and Instagram",
+      "Bio / About",
+      "Up to 3 portfolio images",
+      "Gold Verified badge",
       "Hall of Fame inclusion",
+      "Active for 1 year",
     ],
   },
 ];
 
+/* =========================================================
+   EMPTY FORM
+========================================================= */
+
 const EMPTY_FORM = {
   name: "",
+
   email: "",
+
   city: "",
+
   state: "",
+
   studio: "",
+
   experience: "",
+
   instagram: "",
+
   tattooStyles: [],
+
+  bio: "",
 };
+
+/* =========================================================
+   NORMALIZE PLAN
+========================================================= */
 
 function normalizePlan(value) {
   const plan = String(value || "basic")
@@ -120,14 +200,11 @@ function normalizePlan(value) {
   return "basic";
 }
 
-function getPlanPriority(plan) {
-  const normalized = normalizePlan(plan);
+/* =========================================================
+   UPDATE OLD LOCAL DIRECTORY CACHE
 
-  if (normalized === "verified") return 3;
-  if (normalized === "pro") return 2;
-
-  return 1;
-}
+   BACKEND / MONGODB REMAINS REAL SOURCE.
+========================================================= */
 
 function updateDirectory(updatedProfile) {
   try {
@@ -140,61 +217,109 @@ function updateDirectory(updatedProfile) {
       )
         ? {
             ...artist,
+
             ...updatedProfile,
+
             plan: normalizePlan(updatedProfile.plan),
           }
         : artist,
     );
 
-    localStorage.setItem(DIRECTORY_KEY, JSON.stringify(updatedDirectory));
+    localStorage.setItem(
+      DIRECTORY_KEY,
 
-    console.log("✅ Directory updated successfully");
+      JSON.stringify(updatedDirectory),
+    );
   } catch (error) {
-    console.error("❌ Failed to update directory:", error);
+    console.error("❌ Failed to update directory cache:", error);
   }
 }
+
+/* =========================================================
+   NORMALIZE ARTIST
+========================================================= */
+
 function normalizeArtist(source = {}) {
   return {
     id: source.id || source._id || source.profileId || "",
+
     name:
       source.name || source.artistName || source.professionalName || "Artist",
+
     studio: source.studio || source.studioName || "",
+
     city: source.city || "",
+
     state: source.state || "",
+
     maskedPhone: source.maskedPhone || source.phoneMasked || "",
+
     profileImage: source.profileImage || source.image || "",
-    tattooStyles: Array.isArray(source.tattooStyles)
-      ? source.tattooStyles
-      : [],
+
+    tattooStyles: Array.isArray(source.tattooStyles) ? source.tattooStyles : [],
+
+    bio: source.bio || "",
+
     plan: normalizePlan(source.plan || source.membershipPlan),
   };
 }
 
+/* =========================================================
+   CREATE FORM FROM PROFILE
+========================================================= */
+
 function makeForm(profile = {}) {
   return {
     name: profile.name || profile.artistName || profile.professionalName || "",
+
     email: profile.email || "",
+
     city: profile.city || "",
+
     state: profile.state || "",
+
     studio: profile.studio || profile.studioName || "",
+
     experience: profile.experience || "",
+
     instagram: profile.instagram || "",
+
     tattooStyles: Array.isArray(profile.tattooStyles)
       ? profile.tattooStyles
       : [],
+
+    bio: profile.bio || "",
   };
 }
 
+/* =========================================================
+   API REQUEST
+========================================================= */
+
 async function apiRequest(path, options = {}) {
-  const response = await fetch(`${API_URL}${path}`, {
-    method: options.method || "GET",
-    credentials: "include",
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.headers || {}),
+  const response = await fetch(
+    `${API_URL}${path}`,
+
+    {
+      method: options.method || "GET",
+
+      credentials: "include",
+
+      headers: {
+        Accept: "application/json",
+
+        ...(options.body
+          ? {
+              "Content-Type": "application/json",
+            }
+          : {}),
+
+        ...(options.headers || {}),
+      },
+
+      body: options.body ? JSON.stringify(options.body) : undefined,
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  );
 
   const data = await response.json().catch(() => ({}));
 
@@ -204,31 +329,169 @@ async function apiRequest(path, options = {}) {
     );
 
     error.status = response.status;
+
+    error.data = data;
+
     throw error;
   }
 
   return data;
 }
+
+/* =========================================================
+   RAZORPAY SCRIPT
+========================================================= */
+
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
     if (window.Razorpay) {
       resolve(true);
+
+      return;
+    }
+
+    const existing = document.querySelector(
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
+    );
+
+    if (existing) {
+      existing.addEventListener(
+        "load",
+
+        () => resolve(true),
+
+        {
+          once: true,
+        },
+      );
+
+      existing.addEventListener(
+        "error",
+
+        () => resolve(false),
+
+        {
+          once: true,
+        },
+      );
+
       return;
     }
 
     const script = document.createElement("script");
 
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
+
+    script.async = true;
+
     script.onload = () => resolve(true);
+
     script.onerror = () => resolve(false);
 
     document.body.appendChild(script);
   });
 };
 
+/* =========================================================
+   IMAGE COMPRESSION
+========================================================= */
+
+function compressImage(
+  file,
+
+  maxSize = 800,
+
+  quality = 0.72,
+) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const image = new Image();
+
+      image.onload = () => {
+        let width = image.width;
+
+        let height = image.height;
+
+        if (width > maxSize || height > maxSize) {
+          const ratio = Math.min(
+            maxSize / width,
+
+            maxSize / height,
+          );
+
+          width = Math.round(width * ratio);
+
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement("canvas");
+
+        canvas.width = width;
+
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          reject(new Error("Canvas unavailable."));
+
+          return;
+        }
+
+        context.drawImage(
+          image,
+
+          0,
+
+          0,
+
+          width,
+
+          height,
+        );
+
+        resolve(
+          canvas.toDataURL(
+            "image/jpeg",
+
+            quality,
+          ),
+        );
+      };
+
+      image.onerror = () => {
+        reject(new Error("Unable to load image."));
+      };
+
+      image.src = String(reader.result || "");
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Unable to read image."));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+/* =========================================================
+   PAGE
+========================================================= */
+
 export default function Enter() {
   const navigate = useNavigate();
+
   const location = useLocation();
+
+  const manageProfileRequested = Boolean(
+    location.state?.manageProfile || location.state?.ownerMode,
+  );
+
+  /* =======================================================
+     INCOMING ARTIST FROM ARTISTS.JSX
+  ======================================================= */
 
   const incomingArtistSource =
     location.state?.artist ||
@@ -247,41 +510,377 @@ export default function Enter() {
   const initialArtist = incomingProfileId
     ? normalizeArtist({
         ...(incomingArtistSource || {}),
+
         id: incomingProfileId,
       })
     : null;
 
-  const [screen, setScreen] = useState(initialArtist ? "verify" : "find");
-  const [selectedArtist, setSelectedArtist] = useState(initialArtist);
+  /* =======================================================
+     SCREEN
+
+     find
+     verify
+     edit
+     plans
+  ======================================================= */
+
+  const [screen, setScreen] = useState(
+    initialArtist && manageProfileRequested ? "verify" : "find",
+  );
+
+  const [selectedArtist, setSelectedArtist] = useState(
+    initialArtist && manageProfileRequested ? initialArtist : null,
+  );
+
+  /* =======================================================
+     SEARCH
+  ======================================================= */
 
   const [searchQuery, setSearchQuery] = useState("");
+
   const [searchResults, setSearchResults] = useState([]);
+
   const [searching, setSearching] = useState(false);
 
+  /* =======================================================
+     OTP
+  ======================================================= */
+
   const [otpSent, setOtpSent] = useState(false);
+
   const [otp, setOtp] = useState("");
+
   const [otpLoading, setOtpLoading] = useState(false);
+
   const [maskedPhone, setMaskedPhone] = useState(
     initialArtist?.maskedPhone || "",
   );
+
   const [resendSeconds, setResendSeconds] = useState(0);
 
+  /* =======================================================
+     PROFILE
+  ======================================================= */
+
   const [currentProfile, setCurrentProfile] = useState(null);
+
   const [formData, setFormData] = useState(EMPTY_FORM);
+
   const [profileImage, setProfileImage] = useState("");
+
+  const [portfolioImages, setPortfolioImages] = useState([]);
+
   const [saving, setSaving] = useState(false);
 
+  const [sessionChecking, setSessionChecking] = useState(true);
+
+  const [sessionExpiresAt, setSessionExpiresAt] = useState(null);
+
+  /* =======================================================
+     CHANGE PHONE
+  ======================================================= */
+
   const [changePhoneOpen, setChangePhoneOpen] = useState(false);
+
   const [newPhone, setNewPhone] = useState("");
+
   const [newPhoneOtp, setNewPhoneOtp] = useState("");
+
   const [newPhoneOtpSent, setNewPhoneOtpSent] = useState(false);
+
   const [phoneLoading, setPhoneLoading] = useState(false);
 
+  /* =======================================================
+     MESSAGES
+  ======================================================= */
+
   const [error, setError] = useState("");
+
   const [success, setSuccess] = useState("");
 
+  /* =======================================================
+     HELPERS
+  ======================================================= */
+
+  const clearMessages = () => {
+    setError("");
+
+    setSuccess("");
+  };
+
+  const hydrateProfile = (
+    profile,
+
+    sessionExp = null,
+  ) => {
+    if (!profile) {
+      return;
+    }
+
+    const normalized = normalizeArtist(profile);
+
+    setCurrentProfile(profile);
+
+    setSelectedArtist(normalized);
+
+    setFormData(makeForm(profile));
+
+    setProfileImage(profile?.profileImage || profile?.image || "");
+
+    setPortfolioImages(
+      Array.isArray(profile?.portfolioImages)
+        ? profile.portfolioImages.slice(
+            0,
+
+            3,
+          )
+        : [],
+    );
+
+    setMaskedPhone(profile?.maskedPhone || profile?.phoneMasked || "");
+
+    if (sessionExp) {
+      setSessionExpiresAt(Number(sessionExp) || null);
+    }
+  };
+
+  /* =======================================================
+     RESTORE EXACT 4-HOUR VERIFIED SESSION
+
+     SAME ARTIST:
+     open edit
+
+     DIFFERENT ARTIST:
+     OTP again
+
+     NO SESSION:
+     OTP/search
+  ======================================================= */
+
   useEffect(() => {
-    if (screen !== "verify") {
+    let cancelled = false;
+
+    const restoreVerifiedSession = async () => {
+      try {
+        const data = await apiRequest("/api/claim/me");
+
+        if (cancelled) {
+          return;
+        }
+
+        const rawProfile = data.profile || data.artist || null;
+
+        if (!rawProfile) {
+          throw new Error("Verified profile was not returned.");
+        }
+
+        const normalizedProfile = normalizeArtist(rawProfile);
+
+        const verifiedProfileId = String(
+          normalizedProfile.id || rawProfile._id || rawProfile.id || "",
+        );
+
+        const requestedProfileId = String(
+          manageProfileRequested ? initialArtist?.id || "" : "",
+        );
+
+        /* =========================================
+             ACTIVE SESSION BELONGS TO OTHER ARTIST
+          ========================================= */
+
+        if (
+          requestedProfileId &&
+          verifiedProfileId &&
+          requestedProfileId !== verifiedProfileId
+        ) {
+          setCurrentProfile(null);
+
+          setFormData(EMPTY_FORM);
+
+          setProfileImage("");
+
+          setPortfolioImages([]);
+
+          setSessionExpiresAt(null);
+
+          setOtp("");
+
+          setOtpSent(false);
+
+          setResendSeconds(0);
+
+          setMaskedPhone(initialArtist?.maskedPhone || "");
+
+          setError("");
+
+          setSuccess("");
+
+          setSelectedArtist(initialArtist);
+
+          setScreen("verify");
+
+          return;
+        }
+
+        /* =========================================
+             SAME ARTIST ACTIVE SESSION
+          ========================================= */
+
+        hydrateProfile(
+          rawProfile,
+
+          data.sessionExpiresAt,
+        );
+
+        setMaskedPhone(
+          data.maskedPhone ||
+            data.phoneMasked ||
+            rawProfile.maskedPhone ||
+            rawProfile.phoneMasked ||
+            "VERIFIED NUMBER",
+        );
+
+        setError("");
+
+        setSuccess("Your verified session is still active.");
+
+        setScreen("edit");
+      } catch (sessionError) {
+        if (cancelled) {
+          return;
+        }
+
+        setCurrentProfile(null);
+
+        setFormData(EMPTY_FORM);
+
+        setProfileImage("");
+
+        setPortfolioImages([]);
+
+        setSessionExpiresAt(null);
+
+        const ownerTarget =
+          manageProfileRequested && initialArtist ? initialArtist : null;
+
+        setSelectedArtist(ownerTarget);
+
+        setMaskedPhone(ownerTarget?.maskedPhone || "");
+
+        setOtp("");
+
+        setOtpSent(false);
+
+        setResendSeconds(0);
+
+        if (
+          sessionError.status === 401 ||
+          sessionError.status === 403 ||
+          sessionError.status === 404
+        ) {
+          setScreen(ownerTarget ? "verify" : "find");
+
+          return;
+        }
+
+        console.error("❌ Session restore error:", sessionError);
+
+        setError(sessionError.message || "Unable to check your login session.");
+
+        setScreen(ownerTarget ? "verify" : "find");
+      } finally {
+        if (!cancelled) {
+          setSessionChecking(false);
+        }
+      }
+    };
+
+    void restoreVerifiedSession();
+
+    return () => {
+      cancelled = true;
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* =======================================================
+     AUTO EXPIRE EXACT 4-HOUR SESSION
+
+     IMPORTANT:
+     PAYMENT DOES NOT CHANGE THIS TIMER.
+  ======================================================= */
+
+  useEffect(() => {
+    if (!sessionExpiresAt) {
+      return undefined;
+    }
+
+    const remainingMs = Number(sessionExpiresAt) - Date.now();
+
+    const expireVisibleSession = () => {
+      const profileForVerification = normalizeArtist(
+        currentProfile || selectedArtist || {},
+      );
+
+      if (profileForVerification.id) {
+        setSelectedArtist(profileForVerification);
+      }
+
+      setCurrentProfile(null);
+
+      setFormData(EMPTY_FORM);
+
+      setProfileImage("");
+
+      setPortfolioImages([]);
+
+      setOtp("");
+
+      setOtpSent(false);
+
+      setResendSeconds(0);
+
+      setSessionExpiresAt(null);
+
+      void apiRequest(
+        "/api/claim/logout",
+
+        {
+          method: "POST",
+        },
+      ).catch((logoutError) => {
+        console.error("❌ Automatic logout request failed:", logoutError);
+      });
+
+      setSuccess("");
+
+      setError("Your 4-hour login session expired. Please verify OTP again.");
+
+      setScreen(profileForVerification.id ? "verify" : "find");
+    };
+
+    if (remainingMs <= 0) {
+      expireVisibleSession();
+
+      return undefined;
+    }
+
+    const timer = window.setTimeout(
+      expireVisibleSession,
+
+      remainingMs,
+    );
+
+    return () => window.clearTimeout(timer);
+  }, [sessionExpiresAt, currentProfile, selectedArtist]);
+
+  /* =======================================================
+     MSG91 INIT
+  ======================================================= */
+
+  useEffect(() => {
+    if (sessionChecking || screen !== "verify") {
       return;
     }
 
@@ -289,28 +888,39 @@ export default function Enter() {
       .then(() => {
         console.log("✅ MSG91 OTP READY");
       })
-      .catch((error) => {
-        console.error("❌ MSG91 initialization error:", error);
+      .catch((initError) => {
+        console.error("❌ MSG91 initialization error:", initError);
 
         setError(
           "OTP service could not be initialized. Please refresh the page.",
         );
       });
-  }, [screen]);
+  }, [screen, sessionChecking]);
+
+  /* =======================================================
+     GSAP ANIMATION
+  ======================================================= */
 
   useEffect(() => {
     const context = gsap.context(() => {
       gsap.fromTo(
         ".enter-reveal",
+
         {
           opacity: 0,
+
           y: 22,
         },
+
         {
           opacity: 1,
+
           y: 0,
+
           duration: 0.6,
+
           stagger: 0.04,
+
           ease: "power3.out",
         },
       );
@@ -319,49 +929,85 @@ export default function Enter() {
     return () => context.revert();
   }, [screen]);
 
-  useEffect(() => {
-    if (resendSeconds <= 0) return undefined;
+  /* =======================================================
+     OTP RESEND TIMER
+  ======================================================= */
 
-    const timer = window.setInterval(() => {
-      setResendSeconds((previous) => Math.max(previous - 1, 0));
-    }, 1000);
+  useEffect(() => {
+    if (resendSeconds <= 0) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(
+      () => {
+        setResendSeconds((previous) =>
+          Math.max(
+            previous - 1,
+
+            0,
+          ),
+        );
+      },
+
+      1000,
+    );
 
     return () => window.clearInterval(timer);
   }, [resendSeconds]);
 
+  /* =======================================================
+     CURRENT PLAN
+  ======================================================= */
+
   const currentPlan = useMemo(
     () => normalizePlan(currentProfile?.plan || selectedArtist?.plan),
+
     [currentProfile?.plan, selectedArtist?.plan],
   );
 
-  const clearMessages = () => {
-    setError("");
-    setSuccess("");
-  };
+  /* =======================================================
+     RESET TO SEARCH
+  ======================================================= */
+
   const resetToFind = () => {
     setScreen("find");
+
     setSelectedArtist(null);
 
     setOtp("");
+
     setOtpSent(false);
+
     setResendSeconds(0);
 
     setCurrentProfile(null);
+
     setFormData(EMPTY_FORM);
+
     setProfileImage("");
 
+    setPortfolioImages([]);
+
     setChangePhoneOpen(false);
+
     setNewPhone("");
+
     setNewPhoneOtp("");
+
     setNewPhoneOtpSent(false);
 
     clearMessages();
 
     window.scrollTo({
       top: 0,
+
       behavior: "smooth",
     });
   };
+
+  /* =======================================================
+     SEARCH REAL BACKEND / MONGODB
+  ======================================================= */
 
   const handleSearch = async (event) => {
     event.preventDefault();
@@ -370,19 +1016,26 @@ export default function Enter() {
 
     if (query.length < 2) {
       setError("Enter at least 2 characters of artist or studio name.");
+
       return;
     }
 
     setSearching(true);
+
     clearMessages();
 
     try {
-      const data = await apiRequest("/api/claim/find", {
-        method: "POST",
-        body: {
-          query,
+      const data = await apiRequest(
+        "/api/claim/find",
+
+        {
+          method: "POST",
+
+          body: {
+            query,
+          },
         },
-      });
+      );
 
       const rawResults = Array.isArray(data.profiles)
         ? data.profiles
@@ -410,14 +1063,21 @@ export default function Enter() {
     }
   };
 
+  /* =======================================================
+     SELECT ARTIST
+  ======================================================= */
+
   const chooseArtist = (artist) => {
     const profile = normalizeArtist(artist);
 
     setSelectedArtist(profile);
+
     setMaskedPhone(profile.maskedPhone || "");
 
     setOtp("");
+
     setOtpSent(false);
+
     setResendSeconds(0);
 
     clearMessages();
@@ -426,32 +1086,42 @@ export default function Enter() {
 
     window.scrollTo({
       top: 0,
+
       behavior: "smooth",
     });
   };
 
+  /* =======================================================
+     SEND OTP
+  ======================================================= */
+
   const sendOtp = async () => {
     if (!selectedArtist?.id) {
       setError("Artist profile is missing.");
+
       return;
     }
 
-    if (otpLoading) return;
+    if (otpLoading) {
+      return;
+    }
 
     setOtpLoading(true);
+
     clearMessages();
 
     try {
-      // ============================================
-      // STEP 1: GET REGISTERED PHONE FROM BACKEND
-      // ============================================
+      const data = await apiRequest(
+        "/api/claim/send-otp",
 
-      const data = await apiRequest("/api/claim/send-otp", {
-        method: "POST",
-        body: {
-          profileId: selectedArtist.id,
+        {
+          method: "POST",
+
+          body: {
+            profileId: selectedArtist.id,
+          },
         },
-      });
+      );
 
       const identifier = data.identifier;
 
@@ -459,13 +1129,7 @@ export default function Enter() {
         throw new Error("Registered mobile number was not returned.");
       }
 
-      // ============================================
-      // STEP 2: MSG91 ACTUALLY SENDS THE OTP
-      // ============================================
-
       await sendMsg91Otp(identifier);
-
-      console.log("✅ MSG91 OTP sent successfully");
 
       setMaskedPhone(
         data.maskedPhone ||
@@ -489,12 +1153,18 @@ export default function Enter() {
       setOtpLoading(false);
     }
   };
+
+  /* =======================================================
+     RESEND OTP
+  ======================================================= */
+
   const resendOtp = async () => {
     if (!otpSent || otpLoading || resendSeconds > 0) {
       return;
     }
 
     setOtpLoading(true);
+
     clearMessages();
 
     try {
@@ -505,8 +1175,6 @@ export default function Enter() {
       setResendSeconds(60);
 
       setSuccess("OTP resent successfully.");
-
-      console.log("✅ MSG91 OTP resent successfully");
     } catch (resendError) {
       console.error("❌ Resend OTP error:", resendError);
 
@@ -516,34 +1184,31 @@ export default function Enter() {
     }
   };
 
+  /* =======================================================
+     VERIFY MAIN OTP
+  ======================================================= */
+
   const verifyOtp = async (event) => {
     event.preventDefault();
 
     if (!selectedArtist?.id) {
       setError("Artist profile is missing.");
+
       return;
     }
 
     if (!/^\d{4}$/.test(otp)) {
       setError("Enter the 4-digit OTP.");
+
       return;
     }
 
     setOtpLoading(true);
+
     clearMessages();
 
     try {
-      // ============================================
-      // STEP 1: VERIFY OTP WITH MSG91
-      // ============================================
-
       const msg91Result = await verifyMsg91Otp(otp);
-
-      console.log("✅ MSG91 OTP verified");
-
-      // ============================================
-      // STEP 2: GET MSG91 ACCESS TOKEN
-      // ============================================
 
       const accessToken = getMsg91AccessToken(msg91Result);
 
@@ -553,23 +1218,19 @@ export default function Enter() {
         throw new Error("MSG91 verification token was not returned.");
       }
 
-      // ============================================
-      // STEP 3: VERIFY TOKEN ON OUR BACKEND
-      // ============================================
+      const verifyData = await apiRequest(
+        "/api/claim/verify-otp",
 
-      const verifyData = await apiRequest("/api/claim/verify-otp", {
-        method: "POST",
+        {
+          method: "POST",
 
-        body: {
-          profileId: selectedArtist.id,
+          body: {
+            profileId: selectedArtist.id,
 
-          accessToken,
+            accessToken,
+          },
         },
-      });
-
-      // ============================================
-      // KEEP YOUR EXISTING PROFILE LOGIC
-      // ============================================
+      );
 
       let profile = verifyData.profile || verifyData.artist || null;
 
@@ -579,11 +1240,11 @@ export default function Enter() {
         profile = profileData.profile || profileData.artist || profileData;
       }
 
-      setCurrentProfile(profile);
+      hydrateProfile(
+        profile,
 
-      setFormData(makeForm(profile));
-
-      setProfileImage(profile?.profileImage || profile?.image || "");
+        verifyData.sessionExpiresAt,
+      );
 
       setMaskedPhone(
         profile?.maskedPhone ||
@@ -598,6 +1259,7 @@ export default function Enter() {
 
       window.scrollTo({
         top: 0,
+
         behavior: "smooth",
       });
     } catch (verifyError) {
@@ -609,20 +1271,27 @@ export default function Enter() {
     }
   };
 
+  /* =======================================================
+     FORM CHANGE
+  ======================================================= */
+
   const handleChange = (event) => {
     const { name, value } = event.target;
 
     setFormData((previous) => ({
       ...previous,
+
       [name]: value,
     }));
 
     clearMessages();
   };
 
-  /* =========================================================
+  /* =======================================================
      TATTOO SPECIALITIES
-  ========================================================= */
+
+     PULLED BOOK YOUR ARTIST FEATURE KEPT
+  ======================================================= */
 
   const toggleTattooStyle = (style) => {
     setFormData((previous) => {
@@ -634,6 +1303,7 @@ export default function Enter() {
 
       return {
         ...previous,
+
         tattooStyles: alreadySelected
           ? currentStyles.filter((item) => item !== style)
           : [...currentStyles, style],
@@ -643,67 +1313,26 @@ export default function Enter() {
     clearMessages();
   };
 
-  const compressImage = (file, maxSize = 800, quality = 0.72) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = () => {
-        const image = new Image();
-
-        image.onload = () => {
-          let width = image.width;
-          let height = image.height;
-
-          if (width > maxSize || height > maxSize) {
-            const ratio = Math.min(maxSize / width, maxSize / height);
-
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
-          }
-
-          const canvas = document.createElement("canvas");
-
-          canvas.width = width;
-          canvas.height = height;
-
-          const context = canvas.getContext("2d");
-
-          if (!context) {
-            reject(new Error("Canvas unavailable."));
-            return;
-          }
-
-          context.drawImage(image, 0, 0, width, height);
-
-          resolve(canvas.toDataURL("image/jpeg", quality));
-        };
-
-        image.onerror = () => {
-          reject(new Error("Unable to load image."));
-        };
-
-        image.src = String(reader.result || "");
-      };
-
-      reader.onerror = () => {
-        reject(new Error("Unable to read image."));
-      };
-
-      reader.readAsDataURL(file);
-    });
+  /* =======================================================
+     PROFILE IMAGE
+  ======================================================= */
 
   const handleProfileImage = async (event) => {
     const file = event.target.files?.[0];
 
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     if (!file.type.startsWith("image/")) {
       setError("Please select a valid image.");
+
       return;
     }
 
     if (file.size > 8 * 1024 * 1024) {
       setError("Image must be smaller than 8 MB.");
+
       return;
     }
 
@@ -720,34 +1349,104 @@ export default function Enter() {
     }
   };
 
+  /* =======================================================
+     PORTFOLIO
+
+     MAX 3
+     SAVED FOR ALL PLANS
+     PUBLIC ONLY ON GOLD
+  ======================================================= */
+
+  const handlePortfolioImages = async (event) => {
+    const files = Array.from(event.target.files || []).slice(
+      0,
+
+      3,
+    );
+
+    if (files.length === 0) {
+      return;
+    }
+
+    if (files.some((file) => !file.type.startsWith("image/"))) {
+      setError("Portfolio files must be images.");
+
+      return;
+    }
+
+    if (files.some((file) => file.size > 8 * 1024 * 1024)) {
+      setError("Each portfolio image must be smaller than 8 MB.");
+
+      return;
+    }
+
+    try {
+      const images = await Promise.all(
+        files.map((file) =>
+          compressImage(
+            file,
+
+            1000,
+
+            0.72,
+          ),
+        ),
+      );
+
+      setPortfolioImages(
+        images.slice(
+          0,
+
+          3,
+        ),
+      );
+
+      clearMessages();
+    } catch (portfolioError) {
+      console.error(portfolioError);
+
+      setError("Unable to process portfolio images.");
+    }
+  };
+
+  /* =======================================================
+     VALIDATE
+  ======================================================= */
+
   const validateForm = () => {
     if (!formData.name.trim()) {
       setError("Please enter artist / owner name.");
+
       return false;
     }
 
     if (!formData.email.trim()) {
       setError("Please enter email.");
+
       return false;
     }
 
     if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
       setError("Please enter a valid email address.");
+
       return false;
     }
 
     if (!formData.city.trim()) {
       setError("Please enter city.");
+
       return false;
     }
 
     if (!formData.state.trim()) {
       setError("Please enter state.");
+
       return false;
     }
 
     if (!formData.studio.trim()) {
       setError("Please enter studio name.");
+
       return false;
     }
 
@@ -756,101 +1455,217 @@ export default function Enter() {
       formData.tattooStyles.length === 0
     ) {
       setError("Please select at least one tattoo speciality.");
+
       return false;
     }
 
     return true;
   };
 
+  /* =======================================================
+     UPDATE PROFILE
+
+     ALL DETAILS STORED REGARDLESS OF PLAN
+  ======================================================= */
+
   const saveProfile = async (event) => {
     event.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      return;
+    }
+
+    if (!selectedArtist?.id) {
+      setError("Artist profile is missing.");
+
+      return;
+    }
 
     setSaving(true);
+
     clearMessages();
 
     try {
-      const data = await apiRequest("/api/claim/update", {
-        method: "POST",
-        body: {
-          profileId: selectedArtist?.id,
+      const data = await apiRequest(
+        "/api/claim/update",
 
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          city: formData.city.trim(),
-          state: formData.state.trim(),
-          studio: formData.studio.trim(),
-          experience: formData.experience.trim(),
-          instagram: formData.instagram.trim(),
-          profileImage,
-          tattooStyles: formData.tattooStyles,
+        {
+          method: "POST",
+
+          body: {
+            profileId: selectedArtist.id,
+
+            name: formData.name.trim(),
+
+            email: formData.email.trim(),
+
+            city: formData.city.trim(),
+
+            state: formData.state.trim(),
+
+            studio: formData.studio.trim(),
+
+            experience: formData.experience.trim(),
+
+            instagram: formData.instagram.trim(),
+
+            tattooStyles: formData.tattooStyles,
+
+            bio: formData.bio.trim(),
+
+            profileImage,
+
+            portfolioImages,
+          },
         },
-      });
+      );
 
       const updatedProfile = data.profile ||
         data.artist || {
-          ...currentProfile,
+          ...(currentProfile || {}),
+
           ...formData,
+
           profileImage,
+
+          portfolioImages,
         };
 
-      setCurrentProfile(updatedProfile);
+      const finalProfile = {
+        ...(currentProfile || {}),
 
-      setSelectedArtist((previous) =>
+        ...updatedProfile,
+
+        id:
+          updatedProfile.id ||
+          updatedProfile._id ||
+          currentProfile?.id ||
+          currentProfile?._id ||
+          selectedArtist.id,
+
+        _id:
+          updatedProfile._id ||
+          updatedProfile.id ||
+          currentProfile?._id ||
+          selectedArtist.id,
+
+        profileImage: updatedProfile.profileImage || profileImage || "",
+
+        portfolioImages: Array.isArray(updatedProfile.portfolioImages)
+          ? updatedProfile.portfolioImages.slice(
+              0,
+
+              3,
+            )
+          : portfolioImages,
+
+        plan: normalizePlan(
+          updatedProfile.plan ||
+            currentProfile?.plan ||
+            selectedArtist?.plan ||
+            "basic",
+        ),
+      };
+
+      setCurrentProfile(finalProfile);
+
+      setSelectedArtist(
         normalizeArtist({
-          ...(previous || {}),
-          ...updatedProfile,
+          ...(selectedArtist || {}),
+
+          ...finalProfile,
         }),
       );
 
-      setSuccess("Profile updated successfully.");
+      setFormData(makeForm(finalProfile));
 
-      // ✅ IMPORTANT:
-      // Go to Silver / Gold plan section
+      setProfileImage(finalProfile.profileImage || "");
+
+      setPortfolioImages(
+        Array.isArray(finalProfile.portfolioImages)
+          ? finalProfile.portfolioImages.slice(
+              0,
+
+              3,
+            )
+          : [],
+      );
+
+      updateDirectory(finalProfile);
+
+      setSuccess("Profile updated successfully. Choose your membership plan.");
+
       setScreen("plans");
 
       window.scrollTo({
         top: 0,
+
         behavior: "smooth",
       });
     } catch (saveError) {
-      console.error("❌ Profile update error:", saveError);
+      console.error("❌ PROFILE UPDATE ERROR:", saveError);
 
       if (saveError.status === 401 || saveError.status === 403) {
-        setError("Your verification expired. Please verify OTP again.");
+        setSessionExpiresAt(null);
+
+        setCurrentProfile(null);
+
+        setError("Your verification session expired. Please verify OTP again.");
 
         setOtp("");
+
         setOtpSent(false);
 
+        setResendSeconds(0);
+
         setScreen("verify");
-      } else {
-        setError(saveError.message || "Unable to update profile.");
+
+        return;
       }
+
+      setError(saveError.message || "Unable to update profile.");
     } finally {
       setSaving(false);
     }
   };
 
+  /* =======================================================
+     CHANGE PHONE - SEND OTP
+  ======================================================= */
+
   const sendNewPhoneOtp = async () => {
-    const cleanedPhone = newPhone.replace(/[^0-9+]/g, "").trim();
+    const cleanedPhone = newPhone
+      .replace(
+        /[^0-9+]/g,
+
+        "",
+      )
+      .trim();
 
     if (cleanedPhone.length < 10) {
       setError("Enter a valid new mobile number.");
+
       return;
     }
 
     setPhoneLoading(true);
+
     clearMessages();
 
     try {
-      await apiRequest("/api/claim/change-phone/send-otp", {
-        method: "POST",
-        body: {
-          profileId: selectedArtist?.id,
-          newPhone: cleanedPhone,
+      await apiRequest(
+        "/api/claim/change-phone/send-otp",
+
+        {
+          method: "POST",
+
+          body: {
+            profileId: selectedArtist?.id,
+
+            newPhone: cleanedPhone,
+          },
         },
-      });
+      );
 
       setNewPhone(cleanedPhone);
 
@@ -866,31 +1681,54 @@ export default function Enter() {
     }
   };
 
+  /* =======================================================
+     CHANGE PHONE - VERIFY OTP
+  ======================================================= */
+
   const verifyNewPhoneOtp = async () => {
-    if (!/^\d{6}$/.test(newPhoneOtp)) {
-      setError("Enter the 6-digit OTP sent to the new number.");
+    if (!/^\d{4,6}$/.test(newPhoneOtp)) {
+      setError("Enter the OTP sent to the new number.");
 
       return;
     }
 
     setPhoneLoading(true);
+
     clearMessages();
 
     try {
-      const data = await apiRequest("/api/claim/change-phone/verify-otp", {
-        method: "POST",
-        body: {
-          profileId: selectedArtist?.id,
-          newPhone,
-          otp: newPhoneOtp,
+      const data = await apiRequest(
+        "/api/claim/change-phone/verify-otp",
+
+        {
+          method: "POST",
+
+          body: {
+            profileId: selectedArtist?.id,
+
+            newPhone,
+
+            otp: newPhoneOtp,
+          },
         },
-      });
+      );
+
+      const profile = data.profile || data.artist || null;
+
+      if (profile) {
+        hydrateProfile(
+          profile,
+
+          sessionExpiresAt,
+        );
+      }
 
       setMaskedPhone(data.maskedPhone || data.phoneMasked || "NUMBER UPDATED");
 
       setChangePhoneOpen(false);
 
       setNewPhone("");
+
       setNewPhoneOtp("");
 
       setNewPhoneOtpSent(false);
@@ -905,26 +1743,105 @@ export default function Enter() {
     }
   };
 
+  /* =======================================================
+     FREE
+  ======================================================= */
+
+  const chooseFreePlan = async () => {
+    if (!currentProfile) {
+      setError("Profile information is missing.");
+
+      return;
+    }
+
+    setSaving(true);
+
+    clearMessages();
+
+    try {
+      const data = await apiRequest(
+        "/api/claim/select-free",
+
+        {
+          method: "POST",
+        },
+      );
+
+      const profile = data.profile || data.artist || currentProfile;
+
+      const finalProfile = {
+        ...currentProfile,
+
+        ...profile,
+
+        plan: "basic",
+
+        paymentStatus: "unpaid",
+      };
+
+      setCurrentProfile(finalProfile);
+
+      updateDirectory(finalProfile);
+
+      setSuccess(
+        "Free / Basic listing is active. Your full data is saved privately.",
+      );
+
+      window.setTimeout(
+        () => {
+          navigate(
+            "/artists",
+
+            {
+              state: {
+                newArtistId: finalProfile._id || finalProfile.id,
+
+                refreshDirectory: Date.now(),
+              },
+            },
+          );
+        },
+
+        700,
+      );
+    } catch (freeError) {
+      console.error("❌ Free plan error:", freeError);
+
+      setError(freeError.message || "Unable to activate Free plan.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* =======================================================
+     SILVER / GOLD PAYMENT
+
+     IMPORTANT:
+     NO /refresh-session HERE.
+
+     PAYMENT DOES NOT RESET
+     4-HOUR OTP TIMER.
+  ======================================================= */
+
   const startPaidPlan = async (planId) => {
     if (!currentProfile) {
       setError("Profile information is missing.");
+
       return;
     }
 
     const selectedPlan = PLANS.find((plan) => plan.id === planId);
 
-    if (!selectedPlan) {
+    if (!selectedPlan || selectedPlan.amount <= 0) {
       setError("Invalid membership plan.");
+
       return;
     }
 
     try {
       setSaving(true);
-      clearMessages();
 
-      // =====================================================
-      // LOAD RAZORPAY CHECKOUT
-      // =====================================================
+      clearMessages();
 
       const razorpayLoaded = await loadRazorpayScript();
 
@@ -934,34 +1851,40 @@ export default function Enter() {
         );
       }
 
-      // =====================================================
-      // CREATE ORDER ON BACKEND
-      // =====================================================
+      const profileId =
+        currentProfile._id ||
+        currentProfile.id ||
+        selectedArtist?._id ||
+        selectedArtist?.id ||
+        "";
 
-      console.log("💳 Creating Razorpay order...");
-      console.log("📦 Plan:", selectedPlan.id);
-      console.log("💰 Amount:", selectedPlan.amount);
+      /* =========================================
+           BACKEND DECIDES REAL MEMBERSHIP PRICE
+        ========================================= */
 
-      const orderData = await apiRequest("/api/payment/create-order", {
-        method: "POST",
-        body: {
-          amount: selectedPlan.amount,
-          packageId: selectedPlan.id,
-          email: currentProfile.email || formData.email || "",
-          phone: currentProfile.phone || currentProfile.mobile || "",
-          name: currentProfile.name || formData.name || "",
+      const orderData = await apiRequest(
+        "/api/payment/create-order",
+
+        {
+          method: "POST",
+
+          body: {
+            packageId: selectedPlan.id,
+
+            profileId,
+
+            email: currentProfile.email || formData.email || "",
+
+            phone: currentProfile.phone || currentProfile.mobile || "",
+
+            name: currentProfile.name || formData.name || "",
+          },
         },
-      });
-
-      console.log("✅ Razorpay order created:", orderData);
+      );
 
       if (!orderData.success) {
         throw new Error(orderData.message || "Unable to create payment order.");
       }
-
-      // =====================================================
-      // OPEN RAZORPAY
-      // =====================================================
 
       const options = {
         key: orderData.key,
@@ -978,7 +1901,9 @@ export default function Enter() {
 
         prefill: {
           name: currentProfile.name || formData.name || "",
+
           email: currentProfile.email || formData.email || "",
+
           contact: currentProfile.phone || currentProfile.mobile || "",
         },
 
@@ -986,29 +1911,31 @@ export default function Enter() {
           color: "#a855f7",
         },
 
-        handler: async function (response) {
+        handler: async (response) => {
           try {
-            console.log("💳 Razorpay payment response:", response);
-
             setSaving(true);
+
             clearMessages();
 
-            // =================================================
-            // VERIFY PAYMENT ON BACKEND
-            // =================================================
+            const verifyData = await apiRequest(
+              "/api/payment/verify",
 
-            const verifyData = await apiRequest("/api/payment/verify", {
-              method: "POST",
-              body: {
-                razorpay_order_id: response.razorpay_order_id,
+              {
+                method: "POST",
 
-                razorpay_payment_id: response.razorpay_payment_id,
+                body: {
+                  razorpay_order_id: response.razorpay_order_id,
 
-                razorpay_signature: response.razorpay_signature,
+                  razorpay_payment_id: response.razorpay_payment_id,
+
+                  razorpay_signature: response.razorpay_signature,
+
+                  profileId,
+
+                  packageId: selectedPlan.id,
+                },
               },
-            });
-
-            console.log("🔐 Payment verification:", verifyData);
+            );
 
             if (!verifyData.success) {
               throw new Error(
@@ -1016,28 +1943,55 @@ export default function Enter() {
               );
             }
 
-            // =================================================
-            // PAYMENT SUCCESS
-            // =================================================
+            const backendProfile =
+              verifyData.profile || verifyData.artist || null;
 
             const upgradedProfile = {
               ...currentProfile,
-              plan: selectedPlan.id,
+
+              ...(backendProfile || {}),
+
+              id:
+                backendProfile?._id ||
+                backendProfile?.id ||
+                currentProfile._id ||
+                currentProfile.id,
+
+              _id:
+                backendProfile?._id ||
+                backendProfile?.id ||
+                currentProfile._id ||
+                currentProfile.id,
+
+              plan: normalizePlan(backendProfile?.plan || selectedPlan.id),
+
+              paymentStatus: backendProfile?.paymentStatus || "paid",
+
               paymentId: response.razorpay_payment_id,
+
               orderId: response.razorpay_order_id,
-              updatedAt: new Date().toISOString(),
+
+              updatedAt: backendProfile?.updatedAt || new Date().toISOString(),
             };
 
-            // Save locally for your current frontend setup
+            /* ===================================
+                   KEEP PULLED LOCAL CACHE SUPPORT
+                =================================== */
+
             const profiles = getStoredArray(PROFILE_KEY);
 
             const updatedProfiles = profiles.map((profile) =>
-              String(profile.id) === String(currentProfile.id)
+              String(profile.id || profile._id) ===
+              String(currentProfile.id || currentProfile._id)
                 ? upgradedProfile
                 : profile,
             );
 
-            localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfiles));
+            localStorage.setItem(
+              PROFILE_KEY,
+
+              JSON.stringify(updatedProfiles),
+            );
 
             updateDirectory(upgradedProfile);
 
@@ -1045,18 +1999,29 @@ export default function Enter() {
 
             setSuccess(`${selectedPlan.name} activated successfully!`);
 
-            console.log("✅ Membership upgraded:", selectedPlan.id);
+            /* ===================================
+                   DO NOT REFRESH OTP SESSION
+                =================================== */
 
-            // Small delay so user sees success message
-            setTimeout(() => {
-              localStorage.removeItem(CURRENT_USER_KEY);
-              localStorage.removeItem("inkConventionLoggedUser");
+            window.setTimeout(
+              () => {
+                navigate(
+                  "/artists",
 
-              navigate("/Enter", {
-                replace: true,
-                state: null,
-              });
-            }, 1200);
+                  {
+                    state: {
+                      newArtistId: upgradedProfile._id || upgradedProfile.id,
+
+                      paidPlan: normalizePlan(upgradedProfile.plan),
+
+                      refreshDirectory: Date.now(),
+                    },
+                  },
+                );
+              },
+
+              1200,
+            );
           } catch (verifyError) {
             console.error("❌ Payment verification error:", verifyError);
 
@@ -1068,167 +2033,211 @@ export default function Enter() {
 
         modal: {
           ondismiss: function () {
-            console.log("ℹ️ Razorpay checkout closed.");
-
             setSaving(false);
           },
         },
       };
 
-      console.log("🚀 Opening Razorpay checkout...");
-
       const razorpay = new window.Razorpay(options);
 
-      razorpay.on("payment.failed", function (response) {
-        console.error("❌ Razorpay payment failed:", response);
+      razorpay.on(
+        "payment.failed",
 
-        setError(
-          response.error?.description || "Payment failed. Please try again.",
-        );
+        function (response) {
+          console.error("❌ Razorpay payment failed:", response);
 
-        setSaving(false);
-      });
+          setError(
+            response.error?.description || "Payment failed. Please try again.",
+          );
+
+          setSaving(false);
+        },
+      );
 
       razorpay.open();
-    } catch (error) {
-      console.error("❌ Razorpay initialization error:", error);
+    } catch (paymentError) {
+      console.error("❌ Razorpay initialization error:", paymentError);
 
-      setError(error.message || "Unable to start payment.");
+      setError(paymentError.message || "Unable to start payment.");
 
       setSaving(false);
     }
   };
 
-  const upgradePlan = (nextPlan) => {
-    if (!currentProfile) {
-      return;
-    }
-
-    const oldPriority = getPlanPriority(currentProfile.plan);
-
-    const nextPriority = getPlanPriority(nextPlan);
-
-    if (nextPriority <= oldPriority) {
-      return;
-    }
-
-    const profiles = getStoredArray(PROFILE_KEY);
-
-    const upgradedProfile = {
-      ...currentProfile,
-
-      plan: nextPlan,
-
-      updatedAt: new Date().toISOString(),
-    };
-
-    const updatedProfiles = profiles.map((profile) =>
-      String(profile.id) === String(currentProfile.id)
-        ? upgradedProfile
-        : profile,
-    );
-
-    try {
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfiles));
-
-      updateDirectory(upgradedProfile);
-
-      setCurrentProfile(upgradedProfile);
-
-      navigate("/artists", {
-        state: {
-          newArtistId: upgradedProfile.id,
-        },
-      });
-    } catch (error) {
-      console.error(error);
-
-      setError("Unable to upgrade membership.");
-    }
-  };
-
-  /* =========================================================
+  /* =======================================================
      LOGOUT
+  ======================================================= */
 
-     DOES NOT DELETE PROFILE.
-  ========================================================= */
+  const handleLogout = async () => {
+    try {
+      await apiRequest(
+        "/api/claim/logout",
 
-  const handleLogout = () => {
-    localStorage.removeItem(CURRENT_USER_KEY);
+        {
+          method: "POST",
+        },
+      );
+    } catch (logoutError) {
+      console.error("❌ Logout request failed:", logoutError);
+    } finally {
+      localStorage.removeItem(CURRENT_USER_KEY);
 
-    localStorage.removeItem("inkConventionLoggedUser");
+      localStorage.removeItem("inkConventionLoggedUser");
 
-    setCurrentProfile(null);
+      setSessionExpiresAt(null);
 
-    setFormData(EMPTY_FORM);
+      setCurrentProfile(null);
 
-    setProfileImage("");
+      setSelectedArtist(null);
 
-    setError("");
+      setFormData(EMPTY_FORM);
 
-    navigate("/Enter", {
-      replace: true,
-      state: null,
-    });
+      setProfileImage("");
+
+      setPortfolioImages([]);
+
+      setOtp("");
+
+      setOtpSent(false);
+
+      setError("");
+
+      setSuccess("");
+
+      setScreen("find");
+
+      navigate(
+        "/Enter",
+
+        {
+          replace: true,
+
+          state: null,
+        },
+      );
+    }
   };
 
-  /* =========================================================
-    Test User
-  ========================================================= */
+  /* =======================================================
+     SESSION CHECK SCREEN
+  ======================================================= */
 
-  const openTestPlans = () => {
-    const testProfile = {
-      id: "test-profile",
-      name: "Test Artist",
-      email: "test@example.com",
-      city: "Mumbai",
-      state: "Maharashtra",
-      studio: "Test Tattoo Studio",
-      experience: "5 Years",
-      instagram: "@testartist",
-      tattooStyles: ["Anime", "Realism", "Fine Line"],
-      plan: "basic",
-    };
+  if (sessionChecking) {
+    return (
+      <PageShell>
+        <div
+          className="
+            min-h-[45vh]
+            flex
+            items-center
+            justify-center
+          "
+        >
+          <div
+            className="
+              text-center
+            "
+          >
+            <ShieldCheck
+              size={28}
+              className="
+                mx-auto
+                text-purple-400
+              "
+            />
 
-    setSelectedArtist(normalizeArtist(testProfile));
-    setCurrentProfile(testProfile);
-    setFormData(makeForm(testProfile));
-    setProfileImage("");
-    clearMessages();
-    setScreen("edit");
+            <p
+              className="
+                mt-4
+                text-[10px]
+                font-mono
+                tracking-[0.18em]
+                text-gray-500
+              "
+            >
+              CHECKING VERIFIED SESSION...
+            </p>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+  /* =======================================================
+     FIND SCREEN
+  ======================================================= */
 
   if (screen === "find") {
     return (
       <PageShell>
-        <div className="enter-reveal max-w-4xl mx-auto">
+        <div
+          className="
+            enter-reveal
+            max-w-4xl
+            mx-auto
+          "
+        >
           <Eyebrow icon={<Search size={13} />}>FIND YOUR PROFILE</Eyebrow>
 
-          <h1 className="text-[clamp(3.2rem,8vw,7rem)] font-black uppercase tracking-[-0.07em] leading-[0.84]">
+          <h1
+            className="
+              text-[clamp(3.2rem,8vw,7rem)]
+              font-black
+              uppercase
+              tracking-[-0.07em]
+              leading-[0.84]
+            "
+          >
             FIND YOUR
             <br />
-            <span className="text-purple-500">CARD.</span>
+            <span
+              className="
+                text-purple-500
+              "
+            >
+              CARD.
+            </span>
           </h1>
 
-          <p className="mt-6 max-w-2xl text-sm text-gray-500 leading-relaxed">
-            Search your artist or studio name. Nobody can edit a card until the
-            OTP sent to the mobile number already saved with that card is
-            verified.
+          <p
+            className="
+              mt-6
+              max-w-2xl
+              text-sm
+              text-gray-500
+              leading-relaxed
+            "
+          >
+            Search your real artist or studio profile from the backend. Nobody
+            can edit a card until OTP verification succeeds for the mobile
+            number saved with that profile.
           </p>
 
           <form
             onSubmit={handleSearch}
-            className="mt-10 flex flex-col sm:flex-row gap-3"
+            className="
+              mt-10
+              flex
+              flex-col
+              sm:flex-row
+              gap-3
+            "
           >
-            <div className="relative flex-1">
+            <div
+              className="
+                relative
+                flex-1
+              "
+            >
               <Search
                 size={17}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
+                className="
+                  absolute
+                  left-4
+                  top-1/2
+                  -translate-y-1/2
+                  text-gray-600
+                "
               />
 
               <input
@@ -1236,63 +2245,148 @@ export default function Enter() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="ARTIST OR STUDIO NAME..."
-                className="w-full bg-[#0d0d11] border border-white/10 focus:border-purple-500 rounded-xl pl-11 pr-4 py-4 outline-none text-sm"
+                className="
+                  w-full
+                  bg-[#0d0d11]
+                  border
+                  border-white/10
+                  focus:border-purple-500
+                  rounded-xl
+                  pl-11
+                  pr-4
+                  py-4
+                  outline-none
+                  text-sm
+                "
               />
             </div>
 
             <button
               type="submit"
               disabled={searching}
-              className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl px-7 py-4 text-[10px] font-black tracking-widest transition"
+              className="
+                bg-purple-600
+                hover:bg-purple-500
+                disabled:opacity-50
+                rounded-xl
+                px-7
+                py-4
+                text-[10px]
+                font-black
+                tracking-widest
+                transition
+              "
             >
               {searching ? "SEARCHING..." : "SEARCH"}
             </button>
           </form>
 
-          {/* TEMPORARY TEST BUTTON */}
-          <button
-            type="button"
-            onClick={openTestPlans}
-            className="mt-4 w-full border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 rounded-xl p-4 text-[10px] font-black tracking-widest transition"
-          >
-            TEST PLANS PAGE
-          </button>
-
           <Message error={error} success={success} />
 
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div
+            className="
+              mt-8
+              grid
+              grid-cols-1
+              md:grid-cols-2
+              gap-4
+            "
+          >
             {searchResults.map((artist) => (
               <button
                 key={artist.id}
                 type="button"
                 onClick={() => chooseArtist(artist)}
-                className="text-left bg-[#0d0d11] border border-white/10 hover:border-purple-500/60 rounded-2xl p-5 transition"
+                className="
+                    text-left
+                    bg-[#0d0d11]
+                    border
+                    border-white/10
+                    hover:border-purple-500/60
+                    rounded-2xl
+                    p-5
+                    transition
+                  "
               >
-                <p className="text-[8px] font-mono tracking-[0.14em] text-purple-400">
+                <p
+                  className="
+                      text-[8px]
+                      font-mono
+                      tracking-[0.14em]
+                      text-purple-400
+                    "
+                >
                   DIRECTORY PROFILE
                 </p>
 
-                <h2 className="mt-2 text-xl font-black uppercase">
+                <h2
+                  className="
+                      mt-2
+                      text-xl
+                      font-black
+                      uppercase
+                    "
+                >
                   {artist.name}
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-500">
+                <p
+                  className="
+                      mt-1
+                      text-sm
+                      text-gray-500
+                    "
+                >
                   {artist.studio || "Tattoo Artist / Studio"}
                 </p>
 
-                <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
-                  <MapPin size={13} className="text-purple-500" />
+                <div
+                  className="
+                      mt-4
+                      flex
+                      items-center
+                      gap-2
+                      text-xs
+                      text-gray-500
+                    "
+                >
+                  <MapPin
+                    size={13}
+                    className="
+                        text-purple-500
+                      "
+                  />
 
                   {[artist.city, artist.state].filter(Boolean).join(", ") ||
                     "India"}
                 </div>
 
-                <div className="mt-5 flex items-center justify-between gap-3">
-                  <span className="text-[9px] font-mono text-gray-600">
+                <div
+                  className="
+                      mt-5
+                      flex
+                      items-center
+                      justify-between
+                      gap-3
+                    "
+                >
+                  <span
+                    className="
+                        text-[9px]
+                        font-mono
+                        text-gray-600
+                      "
+                  >
                     {artist.maskedPhone || "REGISTERED MOBILE"}
                   </span>
 
-                  <span className="text-[9px] font-black text-purple-400">
+                  <span
+                    className="
+                        text-[9px]
+                        font-black
+                        text-purple-400
+                      "
+                  >
                     UPDATE YOUR CARD →
                   </span>
                 </div>
@@ -1304,61 +2398,179 @@ export default function Enter() {
     );
   }
 
+  /* =======================================================
+     VERIFY SCREEN
+  ======================================================= */
+
   if (screen === "verify") {
     return (
       <PageShell>
-        <div className="enter-reveal max-w-2xl mx-auto">
+        <div
+          className="
+            enter-reveal
+            max-w-2xl
+            mx-auto
+          "
+        >
           <button
             type="button"
             onClick={resetToFind}
-            className="text-[9px] font-mono text-gray-500 hover:text-white transition mb-8"
+            className="
+              text-[9px]
+              font-mono
+              text-gray-500
+              hover:text-white
+              transition
+              mb-8
+            "
           >
             ← CHOOSE ANOTHER PROFILE
           </button>
 
-          <div className="bg-[#0d0d11] border border-white/10 rounded-[28px] p-6 sm:p-9">
-            <div className="w-14 h-14 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-              <ShieldCheck size={25} className="text-purple-400" />
+          <div
+            className="
+              bg-[#0d0d11]
+              border
+              border-white/10
+              rounded-[28px]
+              p-6
+              sm:p-9
+            "
+          >
+            <div
+              className="
+                w-14
+                h-14
+                rounded-full
+                bg-purple-500/10
+                border
+                border-purple-500/20
+                flex
+                items-center
+                justify-center
+              "
+            >
+              <ShieldCheck
+                size={25}
+                className="
+                  text-purple-400
+                "
+              />
             </div>
 
-            <p className="mt-7 text-[9px] font-mono tracking-[0.16em] text-purple-400">
+            <p
+              className="
+                mt-7
+                text-[9px]
+                font-mono
+                tracking-[0.16em]
+                text-purple-400
+              "
+            >
               OWNERSHIP VERIFICATION
             </p>
 
-            <h1 className="mt-3 text-3xl sm:text-5xl font-black uppercase leading-none">
+            <h1
+              className="
+                mt-3
+                text-3xl
+                sm:text-5xl
+                font-black
+                uppercase
+                leading-none
+              "
+            >
               VERIFY BEFORE
               <br />
               YOU UPDATE.
             </h1>
 
-            <div className="mt-7 border border-white/10 rounded-2xl p-5">
-              <h2 className="font-black uppercase text-lg">
-                {selectedArtist?.name}
+            <div
+              className="
+                mt-7
+                border
+                border-white/10
+                rounded-2xl
+                p-5
+              "
+            >
+              <h2
+                className="
+                  font-black
+                  uppercase
+                  text-lg
+                "
+              >
+                {selectedArtist?.name || "ARTIST PROFILE"}
               </h2>
 
-              <p className="mt-1 text-sm text-gray-500">
+              <p
+                className="
+                  mt-1
+                  text-sm
+                  text-gray-500
+                "
+              >
                 {selectedArtist?.studio || "Tattoo Artist / Studio"}
               </p>
 
-              <p className="mt-3 text-xs text-gray-500">
+              <p
+                className="
+                  mt-3
+                  text-xs
+                  text-gray-500
+                "
+              >
                 OTP goes only to: {maskedPhone || "the saved mobile number"}
               </p>
             </div>
 
-            <div id="msg91-captcha" className="mt-5 flex justify-center"></div>
+            <div
+              id="msg91-captcha"
+              className="
+                mt-5
+                flex
+                justify-center
+              "
+            />
 
             {!otpSent ? (
               <button
                 type="button"
                 onClick={sendOtp}
                 disabled={otpLoading}
-                className="mt-6 w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl p-4 font-black text-[10px] tracking-widest transition"
+                className="
+                  mt-6
+                  w-full
+                  bg-purple-600
+                  hover:bg-purple-500
+                  disabled:opacity-50
+                  rounded-xl
+                  p-4
+                  font-black
+                  text-[10px]
+                  tracking-widest
+                  transition
+                "
               >
                 {otpLoading ? "SENDING..." : "SEND OTP"}
               </button>
             ) : (
-              <form onSubmit={verifyOtp} className="mt-6">
-                <label className="block text-[9px] font-mono text-gray-500 mb-2">
+              <form
+                onSubmit={verifyOtp}
+                className="
+                  mt-6
+                "
+              >
+                <label
+                  className="
+                    block
+                    text-[9px]
+                    font-mono
+                    text-gray-500
+                    mb-2
+                  "
+                >
                   ENTER 4-DIGIT OTP
                 </label>
 
@@ -1366,18 +2578,57 @@ export default function Enter() {
                   type="text"
                   value={otp}
                   onChange={(event) =>
-                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 4))
+                    setOtp(
+                      event.target.value
+                        .replace(
+                          /\D/g,
+
+                          "",
+                        )
+                        .slice(
+                          0,
+
+                          4,
+                        ),
+                    )
                   }
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   placeholder="0000"
-                  className="w-full text-center tracking-[0.55em] bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl px-5 py-5 outline-none text-xl font-black"
+                  className="
+                    w-full
+                    text-center
+                    tracking-[0.55em]
+                    bg-black/40
+                    border
+                    border-white/10
+                    focus:border-purple-500
+                    rounded-xl
+                    px-5
+                    py-5
+                    outline-none
+                    text-xl
+                    font-black
+                  "
                 />
 
                 <button
                   type="submit"
                   disabled={otpLoading || otp.length !== 4}
-                  className="mt-4 w-full bg-white hover:bg-slate-200 text-black disabled:opacity-50 rounded-xl p-4 font-black text-[10px] tracking-widest transition"
+                  className="
+                    mt-4
+                    w-full
+                    bg-white
+                    hover:bg-slate-200
+                    text-black
+                    disabled:opacity-50
+                    rounded-xl
+                    p-4
+                    font-black
+                    text-[10px]
+                    tracking-widest
+                    transition
+                  "
                 >
                   {otpLoading ? "VERIFYING..." : "VERIFY OTP & OPEN PROFILE"}
                 </button>
@@ -1386,7 +2637,14 @@ export default function Enter() {
                   type="button"
                   onClick={resendOtp}
                   disabled={otpLoading || resendSeconds > 0}
-                  className="mt-4 w-full text-[9px] font-mono text-purple-400 disabled:text-gray-700"
+                  className="
+                    mt-4
+                    w-full
+                    text-[9px]
+                    font-mono
+                    text-purple-400
+                    disabled:text-gray-700
+                  "
                 >
                   {resendSeconds > 0
                     ? `RESEND OTP IN ${resendSeconds}s`
@@ -1402,55 +2660,183 @@ export default function Enter() {
     );
   }
 
+  /* =======================================================
+     EDIT SCREEN
+  ======================================================= */
+
   if (screen === "edit") {
     return (
       <PageShell>
-        <div className="max-w-[1250px] mx-auto">
-          <div className="enter-reveal flex flex-col lg:flex-row lg:items-end justify-between gap-6 border-b border-white/10 pb-8">
+        <div
+          className="
+            max-w-[1250px]
+            mx-auto
+          "
+        >
+          <div
+            className="
+              enter-reveal
+              flex
+              flex-col
+              lg:flex-row
+              lg:items-end
+              justify-between
+              gap-6
+              border-b
+              border-white/10
+              pb-8
+            "
+          >
             <div>
               <Eyebrow icon={<CheckCircle2 size={13} />}>
                 PHONE VERIFIED
               </Eyebrow>
 
-              <h1 className="text-[clamp(3rem,7vw,6rem)] font-black uppercase tracking-[-0.065em] leading-[0.86]">
+              <h1
+                className="
+                  text-[clamp(3rem,7vw,6rem)]
+                  font-black
+                  uppercase
+                  tracking-[-0.065em]
+                  leading-[0.86]
+                "
+              >
                 UPDATE YOUR
                 <br />
-                <span className="text-purple-500">PROFILE.</span>
+                <span
+                  className="
+                    text-purple-500
+                  "
+                >
+                  PROFILE.
+                </span>
               </h1>
             </div>
 
-            <button
-              type="button"
-              onClick={resetToFind}
-              className="text-[9px] font-mono text-gray-500 hover:text-white transition"
+            <div
+              className="
+                flex
+                items-center
+                gap-4
+              "
             >
-              EXIT VERIFICATION
-            </button>
+              <button
+                type="button"
+                onClick={() => navigate("/artists")}
+                className="
+                  text-[9px]
+                  font-mono
+                  text-purple-400
+                  hover:text-purple-300
+                  transition
+                "
+              >
+                VIEW PUBLIC PROFILE
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="
+                  text-[9px]
+                  font-mono
+                  text-gray-500
+                  hover:text-white
+                  transition
+                "
+              >
+                LOG OUT
+              </button>
+            </div>
           </div>
 
           <form
             onSubmit={saveProfile}
-            className="enter-reveal mt-10 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10"
+            className="
+              enter-reveal
+              mt-10
+              grid
+              grid-cols-1
+              lg:grid-cols-[320px_1fr]
+              gap-10
+            "
           >
+            {/* =========================================
+                LEFT
+            ========================================= */}
+
             <div>
-              <p className="text-[9px] font-mono text-gray-500 mb-3">
+              <p
+                className="
+                  text-[9px]
+                  font-mono
+                  text-gray-500
+                  mb-3
+                "
+              >
                 PROFILE PHOTO
               </p>
 
-              <label className="relative block aspect-square overflow-hidden bg-[#0d0d11] border border-white/10 hover:border-purple-500/50 rounded-[26px] cursor-pointer transition">
+              <label
+                className="
+                  relative
+                  block
+                  aspect-square
+                  overflow-hidden
+                  bg-[#0d0d11]
+                  border
+                  border-white/10
+                  hover:border-purple-500/50
+                  rounded-[26px]
+                  cursor-pointer
+                  transition
+                "
+              >
                 {profileImage ? (
                   <img
                     src={profileImage}
                     alt="Profile"
-                    className="w-full h-full object-cover"
+                    className="
+                      w-full
+                      h-full
+                      object-cover
+                    "
                   />
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <Users size={32} className="text-purple-500" />
+                  <div
+                    className="
+                      absolute
+                      inset-0
+                      flex
+                      flex-col
+                      items-center
+                      justify-center
+                      text-center
+                    "
+                  >
+                    <Users
+                      size={32}
+                      className="
+                        text-purple-500
+                      "
+                    />
 
-                    <p className="mt-4 font-black">UPLOAD PHOTO</p>
+                    <p
+                      className="
+                        mt-4
+                        font-black
+                      "
+                    >
+                      UPLOAD PHOTO
+                    </p>
 
-                    <p className="mt-1 text-xs text-gray-600">
+                    <p
+                      className="
+                        mt-1
+                        text-xs
+                        text-gray-600
+                      "
+                    >
                       Click to select
                     </p>
                   </div>
@@ -1464,22 +2850,59 @@ export default function Enter() {
                 />
               </label>
 
-              <div className="mt-5 bg-[#0d0d11] border border-white/10 rounded-2xl p-5">
-                <div className="flex items-center gap-2 text-purple-400">
+              {/* VERIFIED NUMBER */}
+
+              <div
+                className="
+                  mt-5
+                  bg-[#0d0d11]
+                  border
+                  border-white/10
+                  rounded-2xl
+                  p-5
+                "
+              >
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-2
+                    text-purple-400
+                  "
+                >
                   <Lock size={13} />
 
-                  <p className="text-[8px] font-mono tracking-[0.14em]">
+                  <p
+                    className="
+                      text-[8px]
+                      font-mono
+                      tracking-[0.14em]
+                    "
+                  >
                     VERIFIED MOBILE
                   </p>
                 </div>
 
-                <p className="mt-2 text-lg font-black">
+                <p
+                  className="
+                    mt-2
+                    text-lg
+                    font-black
+                  "
+                >
                   {maskedPhone || "VERIFIED NUMBER"}
                 </p>
 
-                <p className="mt-2 text-xs text-gray-600 leading-relaxed">
-                  The mobile number cannot be typed over directly. Use secure
-                  number change below.
+                <p
+                  className="
+                    mt-2
+                    text-xs
+                    text-gray-600
+                    leading-relaxed
+                  "
+                >
+                  The mobile number cannot be changed directly without another
+                  OTP verification.
                 </p>
 
                 <button
@@ -1495,7 +2918,13 @@ export default function Enter() {
 
                     setNewPhoneOtpSent(false);
                   }}
-                  className="mt-4 text-[9px] font-black text-purple-400 hover:text-purple-300"
+                  className="
+                    mt-4
+                    text-[9px]
+                    font-black
+                    text-purple-400
+                    hover:text-purple-300
+                  "
                 >
                   {changePhoneOpen
                     ? "CANCEL NUMBER CHANGE"
@@ -1503,10 +2932,23 @@ export default function Enter() {
                 </button>
 
                 {changePhoneOpen && (
-                  <div className="mt-5 pt-5 border-t border-white/10">
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      Your current number was already verified to open this
-                      profile. Enter the new number and verify its OTP.
+                  <div
+                    className="
+                      mt-5
+                      pt-5
+                      border-t
+                      border-white/10
+                    "
+                  >
+                    <p
+                      className="
+                        text-xs
+                        text-gray-500
+                        leading-relaxed
+                      "
+                    >
+                      Enter the new mobile number and verify it before changing
+                      the saved number.
                     </p>
 
                     <input
@@ -1515,7 +2957,20 @@ export default function Enter() {
                       onChange={(event) => setNewPhone(event.target.value)}
                       disabled={newPhoneOtpSent}
                       placeholder="NEW MOBILE NUMBER"
-                      className="mt-4 w-full bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl px-4 py-3 outline-none text-sm disabled:opacity-60"
+                      className="
+                        mt-4
+                        w-full
+                        bg-black/40
+                        border
+                        border-white/10
+                        focus:border-purple-500
+                        rounded-xl
+                        px-4
+                        py-3
+                        outline-none
+                        text-sm
+                        disabled:opacity-60
+                      "
                     />
 
                     {!newPhoneOtpSent ? (
@@ -1523,7 +2978,19 @@ export default function Enter() {
                         type="button"
                         onClick={sendNewPhoneOtp}
                         disabled={phoneLoading}
-                        className="mt-3 w-full bg-white text-black hover:bg-slate-200 disabled:opacity-50 rounded-xl py-3 text-[9px] font-black tracking-widest"
+                        className="
+                          mt-3
+                          w-full
+                          bg-white
+                          text-black
+                          hover:bg-slate-200
+                          disabled:opacity-50
+                          rounded-xl
+                          py-3
+                          text-[9px]
+                          font-black
+                          tracking-widest
+                        "
                       >
                         {phoneLoading ? "SENDING..." : "SEND OTP TO NEW NUMBER"}
                       </button>
@@ -1534,20 +3001,55 @@ export default function Enter() {
                           value={newPhoneOtp}
                           onChange={(event) =>
                             setNewPhoneOtp(
-                              event.target.value.replace(/\D/g, "").slice(0, 6),
+                              event.target.value
+                                .replace(
+                                  /\D/g,
+
+                                  "",
+                                )
+                                .slice(
+                                  0,
+
+                                  6,
+                                ),
                             )
                           }
                           inputMode="numeric"
                           autoComplete="one-time-code"
                           placeholder="000000"
-                          className="mt-3 w-full text-center tracking-[0.45em] bg-black/40 border border-white/10 focus:border-purple-500 rounded-xl px-4 py-3 outline-none font-black"
+                          className="
+                            mt-3
+                            w-full
+                            text-center
+                            tracking-[0.45em]
+                            bg-black/40
+                            border
+                            border-white/10
+                            focus:border-purple-500
+                            rounded-xl
+                            px-4
+                            py-3
+                            outline-none
+                            font-black
+                          "
                         />
 
                         <button
                           type="button"
                           onClick={verifyNewPhoneOtp}
-                          disabled={phoneLoading || newPhoneOtp.length !== 6}
-                          className="mt-3 w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl py-3 text-[9px] font-black tracking-widest"
+                          disabled={phoneLoading || newPhoneOtp.length < 4}
+                          className="
+                            mt-3
+                            w-full
+                            bg-purple-600
+                            hover:bg-purple-500
+                            disabled:opacity-50
+                            rounded-xl
+                            py-3
+                            text-[9px]
+                            font-black
+                            tracking-widest
+                          "
                         >
                           {phoneLoading
                             ? "VERIFYING..."
@@ -1560,7 +3062,15 @@ export default function Enter() {
               </div>
             </div>
 
-            <div className="space-y-5">
+            {/* =========================================
+                RIGHT
+            ========================================= */}
+
+            <div
+              className="
+                space-y-5
+              "
+            >
               <InputField
                 label="ARTIST / OWNER NAME"
                 name="name"
@@ -1578,7 +3088,14 @@ export default function Enter() {
                 placeholder="artist@gmail.com"
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div
+                className="
+                  grid
+                  grid-cols-1
+                  sm:grid-cols-2
+                  gap-5
+                "
+              >
                 <InputField
                   label="CITY"
                   name="city"
@@ -1604,30 +3121,75 @@ export default function Enter() {
                 placeholder="Your tattoo studio"
               />
 
-              {/* =====================================================
+              {/* =====================================
                   TATTOO SPECIALITIES
-              ===================================================== */}
+
+                  PULLED BOOK YOUR ARTIST
+                  FEATURE KEPT
+              ===================================== */}
 
               <div>
-                <div className="flex items-start justify-between gap-4 mb-3">
+                <div
+                  className="
+                    flex
+                    items-start
+                    justify-between
+                    gap-4
+                    mb-3
+                  "
+                >
                   <div>
-                    <p className="text-[9px] font-mono text-gray-500">
+                    <p
+                      className="
+                        text-[9px]
+                        font-mono
+                        text-gray-500
+                      "
+                    >
                       TATTOO SPECIALITIES *
                     </p>
 
-                    <p className="mt-1 text-[10px] text-gray-700">
+                    <p
+                      className="
+                        mt-1
+                        text-[10px]
+                        text-gray-700
+                      "
+                    >
                       Select every tattoo style you specialise in. These styles
-                      are used to match you with customers on Book Your Artist.
+                      are used for Book Your Artist matching.
                     </p>
                   </div>
 
-                  <span className="shrink-0 text-[8px] font-mono text-purple-400">
+                  <span
+                    className="
+                      shrink-0
+                      text-[8px]
+                      font-mono
+                      text-purple-400
+                    "
+                  >
                     {formData.tattooStyles?.length || 0} SELECTED
                   </span>
                 </div>
 
-                <div className="border border-white/10 bg-[#0d0d11] rounded-2xl p-4 sm:p-5">
-                  <div className="flex flex-wrap gap-2">
+                <div
+                  className="
+                    border
+                    border-white/10
+                    bg-[#0d0d11]
+                    rounded-2xl
+                    p-4
+                    sm:p-5
+                  "
+                >
+                  <div
+                    className="
+                      flex
+                      flex-wrap
+                      gap-2
+                    "
+                  >
                     {TATTOO_CATEGORIES.map((style) => {
                       const selected =
                         Array.isArray(formData.tattooStyles) &&
@@ -1639,13 +3201,38 @@ export default function Enter() {
                           type="button"
                           onClick={() => toggleTattooStyle(style)}
                           aria-pressed={selected}
-                          className={`rounded-full border px-3 sm:px-4 py-2.5 text-[8px] font-black tracking-[0.08em] transition-all duration-200 ${
-                            selected
-                              ? "border-purple-400 bg-purple-600 text-white shadow-[0_0_18px_rgba(168,85,247,0.25)]"
-                              : "border-white/10 bg-black/30 text-gray-500 hover:border-purple-500/40 hover:text-purple-300"
-                          }`}
+                          className={`
+                              rounded-full
+                              border
+                              px-3
+                              sm:px-4
+                              py-2.5
+                              text-[8px]
+                              font-black
+                              tracking-[0.08em]
+                              transition-all
+                              duration-200
+
+                              ${
+                                selected
+                                  ? `
+                                    border-purple-400
+                                    bg-purple-600
+                                    text-white
+                                    shadow-[0_0_18px_rgba(168,85,247,0.25)]
+                                  `
+                                  : `
+                                    border-white/10
+                                    bg-black/30
+                                    text-gray-500
+                                    hover:border-purple-500/40
+                                    hover:text-purple-300
+                                  `
+                              }
+                            `}
                         >
                           {selected ? "✓ " : ""}
+
                           {style}
                         </button>
                       );
@@ -1654,11 +3241,31 @@ export default function Enter() {
                 </div>
 
                 {formData.tattooStyles?.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div
+                    className="
+                      mt-3
+                      flex
+                      flex-wrap
+                      gap-2
+                    "
+                  >
                     {formData.tattooStyles.map((style) => (
                       <span
                         key={style}
-                        className="inline-flex items-center gap-2 rounded-lg border border-purple-500/20 bg-purple-500/[0.06] px-3 py-2 text-[8px] font-black text-purple-300"
+                        className="
+                            inline-flex
+                            items-center
+                            gap-2
+                            rounded-lg
+                            border
+                            border-purple-500/20
+                            bg-purple-500/[0.06]
+                            px-3
+                            py-2
+                            text-[8px]
+                            font-black
+                            text-purple-300
+                          "
                       >
                         {style}
 
@@ -1666,7 +3273,11 @@ export default function Enter() {
                           type="button"
                           onClick={() => toggleTattooStyle(style)}
                           aria-label={`Remove ${style}`}
-                          className="text-purple-500 hover:text-white transition"
+                          className="
+                              text-purple-500
+                              hover:text-white
+                              transition
+                            "
                         >
                           ×
                         </button>
@@ -1694,18 +3305,194 @@ export default function Enter() {
                 required={false}
               />
 
+              <TextareaField
+                label="BIO / ABOUT"
+                name="bio"
+                value={formData.bio}
+                onChange={handleChange}
+                placeholder="Tell visitors about your tattoo style, specialties and studio."
+                maxLength={1500}
+                required={false}
+              />
+
+              {/* =====================================
+                  PORTFOLIO
+              ===================================== */}
+
+              <div
+                className="
+                  rounded-2xl
+                  border
+                  border-white/10
+                  bg-[#0d0d11]
+                  p-5
+                "
+              >
+                <div
+                  className="
+                    flex
+                    flex-col
+                    sm:flex-row
+                    sm:items-center
+                    sm:justify-between
+                    gap-3
+                  "
+                >
+                  <div>
+                    <p
+                      className="
+                        text-[9px]
+                        font-mono
+                        tracking-[0.14em]
+                        text-gray-500
+                      "
+                    >
+                      PORTFOLIO IMAGES
+                    </p>
+
+                    <p
+                      className="
+                        mt-1
+                        text-xs
+                        text-gray-600
+                      "
+                    >
+                      Save up to 3 images. They are public only on Gold.
+                    </p>
+                  </div>
+
+                  <label
+                    className="
+                      cursor-pointer
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-white/5
+                      px-4
+                      py-3
+                      text-[9px]
+                      font-black
+                      tracking-widest
+                      hover:border-purple-500/50
+                    "
+                  >
+                    SELECT IMAGES
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handlePortfolioImages}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {portfolioImages.length > 0 && (
+                  <div
+                    className="
+                      mt-4
+                      grid
+                      grid-cols-3
+                      gap-3
+                    "
+                  >
+                    {portfolioImages.map(
+                      (
+                        image,
+
+                        index,
+                      ) => (
+                        <div
+                          key={`${index}-${image.slice(
+                            0,
+
+                            24,
+                          )}`}
+                          className="
+                            relative
+                            aspect-square
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            border-white/10
+                            bg-black
+                          "
+                        >
+                          <img
+                            src={image}
+                            alt={`Portfolio ${index + 1}`}
+                            className="
+                              h-full
+                              w-full
+                              object-cover
+                            "
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPortfolioImages((previous) =>
+                                previous.filter(
+                                  (
+                                    _,
+
+                                    imageIndex,
+                                  ) => imageIndex !== index,
+                                ),
+                              )
+                            }
+                            className="
+                              absolute
+                              right-2
+                              top-2
+                              rounded-full
+                              bg-black/80
+                              px-2
+                              py-1
+                              text-[8px]
+                              font-black
+                              text-white
+                            "
+                          >
+                            REMOVE
+                          </button>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                )}
+              </div>
+
               <Message error={error} success={success} />
 
               <button
                 type="submit"
                 disabled={saving}
-                className="group w-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl p-5 flex items-center justify-between text-[10px] font-black tracking-[0.14em] transition"
+                className="
+                  group
+                  w-full
+                  bg-purple-600
+                  hover:bg-purple-500
+                  disabled:opacity-50
+                  rounded-xl
+                  p-5
+                  flex
+                  items-center
+                  justify-between
+                  text-[10px]
+                  font-black
+                  tracking-[0.14em]
+                  transition
+                "
               >
                 <span>{saving ? "UPDATING..." : "UPDATE PROFILE"}</span>
 
                 <ArrowRight
                   size={15}
-                  className="transition-transform group-hover:translate-x-1"
+                  className="
+                    transition-transform
+                    group-hover:translate-x-1
+                  "
                 />
               </button>
             </div>
@@ -1715,43 +3502,170 @@ export default function Enter() {
     );
   }
 
+  /* =======================================================
+     PLANS SCREEN
+  ======================================================= */
+
   return (
     <PageShell>
-      <div className="max-w-[1250px] mx-auto">
-        <div className="enter-reveal text-center max-w-3xl mx-auto">
+      <div
+        className="
+          max-w-[1250px]
+          mx-auto
+        "
+      >
+        <div
+          className="
+            enter-reveal
+            text-center
+            max-w-3xl
+            mx-auto
+          "
+        >
           <Eyebrow icon={<Sparkles size={13} />}>PROFILE UPDATED</Eyebrow>
 
-          <h1 className="text-[clamp(3.2rem,7vw,6.5rem)] font-black uppercase tracking-[-0.065em] leading-[0.86]">
+          <h1
+            className="
+              text-[clamp(3.2rem,7vw,6.5rem)]
+              font-black
+              uppercase
+              tracking-[-0.065em]
+              leading-[0.86]
+            "
+          >
             GET MORE
             <br />
-            <span className="text-purple-500">VISIBILITY.</span>
+            <span
+              className="
+                text-purple-500
+              "
+            >
+              VISIBILITY.
+            </span>
           </h1>
 
-          <p className="mt-6 text-sm text-gray-500 leading-relaxed">
-            Your existing Basic directory card has been updated. You can keep it
-            as Basic or upgrade for more visibility.
+          <p
+            className="
+              mt-6
+              text-sm
+              text-gray-500
+              leading-relaxed
+            "
+          >
+            All your information is saved. Now choose what visitors can see.
+            Free keeps most details private, Silver unlocks key details, and
+            Gold unlocks everything.
           </p>
         </div>
 
-        {currentPlan === "verified" ? (
-          <div className="enter-reveal mt-12 max-w-2xl mx-auto border border-purple-400/30 bg-purple-500/[0.05] rounded-[28px] p-8 text-center">
-            <CheckCircle2 size={36} className="text-purple-400 mx-auto" />
+        {/* =============================================
+            GOLD ALREADY ACTIVE
+        ============================================= */}
 
-            <h2 className="mt-5 text-3xl font-black uppercase">
-              ALREADY VERIFIED
+        {currentPlan === "verified" ? (
+          <div
+            className="
+              enter-reveal
+              mt-12
+              max-w-2xl
+              mx-auto
+              border
+              border-[#f5c451]/30
+              bg-[#f5c451]/[0.05]
+              rounded-[28px]
+              p-8
+              text-center
+            "
+          >
+            <CheckCircle2
+              size={36}
+              className="
+                text-[#f5c451]
+                mx-auto
+              "
+            />
+
+            <h2
+              className="
+                mt-5
+                text-3xl
+                font-black
+                uppercase
+              "
+            >
+              GOLD ALREADY ACTIVE
             </h2>
 
-            <p className="mt-3 text-sm text-gray-500">
-              Your Verified Spotlight membership is already active.
+            <p
+              className="
+                mt-3
+                text-sm
+                text-gray-500
+              "
+            >
+              Your Gold / Verified membership is already active.
             </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  "/artists",
+
+                  {
+                    state: {
+                      refreshDirectory: Date.now(),
+                    },
+                  },
+                )
+              }
+              className="
+                mt-6
+                bg-[#f5c451]
+                text-black
+                rounded-xl
+                px-6
+                py-4
+                text-[9px]
+                font-black
+                tracking-widest
+              "
+            >
+              VIEW PUBLIC PROFILE →
+            </button>
           </div>
         ) : (
           <div
-            className={`enter-reveal mt-12 grid grid-cols-1 ${
-              currentPlan === "pro" ? "max-w-2xl mx-auto" : "lg:grid-cols-2"
-            } gap-6`}
+            className={`
+              enter-reveal
+              mt-12
+              grid
+              grid-cols-1
+
+              ${
+                currentPlan === "pro"
+                  ? `
+                    max-w-2xl
+                    mx-auto
+                  `
+                  : `
+                    lg:grid-cols-3
+                  `
+              }
+
+              gap-6
+            `}
           >
             {PLANS.filter((plan) => {
+              /* =================================
+                   SILVER ACTIVE:
+
+                   ONLY GOLD UPGRADE SHOWN.
+
+                   Prevent destroying active paid
+                   membership with Free.
+                ================================= */
+
               if (currentPlan === "pro") {
                 return plan.id === "verified";
               }
@@ -1761,31 +3675,16 @@ export default function Enter() {
               <PlanCard
                 key={plan.id}
                 plan={plan}
-                onClick={() => startPaidPlan(plan.id)}
+                saving={saving}
+                onClick={() =>
+                  plan.id === "basic"
+                    ? chooseFreePlan()
+                    : startPaidPlan(plan.id)
+                }
               />
             ))}
           </div>
         )}
-
-        <div className="enter-reveal mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border border-white/10 bg-[#0d0d11] rounded-2xl p-5">
-          <div>
-            <p className="text-[9px] font-black tracking-widest">
-              FINISHED UPDATING?
-            </p>
-
-            <p className="mt-1 text-xs text-gray-600">
-              Go back to the directory to see your card.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => navigate("/artists")}
-            className="text-[9px] font-black text-purple-400 hover:text-purple-300"
-          >
-            BACK TO ARTISTS →
-          </button>
-        </div>
 
         <Message error={error} success={success} />
       </div>
@@ -1793,28 +3692,84 @@ export default function Enter() {
   );
 }
 
+/* =========================================================
+   PAGE SHELL
+========================================================= */
+
 function PageShell({ children }) {
   return (
-    <main className="min-h-screen bg-[#08080a] text-white pt-32 pb-24 px-4 sm:px-6 lg:px-10">
+    <main
+      className="
+        min-h-screen
+        bg-[#08080a]
+        text-white
+        pt-32
+        pb-24
+        px-4
+        sm:px-6
+        lg:px-10
+      "
+    >
       {children}
     </main>
   );
 }
 
+/* =========================================================
+   EYEBROW
+========================================================= */
+
 function Eyebrow({ icon, children }) {
   return (
-    <div className="inline-flex items-center gap-2 text-purple-400 text-[10px] font-mono tracking-[0.2em] mb-5">
+    <div
+      className="
+        inline-flex
+        items-center
+        gap-2
+        text-purple-400
+        text-[10px]
+        font-mono
+        tracking-[0.2em]
+        mb-5
+      "
+    >
       {icon}
+
       {children}
     </div>
   );
 }
 
-function InputField({ label, type = "text", required = true, ...props }) {
+/* =========================================================
+   INPUT
+========================================================= */
+
+function InputField({
+  label,
+
+  type = "text",
+
+  required = true,
+
+  ...props
+}) {
   return (
-    <label className="block">
-      <span className="block text-[9px] font-mono text-gray-500 mb-2">
+    <label
+      className="
+        block
+      "
+    >
+      <span
+        className="
+          block
+          text-[9px]
+          font-mono
+          text-gray-500
+          mb-2
+        "
+      >
         {label}
+
         {required ? " *" : ""}
       </span>
 
@@ -1822,85 +3777,350 @@ function InputField({ label, type = "text", required = true, ...props }) {
         {...props}
         type={type}
         required={required}
-        className="w-full bg-[#0d0d11] border border-white/10 focus:border-purple-500 rounded-xl px-5 py-4 outline-none text-white placeholder:text-gray-700 transition"
+        className="
+          w-full
+          bg-[#0d0d11]
+          border
+          border-white/10
+          focus:border-purple-500
+          rounded-xl
+          px-5
+          py-4
+          outline-none
+          text-white
+          placeholder:text-gray-700
+          transition
+        "
       />
     </label>
   );
 }
 
-function Message({ error, success }) {
+/* =========================================================
+   TEXTAREA
+========================================================= */
+
+function TextareaField({
+  label,
+
+  required = true,
+
+  ...props
+}) {
+  return (
+    <label
+      className="
+        block
+      "
+    >
+      <span
+        className="
+          block
+          text-[9px]
+          font-mono
+          text-gray-500
+          mb-2
+        "
+      >
+        {label}
+
+        {required ? " *" : ""}
+      </span>
+
+      <textarea
+        {...props}
+        required={required}
+        rows={5}
+        className="
+          w-full
+          resize-y
+          bg-[#0d0d11]
+          border
+          border-white/10
+          focus:border-purple-500
+          rounded-xl
+          px-5
+          py-4
+          outline-none
+          text-white
+          placeholder:text-gray-700
+          transition
+        "
+      />
+    </label>
+  );
+}
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+function Message({
+  error,
+
+  success,
+}) {
   if (!error && !success) {
     return null;
   }
 
   return (
     <div
-      className={`mt-5 rounded-xl border px-5 py-4 text-sm ${
-        error
-          ? "border-red-500/30 bg-red-500/[0.05] text-red-400"
-          : "border-emerald-500/30 bg-emerald-500/[0.05] text-emerald-400"
-      }`}
+      className={`
+        mt-5
+        rounded-xl
+        border
+        px-5
+        py-4
+        text-sm
+
+        ${
+          error
+            ? `
+              border-red-500/30
+              bg-red-500/[0.05]
+              text-red-400
+            `
+            : `
+              border-emerald-500/30
+              bg-emerald-500/[0.05]
+              text-emerald-400
+            `
+        }
+      `}
     >
       {error || success}
     </div>
   );
 }
 
-function PlanCard({ plan, onClick }) {
+/* =========================================================
+   PLAN CARD
+========================================================= */
+
+function PlanCard({
+  plan,
+
+  saving,
+
+  onClick,
+}) {
+  const isBasic = plan.id === "basic";
+
   const isVerified = plan.id === "verified";
+
+  const theme = isBasic
+    ? {
+        card: "border-purple-500/30 bg-[#0d0d11]",
+
+        badge: "border-purple-500/30 bg-purple-500/10 text-purple-300",
+
+        title: "text-white",
+
+        price: "text-purple-400",
+
+        button:
+          "border-purple-500/40 bg-purple-600 text-white hover:bg-purple-500",
+
+        buttonText: "CONTINUE FREE",
+      }
+    : isVerified
+      ? {
+          card: "border-[#d6aa3a] bg-gradient-to-br from-[#d6aa3a]/[0.10] via-[#141108] to-[#0b0b0d] shadow-[0_0_34px_rgba(214,170,58,0.14)]",
+
+          badge: "border-[#e7c45b]/40 bg-[#d6aa3a]/10 text-[#ffe59a]",
+
+          title: "text-[#ffe9a8]",
+
+          price: "text-[#ffe59a]",
+
+          button:
+            "border-[#ffe59a]/60 bg-gradient-to-r from-[#b77b15] via-[#f2cf65] to-[#b77b15] text-[#211600]",
+
+          buttonText: "GET GOLD",
+        }
+      : {
+          card: "border-slate-300/80 bg-gradient-to-br from-white/[0.07] via-[#111318] to-[#0b0b0d] shadow-[0_0_28px_rgba(226,232,240,0.10)]",
+
+          badge: "border-white/20 bg-white/[0.06] text-slate-200",
+
+          title: "text-white",
+
+          price: "text-slate-100",
+
+          button:
+            "border-white/60 bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black",
+
+          buttonText: "GET SILVER",
+        };
 
   return (
     <article
-      className={`relative flex flex-col min-h-[560px] rounded-[28px] p-7 sm:p-9 border-2 transition-transform hover:-translate-y-1 ${
-        isVerified
-          ? "border-purple-400 bg-purple-500/[0.05] shadow-[0_0_50px_rgba(168,85,247,0.10)]"
-          : "border-slate-300 bg-white/[0.025]"
-      }`}
-    >
-      {isVerified && (
-        <div className="absolute top-5 right-5 bg-purple-600 px-3 py-1.5 text-[7px] font-black tracking-widest">
-          HALL OF FAME
-        </div>
-      )}
+      className={`
+        group
+        relative
+        flex
+        min-h-[470px]
+        flex-col
+        overflow-hidden
+        rounded-[24px]
+        border-2
+        p-5
+        sm:p-6
+        transition-all
+        duration-500
+        hover:-translate-y-1
 
-      <p className="text-[9px] font-mono tracking-[0.14em] text-gray-500">
-        DIRECTORY UPGRADE
+        ${theme.card}
+      `}
+    >
+      <div
+        className={`
+          absolute
+          right-4
+          top-4
+          rounded-full
+          border
+          px-3
+          py-1.5
+          text-[7px]
+          font-black
+          tracking-widest
+
+          ${theme.badge}
+        `}
+      >
+        {isBasic ? "FREE" : isVerified ? "GOLD" : "SILVER"}
+      </div>
+
+      <p
+        className="
+          relative
+          z-10
+          text-[8px]
+          font-mono
+          tracking-[0.14em]
+          text-gray-500
+        "
+      >
+        DIRECTORY MEMBERSHIP
       </p>
 
       <h2
-        className={`mt-5 text-4xl sm:text-5xl font-black uppercase leading-[0.9] ${
-          isVerified ? "text-purple-400" : "text-white"
-        }`}
+        className={`
+          relative
+          z-10
+          mt-4
+          pr-24
+          text-3xl
+          sm:text-4xl
+          font-black
+          uppercase
+          leading-[0.92]
+
+          ${theme.title}
+        `}
       >
         {plan.name}
       </h2>
 
-      <div className="mt-6 flex items-end gap-3">
-        <p className="text-4xl sm:text-5xl font-black">{plan.price}</p>
+      <div
+        className="
+          relative
+          z-10
+          mt-5
+          flex
+          items-end
+          gap-2
+        "
+      >
+        <p
+          className={`
+            text-3xl
+            sm:text-4xl
+            font-black
 
-        <span className="pb-1 text-[8px] font-mono text-gray-600">
+            ${theme.price}
+          `}
+        >
+          {plan.price}
+        </p>
+
+        <span
+          className="
+            pb-1
+            text-[7px]
+            font-mono
+            text-gray-500
+          "
+        >
           {plan.billing}
         </span>
       </div>
 
-      <p className="mt-5 pb-6 border-b border-white/10 text-sm text-gray-500 leading-relaxed">
+      <p
+        className="
+          relative
+          z-10
+          mt-4
+          border-b
+          border-white/10
+          pb-4
+          text-[11px]
+          sm:text-xs
+          leading-relaxed
+          text-gray-500
+        "
+      >
         {plan.description}
       </p>
 
-      <div className="mt-6 space-y-3 flex-1">
+      <div
+        className="
+          relative
+          z-10
+          mt-4
+          flex-1
+          space-y-2.5
+        "
+      >
         {plan.benefits.map((benefit) => (
-          <div key={benefit} className="flex items-start gap-3 text-sm">
+          <div
+            key={benefit}
+            className="
+                flex
+                items-start
+                gap-2.5
+                text-[11px]
+                sm:text-xs
+              "
+          >
             <span
-              className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[9px] ${
-                isVerified
-                  ? "bg-purple-500/10 text-purple-400"
-                  : "bg-white/10 text-slate-200"
-              }`}
+              className="
+                  mt-[1px]
+                  flex
+                  h-5
+                  w-5
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-full
+                  border
+                  border-white/15
+                  bg-white/[0.06]
+                  text-[8px]
+                "
             >
               ✓
             </span>
 
-            <span className="text-gray-300">{benefit}</span>
+            <span
+              className="
+                  text-gray-300
+                "
+            >
+              {benefit}
+            </span>
           </div>
         ))}
       </div>
@@ -1908,18 +4128,39 @@ function PlanCard({ plan, onClick }) {
       <button
         type="button"
         onClick={onClick}
-        className={`group mt-8 w-full rounded-xl p-4 flex items-center justify-between text-[10px] font-black tracking-widest transition ${
-          isVerified
-            ? "bg-purple-600 hover:bg-purple-500 text-white"
-            : "bg-white hover:bg-slate-200 text-black"
-        }`}
-      >
-        <span>{isVerified ? "GET VERIFIED" : "GET PRO LISTING"}</span>
+        disabled={saving}
+        className={`
+          relative
+          z-10
+          mt-5
+          flex
+          w-full
+          items-center
+          justify-between
+          rounded-xl
+          border
+          px-4
+          py-3.5
+          text-[9px]
+          font-black
+          tracking-widest
+          transition-all
+          disabled:opacity-50
 
-        <ArrowRight
-          size={15}
-          className="transition-transform group-hover:translate-x-1"
-        />
+          ${theme.button}
+        `}
+      >
+        <span>{saving ? "PLEASE WAIT..." : theme.buttonText}</span>
+
+        {!saving && (
+          <ArrowRight
+            size={14}
+            className="
+              transition-transform
+              group-hover:translate-x-1
+            "
+          />
+        )}
       </button>
     </article>
   );
