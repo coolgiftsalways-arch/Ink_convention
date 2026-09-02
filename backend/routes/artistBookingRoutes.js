@@ -5,6 +5,10 @@ const TattooStudio = require("../models/TattooStudio");
 
 const TATTOO_CATEGORIES = require("../constants/tattooCategories");
 
+const {
+  sendArtistBookingEmail,
+} = require("../services/emailService");
+
 const router = express.Router();
 
 /* =========================================================
@@ -190,6 +194,7 @@ async function findMatchingArtists({
 
 /* =========================================================
    CREATE BOOKING
+
    POST /api/artist-bookings
 ========================================================= */
 
@@ -376,6 +381,344 @@ router.post("/", async (req, res) => {
 });
 
 /* =========================================================
+   SELECT ARTIST + SEND EMAIL
+
+   Customer clicks:
+   BOOK THIS ARTIST
+           ↓
+   SEND REQUEST
+
+   POST /api/artist-bookings/:id/select-artist
+========================================================= */
+
+router.post(
+  "/:id/select-artist",
+  async (req, res) => {
+    try {
+      const bookingId = req.params.id;
+
+      const artistId = cleanText(
+        req.body.artistId,
+      );
+
+      /* =====================================================
+         VALIDATION
+      ===================================================== */
+
+      if (!artistId) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Artist ID is required.",
+        });
+      }
+
+      if (
+        !require("mongoose").Types.ObjectId.isValid(
+          bookingId,
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid booking ID.",
+        });
+      }
+
+      if (
+        !require("mongoose").Types.ObjectId.isValid(
+          artistId,
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid artist ID.",
+        });
+      }
+
+      /* =====================================================
+         FIND BOOKING
+      ===================================================== */
+
+      const booking =
+        await ArtistBooking.findById(
+          bookingId,
+        );
+
+      if (!booking) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "Booking not found.",
+        });
+      }
+
+      /* =====================================================
+         PREVENT SELECTING AGAIN
+      ===================================================== */
+
+      if (booking.selectedArtistId) {
+        /*
+          If same artist was already selected,
+          don't create/send duplicate request.
+        */
+
+        if (
+          String(
+            booking.selectedArtistId,
+          ) === String(artistId)
+        ) {
+          return res.status(200).json({
+            success: true,
+
+            message:
+              "Booking request was already sent to this artist.",
+
+            notificationSent:
+              booking.artistNotified ===
+              true,
+
+            booking: {
+              _id: booking._id,
+
+              status: booking.status,
+
+              selectedArtistId:
+                booking.selectedArtistId,
+
+              artistNotified:
+                booking.artistNotified,
+
+              artistNotifiedAt:
+                booking.artistNotifiedAt,
+            },
+          });
+        }
+
+        return res.status(409).json({
+          success: false,
+
+          message:
+            "You have already selected an artist for this booking.",
+        });
+      }
+
+      /* =====================================================
+         FIND ARTIST
+      ===================================================== */
+
+      const artist =
+        await TattooStudio.findById(
+          artistId,
+        );
+
+      if (!artist) {
+        return res.status(404).json({
+          success: false,
+
+          message:
+            "Artist not found.",
+        });
+      }
+
+      /* =====================================================
+         CHECK ARTIST WAS ACTUALLY SUGGESTED
+      ===================================================== */
+
+      const wasSuggested =
+        Array.isArray(
+          booking.suggestedArtistIds,
+        ) &&
+        booking.suggestedArtistIds.some(
+          (id) =>
+            String(id) ===
+            String(artistId),
+        );
+
+      if (!wasSuggested) {
+        return res.status(400).json({
+          success: false,
+
+          message:
+            "This artist was not suggested for this booking.",
+        });
+      }
+
+      /* =====================================================
+         SAVE SELECTED ARTIST
+      ===================================================== */
+
+      booking.selectedArtistId =
+        artist._id;
+
+      booking.artistSelectedAt =
+        new Date();
+
+      booking.status = "pending";
+
+      await booking.save();
+
+      /* =====================================================
+         GET ARTIST EMAIL
+      ===================================================== */
+
+      const artistEmail =
+        cleanText(artist.email)
+          .toLowerCase();
+
+      const artistName =
+        cleanText(
+          artist.professionalName ||
+            artist.studioName ||
+            artist.studio ||
+            artist.name,
+        ) || "Artist";
+
+      /* =====================================================
+         SEND EMAIL
+      ===================================================== */
+
+      let notificationSent = false;
+
+      let notificationMessage = "";
+
+      if (!artistEmail) {
+        console.log(
+          "⚠️ Artist does not have email:",
+          artist._id,
+        );
+
+        notificationMessage =
+          "Artist does not have an email address.";
+      } else {
+        try {
+          await sendArtistBookingEmail({
+            to: artistEmail,
+
+            artistName,
+
+            artistId:
+              String(artist._id),
+
+            bookingId:
+              String(booking._id),
+
+            /*
+              IMPORTANT:
+
+              We intentionally DO NOT send:
+
+              booking.name
+              booking.phone
+              booking.email
+
+              in the email.
+
+              Customer information should
+              only be shown inside the
+              verified artist dashboard.
+            */
+          });
+
+          /* ===============================================
+             EMAIL SUCCESS
+          =============================================== */
+
+          booking.artistNotified = true;
+
+          booking.artistNotifiedAt =
+            new Date();
+
+          await booking.save();
+
+          notificationSent = true;
+
+          notificationMessage =
+            "Artist email sent successfully.";
+
+          console.log(
+            "✅ Artist booking email sent:",
+            artistEmail,
+          );
+        } catch (emailError) {
+          console.error(
+            "❌ Artist booking email failed:",
+            emailError,
+          );
+
+          notificationMessage =
+            "Booking saved, but artist email could not be sent.";
+        }
+      }
+
+      /* =====================================================
+         RESPONSE
+      ===================================================== */
+
+      return res.status(200).json({
+        success: true,
+
+        message: notificationSent
+          ? "Booking request sent. Artist has been notified."
+          : "Booking request saved. Artist notification could not be sent.",
+
+        notificationSent,
+
+        notificationMessage,
+
+        booking: {
+          _id: booking._id,
+
+          status: booking.status,
+
+          selectedArtistId:
+            booking.selectedArtistId,
+
+          artistSelectedAt:
+            booking.artistSelectedAt,
+
+          artistNotified:
+            booking.artistNotified,
+
+          artistNotifiedAt:
+            booking.artistNotifiedAt,
+        },
+
+        artist: {
+          _id: artist._id,
+
+          name: artistName,
+
+          plan:
+            normalizePlan(
+              artist.plan,
+            ),
+        },
+      });
+    } catch (error) {
+      console.error(
+        "❌ Select artist error:",
+        error,
+      );
+
+      return res.status(500).json({
+        success: false,
+
+        message:
+          "Something went wrong while sending booking request.",
+
+        error:
+          process.env.NODE_ENV ===
+          "development"
+            ? error.message
+            : undefined,
+      });
+    }
+  },
+);
+
+/* =========================================================
    GET ALL BOOKINGS
 
    Useful later for Admin Panel
@@ -438,10 +781,18 @@ router.get("/", async (req, res) => {
           .skip(skip)
           .limit(limit)
           .populate({
-            path: "suggestedArtistIds",
+            path:
+              "suggestedArtistIds",
 
             select:
               "name professionalName studio studioName city state plan tattooStyles rating reviews profileImage",
+          })
+          .populate({
+            path:
+              "selectedArtistId",
+
+            select:
+              "name professionalName studio studioName city state plan tattooStyles rating reviews profileImage email",
           })
           .lean(),
 
@@ -469,7 +820,9 @@ router.get("/", async (req, res) => {
         totalPages:
           Math.max(
             1,
-            Math.ceil(total / limit),
+            Math.ceil(
+              total / limit,
+            ),
           ),
 
         hasNextPage:
@@ -505,7 +858,15 @@ router.get("/:id", async (req, res) => {
         req.params.id,
       )
         .populate({
-          path: "suggestedArtistIds",
+          path:
+            "suggestedArtistIds",
+
+          select:
+            "name professionalName studio studioName city state plan tattooStyles rating reviews profileImage",
+        })
+        .populate({
+          path:
+            "selectedArtistId",
 
           select:
             "name professionalName studio studioName city state plan tattooStyles rating reviews profileImage",
@@ -554,6 +915,9 @@ router.patch(
     try {
       const allowedStatuses = [
         "new",
+        "pending",
+        "accepted",
+        "declined",
         "contacted",
         "confirmed",
         "completed",
@@ -565,7 +929,9 @@ router.patch(
       ).toLowerCase();
 
       if (
-        !allowedStatuses.includes(status)
+        !allowedStatuses.includes(
+          status,
+        )
       ) {
         return res.status(400).json({
           success: false,
@@ -576,19 +942,8 @@ router.patch(
       }
 
       const booking =
-        await ArtistBooking.findByIdAndUpdate(
+        await ArtistBooking.findById(
           req.params.id,
-
-          {
-            $set: {
-              status,
-            },
-          },
-
-          {
-            new: true,
-            runValidators: true,
-          },
         );
 
       if (!booking) {
@@ -599,6 +954,41 @@ router.patch(
             "Booking not found.",
         });
       }
+
+      booking.status = status;
+
+      /* =====================================================
+         SAVE STATUS DATE/TIME
+      ===================================================== */
+
+      if (status === "accepted") {
+        booking.acceptedAt =
+          new Date();
+
+        booking.declinedAt = null;
+      }
+
+      if (status === "declined") {
+        booking.declinedAt =
+          new Date();
+      }
+
+      if (status === "confirmed") {
+        booking.confirmedAt =
+          new Date();
+      }
+
+      if (status === "completed") {
+        booking.completedAt =
+          new Date();
+      }
+
+      if (status === "cancelled") {
+        booking.cancelledAt =
+          new Date();
+      }
+
+      await booking.save();
 
       return res.status(200).json({
         success: true,
