@@ -15,6 +15,9 @@ import {
   Maximize2,
   Award,
   Sparkles,
+  Store,
+  BadgeCheck,
+  CircleDashed,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -26,7 +29,11 @@ import AdminSidebar from "./AdminSidebar";
 // API URL
 // =====================================================
 
-const API_URL = "https://api.inkconvention.com";
+const API_URL = import.meta.env.DEV
+  ? ""
+  : String(import.meta.env.VITE_API_URL || "https://api.inkconvention.com")
+      .trim()
+      .replace(/\/$/, "");
 
 const apiFetch = async (path, options = {}) => {
   const controller = new AbortController();
@@ -229,6 +236,15 @@ const normalizeDirectoryArtist = (source = {}) => ({
   paymentStatus: String(source.paymentStatus || source.payment?.status || "")
     .trim()
     .toLowerCase(),
+  claimed: Boolean(
+    source.claimed ||
+    source.phoneVerified ||
+    source.updatedByOwner ||
+    source.ownerVerified,
+  ),
+  claimedAt: source.claimedAt || "",
+  phoneVerified: Boolean(source.phoneVerified),
+  updatedByOwner: Boolean(source.updatedByOwner),
   profileImage: source.profileImage || source.image || source.photo || "",
   updatedAt: source.updatedAt || source.createdAt || "",
 });
@@ -323,15 +339,19 @@ function Dashboard() {
 
   const [clientCount, setClientCount] = useState(0);
 
+  const [stallBookings, setStallBookings] = useState([]);
+
+  const [stallError, setStallError] = useState("");
+
   const [directoryArtists, setDirectoryArtists] = useState([]);
 
   const [membershipError, setMembershipError] = useState("");
 
   // Directory membership filter:
   // basic = FREE / no paid plan
-  // pro = SILVER ₹1,499
+  // pro = SILVER ₹1,999
   // verified = GOLD ₹2,999
-  const [membershipFilter, setMembershipFilter] = useState("basic");
+  const [membershipFilter, setMembershipFilter] = useState("basic-claimed");
 
   const [loading, setLoading] = useState(true);
 
@@ -446,15 +466,27 @@ function Dashboard() {
 
   const fetchClientCount = useCallback(async () => {
     try {
-      const response = await apiFetch("/api/admin/clients");
+      const response = await apiFetch("/api/clients");
 
       const data = await getJson(response);
 
-      if (response.ok && data.success && Array.isArray(data.clients)) {
-        setClientCount(data.clients.length);
-      } else {
-        setClientCount(0);
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Failed to load clients.",
+        );
       }
+
+      const clients = Array.isArray(data)
+        ? data
+        : Array.isArray(data.clients)
+          ? data.clients
+          : Array.isArray(data.users)
+            ? data.users
+            : [];
+
+      setClientCount(clients.length);
+
+      console.log("✅ CLIENTS LOADED:", clients.length);
     } catch (error) {
       console.error("Client count error:", error);
 
@@ -470,17 +502,41 @@ function Dashboard() {
     setMembershipError("");
 
     try {
-      const response = await apiFetch("/api/artists?limit=500");
+      const PAGE_SIZE = 1000;
+      const allArtists = [];
 
-      const data = await getJson(response);
+      let page = 1;
+      let totalPages = 1;
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || data.error || "Failed to load directory memberships.",
+      do {
+        const response = await apiFetch(
+          `/api/admin/tattoo-studios?page=${page}&limit=${PAGE_SIZE}`,
         );
-      }
 
-      const members = getDirectoryArtistsArray(data)
+        const data = await getJson(response);
+
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+              data.error ||
+              "Failed to load directory memberships.",
+          );
+        }
+
+        const pageArtists = getDirectoryArtistsArray(data);
+
+        allArtists.push(...pageArtists);
+
+        totalPages = Math.max(1, Number(data?.pagination?.totalPages || 1));
+
+        console.log(
+          `✅ DASHBOARD DIRECTORY PAGE ${page}/${totalPages}: ${pageArtists.length}`,
+        );
+
+        page += 1;
+      } while (page <= totalPages);
+
+      const members = allArtists
         .map((artist) => normalizeDirectoryArtist(artist))
         .filter((artist) => {
           // FREE / BASIC:
@@ -504,12 +560,51 @@ function Dashboard() {
         });
 
       setDirectoryArtists(members);
+
+      console.log("✅ TOTAL DIRECTORY ARTISTS IN DASHBOARD:", members.length);
     } catch (error) {
       console.error("Membership fetch error:", error);
       setDirectoryArtists([]);
       setMembershipError(
         error.message || "Could not load Free, Silver and Gold artists.",
       );
+    }
+  }, []);
+
+  // ===================================================
+  // FETCH STALL BOOKINGS
+  // ===================================================
+
+  const fetchStallBookings = useCallback(async () => {
+    setStallError("");
+
+    try {
+      const response = await apiFetch("/api/stall-bookings");
+
+      const data = await getJson(response);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Failed to load stall bookings.",
+        );
+      }
+
+      const bookings = Array.isArray(data)
+        ? data
+        : Array.isArray(data.bookings)
+          ? data.bookings
+          : Array.isArray(data.stalls)
+            ? data.stalls
+            : [];
+
+      setStallBookings(bookings);
+
+      console.log("✅ STALL BOOKINGS LOADED:", bookings.length);
+    } catch (error) {
+      console.error("Stall booking fetch error:", error);
+
+      setStallBookings([]);
+      setStallError(error.message || "Could not load stall bookings.");
     }
   }, []);
 
@@ -522,13 +617,18 @@ function Dashboard() {
     setDashboardError("");
 
     try {
-      await Promise.all([fetchUsers(), fetchClientCount(), fetchMemberships()]);
+      await Promise.all([
+        fetchUsers(),
+        fetchClientCount(),
+        fetchMemberships(),
+        fetchStallBookings(),
+      ]);
     } catch (error) {
       setDashboardError(error.message || "Could not load dashboard.");
     } finally {
       setLoading(false);
     }
-  }, [fetchUsers, fetchClientCount, fetchMemberships]);
+  }, [fetchUsers, fetchClientCount, fetchMemberships, fetchStallBookings]);
 
   // ===================================================
   // INITIAL LOAD
@@ -810,8 +910,12 @@ function Dashboard() {
     0,
   );
 
-  const freeMembers = directoryArtists.filter(
-    (artist) => artist.plan === "basic",
+  const freeClaimedMembers = directoryArtists.filter(
+    (artist) => artist.plan === "basic" && artist.claimed,
+  );
+
+  const freeUnclaimedMembers = directoryArtists.filter(
+    (artist) => artist.plan === "basic" && !artist.claimed,
   );
 
   const silverMembers = directoryArtists.filter(
@@ -835,21 +939,32 @@ function Dashboard() {
       : membershipFilter === "pro"
         ? {
             title: "Silver Pro",
-            price: "₹1,499",
+            price: "₹1,999",
             members: silverMembers,
             tone: "silver",
             icon: <Award size={18} />,
             description:
-              "Artists who have taken only the ₹1,499 Silver Pro plan.",
+              "Artists who have taken only the ₹1,999 Silver Pro plan.",
           }
-        : {
-            title: "Free / Basic",
-            price: "₹0",
-            members: freeMembers,
-            tone: "basic",
-            icon: <Sparkles size={18} />,
-            description: "Artists who have not taken Silver or Gold.",
-          };
+        : membershipFilter === "basic-unclaimed"
+          ? {
+              title: "Free Unclaimed",
+              price: "₹0",
+              members: freeUnclaimedMembers,
+              tone: "unclaimed",
+              icon: <CircleDashed size={18} />,
+              description:
+                "Imported Free profiles that have not yet been claimed by their owner.",
+            }
+          : {
+              title: "Free Claimed",
+              price: "₹0",
+              members: freeClaimedMembers,
+              tone: "claimed",
+              icon: <BadgeCheck size={18} />,
+              description:
+                "Free profiles whose owner has successfully claimed and verified the profile.",
+            };
 
   // ===================================================
   // DASHBOARD
@@ -861,6 +976,7 @@ function Dashboard() {
         onLogout={handleLogout}
         tattooCount={submissions.length}
         clientCount={clientCount}
+        stallCount={stallBookings.length}
       />
 
       <main className="flex-1 lg:pl-72 py-10 px-4 sm:px-8 lg:px-12">
@@ -921,7 +1037,7 @@ function Dashboard() {
               STATS
           ========================================== */}
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
             <DashboardStat label="Tattoo Entries" value={submissions.length} />
 
             <DashboardStat label="Media Files" value={totalMedia} highlight />
@@ -929,13 +1045,25 @@ function Dashboard() {
             <DashboardStat label="Clients" value={clientCount} />
 
             <DashboardStat
-              label="Free / Basic"
-              value={freeMembers.length}
-              tone="basic"
+              label="Stall Bookings"
+              value={stallBookings.length}
+              highlight
             />
 
             <DashboardStat
-              label="Silver Pro ₹1,499"
+              label="Free Claimed"
+              value={freeClaimedMembers.length}
+              tone="claimed"
+            />
+
+            <DashboardStat
+              label="Free Unclaimed"
+              value={freeUnclaimedMembers.length}
+              tone="unclaimed"
+            />
+
+            <DashboardStat
+              label="Silver Pro ₹1,999"
               value={silverMembers.length}
               tone="silver"
             />
@@ -950,6 +1078,142 @@ function Dashboard() {
           </div>
 
           {/* ==========================================
+              STALL BOOKINGS
+          ========================================== */}
+
+          <section className="space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#a855f7]">
+                  Stall Reservations
+                </p>
+
+                <h2 className="text-2xl sm:text-3xl font-black mt-2">
+                  Latest Stall Bookings
+                </h2>
+
+                <p className="text-xs sm:text-sm text-gray-600 mt-2">
+                  Paid stall reservations saved in MongoDB.
+                </p>
+              </div>
+
+              <Link
+                to="/admin/stalls"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-mono uppercase tracking-wider"
+              >
+                <Store size={14} />
+                View All Stalls
+              </Link>
+            </div>
+
+            {stallError && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
+                {stallError}
+              </div>
+            )}
+
+            {stallBookings.length === 0 ? (
+              <div className="bg-[#0b0b0f] border border-white/10 rounded-3xl px-5 py-12 text-center">
+                <Store size={36} className="mx-auto text-gray-700" />
+
+                <h3 className="text-lg font-bold mt-4">
+                  No Stall Bookings Yet
+                </h3>
+
+                <p className="text-gray-500 text-sm mt-2">
+                  New paid stall bookings will appear here automatically.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {stallBookings.slice(0, 6).map((booking, index) => {
+                  const studioName =
+                    booking.studioName ||
+                    booking.brandName ||
+                    booking.company ||
+                    "Unnamed Studio";
+
+                  const ownerName =
+                    booking.ownerName ||
+                    booking.fullName ||
+                    booking.name ||
+                    "Unknown";
+
+                  const paymentStatus = String(
+                    booking.paymentStatus || "paid",
+                  ).toUpperCase();
+
+                  const bookingStatus = String(
+                    booking.status || booking.bookingStatus || "CONFIRMED",
+                  ).toUpperCase();
+
+                  const advanceAmount =
+                    Number(
+                      booking.advanceAmount ||
+                        booking.paidAmount ||
+                        booking.amount,
+                    ) || 1499;
+
+                  return (
+                    <div
+                      key={booking._id || booking.id || index}
+                      className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-5"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-[9px] font-mono uppercase tracking-widest text-[#a855f7]">
+                            {booking.packageName ||
+                              booking.stallType ||
+                              `${booking.duration || 1} Day Stall`}
+                          </p>
+
+                          <h3 className="text-lg font-black mt-1 truncate">
+                            {studioName}
+                          </h3>
+
+                          <p className="text-xs text-gray-500 mt-1 truncate">
+                            {ownerName}
+                          </p>
+                        </div>
+
+                        <span className="shrink-0 px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-[8px] font-black">
+                          {paymentStatus}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mt-4">
+                        <CardInfo
+                          label="City"
+                          value={booking.expoCity || booking.city || "N/A"}
+                        />
+
+                        <CardInfo
+                          label="Advance"
+                          value={`₹${advanceAmount.toLocaleString("en-IN")}`}
+                        />
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-3">
+                        <span className="text-[9px] font-mono uppercase tracking-widest text-gray-600">
+                          {bookingStatus}
+                        </span>
+
+                        <span className="text-[9px] text-gray-600">
+                          {booking.createdAt
+                            ? new Date(booking.createdAt).toLocaleDateString(
+                                "en-IN",
+                              )
+                            : ""}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* ==========================================
               DIRECTORY MEMBERSHIPS
           ========================================== */}
 
@@ -961,11 +1225,12 @@ function Dashboard() {
                 </p>
 
                 <h2 className="text-2xl sm:text-3xl font-black mt-2">
-                  Free, Silver & Gold Artists
+                  Free Claimed, Free Unclaimed, Silver & Gold
                 </h2>
 
                 <p className="text-xs sm:text-sm text-gray-600 mt-2">
-                  Free = no Silver/Gold plan • Silver = ₹1,499 only • Gold =
+                  Free Claimed = owner verified profile • Free Unclaimed =
+                  imported profile not claimed yet • Silver = ₹1,999 • Gold =
                   ₹2,999
                 </p>
               </div>
@@ -982,24 +1247,33 @@ function Dashboard() {
             )}
 
             {/* ==========================================
-                3 FILTER BUTTONS
+                4 MEMBERSHIP / CLAIM FILTER BUTTONS
             ========================================== */}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
               <MembershipFilterButton
-                active={membershipFilter === "basic"}
-                onClick={() => setMembershipFilter("basic")}
-                title="FREE / BASIC"
-                subtitle="No Silver or Gold"
-                count={freeMembers.length}
-                tone="basic"
+                active={membershipFilter === "basic-claimed"}
+                onClick={() => setMembershipFilter("basic-claimed")}
+                title="FREE CLAIMED"
+                subtitle="Owner verified"
+                count={freeClaimedMembers.length}
+                tone="claimed"
+              />
+
+              <MembershipFilterButton
+                active={membershipFilter === "basic-unclaimed"}
+                onClick={() => setMembershipFilter("basic-unclaimed")}
+                title="FREE UNCLAIMED"
+                subtitle="Not claimed yet"
+                count={freeUnclaimedMembers.length}
+                tone="unclaimed"
               />
 
               <MembershipFilterButton
                 active={membershipFilter === "pro"}
                 onClick={() => setMembershipFilter("pro")}
                 title="SILVER PRO"
-                subtitle="₹1,499 Plan"
+                subtitle="₹1,999 Plan"
                 count={silverMembers.length}
                 tone="silver"
               />
@@ -1190,24 +1464,32 @@ function Dashboard() {
 
 function DashboardStat({ label, value, highlight = false, tone = "default" }) {
   const borderClass =
-    tone === "basic"
-      ? "border-purple-400/15 bg-purple-500/[0.02]"
-      : tone === "silver"
-        ? "border-slate-300/20 bg-slate-300/[0.025]"
-        : tone === "gold"
-          ? "border-amber-300/20 bg-amber-400/[0.025]"
-          : "border-white/10 bg-[#0b0b0f]";
+    tone === "claimed"
+      ? "border-emerald-400/20 bg-emerald-500/[0.025]"
+      : tone === "unclaimed"
+        ? "border-purple-400/15 bg-purple-500/[0.02]"
+        : tone === "basic"
+          ? "border-purple-400/15 bg-purple-500/[0.02]"
+          : tone === "silver"
+            ? "border-slate-300/20 bg-slate-300/[0.025]"
+            : tone === "gold"
+              ? "border-amber-300/20 bg-amber-400/[0.025]"
+              : "border-white/10 bg-[#0b0b0f]";
 
   const valueClass =
-    tone === "basic"
-      ? "text-purple-300"
-      : tone === "silver"
-        ? "text-slate-200"
-        : tone === "gold"
-          ? "text-amber-300"
-          : highlight
-            ? "text-[#a855f7]"
-            : "text-white";
+    tone === "claimed"
+      ? "text-emerald-300"
+      : tone === "unclaimed"
+        ? "text-purple-300"
+        : tone === "basic"
+          ? "text-purple-300"
+          : tone === "silver"
+            ? "text-slate-200"
+            : tone === "gold"
+              ? "text-amber-300"
+              : highlight
+                ? "text-[#a855f7]"
+                : "text-white";
 
   return (
     <div className={`border rounded-2xl p-5 sm:p-6 ${borderClass}`}>
@@ -1243,9 +1525,13 @@ function MembershipFilterButton({
         ? active
           ? "border-slate-200/50 bg-slate-200/10 text-white shadow-[0_0_30px_rgba(226,232,240,0.06)]"
           : "border-slate-300/15 bg-slate-300/[0.02] text-slate-300"
-        : active
-          ? "border-purple-400/50 bg-purple-500/10 text-purple-200 shadow-[0_0_30px_rgba(168,85,247,0.08)]"
-          : "border-purple-400/15 bg-purple-500/[0.02] text-purple-300";
+        : tone === "claimed"
+          ? active
+            ? "border-emerald-300/50 bg-emerald-400/10 text-emerald-200 shadow-[0_0_30px_rgba(52,211,153,0.08)]"
+            : "border-emerald-300/15 bg-emerald-400/[0.02] text-emerald-300"
+          : active
+            ? "border-purple-400/50 bg-purple-500/10 text-purple-200 shadow-[0_0_30px_rgba(168,85,247,0.08)]"
+            : "border-purple-400/15 bg-purple-500/[0.02] text-purple-300";
 
   return (
     <button
@@ -1284,25 +1570,32 @@ function MembershipTierPanel({
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
-  const isBasic = tone === "basic";
+  const isClaimed = tone === "claimed";
+  const isUnclaimed = tone === "unclaimed";
 
   const outerClass = isGold
     ? "border-amber-300/25 bg-amber-400/[0.025]"
     : isSilver
       ? "border-slate-300/20 bg-slate-300/[0.02]"
-      : "border-purple-400/20 bg-purple-500/[0.02]";
+      : isClaimed
+        ? "border-emerald-300/25 bg-emerald-400/[0.025]"
+        : "border-purple-400/20 bg-purple-500/[0.02]";
 
   const accentClass = isGold
     ? "text-amber-300"
     : isSilver
       ? "text-slate-200"
-      : "text-purple-300";
+      : isClaimed
+        ? "text-emerald-300"
+        : "text-purple-300";
 
   const badgeClass = isGold
     ? "border-amber-300/20 bg-amber-400/10 text-amber-300"
     : isSilver
       ? "border-slate-300/20 bg-slate-300/10 text-slate-200"
-      : "border-purple-400/20 bg-purple-500/10 text-purple-300";
+      : isClaimed
+        ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-300"
+        : "border-purple-400/20 bg-purple-500/10 text-purple-300";
 
   return (
     <div className={`rounded-3xl border p-5 sm:p-6 ${outerClass}`}>
@@ -1339,9 +1632,11 @@ function MembershipTierPanel({
           </p>
 
           <p className="text-xs text-gray-600 mt-1">
-            {isBasic
-              ? "Artists without Silver or Gold will appear here."
-              : "Paid members will appear here automatically."}
+            {isClaimed
+              ? "Free profiles appear here after the owner successfully claims the profile."
+              : isUnclaimed
+                ? "Imported Free profiles stay here until their owner claims them."
+                : "Paid members will appear here automatically."}
           </p>
         </div>
       ) : (
@@ -1362,20 +1657,31 @@ function MembershipTierPanel({
 function MembershipMemberRow({ artist, tone }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
+  const isClaimed = tone === "claimed";
 
   const accentClass = isGold
     ? "text-amber-300"
     : isSilver
       ? "text-slate-200"
-      : "text-purple-300";
+      : isClaimed
+        ? "text-emerald-300"
+        : "text-purple-300";
 
   const dotClass = isGold
     ? "bg-amber-400"
     : isSilver
       ? "bg-slate-300"
-      : "bg-purple-400";
+      : isClaimed
+        ? "bg-emerald-400"
+        : "bg-purple-400";
 
-  const planLabel = isGold ? "GOLD" : isSilver ? "SILVER" : "FREE";
+  const planLabel = isGold
+    ? "GOLD"
+    : isSilver
+      ? "SILVER"
+      : isClaimed
+        ? "FREE CLAIMED"
+        : "FREE UNCLAIMED";
 
   return (
     <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">
@@ -1423,14 +1729,18 @@ function MembershipMemberRow({ artist, tone }) {
               ? "text-amber-300"
               : isSilver
                 ? "text-slate-200"
-                : "text-purple-300"
+                : isClaimed
+                  ? "text-emerald-300"
+                  : "text-purple-300"
           }`}
         >
           {isGold
             ? artist.paymentStatus || "GOLD ACTIVE"
             : isSilver
               ? artist.paymentStatus || "SILVER ACTIVE"
-              : "FREE / BASIC"}
+              : isClaimed
+                ? "CLAIMED FREE"
+                : "UNCLAIMED"}
         </span>
       </div>
     </div>

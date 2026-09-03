@@ -46,6 +46,7 @@ import Clients from "./admin/Clients";
 import AdminStalls from "./admin/AdminStalls";
 import AdminArtists from "./admin/Adminartists";
 import AdminLogin from "./admin/Login";
+import ArtistBookings from "./admin/ArtistBookings";
 
 /*
   DO NOT import AdminSidebar here.
@@ -182,7 +183,7 @@ function Layout() {
               ARTISTS DIRECTORY
 
               BASIC
-              ₹1,499 SILVER
+              ₹1,999 SILVER
               ₹2,999 GOLD
           ================================================= */}
 
@@ -410,7 +411,7 @@ function Layout() {
 
               Shows:
               BASIC artists
-              ₹1,499 SILVER / PRO
+              ₹1,999 SILVER / PRO
               ₹2,999 GOLD / VERIFIED
 
               URL:
@@ -422,6 +423,25 @@ function Layout() {
             element={
               <PageTransition>
                 <AdminArtists />
+              </PageTransition>
+            }
+          />
+
+          {/* =================================================
+              ADMIN ARTIST BOOKINGS
+
+              FILE:
+              src/admin/ArtistBookings.jsx
+
+              URL:
+              /admin/artist-bookings
+          ================================================= */}
+
+          <Route
+            path="/admin/artist-bookings"
+            element={
+              <PageTransition>
+                <ArtistBookings />
               </PageTransition>
             }
           />

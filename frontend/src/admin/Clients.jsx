@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   Users,
@@ -16,13 +16,29 @@ import AdminSidebar from "./AdminSidebar";
 
 import "../Style/AdminClients.css";
 
+/* =========================================================
+   API BASE
+
+   DEV:
+   /api goes through Vite proxy -> 127.0.0.1:5000
+
+   PRODUCTION:
+   VITE_API_URL or https://api.inkconvention.com
+========================================================= */
+
+const API_URL = import.meta.env.DEV
+  ? ""
+  : String(import.meta.env.VITE_API_URL || "https://api.inkconvention.com")
+      .trim()
+      .replace(/\/$/, "");
+
 export default function Clients() {
   // =====================================================
   // AUTH
   // =====================================================
 
   const [isAuthenticated, setIsAuthenticated] = useState(
-    sessionStorage.getItem("isLoggedIn") === "true"
+    sessionStorage.getItem("isLoggedIn") === "true",
   );
 
   // =====================================================
@@ -32,14 +48,6 @@ export default function Clients() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-
-  // =====================================================
-  // API
-  // =====================================================
-
-  const API_URL = "http://localhost:5000";
-  // For local testing, use:
-  // const API_URL = "http://localhost:5000";
 
   // =====================================================
   // LOGOUT
@@ -56,43 +64,47 @@ export default function Clients() {
   // FETCH CLIENTS
   // =====================================================
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       setLoading(true);
 
       console.log("🔄 Fetching clients...");
 
-      const response = await fetch(
-        `${API_URL}/api/clients`
-      );
+      const response = await fetch(`${API_URL}/api/clients`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      });
+
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(
-          `Server returned ${response.status}`
-        );
+        throw new Error(data?.message || `Server returned ${response.status}`);
       }
-
-      const data = await response.json();
 
       console.log("📋 Clients response:", data);
 
-      if (data.success) {
-        setClients(data.clients || []);
-      } else {
-        console.error(
-          "Failed to fetch clients:",
-          data.message
-        );
-      }
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.clients)
+          ? data.clients
+          : Array.isArray(data?.users)
+            ? data.users
+            : Array.isArray(data?.data)
+              ? data.data
+              : [];
+
+      setClients(list);
     } catch (error) {
-      console.error(
-        "❌ Client fetch error:",
-        error
-      );
+      console.error("❌ Client fetch error:", error);
+      setClients([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // =====================================================
   // DELETE CLIENT
@@ -100,54 +112,37 @@ export default function Clients() {
 
   const handleDelete = async (id) => {
     const confirmed = window.confirm(
-      "Are you sure you want to permanently delete this client?"
+      "Are you sure you want to permanently delete this client?",
     );
 
     if (!confirmed) return;
 
     try {
-      console.log(
-        "🗑️ Deleting client:",
-        id
-      );
+      console.log("🗑️ Deleting client:", id);
 
-      const response = await fetch(
-        `${API_URL}/api/clients/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const response = await fetch(`${API_URL}/api/clients/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
-      console.log(
-        "Delete response:",
-        data
-      );
+      console.log("Delete response:", data);
 
       if (response.ok && data.success) {
-        setClients((prev) =>
-          prev.filter(
-            (client) => client._id !== id
-          )
-        );
+        setClients((prev) => prev.filter((client) => client._id !== id));
 
         alert("Client deleted successfully.");
       } else {
-        alert(
-          data.message ||
-            "Failed to delete client."
-        );
+        alert(data.message || "Failed to delete client.");
       }
     } catch (error) {
-      console.error(
-        "❌ Delete client error:",
-        error
-      );
+      console.error("❌ Delete client error:", error);
 
-      alert(
-        "Network error. Could not delete client."
-      );
+      alert("Network error. Could not delete client.");
     }
   };
 
@@ -156,43 +151,40 @@ export default function Clients() {
   // =====================================================
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchClients();
+    if (!isAuthenticated) {
+      return undefined;
     }
-  }, [isAuthenticated]);
+
+    /*
+      Defer the initial request by one tick.
+
+      fetchClients() updates React state (loading/clients), so calling it
+      directly in the effect body triggers react-hooks/set-state-in-effect.
+    */
+    const timer = window.setTimeout(() => {
+      void fetchClients();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isAuthenticated, fetchClients]);
 
   // =====================================================
   // SEARCH
   // =====================================================
 
-  const filteredClients = clients.filter(
-    (client) => {
-      const searchText =
-        search.toLowerCase().trim();
+  const filteredClients = clients.filter((client) => {
+    const searchText = search.toLowerCase().trim();
 
-      return (
-        client.name
-          ?.toLowerCase()
-          .includes(searchText) ||
-
-        client.gmail
-          ?.toLowerCase()
-          .includes(searchText) ||
-
-        client.phone
-          ?.toLowerCase()
-          .includes(searchText) ||
-
-        client.city
-          ?.toLowerCase()
-          .includes(searchText) ||
-
-        client.state
-          ?.toLowerCase()
-          .includes(searchText)
-      );
-    }
-  );
+    return (
+      client.name?.toLowerCase().includes(searchText) ||
+      client.gmail?.toLowerCase().includes(searchText) ||
+      client.phone?.toLowerCase().includes(searchText) ||
+      client.city?.toLowerCase().includes(searchText) ||
+      client.state?.toLowerCase().includes(searchText)
+    );
+  });
 
   // =====================================================
   // LOGIN REQUIRED
@@ -202,23 +194,16 @@ export default function Clients() {
     return (
       <div className="min-h-screen bg-[#08080a] text-white flex items-center justify-center">
         <div className="text-center">
-
-          <Users
-            size={40}
-            className="text-[#a855f7] mx-auto mb-5"
-          />
+          <Users size={40} className="text-[#a855f7] mx-auto mb-5" />
 
           <h1 className="text-2xl font-black">
             Admin Authentication Required
-            <span className="text-[#a855f7]">
-              .
-            </span>
+            <span className="text-[#a855f7]">.</span>
           </h1>
 
           <p className="mt-2 text-gray-500 font-mono text-xs">
             Please login to access client records.
           </p>
-
         </div>
       </div>
     );
@@ -230,7 +215,6 @@ export default function Clients() {
 
   return (
     <div className="admin-clients-page">
-
       {/* =================================================
           SIDEBAR
       ================================================= */}
@@ -246,17 +230,13 @@ export default function Clients() {
       ================================================= */}
 
       <main className="flex-1 lg:pl-72">
-
         <div className="admin-clients-content">
-
           {/* =================================================
               HEADER
           ================================================= */}
 
           <header className="clients-header">
-
             <div className="clients-header-left">
-
               <div className="clients-eyebrow">
                 <Users size={13} />
                 Client Registry
@@ -268,34 +248,22 @@ export default function Clients() {
               </h1>
 
               <p className="clients-description">
-                Manage client registrations and view
-                contact information collected through
-                the Ink Convention experience.
+                Manage client registrations and view contact information
+                collected through the Ink Convention experience.
               </p>
-
             </div>
 
             {/* REFRESH */}
 
             <button
-              onClick={fetchClients}
+              onClick={() => void fetchClients()}
               className="clients-refresh"
               disabled={loading}
             >
-              <RefreshCw
-                size={15}
-                className={
-                  loading
-                    ? "animate-spin"
-                    : ""
-                }
-              />
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
 
-              {loading
-                ? "Loading"
-                : "Refresh"}
+              {loading ? "Loading" : "Refresh"}
             </button>
-
           </header>
 
           {/* =================================================
@@ -303,53 +271,32 @@ export default function Clients() {
           ================================================= */}
 
           <div className="clients-stats">
-
             {/* TOTAL CLIENTS */}
 
             <div className="clients-stat-card">
+              <p className="clients-stat-label">Total Clients</p>
 
-              <p className="clients-stat-label">
-                Total Clients
-              </p>
-
-              <p className="clients-stat-number">
-                {clients.length}
-              </p>
-
+              <p className="clients-stat-number">{clients.length}</p>
             </div>
 
             {/* REGISTRATION */}
 
             <div className="clients-stat-card">
-
-              <p className="clients-stat-label">
-                Registration
-              </p>
+              <p className="clients-stat-label">Registration</p>
 
               <div className="clients-stat-active">
-
                 <span className="clients-stat-active-dot" />
-
                 ACTIVE
-
               </div>
-
             </div>
 
             {/* SERVER */}
 
             <div className="clients-stat-card">
+              <p className="clients-stat-label">Server</p>
 
-              <p className="clients-stat-label">
-                Server
-              </p>
-
-              <p className="clients-stat-online">
-                ONLINE
-              </p>
-
+              <p className="clients-stat-online">ONLINE</p>
             </div>
-
           </div>
 
           {/* =================================================
@@ -357,26 +304,17 @@ export default function Clients() {
           ================================================= */}
 
           <div className="clients-toolbar">
-
             <div className="clients-search">
-
-              <Search
-                size={17}
-                className="clients-search-icon"
-              />
+              <Search size={17} className="clients-search-icon" />
 
               <input
                 type="text"
                 value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, email, phone, city..."
                 className="clients-search-input"
               />
-
             </div>
-
           </div>
 
           {/* =================================================
@@ -384,25 +322,15 @@ export default function Clients() {
           ================================================= */}
 
           <section>
-
             {/* SECTION HEADER */}
 
             <div className="clients-section-header">
-
               <div className="clients-section-title">
-
                 <Users size={15} />
-
-                Client Registrations
-                {" "}
-                ({filteredClients.length})
-
+                Client Registrations ({filteredClients.length})
               </div>
 
-              <span className="clients-live">
-                Live Registry
-              </span>
-
+              <span className="clients-live">Live Registry</span>
             </div>
 
             {/* =================================================
@@ -410,9 +338,7 @@ export default function Clients() {
             ================================================= */}
 
             {loading ? (
-
               <div className="clients-loading">
-
                 <RefreshCw
                   size={30}
                   className="mx-auto text-[#a855f7] animate-spin"
@@ -421,211 +347,134 @@ export default function Clients() {
                 <p className="clients-loading-text">
                   Loading client registry...
                 </p>
-
               </div>
-
             ) : filteredClients.length === 0 ? (
-
               /* =================================================
                   EMPTY
               ================================================= */
 
               <div className="clients-empty">
-
                 <div className="clients-empty-icon">
-
                   <Users size={28} />
-
                 </div>
 
                 <h3 className="clients-empty-title">
-
-                  {search
-                    ? "No Matching Clients"
-                    : "No Clients Yet"}
+                  {search ? "No Matching Clients" : "No Clients Yet"}
 
                   <span>.</span>
-
                 </h3>
 
                 <p className="clients-empty-text">
-
                   {search
                     ? "Try a different search."
                     : "Client registrations will appear here."}
-
                 </p>
-
               </div>
-
             ) : (
-
               /* =================================================
                  CLIENT CARDS
               ================================================= */
 
               <div className="clients-grid">
+                {filteredClients.map((client) => (
+                  <div key={client._id} className="client-card">
+                    {/* PURPLE GLOW */}
 
-                {filteredClients.map(
-                  (client) => (
+                    <div className="absolute -top-24 -right-24 w-52 h-52 bg-[#a855f7]/10 rounded-full blur-[80px] opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none" />
 
-                    <div
-                      key={client._id}
-                      className="client-card"
-                    >
-
-                      {/* PURPLE GLOW */}
-
-                      <div className="absolute -top-24 -right-24 w-52 h-52 bg-[#a855f7]/10 rounded-full blur-[80px] opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none" />
-
-                      {/* =================================================
+                    {/* =================================================
                           CARD HEADER
                       ================================================= */}
 
-                      <div className="client-card-header">
-
-                        <div className="client-profile">
-
-                          <div className="client-avatar">
-
-                            <UserRound
-                              size={20}
-                            />
-
-                          </div>
-
-                          <div className="client-name-wrapper">
-
-                            <h3 className="client-name">
-                              {client.name ||
-                                "Unnamed Client"}
-                            </h3>
-
-                            <p className="client-type">
-                              Client
-                            </p>
-
-                          </div>
-
+                    <div className="client-card-header">
+                      <div className="client-profile">
+                        <div className="client-avatar">
+                          <UserRound size={20} />
                         </div>
 
-                        {/* DELETE */}
+                        <div className="client-name-wrapper">
+                          <h3 className="client-name">
+                            {client.name || "Unnamed Client"}
+                          </h3>
 
-                        <button
-                          onClick={() =>
-                            handleDelete(
-                              client._id
-                            )
-                          }
-                          className="client-delete"
-                          title="Delete Client"
-                        >
-                          <Trash2
-                            size={15}
-                          />
-                        </button>
-
+                          <p className="client-type">Client</p>
+                        </div>
                       </div>
 
-                      {/* =================================================
+                      {/* DELETE */}
+
+                      <button
+                        onClick={() => handleDelete(client._id)}
+                        className="client-delete"
+                        title="Delete Client"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+
+                    {/* =================================================
                           DETAILS
                       ================================================= */}
 
-                      <div className="client-details">
+                    <div className="client-details">
+                      {/* EMAIL */}
 
-                        {/* EMAIL */}
+                      <div className="client-detail">
+                        <Mail size={14} />
 
-                        <div className="client-detail">
-
-                          <Mail size={14} />
-
-                          <span>
-                            {client.gmail ||
-                              "No email"}
-                          </span>
-
-                        </div>
-
-                        {/* PHONE */}
-
-                        <div className="client-detail">
-
-                          <Phone size={14} />
-
-                          <span>
-                            {client.phone ||
-                              "No phone"}
-                          </span>
-
-                        </div>
-
-                        {/* LOCATION */}
-
-                        <div className="client-detail">
-
-                          <MapPin size={14} />
-
-                          <span>
-
-                            {client.city ||
-                              "No city"}
-
-                            {client.state
-                              ? `, ${client.state}`
-                              : ""}
-
-                          </span>
-
-                        </div>
-
+                        <span>{client.gmail || "No email"}</span>
                       </div>
 
-                      {/* =================================================
+                      {/* PHONE */}
+
+                      <div className="client-detail">
+                        <Phone size={14} />
+
+                        <span>{client.phone || "No phone"}</span>
+                      </div>
+
+                      {/* LOCATION */}
+
+                      <div className="client-detail">
+                        <MapPin size={14} />
+
+                        <span>
+                          {client.city || "No city"}
+
+                          {client.state ? `, ${client.state}` : ""}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* =================================================
                           CARD FOOTER
                       ================================================= */}
 
-                      <div className="client-card-footer">
+                    <div className="client-card-footer">
+                      <span className="client-date">
+                        <Clock size={11} />
 
-                        <span className="client-date">
+                        {client.createdAt
+                          ? new Date(client.createdAt).toLocaleDateString(
+                              "en-IN",
+                              {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              },
+                            )
+                          : "Unknown"}
+                      </span>
 
-                          <Clock size={11} />
-
-                          {client.createdAt
-                            ? new Date(
-                                client.createdAt
-                              ).toLocaleDateString(
-                                "en-IN",
-                                {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                }
-                              )
-                            : "Unknown"}
-
-                        </span>
-
-                        <span className="client-status">
-                          Registered
-                        </span>
-
-                      </div>
-
+                      <span className="client-status">Registered</span>
                     </div>
-
-                  )
-                )}
-
+                  </div>
+                ))}
               </div>
-
             )}
-
           </section>
-
         </div>
-
       </main>
-
     </div>
   );
 }

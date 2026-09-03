@@ -15,6 +15,8 @@ import {
   Maximize2,
   Award,
   Sparkles,
+  BadgeCheck,
+  CircleDashed,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -26,7 +28,11 @@ import AdminSidebar from "./AdminSidebar";
 // API URL
 // =====================================================
 
-const API_URL = "https://api.inkconvention.com";
+const API_URL = import.meta.env.DEV
+  ? ""
+  : String(import.meta.env.VITE_API_URL || "https://api.inkconvention.com")
+      .trim()
+      .replace(/\/$/, "");
 
 const apiFetch = async (path, options = {}) => {
   const controller = new AbortController();
@@ -230,6 +236,20 @@ const normalizeDirectoryArtist = (source = {}) => ({
     .trim()
     .toLowerCase(),
   profileImage: source.profileImage || source.image || source.photo || "",
+
+  // A FREE profile is considered claimed if the owner has completed
+  // the claim / OTP ownership flow.
+  claimed: Boolean(
+    source.claimed ||
+    source.phoneVerified ||
+    source.updatedByOwner ||
+    source.ownerVerified,
+  ),
+
+  phoneVerified: Boolean(source.phoneVerified),
+  updatedByOwner: Boolean(source.updatedByOwner),
+  ownerVerified: Boolean(source.ownerVerified),
+
   updatedAt: source.updatedAt || source.createdAt || "",
 });
 
@@ -296,7 +316,7 @@ function MediaImage({ media, alt = "Tattoo image", className = "" }) {
 // DASHBOARD
 // =====================================================
 
-function Dashboard() {
+function AdminArtists() {
   // ===================================================
   // AUTH
   // ===================================================
@@ -328,10 +348,11 @@ function Dashboard() {
   const [membershipError, setMembershipError] = useState("");
 
   // Directory membership filter:
-  // basic = FREE / no paid plan
-  // pro = SILVER ₹1,499
-  // verified = GOLD ₹2,999
-  const [membershipFilter, setMembershipFilter] = useState("basic");
+  // basic-claimed   = FREE profile claimed by owner
+  // basic-unclaimed = imported FREE profile not claimed yet
+  // pro             = SILVER ₹1,999
+  // verified        = GOLD ₹2,999
+  const [membershipFilter, setMembershipFilter] = useState("basic-claimed");
 
   const [loading, setLoading] = useState(true);
 
@@ -446,15 +467,27 @@ function Dashboard() {
 
   const fetchClientCount = useCallback(async () => {
     try {
-      const response = await apiFetch("/api/admin/clients");
+      const response = await apiFetch("/api/clients");
 
       const data = await getJson(response);
 
-      if (response.ok && data.success && Array.isArray(data.clients)) {
-        setClientCount(data.clients.length);
-      } else {
-        setClientCount(0);
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Failed to load clients.",
+        );
       }
+
+      const clients = Array.isArray(data)
+        ? data
+        : Array.isArray(data.clients)
+          ? data.clients
+          : Array.isArray(data.users)
+            ? data.users
+            : [];
+
+      setClientCount(clients.length);
+
+      console.log("✅ CLIENTS LOADED:", clients.length);
     } catch (error) {
       console.error("Client count error:", error);
 
@@ -467,87 +500,78 @@ function Dashboard() {
   // ===================================================
 
   const fetchMemberships = useCallback(async () => {
-  setMembershipError("");
+    setMembershipError("");
 
-  try {
-    const PAGE_SIZE = 1000;
-    let page = 1;
-    let totalPages = 1;
-    const allArtists = [];
+    try {
+      const PAGE_SIZE = 1000;
+      const allArtists = [];
 
-    do {
-      const response = await apiFetch(
-        `/api/admin/tattoo-studios?page=${page}&limit=${PAGE_SIZE}`
-      );
+      let page = 1;
+      let totalPages = 1;
 
-      const data = await getJson(response);
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            data.error ||
-            "Failed to load directory memberships."
+      do {
+        const response = await apiFetch(
+          `/api/admin/tattoo-studios?page=${page}&limit=${PAGE_SIZE}`,
         );
-      }
 
-      const pageArtists = getDirectoryArtistsArray(data);
+        const data = await getJson(response);
 
-      allArtists.push(...pageArtists);
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+              data.error ||
+              "Failed to load directory memberships.",
+          );
+        }
 
-      totalPages = Math.max(
-        1,
-        Number(data?.pagination?.totalPages || 1)
+        const pageArtists = getDirectoryArtistsArray(data);
+
+        allArtists.push(...pageArtists);
+
+        totalPages = Math.max(1, Number(data?.pagination?.totalPages || 1));
+
+        console.log(
+          `✅ ADMIN ARTISTS DIRECTORY PAGE ${page}/${totalPages}: ${pageArtists.length}`,
+        );
+
+        page += 1;
+      } while (page <= totalPages);
+
+      const members = allArtists
+        .map((artist) => normalizeDirectoryArtist(artist))
+        .filter((artist) => {
+          // FREE / BASIC is always included.
+          if (artist.plan === "basic") {
+            return true;
+          }
+
+          // SILVER / GOLD only when membership is active/valid.
+          if (artist.plan === "pro" || artist.plan === "verified") {
+            return hasValidPaidStatus(artist);
+          }
+
+          return false;
+        })
+        .sort((first, second) => {
+          const firstTime = new Date(first.updatedAt || 0).getTime();
+          const secondTime = new Date(second.updatedAt || 0).getTime();
+
+          return secondTime - firstTime;
+        });
+
+      setDirectoryArtists(members);
+
+      console.log("✅ TOTAL DIRECTORY ARTISTS LOADED:", members.length);
+    } catch (error) {
+      console.error("Membership fetch error:", error);
+
+      setDirectoryArtists([]);
+
+      setMembershipError(
+        error.message || "Could not load Free, Silver and Gold artists.",
       );
-
-      page += 1;
-    } while (page <= totalPages);
-
-    const members = allArtists
-      .map((artist) => normalizeDirectoryArtist(artist))
-      .filter((artist) => {
-        // FREE / BASIC
-        if (artist.plan === "basic") {
-          return true;
-        }
-
-        // SILVER / GOLD
-        if (
-          artist.plan === "pro" ||
-          artist.plan === "verified"
-        ) {
-          return hasValidPaidStatus(artist);
-        }
-
-        return false;
-      })
-      .sort((first, second) => {
-        const firstTime = new Date(
-          first.updatedAt || 0
-        ).getTime();
-
-        const secondTime = new Date(
-          second.updatedAt || 0
-        ).getTime();
-
-        return secondTime - firstTime;
-      });
-
-    console.log(
-      `✅ TOTAL DIRECTORY ARTISTS LOADED: ${members.length}`
-    );
-
-    setDirectoryArtists(members);
-  } catch (error) {
-    console.error("Membership fetch error:", error);
-
-    setDirectoryArtists([]);
-
-    setMembershipError(
-      error.message ||
-        "Could not load Free, Silver and Gold artists."
-    );
-  }
-}, []);
+    }
+  }, []);
 
   // ===================================================
   // REFRESH DASHBOARD
@@ -571,9 +595,17 @@ function Dashboard() {
   // ===================================================
 
   useEffect(() => {
-    if (isAuthenticated) {
-      refreshDashboard();
+    if (!isAuthenticated) {
+      return undefined;
     }
+
+    const timer = window.setTimeout(() => {
+      void refreshDashboard();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [isAuthenticated, refreshDashboard]);
 
   // ===================================================
@@ -838,8 +870,12 @@ function Dashboard() {
     0,
   );
 
-  const freeMembers = directoryArtists.filter(
-    (artist) => artist.plan === "basic",
+  const freeClaimedMembers = directoryArtists.filter(
+    (artist) => artist.plan === "basic" && artist.claimed,
+  );
+
+  const freeUnclaimedMembers = directoryArtists.filter(
+    (artist) => artist.plan === "basic" && !artist.claimed,
   );
 
   const silverMembers = directoryArtists.filter(
@@ -863,21 +899,31 @@ function Dashboard() {
       : membershipFilter === "pro"
         ? {
             title: "Silver Pro",
-            price: "₹1,499",
+            price: "₹1,999",
             members: silverMembers,
             tone: "silver",
             icon: <Award size={18} />,
-            description:
-              "Artists who have taken only the ₹1,499 Silver Pro plan.",
+            description: "Artists who have taken the ₹1,999 Silver Pro plan.",
           }
-        : {
-            title: "Free / Basic",
-            price: "₹0",
-            members: freeMembers,
-            tone: "basic",
-            icon: <Sparkles size={18} />,
-            description: "Artists who have not taken Silver or Gold.",
-          };
+        : membershipFilter === "basic-unclaimed"
+          ? {
+              title: "Free Unclaimed",
+              price: "₹0",
+              members: freeUnclaimedMembers,
+              tone: "unclaimed",
+              icon: <CircleDashed size={18} />,
+              description:
+                "Imported Free profiles that have not been claimed by their owner yet.",
+            }
+          : {
+              title: "Free Claimed",
+              price: "₹0",
+              members: freeClaimedMembers,
+              tone: "claimed",
+              icon: <BadgeCheck size={18} />,
+              description:
+                "Free profiles whose owner has claimed and verified their profile.",
+            };
 
   // ===================================================
   // DASHBOARD
@@ -949,7 +995,7 @@ function Dashboard() {
               STATS
           ========================================== */}
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
             <DashboardStat label="Tattoo Entries" value={submissions.length} />
 
             <DashboardStat label="Media Files" value={totalMedia} highlight />
@@ -957,13 +1003,19 @@ function Dashboard() {
             <DashboardStat label="Clients" value={clientCount} />
 
             <DashboardStat
-              label="Free / Basic"
-              value={freeMembers.length}
-              tone="basic"
+              label="Free Claimed"
+              value={freeClaimedMembers.length}
+              tone="claimed"
             />
 
             <DashboardStat
-              label="Silver Pro ₹1,499"
+              label="Free Unclaimed"
+              value={freeUnclaimedMembers.length}
+              tone="unclaimed"
+            />
+
+            <DashboardStat
+              label="Silver Pro ₹1,999"
               value={silverMembers.length}
               tone="silver"
             />
@@ -989,12 +1041,12 @@ function Dashboard() {
                 </p>
 
                 <h2 className="text-2xl sm:text-3xl font-black mt-2">
-                  Free, Silver & Gold Artists
+                  Free Claimed, Free Unclaimed, Silver & Gold Artists
                 </h2>
 
                 <p className="text-xs sm:text-sm text-gray-600 mt-2">
-                  Free = no Silver/Gold plan • Silver = ₹1,499 only • Gold =
-                  ₹2,999
+                  Free profiles are separated by ownership claim status • Silver
+                  = ₹1,999 • Gold = ₹2,999
                 </p>
               </div>
 
@@ -1010,24 +1062,33 @@ function Dashboard() {
             )}
 
             {/* ==========================================
-                3 FILTER BUTTONS
+                4 ARTIST GROUP FILTERS
             ========================================== */}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
               <MembershipFilterButton
-                active={membershipFilter === "basic"}
-                onClick={() => setMembershipFilter("basic")}
-                title="FREE / BASIC"
-                subtitle="No Silver or Gold"
-                count={freeMembers.length}
-                tone="basic"
+                active={membershipFilter === "basic-claimed"}
+                onClick={() => setMembershipFilter("basic-claimed")}
+                title="FREE CLAIMED"
+                subtitle="Owner claimed profile"
+                count={freeClaimedMembers.length}
+                tone="claimed"
+              />
+
+              <MembershipFilterButton
+                active={membershipFilter === "basic-unclaimed"}
+                onClick={() => setMembershipFilter("basic-unclaimed")}
+                title="FREE UNCLAIMED"
+                subtitle="Not claimed yet"
+                count={freeUnclaimedMembers.length}
+                tone="unclaimed"
               />
 
               <MembershipFilterButton
                 active={membershipFilter === "pro"}
                 onClick={() => setMembershipFilter("pro")}
                 title="SILVER PRO"
-                subtitle="₹1,499 Plan"
+                subtitle="₹1,999 Plan"
                 count={silverMembers.length}
                 tone="silver"
               />
@@ -1218,24 +1279,32 @@ function Dashboard() {
 
 function DashboardStat({ label, value, highlight = false, tone = "default" }) {
   const borderClass =
-    tone === "basic"
-      ? "border-purple-400/15 bg-purple-500/[0.02]"
-      : tone === "silver"
-        ? "border-slate-300/20 bg-slate-300/[0.025]"
-        : tone === "gold"
-          ? "border-amber-300/20 bg-amber-400/[0.025]"
-          : "border-white/10 bg-[#0b0b0f]";
+    tone === "claimed"
+      ? "border-emerald-400/20 bg-emerald-500/[0.025]"
+      : tone === "unclaimed"
+        ? "border-purple-400/15 bg-purple-500/[0.02]"
+        : tone === "basic"
+          ? "border-purple-400/15 bg-purple-500/[0.02]"
+          : tone === "silver"
+            ? "border-slate-300/20 bg-slate-300/[0.025]"
+            : tone === "gold"
+              ? "border-amber-300/20 bg-amber-400/[0.025]"
+              : "border-white/10 bg-[#0b0b0f]";
 
   const valueClass =
-    tone === "basic"
-      ? "text-purple-300"
-      : tone === "silver"
-        ? "text-slate-200"
-        : tone === "gold"
-          ? "text-amber-300"
-          : highlight
-            ? "text-[#a855f7]"
-            : "text-white";
+    tone === "claimed"
+      ? "text-emerald-300"
+      : tone === "unclaimed"
+        ? "text-purple-300"
+        : tone === "basic"
+          ? "text-purple-300"
+          : tone === "silver"
+            ? "text-slate-200"
+            : tone === "gold"
+              ? "text-amber-300"
+              : highlight
+                ? "text-[#a855f7]"
+                : "text-white";
 
   return (
     <div className={`border rounded-2xl p-5 sm:p-6 ${borderClass}`}>
@@ -1271,9 +1340,13 @@ function MembershipFilterButton({
         ? active
           ? "border-slate-200/50 bg-slate-200/10 text-white shadow-[0_0_30px_rgba(226,232,240,0.06)]"
           : "border-slate-300/15 bg-slate-300/[0.02] text-slate-300"
-        : active
-          ? "border-purple-400/50 bg-purple-500/10 text-purple-200 shadow-[0_0_30px_rgba(168,85,247,0.08)]"
-          : "border-purple-400/15 bg-purple-500/[0.02] text-purple-300";
+        : tone === "claimed"
+          ? active
+            ? "border-emerald-300/50 bg-emerald-400/10 text-emerald-200"
+            : "border-emerald-300/15 bg-emerald-400/[0.02] text-emerald-300"
+          : active
+            ? "border-purple-400/50 bg-purple-500/10 text-purple-200"
+            : "border-purple-400/15 bg-purple-500/[0.02] text-purple-300";
 
   return (
     <button
@@ -1312,25 +1385,33 @@ function MembershipTierPanel({
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
-  const isBasic = tone === "basic";
+  const isClaimed = tone === "claimed";
+  const isUnclaimed = tone === "unclaimed";
+  const isBasic = tone === "basic" || isClaimed || isUnclaimed;
 
   const outerClass = isGold
     ? "border-amber-300/25 bg-amber-400/[0.025]"
     : isSilver
       ? "border-slate-300/20 bg-slate-300/[0.02]"
-      : "border-purple-400/20 bg-purple-500/[0.02]";
+      : isClaimed
+        ? "border-emerald-300/20 bg-emerald-400/[0.02]"
+        : "border-purple-400/20 bg-purple-500/[0.02]";
 
   const accentClass = isGold
     ? "text-amber-300"
     : isSilver
       ? "text-slate-200"
-      : "text-purple-300";
+      : isClaimed
+        ? "text-emerald-300"
+        : "text-purple-300";
 
   const badgeClass = isGold
     ? "border-amber-300/20 bg-amber-400/10 text-amber-300"
     : isSilver
       ? "border-slate-300/20 bg-slate-300/10 text-slate-200"
-      : "border-purple-400/20 bg-purple-500/10 text-purple-300";
+      : isClaimed
+        ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-300"
+        : "border-purple-400/20 bg-purple-500/10 text-purple-300";
 
   return (
     <div className={`rounded-3xl border p-5 sm:p-6 ${outerClass}`}>
@@ -1367,9 +1448,13 @@ function MembershipTierPanel({
           </p>
 
           <p className="text-xs text-gray-600 mt-1">
-            {isBasic
-              ? "Artists without Silver or Gold will appear here."
-              : "Paid members will appear here automatically."}
+            {isClaimed
+              ? "Claimed Free artists will appear here automatically."
+              : isUnclaimed
+                ? "Unclaimed imported Free profiles will appear here."
+                : isBasic
+                  ? "Free artists will appear here."
+                  : "Paid members will appear here automatically."}
           </p>
         </div>
       ) : (
@@ -1390,20 +1475,31 @@ function MembershipTierPanel({
 function MembershipMemberRow({ artist, tone }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
+  const isClaimed = tone === "claimed";
 
   const accentClass = isGold
     ? "text-amber-300"
     : isSilver
       ? "text-slate-200"
-      : "text-purple-300";
+      : isClaimed
+        ? "text-emerald-300"
+        : "text-purple-300";
 
   const dotClass = isGold
     ? "bg-amber-400"
     : isSilver
       ? "bg-slate-300"
-      : "bg-purple-400";
+      : isClaimed
+        ? "bg-emerald-400"
+        : "bg-purple-400";
 
-  const planLabel = isGold ? "GOLD" : isSilver ? "SILVER" : "FREE";
+  const planLabel = isGold
+    ? "GOLD"
+    : isSilver
+      ? "SILVER"
+      : isClaimed
+        ? "FREE CLAIMED"
+        : "FREE UNCLAIMED";
 
   return (
     <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">
@@ -1451,14 +1547,18 @@ function MembershipMemberRow({ artist, tone }) {
               ? "text-amber-300"
               : isSilver
                 ? "text-slate-200"
-                : "text-purple-300"
+                : isClaimed
+                  ? "text-emerald-300"
+                  : "text-purple-300"
           }`}
         >
           {isGold
             ? artist.paymentStatus || "GOLD ACTIVE"
             : isSilver
               ? artist.paymentStatus || "SILVER ACTIVE"
-              : "FREE / BASIC"}
+              : isClaimed
+                ? "CLAIMED"
+                : "UNCLAIMED"}
         </span>
       </div>
     </div>
@@ -1803,4 +1903,4 @@ function UserDetailsModal({ user, onClose, onDelete }) {
   );
 }
 
-export default Dashboard;
+export default AdminArtists;

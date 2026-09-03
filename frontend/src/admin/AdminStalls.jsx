@@ -1,13 +1,24 @@
 import React from "react";
-import { Search, Store, X, User, Sparkles, RefreshCw } from "lucide-react";
+import {
+  Search,
+  Store,
+  X,
+  User,
+  Sparkles,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import AdminSidebar from "./AdminSidebar";
 
 // =====================================================
 // API
 // =====================================================
 
-const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:5000"
-).replace(/\/$/, "");
+const API_URL = import.meta.env.DEV
+  ? ""
+  : String(import.meta.env.VITE_API_URL || "https://api.inkconvention.com")
+      .trim()
+      .replace(/\/$/, "");
 
 // =====================================================
 // STATUS
@@ -187,6 +198,10 @@ export default function AdminStalls() {
 
   const [error, setError] = React.useState("");
 
+  const [successMessage, setSuccessMessage] = React.useState("");
+
+  const [deletingId, setDeletingId] = React.useState("");
+
   // ===================================================
   // LOAD BOOKINGS FROM MONGODB
   // ===================================================
@@ -213,6 +228,9 @@ export default function AdminStalls() {
       });
 
       const data = await response.json().catch(() => ({}));
+
+      console.log("✅ ADMIN GET HTTP STATUS:", response.status);
+      console.log("✅ ADMIN GET BODY:", data);
 
       console.log("======================================");
       console.log("📦 STALL API RESPONSE");
@@ -425,11 +443,105 @@ export default function AdminStalls() {
   };
 
   // ===================================================
+  // LOGOUT
+  // ===================================================
+
+  const handleLogout = () => {
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("admin");
+    sessionStorage.removeItem("adminToken");
+
+    window.location.href = "/admin/login";
+  };
+
+  // ===================================================
+  // DELETE BOOKING
+  // ===================================================
+
+  const deleteBooking = async (booking) => {
+    const bookingId = booking?.id;
+
+    if (!bookingId) {
+      window.alert("Booking ID is missing.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the stall booking for ${
+        booking?.studioName || "this studio"
+      }?\n\nThis will permanently remove it from MongoDB.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingId(String(bookingId));
+      setError("");
+      setSuccessMessage("");
+
+      console.log("🗑️ DELETING STALL BOOKING:", bookingId);
+
+      const response = await fetch(
+        `${API_URL}/api/stall-bookings/${bookingId}`,
+        {
+          method: "DELETE",
+
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      console.log("🗑️ DELETE RESPONSE:", data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || `Delete failed with HTTP ${response.status}`,
+        );
+      }
+
+      setBookings((previous) =>
+        previous.filter((item) => String(item.id) !== String(bookingId)),
+      );
+
+      setSelectedBooking((previous) => {
+        if (previous && String(previous.id) === String(bookingId)) {
+          return null;
+        }
+
+        return previous;
+      });
+
+      setSuccessMessage(
+        `${booking?.studioName || "Booking"} deleted successfully.`,
+      );
+
+      window.setTimeout(() => {
+        setSuccessMessage("");
+      }, 3500);
+    } catch (deleteError) {
+      console.error("❌ DELETE STALL BOOKING ERROR:", deleteError);
+
+      setError(deleteError.message || "Unable to delete stall booking.");
+
+      window.alert(deleteError.message || "Unable to delete stall booking.");
+    } finally {
+      setDeletingId("");
+    }
+  };
+
+  // ===================================================
   // UI
   // ===================================================
 
   return (
     <>
+      <AdminSidebar onLogout={handleLogout} stallCount={bookings.length} />
+
       <main
         className="
           min-h-screen
@@ -479,7 +591,7 @@ export default function AdminStalls() {
               <p className="text-[9px] font-mono text-gray-700">API</p>
 
               <p className="mt-1 text-[10px] font-mono text-purple-400 break-all">
-                {API_URL}/api/stall-bookings
+                {API_URL || "VITE PROXY"}/api/stall-bookings
               </p>
             </div>
           </section>
@@ -605,6 +717,25 @@ export default function AdminStalls() {
             </button>
           </section>
 
+          {/* SUCCESS */}
+
+          {successMessage && (
+            <section
+              className="
+                mt-5
+                border
+                border-emerald-500/30
+                bg-emerald-500/10
+                rounded-2xl
+                p-5
+              "
+            >
+              <p className="text-xs font-black text-emerald-400">
+                {successMessage}
+              </p>
+            </section>
+          )}
+
           {/* ERROR */}
 
           {error && (
@@ -681,7 +812,8 @@ export default function AdminStalls() {
                 </h2>
 
                 <p className="mt-2 text-xs text-gray-600">
-                  Backend loaded {bookings.length} booking(s).
+                  API returned {bookings.length} booking(s) from
+                  /api/stall-bookings.
                 </p>
 
                 <button
@@ -711,6 +843,10 @@ export default function AdminStalls() {
                     onStatusChange={(status) => {
                       void updateStatus(booking.id, status);
                     }}
+                    onDelete={() => {
+                      void deleteBooking(booking);
+                    }}
+                    deleting={String(deletingId) === String(booking.id)}
                   />
                 ))}
               </div>
@@ -728,6 +864,10 @@ export default function AdminStalls() {
           onStatusChange={(status) => {
             void updateStatus(selectedBooking.id, status);
           }}
+          onDelete={() => {
+            void deleteBooking(selectedBooking);
+          }}
+          deleting={String(deletingId) === String(selectedBooking.id)}
         />
       )}
     </>
@@ -738,7 +878,7 @@ export default function AdminStalls() {
 // BOOKING CARD
 // =====================================================
 
-function BookingCard({ booking, onOpen, onStatusChange }) {
+function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
   const isPaid = booking.paymentStatus === "PAID" || booking.status === "PAID";
 
   return (
@@ -865,6 +1005,45 @@ function BookingCard({ booking, onOpen, onStatusChange }) {
         >
           VIEW DETAILS
         </button>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className="
+            bg-red-500/10
+            hover:bg-red-500
+            border
+            border-red-500/30
+            text-red-400
+            hover:text-white
+            rounded-xl
+            px-5
+            py-3
+            text-[9px]
+            font-black
+            tracking-widest
+            transition
+            flex
+            items-center
+            justify-center
+            gap-2
+            disabled:opacity-50
+            disabled:cursor-not-allowed
+          "
+        >
+          {deleting ? (
+            <>
+              <RefreshCw size={13} className="animate-spin" />
+              DELETING
+            </>
+          ) : (
+            <>
+              <Trash2 size={13} />
+              DELETE
+            </>
+          )}
+        </button>
       </div>
     </article>
   );
@@ -874,7 +1053,13 @@ function BookingCard({ booking, onOpen, onStatusChange }) {
 // BOOKING MODAL
 // =====================================================
 
-function BookingModal({ booking, onClose, onStatusChange }) {
+function BookingModal({
+  booking,
+  onClose,
+  onStatusChange,
+  onDelete,
+  deleting,
+}) {
   React.useEffect(() => {
     document.body.style.overflow = "hidden";
 
@@ -1087,6 +1272,70 @@ function BookingModal({ booking, onClose, onStatusChange }) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="mt-5 flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            className="
+              flex-1
+              border
+              border-red-500/30
+              bg-red-500/10
+              hover:bg-red-500
+              text-red-400
+              hover:text-white
+              rounded-xl
+              px-5
+              py-4
+              text-[9px]
+              font-black
+              tracking-widest
+              transition
+              flex
+              items-center
+              justify-center
+              gap-2
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+            "
+          >
+            {deleting ? (
+              <>
+                <RefreshCw size={14} className="animate-spin" />
+                DELETING BOOKING
+              </>
+            ) : (
+              <>
+                <Trash2 size={14} />
+                DELETE BOOKING
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="
+              flex-1
+              border
+              border-white/10
+              bg-white/[0.04]
+              hover:bg-white
+              hover:text-black
+              rounded-xl
+              px-5
+              py-4
+              text-[9px]
+              font-black
+              tracking-widest
+              transition
+            "
+          >
+            CLOSE
+          </button>
         </div>
       </div>
     </div>

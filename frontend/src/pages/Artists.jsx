@@ -19,6 +19,7 @@ import gsap from "gsap";
 
 const ARTISTS_PER_PAGE = 20;
 const AUTO_ROTATE_MS = 4000;
+const MIN_SEARCH_CHARACTERS = 3;
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const INITIAL_DAY_INDEX = Math.floor(Date.now() / ONE_DAY);
@@ -976,8 +977,6 @@ export default function Artists() {
 
   const [artists, setArtists] = React.useState([]);
 
-  const [directoryTotal, setDirectoryTotal] = React.useState(0);
-
   const [loading, setLoading] = React.useState(true);
 
   const [error, setError] = React.useState("");
@@ -1072,12 +1071,8 @@ export default function Artists() {
 
       let currentPage = 1;
 
-      let totalPages = 1;
-
-      let backendTotal = 0;
-
       try {
-        do {
+        while (!cancelled && !controller.signal.aborted) {
           const params = new URLSearchParams({
             page: String(currentPage),
 
@@ -1118,19 +1113,17 @@ export default function Artists() {
 
           allResults.push(...currentResults);
 
-          backendTotal = Math.max(
-            backendTotal,
-            Number(data?.pagination?.total || data?.total || allResults.length),
+          const responseTotalPages = Math.max(
+            1,
+            Number(data?.pagination?.totalPages || 1),
           );
 
-          totalPages = Math.max(1, Number(data?.pagination?.totalPages || 1));
+          if (currentPage >= responseTotalPages) {
+            break;
+          }
 
           currentPage += 1;
-        } while (
-          currentPage <= totalPages &&
-          !cancelled &&
-          !controller.signal.aborted
-        );
+        }
 
         if (cancelled || controller.signal.aborted) {
           return;
@@ -1139,8 +1132,6 @@ export default function Artists() {
         const normalized = allResults.map(normalizeArtist);
 
         setArtists(sortArtists(normalized));
-
-        setDirectoryTotal(Math.max(backendTotal, normalized.length));
       } catch (requestError) {
         if (requestError?.name === "AbortError") {
           return;
@@ -1150,8 +1141,6 @@ export default function Artists() {
 
         if (!cancelled) {
           setArtists([]);
-
-          setDirectoryTotal(0);
 
           setError("Unable to load artists. Please try again.");
         }
@@ -1205,12 +1194,26 @@ export default function Artists() {
      SEARCH
   ======================================================= */
 
-  const filteredArtists = React.useMemo(() => {
-    const query = safeText(searchQuery).trim();
+  const normalizedSearchQuery = safeText(searchQuery).trim();
 
-    if (!query) {
+  const isSearchActive = normalizedSearchQuery.length >= MIN_SEARCH_CHARACTERS;
+
+  const filteredArtists = React.useMemo(() => {
+    /*
+      Search begins ONLY after 3 characters.
+
+      Example:
+      A   -> normal directory
+      Ah  -> normal directory
+      Ahm -> matching artists such as Ahmed / Ahmad / Ahmer
+
+      Search uses only the public fields allowed by the artist's plan.
+    */
+    if (!isSearchActive) {
       return sortArtists(artists);
     }
+
+    const query = normalizedSearchQuery;
 
     const results = artists.filter((artist) => {
       const plan = normalizePlan(artist.plan);
@@ -1235,7 +1238,7 @@ export default function Artists() {
     });
 
     return sortArtists(results);
-  }, [artists, searchQuery]);
+  }, [artists, isSearchActive, normalizedSearchQuery]);
 
   /* =======================================================
      PAGINATION
@@ -1264,11 +1267,15 @@ export default function Artists() {
   );
 
   React.useEffect(() => {
-    setPage(0);
-  }, [searchQuery, selectedCity]);
+    /*
+      IMPORTANT:
+      AUTO ROTATION STOPS while a real search is active.
 
-  React.useEffect(() => {
-    if (totalArtistPages <= 1 || selectedArtist) {
+      The user can manually use NEXT / PREVIOUS to move
+      through search-result pages without the page changing
+      automatically every 4 seconds.
+    */
+    if (isSearchActive || totalArtistPages <= 1 || selectedArtist) {
       return undefined;
     }
 
@@ -1277,7 +1284,7 @@ export default function Artists() {
     }, AUTO_ROTATE_MS);
 
     return () => window.clearInterval(timer);
-  }, [totalArtistPages, selectedArtist]);
+  }, [isSearchActive, totalArtistPages, selectedArtist]);
 
   React.useEffect(() => {
     if (!artistGridRef.current || visibleArtists.length === 0) {
@@ -1601,8 +1608,11 @@ export default function Artists() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="SEARCH PUBLIC ARTIST DETAILS..."
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                    setPage(0);
+                  }}
+                  placeholder="TYPE AT LEAST 3 LETTERS TO SEARCH..."
                   className="
                     w-full
                     rounded-xl
@@ -1640,7 +1650,10 @@ export default function Artists() {
 
                 <select
                   value={selectedCity}
-                  onChange={(event) => setSelectedCity(event.target.value)}
+                  onChange={(event) => {
+                    setSelectedCity(event.target.value);
+                    setPage(0);
+                  }}
                   className="
                     w-full
                     appearance-none
@@ -1668,6 +1681,53 @@ export default function Artists() {
               </div>
             </div>
 
+            {normalizedSearchQuery.length > 0 &&
+              normalizedSearchQuery.length < MIN_SEARCH_CHARACTERS && (
+                <div
+                  className="
+                    mt-3
+                    rounded-xl
+                    border
+                    border-purple-500/20
+                    bg-purple-500/[0.05]
+                    px-4
+                    py-3
+                    text-[9px]
+                    font-mono
+                    tracking-wider
+                    text-purple-300
+                  "
+                >
+                  TYPE {MIN_SEARCH_CHARACTERS - normalizedSearchQuery.length}{" "}
+                  MORE{" "}
+                  {MIN_SEARCH_CHARACTERS - normalizedSearchQuery.length === 1
+                    ? "LETTER"
+                    : "LETTERS"}{" "}
+                  TO SEARCH ARTISTS
+                </div>
+              )}
+
+            {isSearchActive && (
+              <div
+                className="
+                  mt-3
+                  rounded-xl
+                  border
+                  border-emerald-500/20
+                  bg-emerald-500/[0.05]
+                  px-4
+                  py-3
+                  text-[9px]
+                  font-mono
+                  tracking-wider
+                  text-emerald-300
+                "
+              >
+                SEARCH ACTIVE • {filteredArtists.length} MATCHES • AUTO PAGE
+                CHANGE OFF
+              </div>
+            )}
+
             <div
               className="
                 mt-4
@@ -1680,7 +1740,10 @@ export default function Artists() {
                 <button
                   key={city}
                   type="button"
-                  onClick={() => setSelectedCity(city)}
+                  onClick={() => {
+                    setSelectedCity(city);
+                    setPage(0);
+                  }}
                   className={`
                       shrink-0
                       rounded-full
@@ -1754,7 +1817,7 @@ export default function Artists() {
                     uppercase
                   "
                 >
-                  {searchQuery
+                  {isSearchActive
                     ? "SEARCH RESULTS"
                     : selectedCity !== "ALL"
                       ? `${selectedCity} ARTISTS`
@@ -1813,7 +1876,8 @@ export default function Artists() {
                     >
                       SHOWING {firstVisibleArtistNumber}-
                       {lastVisibleArtistNumber} / PAGE {safeArtistPage + 1} OF{" "}
-                      {totalArtistPages} / AUTO 4S
+                      {totalArtistPages} /{" "}
+                      {isSearchActive ? "SEARCH • AUTO OFF" : "AUTO 4S"}
                     </span>
                   )}
                 </div>
@@ -1962,7 +2026,6 @@ export default function Artists() {
                         <ArtistRow
                           key={artist.id || `${artist.name}-${globalIndex}`}
                           artist={artist}
-                          index={globalIndex}
                           isNew={
                             String(location.state?.newArtistId || "") ===
                             String(artist.id || "")
@@ -3293,7 +3356,7 @@ function CommunityMapBox({
    ARTIST ROW
 ========================================================= */
 
-function ArtistRow({ artist, index, isNew, onClick }) {
+function ArtistRow({ artist, isNew, onClick }) {
   const a = normalizeArtist(artist);
 
   const isBasic = a.plan === "basic";

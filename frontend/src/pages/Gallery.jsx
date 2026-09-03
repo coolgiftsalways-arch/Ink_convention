@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import {
   Sparkles,
   X,
-  Search,
   MapPin,
   Share2,
   Heart,
@@ -251,8 +250,6 @@ const FILTERS = ["ALL", "PHOTOS", "VIDEOS"];
 function Gallery() {
   const [activeFilter, setActiveFilter] = useState("ALL");
 
-  const [searchQuery, setSearchQuery] = useState("");
-
   const [selectedItem, setSelectedItem] = useState(null);
 
   /* =========================================================
@@ -269,21 +266,9 @@ function Gallery() {
         return false;
       }
 
-      if (searchQuery.trim()) {
-        const query = searchQuery.trim().toLowerCase();
-
-        const text = [item.artistName, item.title, item.category, item.city]
-          .join(" ")
-          .toLowerCase();
-
-        if (!text.includes(query)) {
-          return false;
-        }
-      }
-
       return true;
     });
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter]);
 
   return (
     <div
@@ -729,11 +714,11 @@ function Gallery() {
 
             {/* =================================================
                 BUTTON 2
-                COMPETITION
+                BOOK ARTISTS
             ================================================= */}
 
             <Link
-              to="/upload"
+              to="/artists"
               className="
                 group
 
@@ -830,7 +815,7 @@ function Gallery() {
                     mb-1
                   "
                 >
-                  02 / COMPETE
+                  02 / DISCOVER
                 </p>
 
                 <p
@@ -846,7 +831,7 @@ function Gallery() {
                     uppercase
                   "
                 >
-                  GO TO THE COMPETITION
+                  BOOK ARTISTS
                 </p>
               </div>
 
@@ -907,7 +892,7 @@ function Gallery() {
                   uppercase
                 "
               >
-                COMPETE
+                BOOK ARTISTS
               </p>
 
               <p
@@ -921,7 +906,8 @@ function Gallery() {
                   leading-relaxed
                 "
               >
-                Submit your tattoo work and enter the competition.
+                Discover tattoo artists and book the right artist for your next
+                tattoo.
               </p>
             </div>
 
@@ -1112,217 +1098,90 @@ function Gallery() {
       </section>
 
       {/* =====================================================
-          SEARCH + FILTER
+          FILTERS
       ===================================================== */}
 
       <section
         className="
           max-w-7xl
-
           mx-auto
-
           px-5
           sm:px-8
           lg:px-12
-
           mb-12
         "
       >
         <div
           className="
-            bg-[#0b0b0f]
-
-            border
-            border-white/5
-
-            rounded-2xl
-
-            p-4
-            sm:p-5
-
             flex
-
-            flex-col
-            lg:flex-row
-
-            lg:items-center
-
-            justify-between
-
-            gap-5
+            items-center
+            justify-end
+            gap-2
+            flex-wrap
           "
         >
-          {/* SEARCH */}
+          {FILTERS.map((filter) => {
+            const active = activeFilter === filter;
 
-          <div
-            className="
-              relative
-
-              w-full
-
-              lg:max-w-[420px]
-            "
-          >
-            <Search
-              size={17}
-              className="
-                absolute
-
-                left-4
-
-                top-1/2
-
-                -translate-y-1/2
-
-                text-gray-500
-              "
-            />
-
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="SEARCH GALLERY..."
-              className="
-                w-full
-
-                bg-black/50
-
-                border
-                border-white/10
-
-                focus:border-[#a855f7]
-
-                rounded-xl
-
-                pl-12
-                pr-4
-
-                py-4
-
-                text-white
-
-                text-xs
-
-                font-mono
-
-                outline-none
-
-                placeholder:text-gray-700
-
-                transition
-              "
-            />
-          </div>
-
-          {/* =================================================
-              ALL / PHOTOS / VIDEOS
-          ================================================= */}
-
-          <div
-            className="
-              grid
-
-              grid-cols-3
-
-              gap-2
-
-              w-full
-
-              lg:w-auto
-            "
-          >
-            {FILTERS.map((filter) => {
-              const active = activeFilter === filter;
-
-              return (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setActiveFilter(filter)}
-                  className={`
-                      min-w-0
-
-                      lg:min-w-[125px]
-
-                      px-3
-                      sm:px-6
-
-                      py-3.5
-
-                      rounded-xl
-
-                      text-[9px]
-                      sm:text-xs
-
-                      font-black
-
-                      font-mono
-
-                      uppercase
-
-                      tracking-[0.12em]
-
-                      transition-all
-
-                      duration-300
-
-                      ${
-                        active
-                          ? `
-                            bg-[#a855f7]
-
-                            text-white
-
-                            shadow-[0_0_25px_rgba(168,85,247,0.28)]
-                          `
-                          : `
-                            bg-white/[0.04]
-
-                            border
-                            border-white/[0.06]
-
-                            text-gray-500
-
-                            hover:text-white
-
-                            hover:bg-white/[0.08]
-                          `
-                      }
-                    `}
-                >
-                  {filter}
-                </button>
-              );
-            })}
-          </div>
+            return (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setActiveFilter(filter)}
+                className={`
+                  min-w-[105px]
+                  lg:min-w-[125px]
+                  px-3
+                  sm:px-6
+                  py-3.5
+                  rounded-xl
+                  text-[9px]
+                  sm:text-xs
+                  font-black
+                  font-mono
+                  uppercase
+                  tracking-[0.12em]
+                  transition-all
+                  duration-300
+                  ${
+                    active
+                      ? `
+                          bg-[#a855f7]
+                          text-white
+                          shadow-[0_0_25px_rgba(168,85,247,0.28)]
+                        `
+                      : `
+                          bg-white/[0.04]
+                          border
+                          border-white/[0.06]
+                          text-gray-500
+                          hover:text-white
+                          hover:bg-white/[0.08]
+                        `
+                  }
+                `}
+              >
+                {filter}
+              </button>
+            );
+          })}
         </div>
-
-        {/* RESULTS */}
 
         <div
           className="
             flex
-
             items-center
-
             justify-between
-
             mt-5
-
             px-1
           "
         >
           <p
             className="
               text-[9px]
-
               font-mono
-
               text-gray-600
-
               tracking-[0.15em]
-
               uppercase
             "
           >
@@ -1332,13 +1191,9 @@ function Gallery() {
           <p
             className="
               text-[9px]
-
               font-mono
-
               text-[#a855f7]
-
               tracking-[0.15em]
-
               uppercase
             "
           >
@@ -1388,11 +1243,10 @@ function Gallery() {
               text-center
             "
           >
-            <Search
+            <Sparkles
               size={40}
               className="
                 text-gray-700
-
                 mb-5
               "
             />

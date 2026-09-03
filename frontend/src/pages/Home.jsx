@@ -354,11 +354,11 @@ function Home() {
               </Link>
 
               {/* =============================================
-                  2. GO TO COMPETITION
+                  2. BOOK ARTISTS
               ============================================= */}
 
               <Link
-                to="/Upload"
+                to="/artists"
                 className="
                   group
                   relative
@@ -424,7 +424,7 @@ function Home() {
                     whitespace-nowrap
                   "
                 >
-                  ENTER COMPETITION
+                  BOOK ARTISTS
                 </span>
 
                 <ArrowRight
@@ -815,8 +815,8 @@ function Home() {
                 mt-5
               "
             >
-              Book an expo stall, enter the tattoo competition, or create your
-              artist directory profile for free.
+              Reserve an expo stall, book a tattoo artist, or claim your
+              lifetime-free artist profile.
             </p>
           </div>
 
@@ -833,6 +833,8 @@ function Home() {
             <article
               className="
                 group
+                flex
+                flex-col
                 relative
                 overflow-hidden
                 min-h-[460px]
@@ -908,14 +910,58 @@ function Home() {
                   mt-5
                 "
               >
-                Reserve space for your tattoo studio, artist setup, supplier or
-                brand at a three-day regional Ink Convention expo.
+                Reserve your space at an Ink Convention regional expo and put
+                your studio, setup or brand directly in front of the tattoo
+                community.
               </p>
 
-              <div className="space-y-3 mt-7">
+              {/* COMPACT STALL OFFER */}
+
+              <div
+                className="
+                  mt-5
+                  rounded-xl
+                  border
+                  border-white/15
+                  bg-white/[0.05]
+                  px-4
+                  py-3
+                "
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span
+                    className="
+                      text-[8px]
+                      font-mono
+                      font-black
+                      uppercase
+                      tracking-widest
+                      text-gray-400
+                    "
+                  >
+                    RESERVE YOUR STALL
+                  </span>
+
+                  <span className="text-sm font-black text-white">₹1,499</span>
+                </div>
+
+                <p
+                  className="
+                    mt-2
+                    text-[8px]
+                    font-mono
+                    uppercase
+                    tracking-wide
+                    text-gray-600
+                  "
+                >
+                  PAY ₹1,499 ADVANCE TO SECURE YOUR SPACE
+                </p>
+              </div>
+
+              <div className="space-y-2.5 mt-5">
                 <StepLine text="Choose your regional expo city" />
-                <StepLine text="Login to your booking account" />
-                <StepLine text="Select a stall package from ₹4,999" />
+                <StepLine text="Select your stall package" />
                 <StepLine text="Pay ₹1,499 advance to reserve" />
               </div>
 
@@ -923,7 +969,7 @@ function Home() {
                 to="/client-login"
                 state={{ redirectTo: "/stall" }}
                 className="
-                  mt-8
+                  mt-auto
                   w-full
                   bg-white
                   hover:bg-gray-200
@@ -942,7 +988,7 @@ function Home() {
                   transition-all
                 "
               >
-                BOOK A STALL
+                RESERVE YOUR STALL
                 <ArrowRight
                   size={15}
                   className="
@@ -953,11 +999,13 @@ function Home() {
               </Link>
             </article>
 
-            {/* 02 / COMPETITION */}
+            {/* 02 / BOOK ARTISTS */}
 
             <article
               className="
                 group
+                flex
+                flex-col
                 relative
                 overflow-hidden
                 min-h-[460px]
@@ -1014,7 +1062,7 @@ function Home() {
                   text-[#a855f7]
                 "
               >
-                02 / COMPETE
+                02 / DISCOVER
               </p>
 
               <h3
@@ -1025,7 +1073,7 @@ function Home() {
                   mt-3
                 "
               >
-                ENTER THE COMPETITION
+                BOOK TATTOO ARTISTS
               </h3>
 
               <p
@@ -1036,21 +1084,88 @@ function Home() {
                   mt-5
                 "
               >
-                Submit your tattoo work across seven competition categories and
-                compete for recognition, awards and Ink Convention rankings.
+                Browse tattoo artists by city and tattoo style, compare
+                profiles, and send a booking request directly to the artist you
+                want. Get an exclusive first-booking discount when you book
+                through Ink Convention.
               </p>
 
-              <div className="space-y-3 mt-7">
-                <StepLine text="Choose from 7 competition categories" accent />
-                <StepLine text="1 entry ₹999" accent />
-                <StepLine text="3 entries ₹1,499" accent />
-                <StepLine text="5 entries ₹1,999" accent />
+              {/* COMPACT FIRST BOOKING OFFER */}
+
+              <div
+                className="
+                  mt-5
+                  rounded-xl
+                  border
+                  border-[#a855f7]/30
+                  bg-[#a855f7]/10
+                  px-4
+                  py-3
+                "
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="
+                        text-[8px]
+                        font-mono
+                        font-black
+                        uppercase
+                        tracking-widest
+                        text-[#c084fc]
+                      "
+                    >
+                      FIRST BOOKING
+                    </span>
+
+                    <span className="text-sm font-black text-white">
+                      ₹2,000 OFF
+                    </span>
+                  </div>
+
+                  <span
+                    className="
+                      rounded-md
+                      bg-black/30
+                      border
+                      border-white/10
+                      px-2.5
+                      py-1
+                      text-[9px]
+                      font-black
+                      font-mono
+                      tracking-widest
+                      text-[#d8b4fe]
+                    "
+                  >
+                    INK2000
+                  </span>
+                </div>
+
+                <p
+                  className="
+                    mt-2
+                    text-[8px]
+                    font-mono
+                    uppercase
+                    tracking-wide
+                    text-gray-500
+                  "
+                >
+                  New clients • Min. booking ₹5,000 • T&amp;C apply
+                </p>
+              </div>
+
+              <div className="space-y-2.5 mt-5">
+                <StepLine text="Choose your tattoo style" accent />
+                <StepLine text="Find artists in your city" accent />
+                <StepLine text="Send your booking request" accent />
               </div>
 
               <Link
-                to="/Upload"
+                to="/artists"
                 className="
-                  mt-8
+                  mt-auto
                   w-full
                   bg-[#a855f7]
                   hover:bg-[#9333ea]
@@ -1069,7 +1184,7 @@ function Home() {
                   transition-all
                 "
               >
-                ENTER COMPETITION
+                BOOK ARTISTS
                 <ArrowRight
                   size={15}
                   className="
@@ -1085,6 +1200,8 @@ function Home() {
             <article
               className="
                 group
+                flex
+                flex-col
                 relative
                 overflow-hidden
                 min-h-[460px]
@@ -1162,21 +1279,64 @@ function Home() {
                   mt-5
                 "
               >
-                Create a lifetime free artist or studio listing and become
-                discoverable inside the Ink Convention directory.
+                Claim your artist or studio profile and keep your basic Ink
+                Convention directory listing active for life — completely free.
               </p>
 
-              <div className="space-y-3 mt-7">
-                <StepLine text="Lifetime Free directory listing" />
-                <StepLine text="Artist / studio name, city and state" />
-                <StepLine text="Contact information stays masked on Free" />
-                <StepLine text="Upgrade to Pro or Verified anytime" />
+              {/* COMPACT LIFETIME FREE OFFER */}
+
+              <div
+                className="
+                  mt-5
+                  rounded-xl
+                  border
+                  border-purple-500/30
+                  bg-purple-500/10
+                  px-4
+                  py-3
+                "
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span
+                    className="
+                      text-[8px]
+                      font-mono
+                      font-black
+                      uppercase
+                      tracking-widest
+                      text-purple-300
+                    "
+                  >
+                    LIFETIME FREE
+                  </span>
+
+                  <span className="text-sm font-black text-white">₹0</span>
+                </div>
+
+                <p
+                  className="
+                    mt-2
+                    text-[8px]
+                    font-mono
+                    uppercase
+                    tracking-wide
+                    text-gray-500
+                  "
+                >
+                  CLAIM YOUR PROFILE • NO MEMBERSHIP FEE
+                </p>
+              </div>
+
+              <div className="space-y-2.5 mt-5">
+                <StepLine text="Find and claim your existing profile" />
+                <StepLine text="Verify ownership with OTP" />
+                <StepLine text="Keep your basic listing free for life" />
               </div>
 
               <Link
                 to="/Enter"
                 className="
-                  mt-8
+                  mt-auto
                   w-full
                   border
                   border-[#a855f7]
@@ -1196,7 +1356,7 @@ function Home() {
                   transition-all
                 "
               >
-                JOIN DIRECTORY FREE
+                CLAIM YOUR PROFILE
                 <ArrowRight
                   size={15}
                   className="
@@ -1336,7 +1496,7 @@ function Home() {
                   text-sm
                 "
               >
-                TOP ARTISTS (DEMO)
+                TOP ARTISTS • PREVIEW
               </h3>
 
               <Star
@@ -1350,24 +1510,24 @@ function Home() {
             <div className="space-y-4">
               {[
                 {
-                  name: "Artist Name",
+                  name: "Ayaan Mirza",
                   pts: 984,
                 },
                 {
-                  name: "Artist Name",
-                  pts: 921,
+                  name: "Rhea D'Souza",
+                  pts: 947,
                 },
                 {
-                  name: "Artist Name",
-                  pts: 895,
+                  name: "Kabir Sethi",
+                  pts: 918,
                 },
                 {
-                  name: "Artist Name",
-                  pts: 861,
+                  name: "Meher Khan",
+                  pts: 889,
                 },
                 {
-                  name: "Artist Name",
-                  pts: 832,
+                  name: "Arjun Rao",
+                  pts: 864,
                 },
               ].map((artist, index) => (
                 <div
@@ -1431,208 +1591,7 @@ function Home() {
       </section>
 
       {/* =====================================================
-          5. ARTIST DISCOVERY
-      ===================================================== */}
-
-      <section
-        className="
-          w-full
-          py-24
-          px-6
-          sm:px-10
-          lg:px-12
-          bg-[#08080a]
-          border-t
-          border-white/5
-        "
-      >
-        <div
-          className="
-            max-w-7xl
-            mx-auto
-            space-y-12
-          "
-        >
-          <div
-            className="
-              flex
-              flex-col
-              md:flex-row
-              justify-between
-              items-start
-              md:items-end
-              gap-6
-            "
-          >
-            <div className="space-y-3">
-              <h2
-                className="
-                  text-3xl
-                  sm:text-4xl
-                  font-black
-                  tracking-tight
-                  text-white
-                  uppercase
-                "
-              >
-                DISCOVER THE ARTISTS
-              </h2>
-
-              <p
-                className="
-                  text-gray-400
-                  font-light
-                "
-              >
-                Explore participating tattoo artists, their styles, and
-                achievements.
-              </p>
-            </div>
-
-            <Link
-              to="/artists"
-              className="
-                text-xs
-                font-mono
-                tracking-widest
-                text-[#a855f7]
-                hover:text-white
-                uppercase
-                flex
-                items-center
-                gap-2
-              "
-            >
-              EXPLORE ALL ARTISTS
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          <div
-            className="
-              grid
-              grid-cols-1
-              sm:grid-cols-2
-              md:grid-cols-3
-              lg:grid-cols-4
-              gap-6
-            "
-          >
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
-              <div
-                key={item}
-                className="
-                  bg-[#0b0b0f]
-                  border
-                  border-white/5
-                  rounded-2xl
-                  overflow-hidden
-                  hover:border-white/20
-                  transition-colors
-                  cursor-pointer
-                  group
-                "
-              >
-                <div
-                  className="
-                    h-40
-                    bg-gray-800
-                    relative
-                  "
-                >
-                  <div
-                    className="
-                      absolute
-                      inset-0
-                      bg-gradient-to-t
-                      from-[#0b0b0f]
-                      to-transparent
-                      z-10
-                    "
-                  />
-                </div>
-
-                <div
-                  className="
-                    p-5
-                    relative
-                    z-20
-                    -mt-12
-                    flex
-                    flex-col
-                    items-center
-                    text-center
-                  "
-                >
-                  <div
-                    className="
-                      w-16
-                      h-16
-                      rounded-full
-                      bg-[#1a1a24]
-                      border-2
-                      border-[#0b0b0f]
-                      mb-3
-                      overflow-hidden
-                    "
-                  >
-                    <img
-                      src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=200"
-                      alt="Artist"
-                      className="
-                        w-full
-                        h-full
-                        object-cover
-                        grayscale
-                        opacity-80
-                      "
-                    />
-                  </div>
-
-                  <h3
-                    className="
-                      text-sm
-                      font-bold
-                      text-white
-                      mb-1
-                    "
-                  >
-                    Artist Name
-                  </h3>
-
-                  <p
-                    className="
-                      text-[10px]
-                      text-gray-500
-                      mb-3
-                    "
-                  >
-                    City, Country
-                  </p>
-
-                  <span
-                    className="
-                      text-[10px]
-                      font-mono
-                      tracking-wider
-                      text-[#a855f7]
-                      bg-[#a855f7]/10
-                      px-3
-                      py-1
-                      rounded-full
-                    "
-                  >
-                    Style / Category
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          6. HALL OF FAME
+          5. HALL OF FAME
       ===================================================== */}
 
       <section
@@ -1743,7 +1702,7 @@ function Home() {
       </section>
 
       {/* =====================================================
-          7. SPONSORS
+          6. SPONSORS
       ===================================================== */}
 
       <section
@@ -1818,7 +1777,7 @@ function Home() {
       </section>
 
       {/* =====================================================
-          8. FAQ
+          7. FAQ
       ===================================================== */}
 
       <section
