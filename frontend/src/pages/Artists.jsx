@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -843,7 +844,7 @@ function getDefaultLocked(plan) {
 
     bio: normalized !== "verified",
 
-    portfolioImages: normalized !== "verified",
+    portfolioImages: normalized === "basic",
   };
 }
 
@@ -886,13 +887,17 @@ function normalizeArtist(source = {}) {
     bio: source.bio || "",
 
     portfolioImages: Array.isArray(source.portfolioImages)
-      ? source.portfolioImages.slice(0, 3)
+      ? source.portfolioImages.slice(0, 10)
       : [],
 
     locked: {
       ...getDefaultLocked(plan),
 
       ...(source.locked || {}),
+
+      // Portfolio visibility is plan-based here even if an older API response
+      // still sends portfolioImages as locked for Silver.
+      portfolioImages: plan === "basic",
     },
 
     claimed: Boolean(
@@ -914,6 +919,32 @@ function normalizeArtist(source = {}) {
 
     createdAt: source.createdAt || "",
   };
+}
+
+/* =========================================================
+   PUBLIC PORTFOLIO LIMIT
+
+   FREE   -> 0
+   SILVER -> 5
+   GOLD   -> 10
+========================================================= */
+
+function getVisiblePortfolioImages(artist) {
+  const plan = normalizePlan(artist?.plan);
+
+  const images = Array.isArray(artist?.portfolioImages)
+    ? artist.portfolioImages
+    : [];
+
+  if (plan === "verified") {
+    return images.slice(0, 10);
+  }
+
+  if (plan === "pro") {
+    return images.slice(0, 5);
+  }
+
+  return [];
 }
 
 /* =========================================================
@@ -3883,32 +3914,56 @@ function PublicAvatar({ artist, size = "card", compact = false }) {
 
 function ArtistModal({ artist, selectedCity, onClose }) {
   const modalRef = React.useRef(null);
+  const scrollRef = React.useRef(null);
 
   const a = normalizeArtist(artist);
-
   const isBasic = a.plan === "basic";
-
   const isGold = a.plan === "verified";
-
+  const isSilver = a.plan === "pro";
   const expiryText = formatExpiry(a.planExpiresAt);
+  const visiblePortfolioImages = getVisiblePortfolioImages(a);
+
+  const theme = isGold
+    ? {
+        border: "border-[#f5c451]/70",
+        text: "text-[#f5c451]",
+        softText: "text-[#d7b85d]",
+        icon: "text-[#f5c451]",
+        button: "bg-[#f5c451] text-black hover:bg-[#ffe58d]",
+        softBorder: "border-[#f5c451]/25",
+        softBg: "bg-[#f5c451]/[0.05]",
+      }
+    : isSilver
+      ? {
+          border: "border-slate-300/70",
+          text: "text-slate-200",
+          softText: "text-slate-400",
+          icon: "text-slate-300",
+          button: "bg-slate-200 text-black hover:bg-white",
+          softBorder: "border-slate-300/25",
+          softBg: "bg-slate-300/[0.05]",
+        }
+      : {
+          border: "border-purple-500/35",
+          text: "text-purple-400",
+          softText: "text-purple-300",
+          icon: "text-purple-500",
+          button: "bg-purple-600 text-white hover:bg-purple-500",
+          softBorder: "border-purple-500/20",
+          softBg: "bg-purple-500/[0.04]",
+        };
 
   React.useEffect(() => {
-    if (!modalRef.current) {
-      return undefined;
-    }
+    if (!modalRef.current) return undefined;
 
     const tween = gsap.fromTo(
       modalRef.current,
-      {
-        opacity: 0,
-        scale: 0.94,
-        y: 20,
-      },
+      { opacity: 0, scale: 0.97, y: 10 },
       {
         opacity: 1,
         scale: 1,
         y: 0,
-        duration: 0.35,
+        duration: 0.25,
         ease: "power3.out",
       },
     );
@@ -3916,17 +3971,25 @@ function ArtistModal({ artist, selectedCity, onClose }) {
     return () => tween.kill();
   }, []);
 
+  React.useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
+
   const manageState = {
     manageProfile: true,
-
     ownerMode: true,
-
     profileId: a.id,
-
     claimArtistId: a.id,
-
     artistId: a.id,
-
     artist: {
       _id: a.id,
       id: a.id,
@@ -3938,148 +4001,89 @@ function ArtistModal({ artist, selectedCity, onClose }) {
     },
   };
 
-  return (
+  const planTitle =
+    a.plan === "verified"
+      ? "GOLD / VERIFIED PUBLIC PROFILE"
+      : a.plan === "pro"
+        ? "SILVER / PRO PUBLIC PROFILE"
+        : "FREE / BASIC PUBLIC PROFILE";
+
+  const planText =
+    a.plan === "verified"
+      ? "Complete artist profile is public, including up to 10 portfolio images."
+      : a.plan === "pro"
+        ? "Name, State, City, Profile Photo, Phone and the first 5 portfolio images are public. Other premium details remain locked."
+        : "Only Name and State are public. Other details remain locked.";
+
+  const modal = (
     <div
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
+        if (event.target === event.currentTarget) onClose();
       }}
-      className="
-        fixed
-        inset-0
-        z-[9999]
-        overflow-y-auto
-        bg-black/85
-        backdrop-blur-xl
-        p-4
-        sm:p-8
-        flex
-        items-center
-        justify-center
-      "
+      className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-xl"
+      style={{
+        width: "100vw",
+        height: "100dvh",
+        padding: "12px",
+        boxSizing: "border-box",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+      }}
     >
       <div
         ref={modalRef}
-        className={`
-          relative
-          w-full
-          max-w-[1050px]
-          max-h-[92vh]
-          overflow-y-auto
-          rounded-[28px]
-          border
-          bg-[#0d0d11]
-
-          ${isGold ? "border-[#f5c451]/65" : "border-white/10"}
-        `}
+        className={`relative border bg-[#0d0d11] ${theme.border}`}
+        style={{
+          width: "min(1080px, calc(100vw - 24px))",
+          height: "min(760px, calc(100dvh - 24px))",
+          maxWidth: "1080px",
+          minWidth: 0,
+          borderRadius: "20px",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          boxSizing: "border-box",
+        }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="
-            absolute
-            right-5
-            top-5
-            z-20
-            flex
-            h-11
-            w-11
-            items-center
-            justify-center
-            rounded-full
-            border
-            border-white/10
-            bg-black/60
-          "
-        >
-          <X size={17} />
-        </button>
-
+        {/* FIXED HEADER */}
         <div
-          className="
-            border-b
-            border-white/10
-            p-6
-            pr-20
-            sm:p-10
-          "
+          className="relative shrink-0 border-b border-white/10"
+          style={{ padding: "18px 64px 18px 22px" }}
         >
-          <div
-            className="
-              flex
-              flex-col
-              sm:flex-row
-              sm:items-center
-              gap-6
-            "
+          <button
+            type="button"
+            onClick={onClose}
+            className={`absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border bg-black/90 transition ${theme.softBorder} ${theme.text} hover:bg-white/10`}
           >
-            <PublicAvatar artist={a} size="modal" />
+            <X size={16} />
+          </button>
 
-            <div
-              className="
-                flex-1
-                min-w-0
-              "
-            >
-              <PlanBadge plan={a.plan} />
+          <div className="flex items-center gap-5">
+            <div className="shrink-0 scale-[0.78] origin-left">
+              <PublicAvatar artist={a} size="modal" />
+            </div>
 
+            <div className="min-w-0 flex-1 -ml-5">
+              <PlanBadge plan={a.plan} compact />
               <h2
-                className="
-                  mt-4
-                  text-4xl
-                  sm:text-6xl
-                  font-black
-                  uppercase
-                "
+                className={`mt-2 break-words text-2xl font-black uppercase leading-[0.95] sm:text-3xl lg:text-4xl ${theme.text}`}
               >
                 {a.name}
               </h2>
 
-              <div
-                className="
-                  mt-5
-                  flex
-                  items-center
-                  gap-2
-                  text-gray-400
-                "
-              >
-                <MapPin
-                  size={14}
-                  className="
-                    text-purple-500
-                  "
-                />
-
-                {isBasic
-                  ? a.state || "India"
-                  : [a.city, a.state].filter(Boolean).join(", ") || "India"}
+              <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+                <MapPin size={13} className={`shrink-0 ${theme.icon}`} />
+                <span className="break-words">
+                  {isBasic
+                    ? a.state || "India"
+                    : [a.city, a.state].filter(Boolean).join(", ") || "India"}
+                </span>
               </div>
 
-              {isBasic && selectedCity !== "ALL" && (
-                <p
-                  className="
-                      mt-3
-                      text-[8px]
-                      font-mono
-                      text-gray-600
-                    "
-                >
-                  INCLUDED IN {selectedCity} RESULTS · CITY VALUE LOCKED ON FREE
-                  PLAN
-                </p>
-              )}
-
               {expiryText && (
-                <p
-                  className="
-                    mt-3
-                    text-[8px]
-                    font-mono
-                    text-gray-600
-                  "
-                >
+                <p className="mt-2 text-[7px] font-mono text-gray-600">
                   MEMBERSHIP ACTIVE UNTIL {expiryText}
                 </p>
               )}
@@ -4087,71 +4091,65 @@ function ArtistModal({ artist, selectedCity, onClose }) {
           </div>
         </div>
 
+        {/* ONLY THIS AREA SCROLLS */}
         <div
-          className="
-            p-6
-            sm:p-10
-          "
+          ref={scrollRef}
+          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
+          style={{
+            overscrollBehavior: "contain",
+            WebkitOverflowScrolling: "touch",
+            touchAction: "pan-y",
+            scrollbarGutter: "stable",
+            padding: "18px 22px 20px",
+          }}
+          onWheel={(event) => {
+            event.stopPropagation();
+          }}
         >
-          <div
-            className="
-              grid
-              grid-cols-1
-              sm:grid-cols-2
-              gap-x-10
-              gap-y-7
-            "
-          >
-            <PublicField
+          <div className="grid grid-cols-1 gap-x-7 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+            <CompactProfileField
               title="NAME"
               value={a.name}
               locked={false}
               plan={a.plan}
             />
-
-            <PublicField
+            <CompactProfileField
               title="STATE"
               value={a.state}
               locked={false}
               plan={a.plan}
             />
-
-            <PublicField
+            <CompactProfileField
               title="CITY"
               value={a.city}
               locked={a.locked.city}
               plan={a.plan}
             />
-
-            <PublicField
+            <CompactProfileField
               title="PHONE"
               value={a.phone}
               locked={a.locked.phone}
               plan={a.plan}
             />
-
-            <PublicField
+            <CompactProfileField
               title="EMAIL"
               value={a.email}
               locked={a.locked.email}
               plan={a.plan}
             />
-
-            <PublicField
+            <CompactProfileField
               title="STUDIO"
               value={a.studio}
               locked={a.locked.studio}
               plan={a.plan}
             />
-
-            <PublicField
+            <CompactProfileField
               title="EXPERIENCE"
               value={a.experience}
               locked={a.locked.experience}
               plan={a.plan}
             />
-
-            <PublicField
+            <CompactProfileField
               title="INSTAGRAM"
               value={a.instagram}
               locked={a.locked.instagram}
@@ -4159,178 +4157,175 @@ function ArtistModal({ artist, selectedCity, onClose }) {
             />
           </div>
 
-          <div
-            className="
-              mt-8
-            "
-          >
-            <PublicField
-              title="BIO / ABOUT"
-              value={a.bio}
-              locked={a.locked.bio}
-              plan={a.plan}
-              multiline
-            />
+          <div className="mt-4 grid grid-cols-1 gap-4 border-t border-white/10 pt-4 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="min-w-0">
+              <p
+                className={`mb-2 text-[7px] font-mono font-black tracking-[0.18em] ${theme.text}`}
+              >
+                BIO / ABOUT
+              </p>
+
+              {a.locked.bio ? (
+                <div className="flex min-h-[52px] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3">
+                  <Lock size={10} className="text-gray-600" />
+                  <span className="text-[9px] text-gray-600">BIO LOCKED</span>
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap text-[10px] leading-relaxed text-gray-400">
+                  {a.bio || "-"}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <p
+                className={`mb-2 text-[7px] font-mono font-black tracking-[0.18em] ${theme.text}`}
+              >
+                PORTFOLIO
+                {!isBasic
+                  ? ` · ${visiblePortfolioImages.length}/${isGold ? 10 : 5}`
+                  : ""}
+              </p>
+
+              {a.locked.portfolioImages ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {[0, 1, 2].map((index) => (
+                    <div
+                      key={index}
+                      className="flex h-20 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03]"
+                    >
+                      <Lock size={14} className="text-gray-600" />
+                    </div>
+                  ))}
+                </div>
+              ) : visiblePortfolioImages.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                  {visiblePortfolioImages.map((image, index) => (
+                    <div
+                      key={`${index}-${image.slice(0, 20)}`}
+                      className="h-20 overflow-hidden rounded-xl border border-white/10 bg-black"
+                    >
+                      <img
+                        src={image}
+                        alt={`Portfolio ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-20 items-center rounded-xl border border-white/10 px-4 text-[10px] text-gray-600">
+                  No portfolio images added yet.
+                </div>
+              )}
+            </div>
           </div>
 
           <div
-            className="
-              mt-8
-              border-t
-              border-white/10
-              pt-8
-            "
+            className={`mt-4 rounded-xl border px-4 py-3 ${theme.softBorder} ${theme.softBg}`}
           >
-            <p
-              className="
-                mb-4
-                text-[8px]
-                font-mono
-                text-gray-500
-              "
-            >
-              PORTFOLIO
+            <div className="flex items-center gap-2">
+              <Sparkles size={11} className={theme.icon} />
+              <p className={`text-[7px] font-black ${theme.text}`}>
+                {planTitle}
+              </p>
+            </div>
+            <p className={`mt-1 text-[8px] leading-relaxed ${theme.softText}`}>
+              {planText}
             </p>
-
-            {a.locked.portfolioImages ? (
-              <LockedPortfolio />
-            ) : a.portfolioImages.length > 0 ? (
-              <div
-                className="
-                  grid
-                  grid-cols-1
-                  sm:grid-cols-3
-                  gap-4
-                "
-              >
-                {a.portfolioImages.map((image, index) => (
-                  <div
-                    key={`${index}-${image.slice(0, 20)}`}
-                    className="
-                        aspect-square
-                        overflow-hidden
-                        rounded-2xl
-                        border
-                        border-white/10
-                      "
-                  >
-                    <img
-                      src={image}
-                      alt={`Portfolio ${index + 1}`}
-                      className="
-                          h-full
-                          w-full
-                          object-cover
-                        "
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div
-                className="
-                  rounded-2xl
-                  border
-                  border-white/10
-                  p-6
-                  text-gray-600
-                "
-              >
-                No portfolio images added yet.
-              </div>
-            )}
           </div>
 
-          <PlanVisibilityMessage plan={a.plan} />
+          <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[8px] font-black">IS THIS YOUR PROFILE?</p>
+              <p className="mt-1 text-[9px] text-gray-600">
+                Manage or edit using owner OTP verification.
+              </p>
+            </div>
 
-          <div
-            className="
-              mt-10
-              border-t
-              border-white/10
-              pt-6
-            "
-          >
-            <p
-              className="
-                text-[9px]
-                font-black
-              "
-            >
-              IS THIS YOUR PROFILE?
-            </p>
-
-            <p
-              className="
-                mt-1
-                text-xs
-                text-gray-600
-              "
-            >
-              Manage or edit this profile using owner OTP verification.
-            </p>
-
-            <div
-              className="
-                mt-5
-                flex
-                flex-col
-                sm:flex-row
-                justify-end
-                gap-3
-              "
-            >
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={onClose}
-                className="
-                  px-7
-                  py-4
-                  bg-white/5
-                  border
-                  border-white/10
-                  text-[9px]
-                  font-black
-                "
+                className="rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-[8px] font-black hover:bg-white/10"
               >
-                CLOSE PROFILE
+                CLOSE
               </button>
 
               <Link
                 to="/book-artist"
+                state={{
+                  preferredArtist: a.name,
+                  preferredArtistId: a.id,
+                  city: a.city,
+                  state: a.state,
+                }}
                 onClick={onClose}
-                className="
-                  px-7
-                  py-4
-                  text-center
-                  border
-                  border-white/10
-                  text-[9px]
-                  font-black
-                "
+                className={`rounded-lg border px-5 py-2.5 text-center text-[8px] font-black transition ${theme.softBorder} ${theme.text} hover:bg-white/5`}
               >
-                BOOK AN ARTIST →
+                BOOK ARTIST →
               </Link>
 
               <Link
                 to="/Enter"
                 state={manageState}
                 onClick={onClose}
-                className="
-                  px-7
-                  py-4
-                  text-center
-                  bg-purple-600
-                  text-[9px]
-                  font-black
-                "
+                className={`rounded-lg px-5 py-2.5 text-center text-[8px] font-black transition ${theme.button}`}
               >
-                MANAGE / EDIT MY PROFILE →
+                MANAGE PROFILE →
               </Link>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  return createPortal(modal, document.body);
+}
+
+/* =========================================================
+   COMPACT PROFILE FIELD
+========================================================= */
+
+function CompactProfileField({ title, value, locked, plan }) {
+  const normalized = normalizePlan(plan);
+
+  const accent =
+    normalized === "verified"
+      ? "text-[#f5c451]"
+      : normalized === "pro"
+        ? "text-slate-300"
+        : "text-purple-400";
+
+  return (
+    <div className="min-w-0 border-b border-white/10 pb-2">
+      <p
+        className={`
+          mb-1
+          text-[6px]
+          font-mono
+          font-black
+          tracking-[0.18em]
+          ${accent}
+        `}
+      >
+        {title}
+      </p>
+
+      {locked ? (
+        <div className="flex min-h-[22px] items-center gap-1.5 text-[8px] text-gray-600">
+          <Lock size={8} />
+          LOCKED
+        </div>
+      ) : (
+        <p
+          className="min-h-[22px] truncate text-[11px] font-semibold text-white lg:text-xs"
+          title={value || ""}
+        >
+          {value || "-"}
+        </p>
+      )}
     </div>
   );
 }
@@ -4473,14 +4468,14 @@ function PlanVisibilityMessage({ plan }) {
     title = "SILVER / PRO PUBLIC PROFILE";
 
     text =
-      "Name, State, City, Profile Photo and Phone are public. Email, Studio, Experience, Instagram, Bio and Portfolio remain locked.";
+      "Name, State, City, Profile Photo, Phone and the first 5 Portfolio images are public. Email, Studio, Experience, Instagram and Bio remain locked.";
   }
 
   if (normalized === "verified") {
     title = "GOLD / VERIFIED PUBLIC PROFILE";
 
     text =
-      "The complete artist profile is public, including Photo, Phone, Email, Studio, Experience, Instagram, Bio and up to 3 Portfolio images.";
+      "The complete artist profile is public, including Photo, Phone, Email, Studio, Experience, Instagram, Bio and up to 10 Portfolio images.";
   }
 
   return (

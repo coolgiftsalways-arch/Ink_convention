@@ -24,6 +24,24 @@ const MEMBERSHIP_PRICES = {
   verified: 2999,
 };
 
+/*
+  ONE-TIME UPGRADE OFFER
+
+  Active Silver / Pro
+        ↓
+  Gold / Verified
+        =
+  ₹699
+
+  This is available only once per artist profile.
+*/
+const SILVER_TO_GOLD_UPGRADE_PRICE = 699;
+
+const MEMBERSHIP_PRICING_TYPES = {
+  STANDARD: "standard-membership",
+  SILVER_TO_GOLD: "silver-to-gold-upgrade",
+};
+
 /* =========================================================
    START MEMBERSHIP EXPIRY WORKER
 ========================================================= */
@@ -79,6 +97,78 @@ function isDirectoryMembership(profileId, packageId) {
 }
 
 /* =========================================================
+   ACTIVE MEMBERSHIP CHECK
+========================================================= */
+
+function hasActiveMembership(studio, expectedPlan) {
+  if (!studio) {
+    return false;
+  }
+
+  if (normalizePlan(studio.plan) !== normalizePlan(expectedPlan)) {
+    return false;
+  }
+
+  if (String(studio.paymentStatus || "").toLowerCase() !== "paid") {
+    return false;
+  }
+
+  /*
+    Old rows may not have planExpiresAt.
+    If it is missing, treat a paid plan as active for
+    compatibility with existing MongoDB data.
+  */
+  if (!studio.planExpiresAt) {
+    return true;
+  }
+
+  const expiryTime = new Date(studio.planExpiresAt).getTime();
+
+  return Number.isFinite(expiryTime) && expiryTime > Date.now();
+}
+
+/* =========================================================
+   ONE-TIME SILVER -> GOLD ELIGIBILITY
+========================================================= */
+
+function canUseSilverToGoldUpgrade(studio, targetPlan) {
+  return (
+    normalizePlan(targetPlan) === "verified" &&
+    hasActiveMembership(studio, "pro") &&
+    !Boolean(studio?.silverToGoldUpgradeUsed)
+  );
+}
+
+/* =========================================================
+   BACKEND MEMBERSHIP PRICE DECISION
+
+   FREE  -> SILVER = ₹1,999
+   FREE  -> GOLD   = ₹2,999
+   ACTIVE SILVER -> FIRST GOLD = ₹699
+
+   After ₹699 has been used:
+   GOLD / future GOLD renewal = ₹2,999
+========================================================= */
+
+function getMembershipPrice(studio, targetPlan) {
+  const plan = normalizePlan(targetPlan);
+
+  if (canUseSilverToGoldUpgrade(studio, plan)) {
+    return {
+      amountRupees: SILVER_TO_GOLD_UPGRADE_PRICE,
+      pricingType: MEMBERSHIP_PRICING_TYPES.SILVER_TO_GOLD,
+      upgradeDiscount: true,
+    };
+  }
+
+  return {
+    amountRupees: MEMBERSHIP_PRICES[plan],
+    pricingType: MEMBERSHIP_PRICING_TYPES.STANDARD,
+    upgradeDiscount: false,
+  };
+}
+
+/* =========================================================
    CREATE UNIQUE RECEIPT
 ========================================================= */
 
@@ -116,6 +206,12 @@ function safeMembershipProfile(studio) {
 
     planExpiresAt: studio.planExpiresAt || null,
 
+    paymentAmount: Number(studio.paymentAmount || 0),
+
+    silverToGoldUpgradeUsed: Boolean(studio.silverToGoldUpgradeUsed),
+
+    silverToGoldUpgradeUsedAt: studio.silverToGoldUpgradeUsedAt || null,
+
     updatedAt: studio.updatedAt || null,
   };
 }
@@ -137,7 +233,96 @@ router.get(
       message: "Payment API is working.",
 
       membershipPrices: MEMBERSHIP_PRICES,
+
+      silverToGoldUpgradePrice: SILVER_TO_GOLD_UPGRADE_PRICE,
     });
+  },
+);
+
+/* =========================================================
+   MEMBERSHIP PRICE QUOTE
+
+   POST
+   /api/payment/membership-quote
+
+   IMPORTANT:
+   This does NOT create a Razorpay order.
+
+   It lets the frontend ask the backend:
+   "What should this exact profile pay for this plan?"
+
+   ACTIVE SILVER -> GOLD:
+   ₹699 one-time
+
+   ALL OTHER GOLD:
+   ₹2,999
+========================================================= */
+
+router.post(
+  "/membership-quote",
+
+  async (req, res) => {
+    try {
+      const { profileId, packageId } = req.body || {};
+
+      if (!profileId) {
+        return res.status(400).json({
+          success: false,
+          message: "Artist profile ID is required.",
+        });
+      }
+
+      const targetPlan = normalizePlan(packageId);
+
+      if (targetPlan !== "pro" && targetPlan !== "verified") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid membership plan.",
+        });
+      }
+
+      const studio = await TattooStudio.findById(profileId).lean();
+
+      if (!studio) {
+        return res.status(404).json({
+          success: false,
+          message: "Artist profile not found.",
+        });
+      }
+
+      const priceDecision = getMembershipPrice(studio, targetPlan);
+
+      return res.status(200).json({
+        success: true,
+        membership: true,
+
+        profileId: String(studio._id),
+
+        currentPlan: normalizePlan(studio.plan),
+        targetPlan,
+
+        paymentStatus: String(studio.paymentStatus || "")
+          .trim()
+          .toLowerCase(),
+
+        planExpiresAt: studio.planExpiresAt || null,
+
+        silverToGoldUpgradeUsed: Boolean(studio.silverToGoldUpgradeUsed),
+
+        amountRupees: priceDecision.amountRupees,
+        pricingType: priceDecision.pricingType,
+        upgradeDiscount: priceDecision.upgradeDiscount,
+
+        silverToGoldUpgradePrice: SILVER_TO_GOLD_UPGRADE_PRICE,
+      });
+    } catch (error) {
+      console.error("❌ Membership quote error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Unable to check membership price.",
+      });
+    }
   },
 );
 
@@ -183,6 +368,10 @@ router.post(
 
       let amountRupees;
 
+      let pricingType = "general-payment";
+
+      let upgradeDiscount = false;
+
       /* =============================================
          MEMBERSHIP PAYMENT
       ============================================= */
@@ -201,14 +390,21 @@ router.post(
         /* ===========================================
            PRICE FROM BACKEND ONLY
 
-           SILVER:
-           ₹1,999
+           STANDARD:
+           SILVER = ₹1,999
+           GOLD   = ₹2,999
 
-           GOLD:
-           ₹2,999
+           ONE-TIME UPGRADE:
+           ACTIVE SILVER -> GOLD = ₹699
         =========================================== */
 
-        amountRupees = MEMBERSHIP_PRICES[normalizedPlan];
+        const priceDecision = getMembershipPrice(studio, normalizedPlan);
+
+        amountRupees = priceDecision.amountRupees;
+
+        pricingType = priceDecision.pricingType;
+
+        upgradeDiscount = priceDecision.upgradeDiscount;
       } else {
         /* ===========================================
            OTHER PAYMENT FLOWS
@@ -263,6 +459,12 @@ router.post(
           phone: String(phone || "").slice(0, 50),
 
           purpose: membership ? "directory-membership" : "general-payment",
+
+          pricingType: String(pricingType),
+
+          expectedAmountRupees: String(amountRupees),
+
+          upgradeDiscount: upgradeDiscount ? "true" : "false",
         },
       });
 
@@ -290,6 +492,10 @@ router.post(
               plan: normalizedPlan,
 
               amountRupees,
+
+              pricingType,
+
+              upgradeDiscount,
             }
           : {}),
       });
@@ -425,13 +631,37 @@ router.post(
 
       const orderProfileId = String(order?.notes?.profileId || "");
 
-      const expectedAmountPaise = MEMBERSHIP_PRICES[plan] * 100;
+      const orderPricingType = String(
+        order?.notes?.pricingType || MEMBERSHIP_PRICING_TYPES.STANDARD,
+      );
+
+      const orderExpectedAmountRupees = Number(
+        order?.notes?.expectedAmountRupees,
+      );
+
+      const isSilverToGoldUpgradeOrder =
+        orderPricingType === MEMBERSHIP_PRICING_TYPES.SILVER_TO_GOLD;
+
+      /*
+        Razorpay notes are created by this backend.
+
+        We still validate that a discounted order is EXACTLY
+        the allowed ₹699 Gold-upgrade order.
+      */
+      const validPricingType = isSilverToGoldUpgradeOrder
+        ? plan === "verified" &&
+          orderExpectedAmountRupees === SILVER_TO_GOLD_UPGRADE_PRICE
+        : orderPricingType === MEMBERSHIP_PRICING_TYPES.STANDARD &&
+          orderExpectedAmountRupees === MEMBERSHIP_PRICES[plan];
+
+      const expectedAmountPaise = Math.round(orderExpectedAmountRupees * 100);
 
       /* =============================================
          SECURITY CHECK
 
          PACKAGE
          PROFILE
+         PRICING TYPE
          AMOUNT
          CURRENCY
       ============================================= */
@@ -439,6 +669,8 @@ router.post(
       if (
         orderPlan !== plan ||
         orderProfileId !== String(profileId) ||
+        !validPricingType ||
+        !Number.isFinite(expectedAmountPaise) ||
         Number(order?.amount) !== expectedAmountPaise ||
         String(order?.currency || "").toUpperCase() !== "INR"
       ) {
@@ -460,6 +692,59 @@ router.post(
           success: false,
 
           message: "Artist profile not found.",
+        });
+      }
+
+      /* =============================================
+         IDEMPOTENT VERIFY
+
+         If Razorpay/browser retries the same successful
+         verification, return success instead of charging
+         or changing membership again.
+      ============================================= */
+
+      if (
+        String(studio.razorpayOrderId || "") === String(razorpay_order_id) &&
+        String(studio.razorpayPaymentId || "") === String(razorpay_payment_id)
+      ) {
+        const existingProfile = safeMembershipProfile(studio);
+
+        return res.status(200).json({
+          success: true,
+          verified: true,
+          alreadyProcessed: true,
+          message: "Payment was already verified successfully.",
+          paymentId: razorpay_payment_id,
+          orderId: razorpay_order_id,
+          plan: normalizePlan(studio.plan),
+          planStartedAt: studio.planStartedAt || null,
+          planExpiresAt: studio.planExpiresAt || null,
+          amountRupees: Number(studio.paymentAmount || 0),
+          profile: existingProfile,
+          artist: existingProfile,
+        });
+      }
+
+      /* =============================================
+         RE-CHECK ₹699 UPGRADE ELIGIBILITY
+
+         The artist must STILL have:
+         - active Silver
+         - paid status
+         - unused one-time upgrade offer
+
+         This prevents reusing an old discounted order.
+      ============================================= */
+
+      if (
+        isSilverToGoldUpgradeOrder &&
+        !canUseSilverToGoldUpgrade(studio, plan)
+      ) {
+        return res.status(409).json({
+          success: false,
+
+          message:
+            "The ₹699 Silver-to-Gold upgrade offer is no longer available for this profile.",
         });
       }
 
@@ -507,11 +792,26 @@ router.post(
 
       studio.razorpaySignature = String(razorpay_signature);
 
-      studio.paymentAmount = MEMBERSHIP_PRICES[plan];
+      studio.paymentAmount = orderExpectedAmountRupees;
 
       studio.paymentCurrency = "INR";
 
       studio.paidAt = startedAt;
+
+      /* =============================================
+         MARK ONE-TIME ₹699 OFFER AS USED
+
+         This flag is permanent.
+         Membership expiry must NOT reset it.
+      ============================================= */
+
+      if (isSilverToGoldUpgradeOrder) {
+        studio.silverToGoldUpgradeUsed = true;
+
+        studio.silverToGoldUpgradeUsedAt = startedAt;
+
+        studio.silverToGoldUpgradePaymentId = String(razorpay_payment_id);
+      }
 
       /* =============================================
          MEMBERSHIP DATES
@@ -536,7 +836,7 @@ router.post(
       const profile = safeMembershipProfile(studio);
 
       console.log(
-        `✅ Membership activated: ${plan} | ${studio._id} | expires ${expiresAt.toISOString()}`,
+        `✅ Membership activated: ${plan} | ₹${orderExpectedAmountRupees} | ${orderPricingType} | ${studio._id} | expires ${expiresAt.toISOString()}`,
       );
 
       /* =============================================
@@ -563,6 +863,12 @@ router.post(
         orderId: razorpay_order_id,
 
         plan,
+
+        amountRupees: orderExpectedAmountRupees,
+
+        pricingType: orderPricingType,
+
+        upgradeDiscountUsed: isSilverToGoldUpgradeOrder,
 
         planStartedAt: startedAt,
 

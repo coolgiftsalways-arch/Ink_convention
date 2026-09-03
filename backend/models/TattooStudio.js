@@ -375,6 +375,35 @@ const tattooStudioSchema = new mongoose.Schema(
     },
 
     /* =====================================================
+       ONE-TIME SILVER -> GOLD UPGRADE OFFER
+
+       RULE:
+       Active Silver can upgrade to Gold for ₹699 once.
+
+       IMPORTANT:
+       This flag NEVER resets when Gold expires.
+       After this offer is used, future Gold purchases /
+       renewals are charged the normal ₹2,999 price.
+    ===================================================== */
+
+    silverToGoldUpgradeUsed: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    silverToGoldUpgradeUsedAt: {
+      type: Date,
+      default: null,
+    },
+
+    silverToGoldUpgradePaymentId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    /* =====================================================
        1-YEAR MEMBERSHIP DATES
     ===================================================== */
 

@@ -467,7 +467,7 @@ export default function AdminSidebar({
                   }
                 />
               }
-              title="Book Stall"
+              title=" Stall Bookings"
               subtitle="STALL BOOKINGS"
               count={finalStallCount}
               onNavigate={closeMobileSidebar}
@@ -488,7 +488,7 @@ export default function AdminSidebar({
                   }
                 />
               }
-              title="Clients"
+              title="COmptetition"
               subtitle="CLIENT REGISTRY"
               count={finalClientCount}
               onNavigate={closeMobileSidebar}
@@ -509,7 +509,7 @@ export default function AdminSidebar({
                   }
                 />
               }
-              title="Artist Enter"
+              title="Artist"
               subtitle="DIRECTORY ARTISTS"
               count={finalArtistCount}
               onNavigate={closeMobileSidebar}
@@ -530,7 +530,7 @@ export default function AdminSidebar({
                   }
                 />
               }
-              title="Artist Bookings"
+              title="Client Bookings"
               subtitle="BOOKING REQUESTS"
               count={finalBookingCount}
               onNavigate={closeMobileSidebar}

@@ -32,6 +32,8 @@ const API_URL = import.meta.env.DEV
       .trim()
       .replace(/\/$/, "");
 
+const MAX_PORTFOLIO_IMAGES = 10;
+
 /* =========================================================
    OLD LOCAL CACHE HELPER
 
@@ -123,7 +125,8 @@ const PLANS = [
       "City visible",
       "Profile image visible",
       "Phone number visible",
-      "Email, studio, experience, Instagram, bio and portfolio stay locked",
+      "Email, studio, experience, Instagram and bio stay locked",
+      "First 5 portfolio images are visible publicly",
       "Active for 1 year",
     ],
   },
@@ -148,7 +151,7 @@ const PLANS = [
       "Email and studio",
       "Experience and Instagram",
       "Bio / About",
-      "Up to 3 portfolio images",
+      "Up to 10 portfolio images",
       "Gold Verified badge",
       "Hall of Fame inclusion",
       "Active for 1 year",
@@ -261,6 +264,16 @@ function normalizeArtist(source = {}) {
     bio: source.bio || "",
 
     plan: normalizePlan(source.plan || source.membershipPlan),
+
+    paymentStatus: String(source.paymentStatus || "")
+      .trim()
+      .toLowerCase(),
+
+    planStartedAt: source.planStartedAt || null,
+
+    planExpiresAt: source.planExpiresAt || null,
+
+    silverToGoldUpgradeUsed: Boolean(source.silverToGoldUpgradeUsed),
   };
 }
 
@@ -599,6 +612,15 @@ export default function Enter() {
   const [success, setSuccess] = useState("");
 
   /* =======================================================
+     BACKEND GOLD PRICE QUOTE
+
+     This is used only to DISPLAY the correct Gold price.
+     payment.js still makes the final secure pricing decision.
+  ======================================================= */
+
+  const [goldPriceQuote, setGoldPriceQuote] = useState(null);
+
+  /* =======================================================
      HELPERS
   ======================================================= */
 
@@ -629,11 +651,7 @@ export default function Enter() {
 
     setPortfolioImages(
       Array.isArray(profile?.portfolioImages)
-        ? profile.portfolioImages.slice(
-            0,
-
-            3,
-          )
+        ? profile.portfolioImages.slice(0, MAX_PORTFOLIO_IMAGES)
         : [],
     );
 
@@ -964,6 +982,81 @@ export default function Enter() {
 
     [currentProfile?.plan, selectedArtist?.plan],
   );
+
+  /* =======================================================
+     GOLD PRICE FROM BACKEND
+
+     WHY:
+     /api/claim/me can return a restricted/safe profile that may
+     not contain every payment field.
+
+     So the Gold card asks payment.js directly.
+
+     MongoDB source of truth:
+     Active Silver + unused offer -> ₹699
+     Otherwise -> ₹2,999
+  ======================================================= */
+
+  const pricingProfileId = String(
+    currentProfile?._id ||
+      currentProfile?.id ||
+      selectedArtist?._id ||
+      selectedArtist?.id ||
+      "",
+  );
+
+  useEffect(() => {
+    if (screen !== "plans" || !pricingProfileId) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadGoldPriceQuote = async () => {
+      try {
+        const data = await apiRequest("/api/payment/membership-quote", {
+          method: "POST",
+          body: {
+            profileId: pricingProfileId,
+            packageId: "verified",
+          },
+        });
+
+        if (!cancelled) {
+          setGoldPriceQuote(data);
+        }
+      } catch (quoteError) {
+        console.error("❌ Gold price quote error:", quoteError);
+
+        if (!cancelled) {
+          setGoldPriceQuote(null);
+        }
+      }
+    };
+
+    void loadGoldPriceQuote();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [screen, pricingProfileId]);
+
+  /*
+    Immediate UI fallback:
+
+    If we already know the user is on Silver, show ₹699 straight
+    away while the backend quote is loading.
+
+    As soon as the backend responds, its answer wins.
+  */
+  const silverToGoldUpgradeAvailable = goldPriceQuote?.success
+    ? goldPriceQuote.pricingType === "silver-to-gold-upgrade" &&
+      Number(goldPriceQuote.amountRupees) === 699
+    : currentPlan === "pro" &&
+      !Boolean(
+        currentProfile?.silverToGoldUpgradeUsed ||
+        selectedArtist?.silverToGoldUpgradeUsed,
+      );
 
   /* =======================================================
      RESET TO SEARCH
@@ -1352,37 +1445,60 @@ export default function Enter() {
   /* =======================================================
      PORTFOLIO
 
-     MAX 3
-     SAVED FOR ALL PLANS
-     PUBLIC ONLY ON GOLD
+     MAX 10 SAVED IN MONGODB
+
+     FREE   -> 0 public
+     SILVER -> first 5 public
+     GOLD   -> first 10 public
   ======================================================= */
 
   const handlePortfolioImages = async (event) => {
-    const files = Array.from(event.target.files || []).slice(
-      0,
+    const selectedFiles = Array.from(event.target.files || []);
 
-      3,
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    const remainingSlots = Math.max(
+      0,
+      MAX_PORTFOLIO_IMAGES - portfolioImages.length,
     );
 
-    if (files.length === 0) {
+    if (remainingSlots === 0) {
+      setError(
+        `You already have ${MAX_PORTFOLIO_IMAGES} portfolio images. Remove an old image before adding another one.`,
+      );
+
+      event.target.value = "";
       return;
     }
 
-    if (files.some((file) => !file.type.startsWith("image/"))) {
+    if (selectedFiles.length > remainingSlots) {
+      setError(
+        `You can add only ${remainingSlots} more portfolio image${remainingSlots === 1 ? "" : "s"}. Maximum is ${MAX_PORTFOLIO_IMAGES}.`,
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    if (selectedFiles.some((file) => !file.type.startsWith("image/"))) {
       setError("Portfolio files must be images.");
 
+      event.target.value = "";
       return;
     }
 
-    if (files.some((file) => file.size > 8 * 1024 * 1024)) {
+    if (selectedFiles.some((file) => file.size > 8 * 1024 * 1024)) {
       setError("Each portfolio image must be smaller than 8 MB.");
 
+      event.target.value = "";
       return;
     }
 
     try {
       const images = await Promise.all(
-        files.map((file) =>
+        selectedFiles.map((file) =>
           compressImage(
             file,
 
@@ -1393,19 +1509,19 @@ export default function Enter() {
         ),
       );
 
-      setPortfolioImages(
-        images.slice(
-          0,
+      setPortfolioImages((previous) => {
+        const combined = [...previous, ...images];
 
-          3,
-        ),
-      );
+        return Array.from(new Set(combined)).slice(0, MAX_PORTFOLIO_IMAGES);
+      });
 
       clearMessages();
+      event.target.value = "";
     } catch (portfolioError) {
       console.error(portfolioError);
 
       setError("Unable to process portfolio images.");
+      event.target.value = "";
     }
   };
 
@@ -1470,6 +1586,15 @@ export default function Enter() {
 
   const saveProfile = async (event) => {
     event.preventDefault();
+
+    // Which edit-screen button submitted the form?
+    // Silver has two choices:
+    // 1) done -> save and return to Artists
+    // 2) upgrade-gold -> save first, then open the Gold upgrade screen
+    const profileAction =
+      event.nativeEvent?.submitter?.value ||
+      event.nativeEvent?.submitter?.dataset?.profileAction ||
+      "done";
 
     if (!validateForm()) {
       return;
@@ -1552,12 +1677,8 @@ export default function Enter() {
         profileImage: updatedProfile.profileImage || profileImage || "",
 
         portfolioImages: Array.isArray(updatedProfile.portfolioImages)
-          ? updatedProfile.portfolioImages.slice(
-              0,
-
-              3,
-            )
-          : portfolioImages,
+          ? updatedProfile.portfolioImages.slice(0, MAX_PORTFOLIO_IMAGES)
+          : portfolioImages.slice(0, MAX_PORTFOLIO_IMAGES),
 
         plan: normalizePlan(
           updatedProfile.plan ||
@@ -1583,16 +1704,51 @@ export default function Enter() {
 
       setPortfolioImages(
         Array.isArray(finalProfile.portfolioImages)
-          ? finalProfile.portfolioImages.slice(
-              0,
-
-              3,
-            )
+          ? finalProfile.portfolioImages.slice(0, MAX_PORTFOLIO_IMAGES)
           : [],
       );
 
       updateDirectory(finalProfile);
 
+      const savedPlan = normalizePlan(finalProfile.plan);
+
+      /*
+        SILVER owner gets TWO choices on the edit screen:
+
+        DONE & VIEW PROFILE
+        -> save changes and return to Artists
+
+        SAVE & GO GOLD
+        -> save changes first, then open the Gold upgrade screen
+      */
+      if (savedPlan === "pro" && profileAction === "upgrade-gold") {
+        setSuccess(
+          "Changes saved. You can now upgrade your Silver profile to Gold.",
+        );
+        setScreen("plans");
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+
+        return;
+      }
+
+      /* Existing SILVER / GOLD owner pressed DONE. */
+      if (savedPlan === "pro" || savedPlan === "verified") {
+        navigate("/artists", {
+          state: {
+            refreshDirectory: Date.now(),
+            newArtistId:
+              finalProfile.id || finalProfile._id || selectedArtist.id,
+          },
+        });
+
+        return;
+      }
+
+      /* FREE / BASIC continues to the membership selection screen. */
       setSuccess("Profile updated successfully. Choose your membership plan.");
 
       setScreen("plans");
@@ -1895,7 +2051,10 @@ export default function Enter() {
 
         name: "INK CONVENTION 2026",
 
-        description: selectedPlan.name,
+        description:
+          orderData.pricingType === "silver-to-gold-upgrade"
+            ? "Silver to Gold Upgrade - ₹699"
+            : selectedPlan.name,
 
         order_id: orderData.orderId,
 
@@ -1997,7 +2156,24 @@ export default function Enter() {
 
             setCurrentProfile(upgradedProfile);
 
-            setSuccess(`${selectedPlan.name} activated successfully!`);
+            setGoldPriceQuote({
+              success: true,
+              pricingType: "standard-membership",
+              amountRupees: 2999,
+              upgradeDiscount: false,
+            });
+
+            const paidAmount = Number(
+              verifyData.amountRupees || orderData.amountRupees || 0,
+            );
+
+            setSuccess(
+              `${selectedPlan.name} activated successfully${
+                paidAmount > 0
+                  ? ` for ₹${paidAmount.toLocaleString("en-IN")}`
+                  : ""
+              }!`,
+            );
 
             /* ===================================
                    DO NOT REFRESH OTP SESSION
@@ -3357,7 +3533,9 @@ export default function Enter() {
                         text-gray-600
                       "
                     >
-                      Save up to 3 images. They are public only on Gold.
+                      Upload up to 10 images. You can add more later or remove
+                      old ones. Silver shows the first 5; Gold shows all 10;
+                      Free keeps them private.
                     </p>
                   </div>
 
@@ -3376,7 +3554,7 @@ export default function Enter() {
                       hover:border-purple-500/50
                     "
                   >
-                    SELECT IMAGES
+                    ADD IMAGES ({portfolioImages.length}/10)
                     <input
                       type="file"
                       accept="image/*"
@@ -3465,36 +3643,112 @@ export default function Enter() {
 
               <Message error={error} success={success} />
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="
-                  group
-                  w-full
-                  bg-purple-600
-                  hover:bg-purple-500
-                  disabled:opacity-50
-                  rounded-xl
-                  p-5
-                  flex
-                  items-center
-                  justify-between
-                  text-[10px]
-                  font-black
-                  tracking-[0.14em]
-                  transition
-                "
-              >
-                <span>{saving ? "UPDATING..." : "UPDATE PROFILE"}</span>
+              {currentPlan === "pro" ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button
+                    type="submit"
+                    name="profileAction"
+                    value="done"
+                    disabled={saving}
+                    className="
+                      group
+                      w-full
+                      rounded-xl
+                      border
+                      border-slate-300/30
+                      bg-slate-200
+                      p-5
+                      text-black
+                      disabled:opacity-50
+                      flex
+                      items-center
+                      justify-between
+                      text-[10px]
+                      font-black
+                      tracking-[0.14em]
+                      transition
+                      hover:bg-white
+                    "
+                  >
+                    <span>{saving ? "SAVING..." : "DONE & VIEW PROFILE"}</span>
+                    <ArrowRight
+                      size={15}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </button>
 
-                <ArrowRight
-                  size={15}
+                  <button
+                    type="submit"
+                    name="profileAction"
+                    value="upgrade-gold"
+                    disabled={saving}
+                    className="
+                      group
+                      w-full
+                      rounded-xl
+                      border
+                      border-[#f5c451]/50
+                      bg-[#f5c451]
+                      p-5
+                      text-black
+                      disabled:opacity-50
+                      flex
+                      items-center
+                      justify-between
+                      text-[10px]
+                      font-black
+                      tracking-[0.14em]
+                      transition
+                      hover:bg-[#ffe58d]
+                    "
+                  >
+                    <span>{saving ? "SAVING..." : "SAVE & GO GOLD"}</span>
+                    <ArrowRight
+                      size={15}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  name="profileAction"
+                  value="done"
+                  disabled={saving}
                   className="
-                    transition-transform
-                    group-hover:translate-x-1
+                    group
+                    w-full
+                    bg-purple-600
+                    hover:bg-purple-500
+                    disabled:opacity-50
+                    rounded-xl
+                    p-5
+                    flex
+                    items-center
+                    justify-between
+                    text-[10px]
+                    font-black
+                    tracking-[0.14em]
+                    transition
                   "
-                />
-              </button>
+                >
+                  <span>
+                    {saving
+                      ? "SAVING..."
+                      : currentPlan === "verified"
+                        ? "DONE & VIEW PROFILE"
+                        : "UPDATE PROFILE"}
+                  </span>
+
+                  <ArrowRight
+                    size={15}
+                    className="
+                      transition-transform
+                      group-hover:translate-x-1
+                    "
+                  />
+                </button>
+              )}
             </div>
           </form>
         </div>
@@ -3676,6 +3930,9 @@ export default function Enter() {
                 key={plan.id}
                 plan={plan}
                 saving={saving}
+                silverToGoldUpgrade={
+                  plan.id === "verified" && silverToGoldUpgradeAvailable
+                }
                 onClick={() =>
                   plan.id === "basic"
                     ? chooseFreePlan()
@@ -3903,6 +4160,8 @@ function PlanCard({
 
   saving,
 
+  silverToGoldUpgrade = false,
+
   onClick,
 }) {
   const isBasic = plan.id === "basic";
@@ -4043,7 +4302,7 @@ function PlanCard({
             ${theme.price}
           `}
         >
-          {plan.price}
+          {silverToGoldUpgrade ? "₹699" : plan.price}
         </p>
 
         <span
@@ -4054,9 +4313,49 @@ function PlanCard({
             text-gray-500
           "
         >
-          {plan.billing}
+          {silverToGoldUpgrade ? "ONE-TIME UPGRADE" : plan.billing}
         </span>
       </div>
+
+      {silverToGoldUpgrade && (
+        <div
+          className="
+            relative
+            z-10
+            mt-4
+            rounded-xl
+            border
+            border-[#f5c451]/25
+            bg-[#f5c451]/[0.06]
+            px-4
+            py-3
+          "
+        >
+          <p
+            className="
+              text-[9px]
+              font-black
+              font-mono
+              tracking-wider
+              text-[#ffe59a]
+            "
+          >
+            ACTIVE SILVER UPGRADE OFFER
+          </p>
+
+          <p
+            className="
+              mt-1
+              text-[10px]
+              leading-relaxed
+              text-gray-400
+            "
+          >
+            Upgrade your active Silver membership to Gold for ₹699. This special
+            upgrade price can be used only once. Future Gold renewal is ₹2,999.
+          </p>
+        </div>
+      )}
 
       <p
         className="
@@ -4150,7 +4449,13 @@ function PlanCard({
           ${theme.button}
         `}
       >
-        <span>{saving ? "PLEASE WAIT..." : theme.buttonText}</span>
+        <span>
+          {saving
+            ? "PLEASE WAIT..."
+            : silverToGoldUpgrade
+              ? "UPGRADE TO GOLD • ₹699"
+              : theme.buttonText}
+        </span>
 
         {!saving && (
           <ArrowRight

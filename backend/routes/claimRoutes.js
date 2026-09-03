@@ -1275,7 +1275,7 @@ router.post(
       /* =============================================
          PORTFOLIO
 
-         MAXIMUM 3
+         MAXIMUM 10 SAVED
       ============================================= */
 
       if (portfolioImages !== undefined) {
@@ -1290,7 +1290,7 @@ router.post(
         artist.portfolioImages = portfolioImages
           .map((image) => String(image || "").trim())
           .filter(Boolean)
-          .slice(0, 3);
+          .slice(0, 10);
       }
 
       /* =============================================

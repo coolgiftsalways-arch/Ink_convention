@@ -384,7 +384,7 @@ export default function HallOfFame() {
                   leading-relaxed
                 "
               >
-                Every tattoo artist or studio with an active ₹2,999 Verified
+                Every tattoo artist or studio with an active  Verified
                 Spotlight membership appears here automatically while still
                 remaining visible inside the main Artists directory.
               </p>
@@ -419,7 +419,7 @@ export default function HallOfFame() {
                     tracking-[0.16em]
                   "
                 >
-                  ₹2,999 VERIFIED
+                  
                 </p>
               </div>
 
