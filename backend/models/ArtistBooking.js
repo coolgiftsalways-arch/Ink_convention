@@ -29,25 +29,62 @@ const artistBookingSchema = new mongoose.Schema(
       lowercase: true,
     },
 
-    city: {
-      type: String,
+    /* =====================================================
+       SELECTED ARTIST
+       Artist is already selected from Artists.jsx
+    ===================================================== */
+
+    selectedArtistId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TattooStudio",
       required: true,
+      index: true,
+    },
+
+    selectedArtistName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    artistCity: {
+      type: String,
+      default: "",
       trim: true,
       index: true,
+    },
+
+    artistState: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    /*
+      Store the artist plan at booking time.
+
+      basic    = Free
+      pro      = Silver
+      verified = Gold
+    */
+
+    artistPlanAtBooking: {
+      type: String,
+      enum: ["basic", "pro", "verified"],
+      default: "basic",
+      index: true,
+    },
+
+    artistSelectedAt: {
+      type: Date,
+      default: Date.now,
     },
 
     /* =====================================================
-       TATTOO INFORMATION
+       TATTOO / BOOKING INFORMATION
     ===================================================== */
 
-    category: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
-    },
-
-    preferredArtist: {
+    tattooStyle: {
       type: String,
       default: "",
       trim: true,
@@ -58,7 +95,43 @@ const artistBookingSchema = new mongoose.Schema(
       default: null,
     },
 
+    preferredTime: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     tattooIdea: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    bodyPlacement: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    tattooSize: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    budget: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    referenceLink: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    additionalMessage: {
       type: String,
       default: "",
       trim: true,
@@ -67,21 +140,18 @@ const artistBookingSchema = new mongoose.Schema(
     /* =====================================================
        BOOKING STATUS
 
-       new       = customer submitted search
-       pending   = customer selected an artist
-       accepted  = artist accepted request
-       declined  = artist declined request
+       pending   = request sent to selected artist
+       accepted  = artist accepted
+       declined  = artist declined
        contacted = artist/customer contacted
-       confirmed = booking confirmed
+       confirmed = final booking confirmed
        completed = tattoo completed
        cancelled = booking cancelled
     ===================================================== */
 
     status: {
       type: String,
-
       enum: [
-        "new",
         "pending",
         "accepted",
         "declined",
@@ -90,49 +160,22 @@ const artistBookingSchema = new mongoose.Schema(
         "completed",
         "cancelled",
       ],
-
-      default: "new",
-
+      default: "pending",
       index: true,
     },
 
     /* =====================================================
-       SUGGESTED ARTISTS
+       ARTIST NOTIFICATION
 
-       Artists returned by Book Your Artist matching.
-    ===================================================== */
+       Free:
+       anonymous booking interest only
+       customer identity must NOT be exposed
 
-    suggestedArtistIds: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "TattooStudio",
-      },
-    ],
+       Silver:
+       limited booking information
 
-    
-
-    /* =====================================================
-       SELECTED ARTIST
-
-       When customer clicks:
-       BOOK THIS ARTIST
-       -> SEND REQUEST
-    ===================================================== */
-
-    selectedArtistId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "TattooStudio",
-      default: null,
-      index: true,
-    },
-
-    artistSelectedAt: {
-      type: Date,
-      default: null,
-    },
-
-    /* =====================================================
-       ARTIST EMAIL NOTIFICATION
+       Gold:
+       customer name + booking summary can be revealed
     ===================================================== */
 
     artistNotified: {
@@ -145,8 +188,48 @@ const artistBookingSchema = new mongoose.Schema(
       default: null,
     },
 
+    artistNotificationType: {
+      type: String,
+      enum: [
+        "",
+        "free-upgrade",
+        "silver-booking",
+        "gold-booking",
+      ],
+      default: "",
+    },
+
+    artistNotificationChannel: {
+      type: String,
+      enum: ["", "sms", "whatsapp", "email"],
+      default: "",
+    },
+
+    artistNotificationMessage: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    /*
+      Useful when MSG91 / WhatsApp / SMS provider
+      returns a message or request ID.
+    */
+
+    artistNotificationMessageId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    artistNotificationError: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     /* =====================================================
-       CUSTOMER EMAIL NOTIFICATION
+       CUSTOMER NOTIFICATION
     ===================================================== */
 
     customerNotified: {
@@ -157,6 +240,12 @@ const artistBookingSchema = new mongoose.Schema(
     customerNotifiedAt: {
       type: Date,
       default: null,
+    },
+
+    customerNotificationChannel: {
+      type: String,
+      enum: ["", "sms", "whatsapp", "email"],
+      default: "",
     },
 
     /* =====================================================
@@ -183,6 +272,11 @@ const artistBookingSchema = new mongoose.Schema(
        CONFIRMATION
     ===================================================== */
 
+    contactedAt: {
+      type: Date,
+      default: null,
+    },
+
     confirmedAt: {
       type: Date,
       default: null,
@@ -198,7 +292,6 @@ const artistBookingSchema = new mongoose.Schema(
       default: null,
     },
   },
-
   {
     timestamps: true,
   },
@@ -209,14 +302,19 @@ const artistBookingSchema = new mongoose.Schema(
 ========================================================= */
 
 artistBookingSchema.index({
-  city: 1,
-  category: 1,
+  selectedArtistId: 1,
+  status: 1,
+  createdAt: -1,
+});
+
+artistBookingSchema.index({
+  artistPlanAtBooking: 1,
   status: 1,
 });
 
 artistBookingSchema.index({
-  selectedArtistId: 1,
-  status: 1,
+  phone: 1,
+  createdAt: -1,
 });
 
 /* =========================================================
@@ -225,9 +323,6 @@ artistBookingSchema.index({
 
 const ArtistBooking =
   mongoose.models.ArtistBooking ||
-  mongoose.model(
-    "ArtistBooking",
-    artistBookingSchema,
-  );
+  mongoose.model("ArtistBooking", artistBookingSchema);
 
 module.exports = ArtistBooking;

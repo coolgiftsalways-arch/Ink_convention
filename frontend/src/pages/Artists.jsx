@@ -1085,6 +1085,7 @@ export default function Artists() {
           });
 
           if (selectedCity !== "ALL") {
+            // Selected city = Gold + Silver + Free from that city
             params.set("city", selectedCity);
           }
 
@@ -1329,7 +1330,18 @@ export default function Artists() {
 
   const cityOptions = ["ALL", ...directoryCities];
 
-  const quickCityOptions = cityOptions.slice(0, 6);
+  const quickCityOptions = [
+    "ALL",
+    "MUMBAI",
+    "DELHI",
+    "PUNE",
+    "BENGALURU",
+    "HYDERABAD",
+    "CHENNAI",
+    "KOLKATA",
+    "AHMEDABAD",
+    "JAIPUR",
+  ];
 
   return (
     <>
@@ -1758,7 +1770,7 @@ export default function Artists() {
                 >
                   {selectedCity === "ALL"
                     ? "All directory profiles are shown with Gold → Silver → Free priority."
-                    : `All real ${selectedCity} profiles are included, including Free listings.`}
+                    : `All ${selectedCity} profiles are shown with Gold → Silver → Free priority.`}
                 </p>
               </div>
 
@@ -1930,7 +1942,7 @@ export default function Artists() {
                         text-center
                       "
                     >
-                      Plan
+                      Book Artist
                     </span>
 
                     <span
@@ -3295,9 +3307,16 @@ function ArtistRow({ artist, index, isNew, onClick }) {
     : [a.city, a.state].filter(Boolean).join(", ") || "India";
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
       className={`
         group
         relative
@@ -3549,7 +3568,39 @@ function ArtistRow({ artist, index, isNew, onClick }) {
           justify-center
         "
       >
-        <PlanBadge plan={a.plan} compact />
+        <Link
+          to="/book-artist"
+          state={{
+            preferredArtist: a.name,
+            preferredArtistId: a.id,
+            city: a.city,
+            state: a.state,
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+          className="
+            inline-flex
+            items-center
+            justify-center
+            gap-1.5
+            rounded-lg
+            bg-purple-600
+            hover:bg-purple-500
+            px-3
+            py-2.5
+            text-[7px]
+            font-black
+            uppercase
+            tracking-wider
+            text-white
+            transition
+            whitespace-nowrap
+          "
+        >
+          BOOK ARTIST
+          <ArrowRight size={11} />
+        </Link>
       </div>
 
       <div
@@ -3579,7 +3630,7 @@ function ArtistRow({ artist, index, isNew, onClick }) {
           <ArrowRight size={11} />
         </span>
       </div>
-    </button>
+    </div>
   );
 }
 

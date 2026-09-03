@@ -5,93 +5,174 @@ require("dotenv").config();
 
 const TattooStudio = require("../models/TattooStudio");
 
-const SHEET_NAME = "Callable Master";
+/* =========================================================
+   SETTINGS
+========================================================= */
 
-const ALLOWED_PRIORITY = /^P[123]\s*[—–-]\s*(Artist|Studio)\s*:/i;
+const BATCH_SIZE = 500;
 
-function clean(value) {
-  if (value === null || value === undefined) return "";
+/* =========================================================
+   BASIC HELPERS
+========================================================= */
+
+function cleanText(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
 
   return String(value)
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function toNumber(value, fallback = 0) {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return fallback;
-  }
-
-  const n = Number(
-    String(value)
-      .replace(/,/g, "")
-      .trim()
-  );
-
-  return Number.isFinite(n)
-    ? n
-    : fallback;
+function normalizeText(value) {
+  return cleanText(value)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
+function normalizeHeader(value) {
+  return normalizeText(value)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeUrl(value) {
+  const text = cleanText(value);
+
+  if (!text) {
+    return "";
+  }
+
+  const lower = text.toLowerCase();
+
+  if (
+    lower === "undefined" ||
+    lower === "null" ||
+    lower === "n/a" ||
+    lower === "na" ||
+    lower === "-"
+  ) {
+    return "";
+  }
+
+  return text;
+}
+
+function parseNumber(value) {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const number = Number(
+    String(value)
+      .replace(/,/g, "")
+      .replace(/[^\d.-]/g, "")
+      .trim(),
+  );
+
+  return Number.isFinite(number)
+    ? number
+    : null;
+}
+
+function parseReviews(value) {
+  const number = parseNumber(value);
+
+  if (number === null) {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    Math.round(number),
+  );
+}
+
+/* =========================================================
+   PHONE NORMALIZER
+========================================================= */
+
 function normalizePhone(value) {
-  let digits = clean(value)
+  let digits = cleanText(value)
     .replace(/\D/g, "");
 
-  if (digits.length === 10) {
-    return `+91${digits}`;
+  if (!digits) {
+    return "";
   }
 
   if (
     digits.length === 12 &&
     digits.startsWith("91")
   ) {
+    digits = digits.slice(2);
+  }
+
+  if (
+    digits.length === 11 &&
+    digits.startsWith("0")
+  ) {
+    digits = digits.slice(1);
+  }
+
+  if (digits.length === 10) {
+    return `+91${digits}`;
+  }
+
+  if (digits.length > 10) {
     return `+${digits}`;
   }
 
-  if (digits.length > 0) {
-    return `+${digits}`;
-  }
-
-  return "";
+  return digits;
 }
 
-function extractGooglePlaceId(mapsUrl) {
-  const raw = clean(mapsUrl);
+/* =========================================================
+   GOOGLE PLACE ID
+========================================================= */
 
-  if (!raw) return "";
+function extractGooglePlaceId(mapsUrl) {
+  const raw = cleanText(mapsUrl);
+
+  if (!raw) {
+    return "";
+  }
 
   try {
     const url = new URL(raw);
 
-    const queryPlaceId = clean(
-      url.searchParams.get("query_place_id")
+    const queryPlaceId = cleanText(
+      url.searchParams.get("query_place_id"),
     );
 
     if (queryPlaceId) {
       return queryPlaceId;
     }
 
-    const placeId = clean(
-      url.searchParams.get("place_id")
+    const placeId = cleanText(
+      url.searchParams.get("place_id"),
     );
 
     if (placeId) {
       return placeId;
     }
   } catch (error) {
-    // continue to regex fallback
+    // Continue to regex fallback
   }
 
   const match =
     raw.match(
-      /[?&](?:query_place_id|place_id)=([^&#]+)/i
+      /[?&](?:query_place_id|place_id)=([^&#]+)/i,
     ) ||
     raw.match(
-      /(?:!1s|!2s)(ChI[A-Za-z0-9_-]+)/
+      /(?:!1s|!2s)(ChI[A-Za-z0-9_-]+)/,
     );
 
   return match
@@ -99,138 +180,168 @@ function extractGooglePlaceId(mapsUrl) {
     : "";
 }
 
-function slugPart(value) {
-  return clean(value)
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
-    .replace(/\s+/g, "-");
-}
+/* =========================================================
+   DUPLICATE KEY
+========================================================= */
 
-function buildDuplicateKey(row) {
-  const googlePlaceId =
-    extractGooglePlaceId(
-      row["Google Maps URL"]
-    );
+function createDuplicateKey(data) {
+  // 1. BEST: Google Place ID
+  const placeId = extractGooglePlaceId(
+    data.mapsUrl,
+  );
 
-  if (googlePlaceId) {
-    return `google-place:${googlePlaceId}`;
+  if (placeId) {
+    return `google-place:${placeId}`;
   }
 
-  const name = slugPart(
-    row["Business / Artist Name"]
-  );
-
-  const phone = normalizePhone(
-    row["Mobile"]
+  // 2. PHONE
+  const phoneDigits = normalizePhone(
+    data.phone,
   ).replace(/\D/g, "");
 
-  const city = slugPart(
-    row["Normalized City"]
+  if (phoneDigits) {
+    return `phone:${phoneDigits}`;
+  }
+
+  // 3. GOOGLE MAPS URL
+  if (data.mapsUrl) {
+    return `maps:${normalizeText(
+      data.mapsUrl,
+    )}`;
+  }
+
+  // 4. NAME + CITY + STATE
+  const name = normalizeText(
+    data.name,
   );
 
-  return `fallback:${name}|${phone}|${city}`;
+  const city = normalizeText(
+    data.city,
+  );
+
+  const state = normalizeText(
+    data.state,
+  );
+
+  if (name) {
+    return `studio:${name}|${city}|${state}`;
+  }
+
+  return "";
 }
 
-function mapRow(row) {
-  const priority = clean(
-    row["Lead Priority"]
-  );
+/* =========================================================
+   FIND COLUMN
+========================================================= */
 
-  const isArtist =
-    /\bArtist\b/i.test(priority);
+function getColumnFromObject(
+  row,
+  possibleNames,
+) {
+  const keys = Object.keys(row);
 
-  const isStudio =
-    /\bStudio\b/i.test(priority);
+  for (const possibleName of possibleNames) {
+    const normalizedPossibleName =
+      normalizeHeader(possibleName);
 
-  const name = clean(
-    row["Business / Artist Name"]
-  );
+    const matchingKey = keys.find(
+      (key) =>
+        normalizeHeader(key) ===
+        normalizedPossibleName,
+    );
 
-  return {
-    sourceRowId: clean(
-      row["Lead ID"]
-    ),
+    if (matchingKey !== undefined) {
+      return row[matchingKey];
+    }
+  }
 
-    name,
+  return "";
+}
 
-    artistName: isArtist
-      ? name
-      : "",
+/* =========================================================
+   BUILD STUDIO DATA
+========================================================= */
 
-    professionalName: isArtist
-      ? name
-      : "",
+function buildStudioData({
+  sourceRowId,
+  name,
+  rating,
+  reviews,
+  address,
+  city,
+  state,
+  country,
+  website,
+  phone,
+  items,
+  mapsUrl,
+  category,
+  sourceSheet,
+}) {
+  const studioData = {
+    sourceRowId: cleanText(sourceRowId),
+
+    name: cleanText(name),
+
+    artistName: "",
+
+    professionalName: "",
 
     rating:
-      row["Rating"] === null ||
-      row["Rating"] === undefined ||
-      row["Rating"] === ""
+      rating === null ||
+      rating === undefined ||
+      rating === ""
         ? null
-        : toNumber(
-            row["Rating"],
-            null
-          ),
+        : parseNumber(rating),
 
-    reviews: toNumber(
-      row["Google Reviews"],
-      0
-    ),
+    reviews: parseReviews(reviews),
 
-    address: clean(
-      row["Address"]
-    ),
+    address: cleanText(address),
 
-    city: clean(
-      row["Normalized City"]
-    ),
+    city: cleanText(city),
 
-    state: clean(
-      row["Normalized State"]
-    ),
+    state: cleanText(state),
 
-    country: "IN",
+    country:
+      cleanText(country) || "IN",
 
-    website: clean(
-      row["Website"]
-    ),
+    website: normalizeUrl(website),
 
-    phone: normalizePhone(
-      row["Mobile"]
-    ),
+    phone: normalizePhone(phone),
 
     email: "",
 
-    studio: isStudio
-      ? name
-      : "",
+    studio: cleanText(name),
 
-    studioName: isStudio
-      ? name
-      : "",
+    studioName: cleanText(name),
 
-    instagram: clean(
-      row["Instagram"]
-    ),
+    experience: "",
 
-    mapsUrl: clean(
-      row["Google Maps URL"]
-    ),
+    instagram: "",
 
-    category: clean(
-      row["Google Category"]
-    ),
+    bio: "",
 
-    sourceSheet:
-      clean(
-        row["Source Sheet"]
-      ) || SHEET_NAME,
+    profileImage: "",
 
-    duplicateKey:
-      buildDuplicateKey(row),
+    portfolioImages: [],
+
+    tattooStyles: [],
+
+    items: cleanText(items),
+
+    mapsUrl: normalizeUrl(mapsUrl),
+
+    category: cleanText(category),
+
+    sourceSheet: cleanText(sourceSheet),
+
+    /* ==============================================
+       ALL IMPORTED GOOGLE DATA STARTS FREE
+    ============================================== */
 
     claimed: false,
+
+    claimedAt: null,
 
     phoneVerified: false,
 
@@ -238,6 +349,7 @@ function mapRow(row) {
 
     ownerVerified: false,
 
+    // FREE
     plan: "basic",
 
     paymentStatus: "unpaid",
@@ -248,9 +360,905 @@ function mapRow(row) {
 
     hallOfFameEligible: false,
 
+    planStartedAt: null,
+
+    planExpiresAt: null,
+
     importedAt: new Date(),
   };
+
+  studioData.duplicateKey =
+    createDuplicateKey(studioData);
+
+  return studioData;
 }
+
+/* =========================================================
+   HEADER-BASED ROW
+========================================================= */
+
+function convertHeaderRowToStudio(
+  row,
+  sheetName,
+  rowNumber,
+) {
+  const sourceId =
+    getColumnFromObject(row, [
+      "id",
+      "lead id",
+      "source row id",
+      "source id",
+    ]);
+
+  const name =
+    getColumnFromObject(row, [
+      "name",
+      "studio name",
+      "business name",
+      "business / artist name",
+      "tattoo studio",
+      "artist name",
+      "studio",
+    ]);
+
+  const rating =
+    getColumnFromObject(row, [
+      "rating",
+      "google rating",
+      "google rating score",
+    ]);
+
+  const reviews =
+    getColumnFromObject(row, [
+      "reviews",
+      "google reviews",
+      "review count",
+      "reviews count",
+      "number of reviews",
+    ]);
+
+  const address =
+    getColumnFromObject(row, [
+      "address",
+      "full address",
+      "location",
+    ]);
+
+  const city =
+    getColumnFromObject(row, [
+      "city",
+      "normalized city",
+      "town",
+    ]);
+
+  const state =
+    getColumnFromObject(row, [
+      "state",
+      "normalized state",
+      "region",
+    ]);
+
+  const country =
+    getColumnFromObject(row, [
+      "country",
+      "country code",
+    ]);
+
+  const website =
+    getColumnFromObject(row, [
+      "website",
+      "website url",
+      "website link",
+      "url",
+    ]);
+
+  const phone =
+    getColumnFromObject(row, [
+      "phone",
+      "phone number",
+      "telephone",
+      "mobile",
+      "contact",
+      "contact number",
+    ]);
+
+  const items =
+    getColumnFromObject(row, [
+      "items",
+      "item",
+      "services",
+    ]);
+
+  const mapsUrl =
+    getColumnFromObject(row, [
+      "maps url",
+      "google maps url",
+      "google maps",
+      "map url",
+      "maps",
+    ]);
+
+  const category =
+    getColumnFromObject(row, [
+      "category",
+      "google category",
+      "business category",
+      "type",
+    ]);
+
+  if (
+    !cleanText(name) &&
+    !cleanText(address) &&
+    !cleanText(phone)
+  ) {
+    return null;
+  }
+
+  if (!cleanText(name)) {
+    return {
+      invalid: true,
+      rowNumber,
+      sheetName,
+      reason:
+        "Studio / artist name is missing.",
+    };
+  }
+
+  const studioData =
+    buildStudioData({
+      sourceRowId:
+        cleanText(sourceId) ||
+        `${sheetName}-${rowNumber}`,
+
+      name,
+      rating,
+      reviews,
+      address,
+      city,
+      state,
+      country,
+      website,
+      phone,
+      items,
+      mapsUrl,
+      category,
+      sourceSheet: sheetName,
+    });
+
+  if (!studioData.duplicateKey) {
+    return {
+      invalid: true,
+      rowNumber,
+      sheetName,
+      reason:
+        "Could not create duplicate key.",
+    };
+  }
+
+  return studioData;
+}
+
+/* =========================================================
+   HEADERLESS ROW
+
+   EXPECTED COLUMNS:
+
+   0  = ID
+   1  = Name
+   2  = Rating
+   3  = Reviews
+   4  = Address
+   5  = City
+   6  = State
+   7  = Country
+   8  = Website
+   9  = Phone
+   10 = Items
+   11 = Google Maps URL
+   12 = Category
+========================================================= */
+
+function convertArrayRowToStudio(
+  row,
+  sheetName,
+  rowNumber,
+) {
+  if (!Array.isArray(row)) {
+    return null;
+  }
+
+  const sourceId =
+    cleanText(row[0]);
+
+  const name =
+    cleanText(row[1]);
+
+  const rating =
+    parseNumber(row[2]);
+
+  const reviews =
+    parseReviews(row[3]);
+
+  const address =
+    cleanText(row[4]);
+
+  const city =
+    cleanText(row[5]);
+
+  const state =
+    cleanText(row[6]);
+
+  const country =
+    cleanText(row[7]) || "IN";
+
+  const website =
+    normalizeUrl(row[8]);
+
+  const phone =
+    normalizePhone(row[9]);
+
+  const items =
+    cleanText(row[10]);
+
+  const mapsUrl =
+    normalizeUrl(row[11]);
+
+  const category =
+    cleanText(row[12]);
+
+  if (
+    !name &&
+    !address &&
+    !phone
+  ) {
+    return null;
+  }
+
+  if (!name) {
+    return {
+      invalid: true,
+      rowNumber,
+      sheetName,
+      reason:
+        "Studio / artist name is missing.",
+    };
+  }
+
+  const studioData =
+    buildStudioData({
+      sourceRowId:
+        sourceId ||
+        `${sheetName}-${rowNumber}`,
+
+      name,
+      rating,
+      reviews,
+      address,
+      city,
+      state,
+      country,
+      website,
+      phone,
+      items,
+      mapsUrl,
+      category,
+      sourceSheet: sheetName,
+    });
+
+  if (!studioData.duplicateKey) {
+    return {
+      invalid: true,
+      rowNumber,
+      sheetName,
+      reason:
+        "Could not create duplicate key.",
+    };
+  }
+
+  return studioData;
+}
+
+/* =========================================================
+   DETECT HEADER ROW
+========================================================= */
+
+function looksLikeHeaderRow(row) {
+  if (!Array.isArray(row)) {
+    return false;
+  }
+
+  const firstSeveral = row
+    .slice(0, 15)
+    .map((value) =>
+      normalizeHeader(value),
+    );
+
+  const headerWords = [
+    "id",
+    "lead id",
+    "name",
+    "studio name",
+    "business name",
+    "business / artist name",
+    "artist name",
+    "rating",
+    "google rating",
+    "reviews",
+    "google reviews",
+    "review count",
+    "address",
+    "city",
+    "normalized city",
+    "state",
+    "normalized state",
+    "country",
+    "website",
+    "phone",
+    "phone number",
+    "mobile",
+    "category",
+    "google category",
+    "maps url",
+    "google maps url",
+  ];
+
+  const matches =
+    firstSeveral.filter(
+      (value) =>
+        headerWords.includes(value),
+    );
+
+  return matches.length >= 2;
+}
+
+/* =========================================================
+   PROCESS MONGODB BATCH
+========================================================= */
+
+async function processBatch(batch) {
+  if (!batch.length) {
+    return {
+      imported: 0,
+      existing: 0,
+      duplicateInsideBatch: 0,
+      errors: 0,
+    };
+  }
+
+  /* ===============================================
+     REMOVE DUPLICATES INSIDE CURRENT BATCH
+  =============================================== */
+
+  const uniqueMap =
+    new Map();
+
+  for (const studio of batch) {
+    if (
+      !studio ||
+      !studio.duplicateKey
+    ) {
+      continue;
+    }
+
+    if (
+      !uniqueMap.has(
+        studio.duplicateKey,
+      )
+    ) {
+      uniqueMap.set(
+        studio.duplicateKey,
+        studio,
+      );
+    }
+  }
+
+  const uniqueStudios =
+    [...uniqueMap.values()];
+
+  const duplicateInsideBatch =
+    batch.length -
+    uniqueStudios.length;
+
+  if (
+    uniqueStudios.length === 0
+  ) {
+    return {
+      imported: 0,
+      existing: 0,
+      duplicateInsideBatch,
+      errors: 0,
+    };
+  }
+
+  /* ===============================================
+     UPSERT
+
+     Existing profile:
+     DO NOT overwrite it.
+
+     New profile:
+     INSERT it.
+  =============================================== */
+
+  const operations =
+    uniqueStudios.map(
+      (studio) => ({
+        updateOne: {
+          filter: {
+            duplicateKey:
+              studio.duplicateKey,
+          },
+
+          update: {
+            $setOnInsert: studio,
+          },
+
+          upsert: true,
+        },
+      }),
+    );
+
+  try {
+    const result =
+      await TattooStudio.bulkWrite(
+        operations,
+        {
+          ordered: false,
+        },
+      );
+
+    return {
+      imported:
+        result.upsertedCount || 0,
+
+      existing:
+        result.matchedCount || 0,
+
+      duplicateInsideBatch,
+
+      errors: 0,
+    };
+  } catch (error) {
+    console.error(
+      "❌ MongoDB batch error:",
+      error.message,
+    );
+
+    return {
+      imported: 0,
+      existing: 0,
+      duplicateInsideBatch,
+      errors:
+        uniqueStudios.length,
+    };
+  }
+}
+
+/* =========================================================
+   IMPORT EXCEL FILE
+========================================================= */
+
+async function importExcelFile(
+  filePath,
+) {
+  console.log(
+    "==============================================",
+  );
+
+  console.log(
+    "📊 STARTING TATTOO EXCEL IMPORT",
+  );
+
+  console.log(
+    "==============================================",
+  );
+
+  console.log(
+    `📁 File: ${filePath}`,
+  );
+
+  const workbook =
+    XLSX.readFile(filePath, {
+      cellDates: false,
+      cellNF: false,
+      cellStyles: false,
+    });
+
+  const sheetNames =
+    workbook.SheetNames;
+
+  console.log(
+    `📄 Sheets found: ${sheetNames.length}`,
+  );
+
+  console.log(
+    `📄 ${sheetNames.join(", ")}`,
+  );
+
+  let totalRows = 0;
+
+  let imported = 0;
+
+  let existing = 0;
+
+  let duplicateInsideExcel = 0;
+
+  let emptyRows = 0;
+
+  let invalid = 0;
+
+  let errors = 0;
+
+  const errorRows = [];
+
+  /* ===============================================
+     GLOBAL DUPLICATE CHECK
+
+     This catches duplicate records across
+     DIFFERENT Excel sheets too.
+  =============================================== */
+
+  const globalSeenKeys =
+    new Set();
+
+  /* =======================================================
+     LOOP THROUGH EVERY SHEET
+  ======================================================= */
+
+  for (const sheetName of sheetNames) {
+    console.log("");
+
+    console.log(
+      `📑 Processing sheet: ${sheetName}`,
+    );
+
+    const worksheet =
+      workbook.Sheets[sheetName];
+
+    if (!worksheet) {
+      console.log(
+        `⚠️ Sheet "${sheetName}" could not be read.`,
+      );
+
+      continue;
+    }
+
+    const rows =
+      XLSX.utils.sheet_to_json(
+        worksheet,
+        {
+          header: 1,
+          defval: "",
+          raw: false,
+        },
+      );
+
+    console.log(
+      `   Rows found: ${rows.length}`,
+    );
+
+    if (rows.length === 0) {
+      continue;
+    }
+
+    const hasHeader =
+      looksLikeHeaderRow(
+        rows[0],
+      );
+
+    console.log(
+      `   Header row detected: ${
+        hasHeader
+          ? "YES"
+          : "NO"
+      }`,
+    );
+
+    totalRows += hasHeader
+      ? Math.max(
+          rows.length - 1,
+          0,
+        )
+      : rows.length;
+
+    const headers =
+      hasHeader
+        ? rows[0]
+        : null;
+
+    const startIndex =
+      hasHeader
+        ? 1
+        : 0;
+
+    let batch = [];
+
+    /* =====================================================
+       PROCESS ROWS
+    ===================================================== */
+
+    for (
+      let index = startIndex;
+      index < rows.length;
+      index++
+    ) {
+      const excelRowNumber =
+        index + 1;
+
+      try {
+        let studio;
+
+        /* ==========================================
+           HEADER-BASED
+        ========================================== */
+
+        if (hasHeader) {
+          const objectRow = {};
+
+          headers.forEach(
+            (
+              header,
+              columnIndex,
+            ) => {
+              if (
+                header !==
+                  undefined &&
+                header !== null &&
+                String(
+                  header,
+                ).trim() !== ""
+              ) {
+                objectRow[
+                  String(header)
+                ] =
+                  rows[index][
+                    columnIndex
+                  ] ?? "";
+              }
+            },
+          );
+
+          studio =
+            convertHeaderRowToStudio(
+              objectRow,
+              sheetName,
+              excelRowNumber,
+            );
+        } else {
+          /* ========================================
+             HEADERLESS
+          ======================================== */
+
+          studio =
+            convertArrayRowToStudio(
+              rows[index],
+              sheetName,
+              excelRowNumber,
+            );
+        }
+
+        /* ==========================================
+           EMPTY ROW
+        ========================================== */
+
+        if (studio === null) {
+          emptyRows++;
+          continue;
+        }
+
+        /* ==========================================
+           INVALID ROW
+        ========================================== */
+
+        if (studio.invalid) {
+          invalid++;
+
+          errorRows.push({
+            sheet: sheetName,
+
+            row:
+              excelRowNumber,
+
+            reason:
+              studio.reason,
+          });
+
+          continue;
+        }
+
+        /* ==========================================
+           DUPLICATE ANYWHERE IN EXCEL
+
+           Works even if same studio appears
+           in another sheet.
+        ========================================== */
+
+        if (
+          globalSeenKeys.has(
+            studio.duplicateKey,
+          )
+        ) {
+          duplicateInsideExcel++;
+
+          continue;
+        }
+
+        globalSeenKeys.add(
+          studio.duplicateKey,
+        );
+
+        batch.push(studio);
+
+        /* ==========================================
+           PROCESS BATCH
+        ========================================== */
+
+        if (
+          batch.length >=
+          BATCH_SIZE
+        ) {
+          const result =
+            await processBatch(
+              batch,
+            );
+
+          imported +=
+            result.imported;
+
+          existing +=
+            result.existing;
+
+          duplicateInsideExcel +=
+            result.duplicateInsideBatch;
+
+          errors +=
+            result.errors;
+
+          batch = [];
+
+          console.log(
+            `   ✓ Processed ${
+              index + 1
+            }/${rows.length}`,
+          );
+        }
+      } catch (error) {
+        errors++;
+
+        errorRows.push({
+          sheet: sheetName,
+
+          row:
+            excelRowNumber,
+
+          reason:
+            error.message,
+        });
+
+        console.error(
+          `❌ Error at ${sheetName} row ${excelRowNumber}:`,
+          error.message,
+        );
+      }
+    }
+
+    /* ===============================================
+       PROCESS REMAINING ROWS
+    =============================================== */
+
+    if (batch.length > 0) {
+      const result =
+        await processBatch(
+          batch,
+        );
+
+      imported +=
+        result.imported;
+
+      existing +=
+        result.existing;
+
+      duplicateInsideExcel +=
+        result.duplicateInsideBatch;
+
+      errors +=
+        result.errors;
+    }
+
+    console.log(
+      `✅ Finished sheet: ${sheetName}`,
+    );
+  }
+
+  /* =======================================================
+     FINAL COUNT
+  ======================================================= */
+
+  const mongoCount =
+    await TattooStudio.countDocuments();
+
+  console.log("");
+
+  console.log(
+    "==============================================",
+  );
+
+  console.log(
+    "✅ EXCEL IMPORT COMPLETE",
+  );
+
+  console.log(
+    "==============================================",
+  );
+
+  console.log(
+    `Total Excel rows: ${totalRows}`,
+  );
+
+  console.log(
+    `Inserted new: ${imported}`,
+  );
+
+  console.log(
+    `Already existed in MongoDB: ${existing}`,
+  );
+
+  console.log(
+    `Duplicate inside Excel: ${duplicateInsideExcel}`,
+  );
+
+  console.log(
+    `Empty rows skipped: ${emptyRows}`,
+  );
+
+  console.log(
+    `Invalid rows skipped: ${invalid}`,
+  );
+
+  console.log(
+    `Errors: ${errors}`,
+  );
+
+  console.log(
+    `MongoDB final count: ${mongoCount}`,
+  );
+
+  console.log(
+    "==============================================",
+  );
+
+  /* =======================================================
+     SHOW FIRST ERRORS
+  ======================================================= */
+
+  if (errorRows.length > 0) {
+    console.log(
+      "\n⚠️ First invalid/error rows:",
+    );
+
+    console.table(
+      errorRows.slice(
+        0,
+        30,
+      ),
+    );
+  }
+
+  return {
+    totalRows,
+    imported,
+    existing,
+    duplicateInsideExcel,
+    emptyRows,
+    invalid,
+    errors,
+    mongoCount,
+  };
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
 
 async function main() {
   const inputArg =
@@ -262,7 +1270,7 @@ async function main() {
 
 Example:
 
-node scripts\\importTattooStudios.js "D:\\Ink_convention-main\\Ink_convention-main\\backend\\data\\Ink_Convention_Tattoo_Master_Phase3_Shareable.xlsx"
+node scripts\\importTattooStudios.js "D:\\Ink_convention-main\\Ink_convention-main\\backend\\uploads\\excel\\Tattoo Data (1) (1).xlsx"
 `);
 
     process.exit(1);
@@ -270,7 +1278,7 @@ node scripts\\importTattooStudios.js "D:\\Ink_convention-main\\Ink_convention-ma
 
   if (!process.env.MONGO_URI) {
     throw new Error(
-      "MONGO_URI missing from backend/.env"
+      "MONGO_URI missing from backend/.env",
     );
   }
 
@@ -278,276 +1286,53 @@ node scripts\\importTattooStudios.js "D:\\Ink_convention-main\\Ink_convention-ma
     path.resolve(inputArg);
 
   console.log(
-    `📄 Reading Excel: ${excelPath}`
-  );
-
-  const workbook =
-    XLSX.readFile(excelPath);
-
-  if (
-    !workbook.SheetNames.includes(
-      SHEET_NAME
-    )
-  ) {
-    throw new Error(
-      `Sheet "${SHEET_NAME}" not found. Found: ${workbook.SheetNames.join(", ")}`
-    );
-  }
-
-  const worksheet =
-    workbook.Sheets[
-      SHEET_NAME
-    ];
-
-  const rows =
-    XLSX.utils.sheet_to_json(
-      worksheet,
-      {
-        defval: "",
-        raw: false,
-      }
-    );
-
-  console.log(
-    `📊 Total rows in ${SHEET_NAME}: ${rows.length}`
-  );
-
-  const filtered =
-    rows.filter((row) =>
-      ALLOWED_PRIORITY.test(
-        clean(
-          row["Lead Priority"]
-        )
-      )
-    );
-
-  console.log(
-    `✅ P1/P2/P3 Artist + Studio rows: ${filtered.length}`
-  );
-
-  const skipped = [];
-
-  const docs = [];
-
-  const seenKeys =
-    new Set();
-
-  for (
-    let i = 0;
-    i < filtered.length;
-    i++
-  ) {
-    const row =
-      filtered[i];
-
-    const name =
-      clean(
-        row[
-          "Business / Artist Name"
-        ]
-      );
-
-    if (!name) {
-      skipped.push({
-        excelRow: i + 2,
-        reason:
-          "Missing Business / Artist Name",
-      });
-
-      continue;
-    }
-
-    const doc =
-      mapRow(row);
-
-    if (
-      !doc.duplicateKey ||
-      doc.duplicateKey ===
-        "fallback:||"
-    ) {
-      skipped.push({
-        excelRow:
-          i + 2,
-        name,
-        reason:
-          "Could not create duplicate key",
-      });
-
-      continue;
-    }
-
-    if (
-      seenKeys.has(
-        doc.duplicateKey
-      )
-    ) {
-      skipped.push({
-        excelRow:
-          i + 2,
-        name,
-        reason:
-          `Duplicate inside Excel: ${doc.duplicateKey}`,
-      });
-
-      continue;
-    }
-
-    seenKeys.add(
-      doc.duplicateKey
-    );
-
-    docs.push(doc);
-  }
-
-  console.log(
-    `📦 Ready to import: ${docs.length}`
-  );
-
-  console.log(
-    `⏭️ Skipped: ${skipped.length}`
+    `📄 Excel path: ${excelPath}`,
   );
 
   await mongoose.connect(
-    process.env.MONGO_URI
+    process.env.MONGO_URI,
   );
 
   console.log(
-    "✅ MongoDB connected"
+    "✅ MongoDB connected",
   );
 
   const before =
     await TattooStudio.countDocuments();
 
   console.log(
-    `📦 Current MongoDB count: ${before}`
+    `📦 MongoDB before import: ${before}`,
   );
 
-  const operations =
-    docs.map((doc) => ({
-      updateOne: {
-        filter: {
-          duplicateKey:
-            doc.duplicateKey,
-        },
-
-        update: {
-          $set: doc,
-
-          $setOnInsert: {
-            createdAt:
-              new Date(),
-          },
-        },
-
-        upsert: true,
-      },
-    }));
-
-  const BATCH_SIZE = 500;
-
-  let inserted = 0;
-  let matched = 0;
-  let modified = 0;
-
-  for (
-    let start = 0;
-    start <
-    operations.length;
-    start += BATCH_SIZE
-  ) {
-    const batch =
-      operations.slice(
-        start,
-        start +
-          BATCH_SIZE
-      );
-
-    const result =
-      await TattooStudio.bulkWrite(
-        batch,
-        {
-          ordered: false,
-        }
-      );
-
-    inserted +=
-      result.upsertedCount ||
-      0;
-
-    matched +=
-      result.matchedCount ||
-      0;
-
-    modified +=
-      result.modifiedCount ||
-      0;
-
-    const completed =
-      Math.min(
-        start +
-          BATCH_SIZE,
-        operations.length
-      );
-
-    console.log(
-      `🚀 Processed ${completed}/${operations.length}`
-    );
-  }
-
-  const after =
-    await TattooStudio.countDocuments();
-
-  console.log(`
-====================================
-✅ IMPORT FINISHED
-====================================
-
-Inserted new: ${inserted}
-Matched existing: ${matched}
-Modified existing: ${modified}
-Skipped: ${skipped.length}
-
-MongoDB before: ${before}
-MongoDB after: ${after}
-`);
-
-  if (
-    skipped.length >
-    0
-  ) {
-    console.log(
-      "⚠️ Skipped rows:"
-    );
-
-    console.table(
-      skipped.slice(
-        0,
-        20
-      )
-    );
-  }
+  await importExcelFile(
+    excelPath,
+  );
 
   await mongoose.disconnect();
 
   console.log(
-    "✅ MongoDB disconnected"
+    "✅ MongoDB disconnected",
   );
 }
+
+/* =========================================================
+   RUN
+========================================================= */
 
 main().catch(
   async (error) => {
     console.error(
-      "\n❌ Import failed:"
+      "\n❌ Import failed:",
     );
 
-    console.error(
-      error
-    );
+    console.error(error);
 
     try {
       await mongoose.disconnect();
-    } catch (error) {}
+    } catch (disconnectError) {
+      // Ignore disconnect error
+    }
 
     process.exit(1);
-  }
+  },
 );

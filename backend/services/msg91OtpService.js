@@ -13,29 +13,27 @@ async function verifyMsg91AccessToken(accessToken) {
     throw new Error("MSG91_AUTH_KEY is missing in backend .env");
   }
 
-  const response = await fetch(
-    "https://control.msg91.com/api/v5/widget/verifyAccessToken",
+  console.log("========================================");
+  console.log("🔐 VERIFYING MSG91 ACCESS TOKEN");
+  console.log("🔑 Authkey configured:", Boolean(authkey));
+  console.log("🎟️ Access token configured:", Boolean(cleanAccessToken));
+  console.log("========================================");
 
+  const response = await fetch(
+    "https://api.msg91.com/api/v5/widget/verifyAccessToken",
     {
       method: "POST",
 
       headers: {
+        Accept: "application/json",
         "Content-Type": "application/json",
 
-        Accept: "application/json",
+        // IMPORTANT:
+        // Keep the real MSG91 Authkey on backend only.
+        authkey,
       },
 
-      /*
-       * IMPORTANT:
-       *
-       * MSG91's own Server Side
-       * Integration example sends
-       * BOTH values in the JSON body.
-       */
-
       body: JSON.stringify({
-        authkey,
-
         "access-token": cleanAccessToken,
       }),
     },
@@ -43,17 +41,20 @@ async function verifyMsg91AccessToken(accessToken) {
 
   const rawText = await response.text();
 
+  console.log("📲 MSG91 STATUS:", response.status);
+  console.log("📲 MSG91 RAW RESPONSE:", rawText);
+
   let data = {};
 
   try {
     data = rawText ? JSON.parse(rawText) : {};
-  } catch {
-    console.error("❌ MSG91 RAW RESPONSE:", rawText);
+  } catch (error) {
+    console.error("❌ MSG91 INVALID JSON RESPONSE:", rawText);
 
-    throw new Error("MSG91 returned an invalid verification response.");
+    throw new Error(
+      `MSG91 returned an invalid verification response (${response.status}).`,
+    );
   }
-
-  console.log("📲 MSG91 STATUS:", response.status);
 
   console.log("📲 MSG91 RESULT:", data);
 
@@ -61,11 +62,24 @@ async function verifyMsg91AccessToken(accessToken) {
     .trim()
     .toLowerCase();
 
-  if (!response.ok || type === "error" || data?.success === false) {
-    throw new Error(
-      data?.message || data?.error || "MSG91 access token verification failed.",
-    );
+  const success =
+    response.ok &&
+    type !== "error" &&
+    data?.success !== false;
+
+  if (!success) {
+    const message =
+      data?.message ||
+      data?.error ||
+      data?.description ||
+      `MSG91 access token verification failed (${response.status}).`;
+
+    console.error("❌ MSG91 ACCESS TOKEN VERIFICATION FAILED:", message);
+
+    throw new Error(message);
   }
+
+  console.log("✅ MSG91 ACCESS TOKEN VERIFIED");
 
   return data;
 }

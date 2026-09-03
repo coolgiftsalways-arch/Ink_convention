@@ -201,7 +201,7 @@ router.post(
 
    MongoDB REAL DATA
           ↓
-   CITY FILTER
+   FILTERS
           ↓
    GOLD FIRST
           ↓
@@ -224,6 +224,18 @@ router.post(
 
    GOLD:
    Full public profile
+
+
+   SPECIAL:
+
+   ?paidOnly=true
+
+   ONLY RETURNS:
+
+   GOLD / VERIFIED
+   SILVER / PRO
+
+   FREE / BASIC WILL NOT RETURN
 ========================================================= */
 
 router.get(
@@ -262,9 +274,38 @@ router.get(
         verified,
         minRating,
         search,
+        paidOnly,
       } = req.query;
 
       const filter = {};
+
+      /* =============================================
+         PAID ONLY
+
+         paidOnly=true means:
+
+         SILVER
+         plan = pro
+         paymentStatus = paid
+
+         GOLD
+         plan = verified
+         paymentStatus = paid
+
+         FREE / BASIC WILL NOT BE RETURNED
+      ============================================= */
+
+      if (
+        String(paidOnly || "")
+          .trim()
+          .toLowerCase() === "true"
+      ) {
+        filter.paymentStatus = "paid";
+
+        filter.plan = {
+          $in: ["pro", "verified"],
+        };
+      }
 
       /* =============================================
          CITY FILTER
@@ -356,9 +397,17 @@ router.get(
 
       /* =============================================
          PLAN FILTER
+
+         IMPORTANT:
+
+         If paidOnly=true, don't allow
+         normal plan filter to override it.
       ============================================= */
 
       if (
+        String(paidOnly || "")
+          .trim()
+          .toLowerCase() !== "true" &&
         plan &&
         String(plan).trim() &&
         String(plan).trim().toUpperCase() !== "ALL"
@@ -447,17 +496,7 @@ router.get(
       /* =============================================
          GET REAL DATA FROM MONGODB
 
-         IMPORTANT SORT:
-
-         plan -1 means:
-
-         verified
-            ↓
-         pro
-            ↓
-         basic
-
-         So:
+         SORT:
 
          GOLD
             ↓
@@ -471,9 +510,9 @@ router.get(
           .sort({
             verified: -1,
 
-            plan: -1,
-
             spotlight: -1,
+
+            plan: -1,
 
             updatedAt: -1,
 
@@ -488,15 +527,6 @@ router.get(
 
       /* =============================================
          PUBLIC PRIVACY SERIALIZER
-
-         IMPORTANT:
-
-         MongoDB contains all details.
-
-         We filter by city BEFORE this.
-
-         Then this removes details that
-         visitor is not allowed to see.
       ============================================= */
 
       const publicStudios = studios.map(serializePublicArtist);
@@ -510,13 +540,6 @@ router.get(
       return res.status(200).json({
         success: true,
 
-        /* ===========================================
-           SAME DATA UNDER MULTIPLE KEYS
-
-           This keeps compatibility with
-           older frontend code.
-        =========================================== */
-
         data: publicStudios,
 
         artists: publicStudios,
@@ -525,21 +548,22 @@ router.get(
 
         total,
 
-        /* ===========================================
-           CURRENT FILTER
-        =========================================== */
+        selectedCity:
+          city && String(city).trim()
+            ? String(city).trim()
+            : "ALL",
 
-        selectedCity: city && String(city).trim() ? String(city).trim() : "ALL",
+        selectedState:
+          state && String(state).trim()
+            ? String(state).trim()
+            : "ALL",
 
-        /* ===========================================
-           DISPLAY ORDER
-        =========================================== */
+        paidOnly:
+          String(paidOnly || "")
+            .trim()
+            .toLowerCase() === "true",
 
         order: ["verified", "pro", "basic"],
-
-        /* ===========================================
-           PAGINATION
-        =========================================== */
 
         pagination: {
           page,
@@ -633,16 +657,6 @@ router.get(
 
    GET
    /api/admin/tattoo-studios/filters
-
-
-   IMPORTANT:
-
-   Cities come DIRECTLY from MongoDB.
-
-   There are NO fake/hardcoded cities.
-
-   Even if only a FREE artist exists in
-   a city, that city can still appear.
 ========================================================= */
 
 router.get(
@@ -656,39 +670,40 @@ router.get(
          GET REAL VALUES FROM MONGODB
       ============================================= */
 
-      const [states, cities, categories, tattooStylesRaw] = await Promise.all([
-        TattooStudio.distinct("state", {
-          state: {
-            $exists: true,
+      const [states, cities, categories, tattooStylesRaw] =
+        await Promise.all([
+          TattooStudio.distinct("state", {
+            state: {
+              $exists: true,
 
-            $nin: ["", null],
-          },
-        }),
+              $nin: ["", null],
+            },
+          }),
 
-        TattooStudio.distinct("city", {
-          city: {
-            $exists: true,
+          TattooStudio.distinct("city", {
+            city: {
+              $exists: true,
 
-            $nin: ["", null],
-          },
-        }),
+              $nin: ["", null],
+            },
+          }),
 
-        TattooStudio.distinct("category", {
-          category: {
-            $exists: true,
+          TattooStudio.distinct("category", {
+            category: {
+              $exists: true,
 
-            $nin: ["", null],
-          },
-        }),
+              $nin: ["", null],
+            },
+          }),
 
-        TattooStudio.distinct("tattooStyles", {
-          tattooStyles: {
-            $exists: true,
+          TattooStudio.distinct("tattooStyles", {
+            tattooStyles: {
+              $exists: true,
 
-            $ne: [],
-          },
-        }),
-      ]);
+              $ne: [],
+            },
+          }),
+        ]);
 
       /* =============================================
          CLEAN + REMOVE DUPLICATES
@@ -757,7 +772,14 @@ router.get(
     try {
       await expireMemberships();
 
-      const [total, gold, silver, basic] = await Promise.all([
+      const [
+        total,
+        gold,
+        silver,
+        basic,
+        paidGold,
+        paidSilver,
+      ] = await Promise.all([
         TattooStudio.countDocuments(),
 
         TattooStudio.countDocuments({
@@ -770,6 +792,16 @@ router.get(
 
         TattooStudio.countDocuments({
           plan: "basic",
+        }),
+
+        TattooStudio.countDocuments({
+          plan: "verified",
+          paymentStatus: "paid",
+        }),
+
+        TattooStudio.countDocuments({
+          plan: "pro",
+          paymentStatus: "paid",
         }),
       ]);
 
@@ -784,15 +816,22 @@ router.get(
 
           gold,
 
+          paidGold,
+
           /* SILVER */
           pro: silver,
 
           silver,
 
+          paidSilver,
+
           /* FREE */
           free: basic,
 
           basic,
+
+          paidFeatured:
+            paidGold + paidSilver,
         },
       });
     } catch (error) {
@@ -821,7 +860,9 @@ router.delete(
 
   async (req, res) => {
     try {
-      const deletedStudio = await TattooStudio.findByIdAndDelete(req.params.id);
+      const deletedStudio = await TattooStudio.findByIdAndDelete(
+        req.params.id,
+      );
 
       if (!deletedStudio) {
         return res.status(404).json({
