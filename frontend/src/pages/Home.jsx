@@ -289,69 +289,10 @@ function Home() {
                 sm:w-auto
               "
             >
-              {/* =============================================
-                  1. BOOK YOUR STALL
-              ============================================= */}
-
-              <Link
-                to="/client-login"
-                state={{ redirectTo: "/stall" }}
-                className="
-                  group
-                  relative
-                  overflow-hidden
-
-                  bg-white
-                  hover:bg-gray-200
-
-                  text-black
-
-                  px-7
-                  py-4
-
-                  rounded-xl
-
-                  font-black
-                  text-[10px]
-                  sm:text-xs
-                  font-mono
-                  uppercase
-                  tracking-[0.12em]
-
-                  flex
-                  items-center
-                  justify-center
-                  gap-3
-
-                  transition-all
-                  duration-300
-
-                  hover:-translate-y-1
-
-                  shadow-[0_10px_35px_rgba(255,255,255,0.08)]
-                "
-              >
-                <span
-                  className="
-                    relative
-                    z-10
-                    whitespace-nowrap
-                  "
-                >
-                  BOOK YOUR STALL
-                </span>
-
-                <ArrowRight
-                  size={14}
-                  className="
-                    relative
-                    z-10
-                    transition-transform
-                    duration-300
-                    group-hover:translate-x-1
-                  "
-                />
-              </Link>
+              {/*
+                  STALL BOOKING BUTTON REMOVED FOR NOW.
+                  Future route can be restored here when stall booking goes live.
+              */}
 
               {/* =============================================
                   2. BOOK ARTISTS
@@ -644,7 +585,7 @@ function Home() {
                   text-white
                 "
               >
-                ₹0
+                MORE
               </h3>
 
               <p
@@ -657,7 +598,7 @@ function Home() {
                   uppercase
                 "
               >
-                LIFETIME FREE LISTING
+                FEATURES COMING SOON
               </p>
             </div>
           </div>
@@ -815,8 +756,8 @@ function Home() {
                 mt-5
               "
             >
-              Reserve an expo stall, book a tattoo artist, or claim your
-              lifetime-free artist profile.
+              Explore upcoming expo stall opportunities, book a tattoo artist,
+              or claim your artist profile.
             </p>
           </div>
 
@@ -914,8 +855,7 @@ function Home() {
                 your studio, setup or brand directly in front of the tattoo
                 community.
               </p>
-
-              {/* COMPACT STALL OFFER */}
+              {/* STALL BOOKING STATUS */}
 
               <div
                 className="
@@ -925,55 +865,55 @@ function Home() {
                   border-white/15
                   bg-white/[0.05]
                   px-4
-                  py-3
+                  py-4
                 "
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span
-                    className="
-                      text-[8px]
-                      font-mono
-                      font-black
-                      uppercase
-                      tracking-widest
-                      text-gray-400
-                    "
-                  >
-                    RESERVE YOUR STALL
-                  </span>
-
-                  <span className="text-sm font-black text-white">₹1,499</span>
-                </div>
+                <p
+                  className="
+                    text-[9px]
+                    font-mono
+                    font-black
+                    uppercase
+                    tracking-widest
+                    text-white
+                  "
+                >
+                  STALL BOOKING COMING SOON
+                </p>
 
                 <p
                   className="
                     mt-2
-                    text-[8px]
-                    font-mono
-                    uppercase
-                    tracking-wide
-                    text-gray-600
+                    text-[10px]
+                    sm:text-xs
+                    text-gray-500
+                    leading-relaxed
                   "
                 >
-                  PAY ₹1,499 ADVANCE TO SECURE YOUR SPACE
+                  Soon you will be able to choose your expo city, explore stall
+                  options and reserve your space directly through Ink
+                  Convention.
                 </p>
               </div>
 
               <div className="space-y-2.5 mt-5">
                 <StepLine text="Choose your regional expo city" />
-                <StepLine text="Select your stall package" />
-                <StepLine text="Pay ₹1,499 advance to reserve" />
+                <StepLine text="Explore available stall options" />
+                <StepLine text="Booking access will be available soon" />
               </div>
+              {/*
+                OLD STALL BOOKING LINK REMOVED FOR NOW.
+                Restore the /client-login route here when bookings go live.
+              */}
 
-              <Link
-                to="/client-login"
-                state={{ redirectTo: "/stall" }}
+              <div
                 className="
                   mt-auto
                   w-full
-                  bg-white
-                  hover:bg-gray-200
-                  text-black
+                  border
+                  border-white/10
+                  bg-white/[0.04]
+                  text-gray-400
                   px-6
                   py-4
                   rounded-xl
@@ -984,19 +924,11 @@ function Home() {
                   uppercase
                   flex
                   items-center
-                  justify-between
-                  transition-all
+                  justify-center
                 "
               >
-                RESERVE YOUR STALL
-                <ArrowRight
-                  size={15}
-                  className="
-                    transition-transform
-                    group-hover:translate-x-1
-                  "
-                />
-              </Link>
+                STALL BOOKINGS OPENING SOON
+              </div>
             </article>
 
             {/* 02 / BOOK ARTISTS */}
@@ -1089,8 +1021,7 @@ function Home() {
                 want. Get an exclusive first-booking discount when you book
                 through Ink Convention.
               </p>
-
-              {/* COMPACT FIRST BOOKING OFFER */}
+              {/* ARTIST BOOKING BENEFIT */}
 
               <div
                 className="
@@ -1100,59 +1031,33 @@ function Home() {
                   border-[#a855f7]/30
                   bg-[#a855f7]/10
                   px-4
-                  py-3
+                  py-4
                 "
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="
-                        text-[8px]
-                        font-mono
-                        font-black
-                        uppercase
-                        tracking-widest
-                        text-[#c084fc]
-                      "
-                    >
-                      FIRST BOOKING
-                    </span>
-
-                    <span className="text-sm font-black text-white">
-                      ₹2,000 OFF
-                    </span>
-                  </div>
-
-                  <span
-                    className="
-                      rounded-md
-                      bg-black/30
-                      border
-                      border-white/10
-                      px-2.5
-                      py-1
-                      text-[9px]
-                      font-black
-                      font-mono
-                      tracking-widest
-                      text-[#d8b4fe]
-                    "
-                  >
-                    INK2000
-                  </span>
-                </div>
+                <p
+                  className="
+                    text-[9px]
+                    font-mono
+                    font-black
+                    uppercase
+                    tracking-widest
+                    text-[#c084fc]
+                  "
+                >
+                  MORE BOOKING BENEFITS COMING
+                </p>
 
                 <p
                   className="
                     mt-2
-                    text-[8px]
-                    font-mono
-                    uppercase
-                    tracking-wide
+                    text-[10px]
+                    sm:text-xs
                     text-gray-500
+                    leading-relaxed
                   "
                 >
-                  New clients • Min. booking ₹5,000 • T&amp;C apply
+                  Discover artists now. More exclusive booking features and
+                  client benefits will be introduced in the future.
                 </p>
               </div>
 
@@ -1282,8 +1187,7 @@ function Home() {
                 Claim your artist or studio profile and keep your basic Ink
                 Convention directory listing active for life — completely free.
               </p>
-
-              {/* COMPACT LIFETIME FREE OFFER */}
+              {/* DIRECTORY MESSAGE */}
 
               <div
                 className="
@@ -1293,37 +1197,33 @@ function Home() {
                   border-purple-500/30
                   bg-purple-500/10
                   px-4
-                  py-3
+                  py-4
                 "
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span
-                    className="
-                      text-[8px]
-                      font-mono
-                      font-black
-                      uppercase
-                      tracking-widest
-                      text-purple-300
-                    "
-                  >
-                    LIFETIME FREE
-                  </span>
-
-                  <span className="text-sm font-black text-white">₹0</span>
-                </div>
+                <p
+                  className="
+                    text-[9px]
+                    font-mono
+                    font-black
+                    uppercase
+                    tracking-widest
+                    text-purple-300
+                  "
+                >
+                  BUILD YOUR PROFILE TODAY
+                </p>
 
                 <p
                   className="
                     mt-2
-                    text-[8px]
-                    font-mono
-                    uppercase
-                    tracking-wide
+                    text-[10px]
+                    sm:text-xs
                     text-gray-500
+                    leading-relaxed
                   "
                 >
-                  CLAIM YOUR PROFILE • NO MEMBERSHIP FEE
+                  Create your artist profile now and unlock more visibility,
+                  profile tools and opportunities as Ink Convention grows.
                 </p>
               </div>
 
@@ -1820,12 +1720,12 @@ function Home() {
                 a: "Create your artist or studio profile and choose the Lifetime Free listing. You can upgrade to Pro or Verified Spotlight later.",
               },
               {
-                q: "How does stall booking work?",
-                a: "Choose Book Your Stall, login to your account, select your expo city and stall package, then reserve your space with the ₹1,499 advance.",
+                q: "When will stall booking be available?",
+                a: "Stall booking is being prepared. Soon you will be able to choose an expo city, explore stall options and reserve your space directly through Ink Convention.",
               },
               {
-                q: "How much does a stall cost?",
-                a: "The planned stall packages are ₹4,999, ₹7,499 and ₹12,499, depending on the package and visibility level.",
+                q: "What stall options will be available?",
+                a: "Different stall options and visibility levels are planned. Full booking details will be announced when stall bookings open.",
               },
               {
                 q: "How do I enter the tattoo competition?",

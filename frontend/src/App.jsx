@@ -34,7 +34,6 @@ import Enter from "./pages/Enter";
 import Upload from "./pages/Upload";
 import TOP from "./pages/TOP";
 import Upcoming from "./pages/Upcomeing";
-import ClientLogin from "./pages/ClientLogin";
 import BookArtist from "./pages/BookArtist";
 
 /* =========================================================
@@ -292,19 +291,6 @@ function Layout() {
             }
           />
           <Route path="/book-artist" element={<BookArtist />} />
-
-          {/* =================================================
-              CLIENT LOGIN
-          ================================================= */}
-
-          <Route
-            path="/client-login"
-            element={
-              <PageTransition>
-                <ClientLogin />
-              </PageTransition>
-            }
-          />
 
           {/* =================================================
               ADMIN ROOT

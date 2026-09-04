@@ -384,9 +384,9 @@ export default function HallOfFame() {
                   leading-relaxed
                 "
               >
-                Every tattoo artist or studio with an active  Verified
-                Spotlight membership appears here automatically while still
-                remaining visible inside the main Artists directory.
+                Every tattoo artist or studio with an active Verified Spotlight
+                membership appears here automatically while still remaining
+                visible inside the main Artists directory.
               </p>
             </div>
 
@@ -418,9 +418,7 @@ export default function HallOfFame() {
                     font-mono
                     tracking-[0.16em]
                   "
-                >
-                  
-                </p>
+                ></p>
               </div>
 
               <div
@@ -470,7 +468,7 @@ export default function HallOfFame() {
         >
           <InfoBox
             icon={<Award size={17} />}
-            title="₹2,999 VERIFIED"
+            title="VERIFIED"
             text="Active Verified Spotlight membership"
           />
 
@@ -654,9 +652,9 @@ export default function HallOfFame() {
                   leading-relaxed
                 "
             >
-              When the first artist successfully purchases and activates the
-              ₹2,999 Verified Spotlight membership, their profile will
-              automatically appear here.
+              Featured artists will appear here once their profiles are verified
+              and activated. Stay tuned to discover standout talent from the Ink
+              Convention community.
             </p>
           </section>
         )}
@@ -1011,7 +1009,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
                 tracking-[0.12em]
               "
             >
-              ₹2,999 VERIFIED SPOTLIGHT
+              VERIFIED SPOTLIGHT
             </span>
           </div>
 

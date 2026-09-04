@@ -397,11 +397,14 @@ export default function Upcomeing() {
             >
               <div ref={headingRef} className="relative w-full">
                 {showBookText ? (
-                  <Link
-                    to="/client-login"
-                    className="relative block group cursor-pointer"
-                  >
-                    {/* Purple background glow */}
+                  <div className="relative block">
+                    {/*
+                      OLD CLIENT LOGIN LINK — KEEP FOR FUTURE TESTING
+
+                      <Link to="/client-login">
+                        BOOK YOUR STALL NOW
+                      </Link>
+                    */}
 
                     <div
                       ref={glowRef}
@@ -432,7 +435,7 @@ export default function Upcomeing() {
                         "
                       >
                         <span className="block text-white">
-                          BOOK YOUR STALL
+                          YOU CAN BOOK YOUR STALL
                         </span>
 
                         <span className="flex items-center gap-3 mt-1">
@@ -442,10 +445,10 @@ export default function Upcomeing() {
                               drop-shadow-[0_0_25px_rgba(168,85,247,1)]
                             "
                           >
-                            NOW
+                            COMING SOON
                           </span>
 
-                          <ArrowRight
+                          <Clock
                             ref={arrowRef}
                             className="
                               w-10
@@ -456,8 +459,6 @@ export default function Upcomeing() {
                               drop-shadow-[0_0_18px_rgba(168,85,247,1)]
                             "
                           />
-
-                          {/* Pulsing dot */}
 
                           <span className="relative flex h-4 w-4 ml-2">
                             <span
@@ -487,8 +488,6 @@ export default function Upcomeing() {
                           </span>
                         </span>
                       </h1>
-
-                      {/* Shimmer line */}
 
                       <div
                         className="
@@ -528,10 +527,10 @@ export default function Upcomeing() {
                           uppercase
                         "
                       >
-                        Click to reserve your space
+                        Stall booking will be available soon
                       </p>
                     </div>
-                  </Link>
+                  </div>
                 ) : (
                   <h1
                     className="
@@ -868,75 +867,54 @@ export default function Upcomeing() {
                       >
                         <ArrowDown size={16} className="text-amber-400" />
 
-                        <span>🚀 BOOK YOUR STALL NOW 🚀</span>
+                        <span>STALL BOOKINGS OPENING SOON</span>
 
                         <ArrowDown size={16} className="text-amber-400" />
                       </div>
                     </div>
 
-                    {/* MAIN BUTTON */}
+                    {/* ================================================= */}
+                    {/* STALL BOOKING - COMING SOON */}
+                    {/* ================================================= */}
 
-                    <Link
-                      to="/client-login"
+                    {/*
+                      OLD CLIENT LOGIN BUTTON — KEEP FOR FUTURE TESTING
+
+                      <Link to="/client-login">
+                        BOOK YOUR STALL
+                      </Link>
+                    */}
+
+                    <div
                       className="
                         relative
-                        overflow-hidden
-                        group
                         w-full
-                        bg-gradient-to-r
-                        from-[#a855f7]
-                        via-purple-600
-                        to-[#9333ea]
-                        hover:opacity-95
-                        text-white
+                        border
+                        border-purple-500/40
+                        bg-purple-500/10
+                        text-purple-200
                         font-black
                         py-4
                         px-4
                         rounded-xl
-                        transition-all
                         text-sm
                         text-center
                         flex
                         items-center
                         justify-center
                         gap-2
-                        shadow-xl
-                        shadow-purple-500/40
-                        ring-4
-                        ring-purple-500/40
-                        hover:scale-[1.02]
+                        cursor-default
                       "
                     >
-                      <div
-                        className="
-                          absolute
-                          inset-0
-                          w-1/2
-                          h-full
-                          bg-white/20
-                          skew-x-12
-                          -translate-x-full
-                          group-hover:translate-x-[300%]
-                          transition-transform
-                          duration-1000
-                        "
-                      />
-
-                      <Store size={18} className="animate-pulse" />
-
-                      <span>BOOK YOUR STALL</span>
-
-                      <ArrowRight
-                        size={16}
-                        className="group-hover:translate-x-1 transition-transform"
-                      />
-                    </Link>
+                      <Clock size={18} className="text-purple-400" />
+                      <span>STALL BOOKING — COMING SOON</span>
+                    </div>
 
                     {/* SECONDARY BUTTONS */}
 
                     <div className="flex gap-3 mt-1">
                       <Link
-                        to="/Upload"
+                        to="/artists"
                         className="
                           flex-1
                           bg-white/5
@@ -957,7 +935,7 @@ export default function Upcomeing() {
                           justify-center
                         "
                       >
-                        EXPO 2026 FORM
+                        Artists
                       </Link>
 
                       <button

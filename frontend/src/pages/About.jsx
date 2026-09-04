@@ -458,35 +458,11 @@ function About() {
         </div>
       </section>
 
-      {/* =========================================
-          11. FINAL CALL TO ACTION
-      ========================================= */}
-      <section className="w-full py-32 px-6 sm:px-10 lg:px-12 bg-gradient-to-t from-[#140a24] to-[#08080a] border-t border-[#a855f7]/20 text-center">
-        <div className="max-w-3xl mx-auto space-y-8">
-          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-white uppercase leading-tight">
-            READY TO PUT YOUR WORK TO THE TEST?
-          </h2>
-          <p className="text-gray-300 text-lg font-light">
-            Explore the competition, choose your category and discover how Ink
-            Convention works.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
-            <Link
-              to="/upload"
-              className="w-full sm:w-auto bg-[#a855f7] hover:bg-[#9333ea] text-white px-10 py-5 rounded-xl font-bold text-sm font-mono uppercase tracking-widest transition duration-300 shadow-lg shadow-purple-900/50"
-            >
-              VIEW THE COMPETITION
-            </Link>
-            <Link
-              to="/categories"
-              className="w-full sm:w-auto bg-transparent border border-white/20 hover:border-white/60 text-white px-10 py-5 rounded-xl font-bold text-sm font-mono uppercase tracking-widest transition duration-300"
-            >
-              EXPLORE CATEGORIES
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/*
+          FINAL CALL TO ACTION REMOVED
+          "READY TO PUT YOUR WORK TO THE TEST?"
+          can be restored here later if needed.
+      */}
     </div>
   );
 }

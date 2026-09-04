@@ -237,50 +237,6 @@ function Navbar() {
               </svg>
             </a>
 
-            {/* INSTAGRAM */}
-
-            <a
-              href="https://www.instagram.com/ink.convention__?igsi=MXV1bDZ1NXNqcXhxMQ=="
-              target="_blank"
-              rel="noopener noreferrer"
-              className="
-                w-8
-                h-8
-                rounded-full
-                bg-white/5
-                border
-                border-white/10
-                flex
-                items-center
-                justify-center
-                text-gray-300
-                hover:bg-[#a855f7]
-                hover:border-[#a855f7]
-                hover:text-white
-                transition
-                duration-300
-              "
-              aria-label="Instagram"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-
-                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-              </svg>
-            </a>
-
             {/* EMAIL */}
 
             <a
@@ -493,50 +449,6 @@ function Navbar() {
                   strokeLinejoin="round"
                 >
                   <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-                </svg>
-              </a>
-
-              {/* INSTAGRAM */}
-
-              <a
-                href="https://www.instagram.com/ink.convention__?igsi=MXV1bDZ1NXNqcXhxMQ=="
-                target="_blank"
-                rel="noopener noreferrer"
-                className="
-                  w-8
-                  h-8
-                  rounded-full
-                  bg-white/5
-                  border
-                  border-white/10
-                  flex
-                  items-center
-                  justify-center
-                  text-gray-300
-                  hover:bg-[#a855f7]
-                  hover:border-[#a855f7]
-                  hover:text-white
-                  transition
-                  duration-300
-                "
-                aria-label="Instagram"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-
-                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
                 </svg>
               </a>
 
