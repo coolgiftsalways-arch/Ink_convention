@@ -1,6 +1,5 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const crypto = require("crypto");
 
 const StallBooking = require("../models/StallBooking");
 
@@ -42,15 +41,22 @@ const getPackageData = (duration) => {
   };
 };
 
-// =====================================================
-// POST /api/stall-bookings
-// CREATE BOOKING
-// =====================================================
+/* =========================================================
+   CREATE A STALL REQUEST
+   NO RAZORPAY
+   NO PAYMENT ON WEBSITE
 
-router.post("/", async (req, res) => {
+   POST /api/stall-bookings/request
+
+   Also supports:
+   POST /api/stall-bookings
+   so older frontend code will not break.
+========================================================= */
+
+const createStallRequest = async (req, res) => {
   try {
     console.log("=======================================");
-    console.log("💾 STALL BOOKING REQUEST");
+    console.log("🏪 NEW STALL REQUEST");
     console.log(req.body);
     console.log("=======================================");
 
@@ -71,6 +77,10 @@ router.post("/", async (req, res) => {
     const phone = cleanText(body.phone || body.mobile || body.phoneNumber);
 
     const city = cleanText(body.city || body.userCity);
+
+    /* -----------------------------
+       VALIDATION
+    ----------------------------- */
 
     if (!fullName) {
       return res.status(400).json({
@@ -96,101 +106,20 @@ router.post("/", async (req, res) => {
     if (!phone) {
       return res.status(400).json({
         success: false,
-        message: "Phone is required.",
+        message: "Phone number is required.",
       });
     }
 
     if (!city) {
       return res.status(400).json({
         success: false,
-        message: "City is required.",
+        message: "Preferred city is required.",
       });
     }
 
-    // =================================================
-    // RAZORPAY DATA
-    // =================================================
-
-    const razorpayOrderId = cleanText(
-      body.razorpay_order_id || body.razorpayOrderId || body.orderId,
-    );
-
-    const razorpayPaymentId = cleanText(
-      body.razorpay_payment_id || body.razorpayPaymentId || body.paymentId,
-    );
-
-    const razorpaySignature = cleanText(
-      body.razorpay_signature || body.razorpaySignature,
-    );
-
-    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
-      return res.status(400).json({
-        success: false,
-        message: "Razorpay payment details are missing.",
-      });
-    }
-
-    // =================================================
-    // VERIFY SIGNATURE
-    // =================================================
-
-    const razorpaySecret =
-      process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET;
-
-    if (!razorpaySecret) {
-      console.error("❌ Razorpay secret missing in backend .env");
-
-      return res.status(500).json({
-        success: false,
-        message: "Razorpay server configuration is missing.",
-      });
-    }
-
-    const expectedSignature = crypto
-      .createHmac("sha256", razorpaySecret)
-      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-      .digest("hex");
-
-    if (expectedSignature !== razorpaySignature) {
-      console.error("❌ INVALID RAZORPAY SIGNATURE");
-
-      return res.status(400).json({
-        success: false,
-        message: "Payment verification failed.",
-      });
-    }
-
-    // =================================================
-    // DUPLICATE PAYMENT CHECK
-    // =================================================
-
-    const existingBooking = await StallBooking.findOne({
-      $or: [
-        {
-          razorpay_payment_id: razorpayPaymentId,
-        },
-        {
-          razorpayPaymentId,
-        },
-        {
-          paymentId: razorpayPaymentId,
-        },
-      ],
-    });
-
-    if (existingBooking) {
-      console.log("⚠️ Booking already exists:", existingBooking._id);
-
-      return res.status(200).json({
-        success: true,
-        message: "Booking already exists.",
-        booking: existingBooking,
-      });
-    }
-
-    // =================================================
-    // PACKAGE
-    // =================================================
+    /* -----------------------------
+       PACKAGE
+    ----------------------------- */
 
     const duration = cleanText(body.duration) || "1";
 
@@ -199,34 +128,30 @@ router.post("/", async (req, res) => {
     const packageId = cleanText(body.packageId) || fallbackPackage.packageId;
 
     const packageName =
-      cleanText(body.packageName) || fallbackPackage.packageName;
+      cleanText(body.packageName) ||
+      cleanText(body.stallType) ||
+      cleanText(body.stallName) ||
+      fallbackPackage.packageName;
 
     const packagePrice =
       cleanNumber(body.packagePrice || body.totalAmount || body.price) ||
       fallbackPackage.packagePrice;
 
-    const advanceAmount =
-      cleanNumber(body.advanceAmount || body.paidAmount || body.amount) || 1499;
-
-    // =================================================
-    // CREATE MONGODB RECORD
-    // =================================================
+    /* -----------------------------
+       SAVE AS NEW REQUEST
+       PAYMENT IS NOT DONE YET
+    ----------------------------- */
 
     const booking = await StallBooking.create({
       name: fullName,
-
       fullName,
-
       ownerName: fullName,
 
       brandName,
-
       studioName: brandName,
 
       email,
-
       phone,
-
       city,
 
       state: cleanText(body.state),
@@ -238,71 +163,66 @@ router.post("/", async (req, res) => {
       duration,
 
       packageId,
-
       packageName,
-
       packagePrice,
-
       totalAmount: packagePrice,
 
-      advanceAmount,
+      // Your team will discuss this after contacting the user.
+      advanceAmount: 1499,
 
-      paidAmount: advanceAmount,
+      // No money has been received yet.
+      paidAmount: 0,
+      amount: 0,
 
-      amount: advanceAmount,
+      paymentStatus: "pending",
+      bookingStatus: "new",
+      status: "NEW REQUEST",
 
-      paymentStatus: "paid",
+      notes: cleanText(body.notes),
 
-      bookingStatus: "confirmed",
-
-      status: "CONFIRMED",
-
-      razorpay_order_id: razorpayOrderId,
-
-      razorpay_payment_id: razorpayPaymentId,
-
-      razorpay_signature: razorpaySignature,
-
-      razorpayOrderId,
-
-      razorpayPaymentId,
-
-      razorpaySignature,
-
-      orderId: razorpayOrderId,
-
-      paymentId: razorpayPaymentId,
+      source: cleanText(body.source) || "website_stall_request",
 
       extraData: body,
     });
 
     console.log("=======================================");
-    console.log("✅ STALL BOOKING SAVED");
+    console.log("✅ STALL REQUEST SAVED");
     console.log("ID:", booking._id);
     console.log("Studio:", booking.brandName);
-    console.log("Payment:", booking.razorpay_payment_id);
+    console.log("Phone:", booking.phone);
+    console.log("Payment Status:", booking.paymentStatus);
+    console.log("Booking Status:", booking.bookingStatus);
     console.log("=======================================");
 
     return res.status(201).json({
       success: true,
-      message: "Stall booking saved successfully.",
+      message:
+        "Your stall request has been submitted successfully. Our team will contact you within 24 hours.",
       booking,
     });
   } catch (error) {
-    console.error("❌ STALL BOOKING CREATE ERROR:", error);
+    console.error("❌ STALL REQUEST CREATE ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Unable to save stall booking.",
+      message: "Unable to submit stall request.",
       error: process.env.NODE_ENV === "production" ? undefined : error.message,
     });
   }
-});
+};
 
-// =====================================================
-// GET /api/stall-bookings
-// GET ALL BOOKINGS
-// =====================================================
+// New frontend route.
+router.post("/request", createStallRequest);
+
+// Backward compatibility.
+// If any older page still posts to /api/stall-bookings,
+// it will now also create a request without Razorpay.
+router.post("/", createStallRequest);
+
+/* =========================================================
+   GET /api/stall-bookings
+   GET ALL BOOKINGS / REQUESTS
+========================================================= */
 
 router.get("/", async (req, res) => {
   try {
@@ -331,9 +251,9 @@ router.get("/", async (req, res) => {
   }
 });
 
-// =====================================================
-// GET SINGLE
-// =====================================================
+/* =========================================================
+   GET SINGLE BOOKING
+========================================================= */
 
 router.get("/:id", async (req, res) => {
   try {
@@ -367,10 +287,21 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// =====================================================
-// PUT /api/stall-bookings/:id
-// UPDATE STATUS
-// =====================================================
+/* =========================================================
+   UPDATE BOOKING STATUS
+
+   PUT /api/stall-bookings/:id
+
+   Example bodies:
+
+   { "bookingStatus": "contacted" }
+
+   { "bookingStatus": "paid" }
+
+   { "bookingStatus": "confirmed" }
+
+   { "bookingStatus": "cancelled" }
+========================================================= */
 
 router.put("/:id", async (req, res) => {
   try {
@@ -400,13 +331,39 @@ router.put("/:id", async (req, res) => {
       });
     }
 
+    const existingBooking = await StallBooking.findById(req.params.id);
+
+    if (!existingBooking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found.",
+      });
+    }
+
     const updateData = {
       bookingStatus: requestedStatus,
-      status: requestedStatus.toUpperCase(),
+      status:
+        requestedStatus === "new"
+          ? "NEW REQUEST"
+          : requestedStatus.toUpperCase(),
     };
 
+    // Your admin clicks PAID only after manually verifying
+    // that the ₹1,499 advance reached your account.
     if (requestedStatus === "paid") {
       updateData.paymentStatus = "paid";
+      updateData.paidAmount = existingBooking.advanceAmount || 1499;
+      updateData.amount = existingBooking.advanceAmount || 1499;
+    }
+
+    // If cancelled before payment, payment stays pending.
+    if (
+      requestedStatus === "cancelled" &&
+      existingBooking.paymentStatus !== "paid"
+    ) {
+      updateData.paymentStatus = "pending";
+      updateData.paidAmount = 0;
+      updateData.amount = 0;
     }
 
     const booking = await StallBooking.findByIdAndUpdate(
@@ -417,13 +374,6 @@ router.put("/:id", async (req, res) => {
         runValidators: true,
       },
     );
-
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found.",
-      });
-    }
 
     return res.status(200).json({
       success: true,
@@ -440,9 +390,9 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// =====================================================
-// DELETE
-// =====================================================
+/* =========================================================
+   DELETE BOOKING
+========================================================= */
 
 router.delete("/:id", async (req, res) => {
   try {

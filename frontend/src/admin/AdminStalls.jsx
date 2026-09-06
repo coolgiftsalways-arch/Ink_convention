@@ -7,6 +7,11 @@ import {
   Sparkles,
   RefreshCw,
   Trash2,
+  Phone,
+  Mail,
+  MapPin,
+  CalendarClock,
+  ArrowRight,
 } from "lucide-react";
 import AdminSidebar from "./AdminSidebar";
 
@@ -40,6 +45,36 @@ function formatPrice(value) {
   return `₹${amount.toLocaleString("en-IN")}`;
 }
 
+function normalizeStatusValue(value) {
+  const status = String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  if (status === "NEW" || status === "NEW REQUEST") {
+    return "NEW";
+  }
+
+  if (status === "CONTACTED") {
+    return "CONTACTED";
+  }
+
+  if (status === "CONFIRMED") {
+    return "CONFIRMED";
+  }
+
+  if (status === "PAID") {
+    return "PAID";
+  }
+
+  if (status === "CANCELLED" || status === "CANCELED") {
+    return "CANCELLED";
+  }
+
+  return status || "NEW";
+}
+
 function formatDate(value) {
   if (!value) {
     return "-";
@@ -58,6 +93,47 @@ function formatDate(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function matchesDateFilter(createdAt, filter) {
+  if (filter === "ALL") {
+    return true;
+  }
+
+  if (!createdAt) {
+    return false;
+  }
+
+  const submittedDate = new Date(createdAt);
+
+  if (Number.isNaN(submittedDate.getTime())) {
+    return false;
+  }
+
+  const now = new Date();
+  const ageInMs = now.getTime() - submittedDate.getTime();
+
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
+
+  // NEW = requests from the last 48 hours only
+  if (filter === "NEW") {
+    return ageInMs >= 0 && ageInMs <= 48 * HOUR;
+  }
+
+  if (filter === "1_WEEK") {
+    return ageInMs >= 0 && ageInMs <= 7 * DAY;
+  }
+
+  if (filter === "2_WEEKS") {
+    return ageInMs >= 0 && ageInMs <= 14 * DAY;
+  }
+
+  if (filter === "3_WEEKS") {
+    return ageInMs >= 0 && ageInMs <= 21 * DAY;
+  }
+
+  return true;
 }
 
 function getFallbackPackagePrice(duration) {
@@ -97,7 +173,7 @@ function normalizeBooking(booking, index) {
     Number(booking.advanceAmount || booking.paidAmount || booking.amount) ||
     1499;
 
-  const rawStatus = booking.status || booking.bookingStatus || "CONFIRMED";
+  const rawStatus = booking.bookingStatus || booking.status || "new";
 
   const rawPaymentStatus =
     booking.paymentStatus || booking.payment?.status || "PENDING";
@@ -156,9 +232,11 @@ function normalizeBooking(booking, index) {
 
     advanceAmount,
 
-    paymentStatus: String(rawPaymentStatus).toUpperCase(),
+    paymentStatus: String(rawPaymentStatus || "pending")
+      .trim()
+      .toUpperCase(),
 
-    status: String(rawStatus).toUpperCase(),
+    status: normalizeStatusValue(rawStatus),
 
     paymentId:
       booking.paymentId ||
@@ -178,6 +256,9 @@ function normalizeBooking(booking, index) {
 
     createdAt:
       booking.createdAt || booking.bookingDate || booking.updatedAt || "",
+
+    submittedAt:
+      booking.createdAt || booking.bookingDate || booking.updatedAt || "",
   };
 }
 
@@ -191,6 +272,8 @@ export default function AdminStalls() {
   const [searchQuery, setSearchQuery] = React.useState("");
 
   const [statusFilter, setStatusFilter] = React.useState("ALL");
+
+  const [dateFilter, setDateFilter] = React.useState("ALL");
 
   const [selectedBooking, setSelectedBooking] = React.useState(null);
 
@@ -320,11 +403,17 @@ export default function AdminStalls() {
         ].some((value) => safeText(value).includes(query));
 
       const matchesStatus =
-        statusFilter === "ALL" || booking.status === statusFilter;
+        statusFilter === "ALL" ||
+        normalizeStatusValue(booking.status) === statusFilter;
 
-      return matchesSearch && matchesStatus;
+      const matchesDate = matchesDateFilter(
+        booking.submittedAt || booking.createdAt,
+        dateFilter,
+      );
+
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [bookings, searchQuery, statusFilter]);
+  }, [bookings, searchQuery, statusFilter, dateFilter]);
 
   // ===================================================
   // STATS
@@ -690,6 +779,28 @@ export default function AdminStalls() {
               ))}
             </select>
 
+            <select
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
+              className="
+                bg-black/30
+                border
+                border-white/10
+                rounded-xl
+                px-4
+                py-4
+                outline-none
+                text-[9px]
+                font-mono
+              "
+            >
+              <option value="ALL">ALL DATES</option>
+              <option value="NEW">NEW — LAST 48 HOURS</option>
+              <option value="1_WEEK">LAST 1 WEEK</option>
+              <option value="2_WEEKS">LAST 2 WEEKS</option>
+              <option value="3_WEEKS">LAST 3 WEEKS</option>
+            </select>
+
             <button
               type="button"
               onClick={handleRefresh}
@@ -808,12 +919,13 @@ export default function AdminStalls() {
                 <Store size={36} className="text-gray-700" />
 
                 <h2 className="mt-5 text-xl font-black uppercase">
-                  NO STALL BOOKINGS
+                  NO MATCHING STALL REQUESTS
                 </h2>
 
-                <p className="mt-2 text-xs text-gray-600">
-                  API returned {bookings.length} booking(s) from
-                  /api/stall-bookings.
+                <p className="mt-2 max-w-xl text-xs text-gray-600 leading-relaxed">
+                  We loaded {bookings.length} total request(s), but none match
+                  the selected status/date filters. For NEW, only requests from
+                  the last 48 hours are shown.
                 </p>
 
                 <button
@@ -880,20 +992,43 @@ export default function AdminStalls() {
 
 function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
   const isPaid = booking.paymentStatus === "PAID" || booking.status === "PAID";
+  const isNew48Hours = matchesDateFilter(
+    booking.submittedAt || booking.createdAt,
+    "NEW",
+  );
+
+  const handleCardKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onOpen();
+    }
+  };
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={handleCardKeyDown}
       className="
         bg-[#0d0d11]
         border
         border-white/10
-        hover:border-purple-500/30
+        hover:border-purple-500/40
+        hover:bg-purple-500/[0.025]
         rounded-[24px]
         p-5
         sm:p-6
-        transition
+        transition-all
+        duration-300
+        cursor-pointer
+        hover:-translate-y-1
+        hover:shadow-[0_20px_60px_rgba(0,0,0,0.30)]
+        focus:outline-none
+        focus:border-purple-500/50
       "
     >
+      {/* TOP */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[8px] font-mono tracking-widest text-purple-400 break-all">
@@ -906,37 +1041,80 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
 
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
             <User size={12} />
-
-            <span>{booking.ownerName}</span>
+            <span className="truncate">{booking.ownerName}</span>
           </div>
         </div>
 
-        <span
-          className={`
-            shrink-0
-            rounded-full
-            border
-            px-3
-            py-2
-            text-[7px]
-            font-black
-            tracking-widest
-            ${
-              isPaid
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                : "border-orange-500/20 bg-orange-500/10 text-orange-400"
-            }
-          `}
-        >
-          {isPaid ? "PAID" : booking.paymentStatus}
-        </span>
+        <div className="shrink-0 flex flex-col items-end gap-2">
+          {isNew48Hours && (
+            <span
+              className="
+                rounded-full
+                border
+                border-purple-500/30
+                bg-purple-500/10
+                px-3
+                py-2
+                text-[7px]
+                font-black
+                tracking-widest
+                text-purple-300
+              "
+            >
+              NEW · 48H
+            </span>
+          )}
+
+          <span
+            className={`
+              rounded-full
+              border
+              px-3
+              py-2
+              text-[7px]
+              font-black
+              tracking-widest
+              ${
+                isPaid
+                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                  : "border-orange-500/20 bg-orange-500/10 text-orange-400"
+              }
+            `}
+          >
+            {isPaid ? "PAID" : booking.paymentStatus}
+          </span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mt-6">
-        <SmallInfo label="CUSTOMER CITY" value={booking.city} />
+      {/* CONTACT DETAILS */}
+      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <CardContact
+          icon={<Phone size={13} />}
+          label="PHONE"
+          value={booking.phone}
+        />
 
-        <SmallInfo label="EXPO CITY" value={booking.expoCity} />
+        <CardContact
+          icon={<Mail size={13} />}
+          label="EMAIL"
+          value={booking.email}
+        />
 
+        <CardContact
+          icon={<MapPin size={13} />}
+          label="CITY"
+          value={booking.city}
+        />
+
+        <CardContact
+          icon={<CalendarClock size={13} />}
+          label="SUBMITTED"
+          value={formatDate(booking.submittedAt)}
+        />
+      </div>
+
+      {/* BOOKING INFO */}
+      <div className="grid grid-cols-2 gap-3 mt-4">
         <SmallInfo label="PACKAGE" value={booking.packageName} />
 
         <SmallInfo
@@ -956,6 +1134,35 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
       <div
         className="
           mt-5
+          rounded-xl
+          border
+          border-purple-500/15
+          bg-purple-500/[0.04]
+          px-4
+          py-3
+          flex
+          items-center
+          justify-between
+          gap-3
+        "
+      >
+        <div>
+          <p className="text-[7px] font-mono tracking-widest text-purple-400">
+            CLICK CARD FOR FULL DETAILS
+          </p>
+          <p className="mt-1 text-[10px] text-gray-600">
+            View everything the user submitted.
+          </p>
+        </div>
+
+        <ArrowRight size={15} className="shrink-0 text-purple-400" />
+      </div>
+
+      {/* ACTIONS */}
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="
+          mt-5
           pt-5
           border-t
           border-white/10
@@ -968,6 +1175,7 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
         <select
           value={booking.status}
           onChange={(event) => onStatusChange(event.target.value)}
+          onClick={(event) => event.stopPropagation()}
           className="
             flex-1
             bg-black/30
@@ -990,7 +1198,10 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
 
         <button
           type="button"
-          onClick={onOpen}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
           className="
             bg-purple-600
             hover:bg-purple-500
@@ -1008,7 +1219,10 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
 
         <button
           type="button"
-          onClick={onDelete}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
           disabled={deleting}
           className="
             bg-red-500/10
@@ -1046,6 +1260,32 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
         </button>
       </div>
     </article>
+  );
+}
+
+function CardContact({ icon, label, value }) {
+  return (
+    <div
+      className="
+        rounded-xl
+        border
+        border-white/[0.06]
+        bg-black/20
+        p-4
+      "
+    >
+      <div className="flex items-center gap-2 text-purple-400">
+        {icon}
+
+        <p className="text-[7px] font-mono tracking-wider text-gray-700">
+          {label}
+        </p>
+      </div>
+
+      <p className="mt-2 text-xs font-bold text-gray-300 break-all">
+        {value || "-"}
+      </p>
+    </div>
   );
 }
 
@@ -1158,6 +1398,27 @@ function BookingModal({
           <p className="mt-2 text-[9px] font-mono text-gray-600 break-all">
             {booking.bookingId}
           </p>
+
+          <div
+            className="
+              mt-4
+              inline-flex
+              items-center
+              gap-2
+              rounded-full
+              border
+              border-purple-500/20
+              bg-purple-500/[0.06]
+              px-3
+              py-2
+            "
+          >
+            <CalendarClock size={13} className="text-purple-400" />
+
+            <span className="text-[8px] font-mono tracking-wider text-gray-400">
+              SUBMITTED {formatDate(booking.submittedAt)}
+            </span>
+          </div>
         </div>
 
         <div
@@ -1214,7 +1475,11 @@ function BookingModal({
 
           <Detail label="INSTAGRAM" value={booking.instagram} />
 
-          <Detail label="BOOKING DATE" value={formatDate(booking.createdAt)} />
+          <Detail
+            label="SUBMITTED DATE & TIME"
+            value={formatDate(booking.submittedAt)}
+            highlight
+          />
         </div>
 
         <div
@@ -1228,7 +1493,7 @@ function BookingModal({
           "
         >
           <p className="text-[8px] font-mono tracking-widest text-gray-600">
-            MESSAGE
+            USER MESSAGE / NOTES
           </p>
 
           <p className="mt-3 text-sm text-gray-300 leading-relaxed">

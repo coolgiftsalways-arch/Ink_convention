@@ -35,6 +35,7 @@ import Upload from "./pages/Upload";
 import TOP from "./pages/TOP";
 import Upcoming from "./pages/Upcomeing";
 import BookArtist from "./pages/BookArtist";
+import ClientLogin from "./pages/ClientLogin";
 
 /* =========================================================
    ADMIN PAGES
@@ -244,6 +245,19 @@ function Layout() {
           />
 
           {/* =================================================
+              STALL BOOKING / CONTACT
+          ================================================= */}
+
+          <Route
+            path="/stall-booking"
+            element={
+              <PageTransition>
+                <ClientLogin />
+              </PageTransition>
+            }
+          />
+
+          {/* =================================================
               CONTACT
           ================================================= */}
 
@@ -257,8 +271,25 @@ function Layout() {
           />
 
           {/* =================================================
-              COMPETITION UPLOAD
+              COMPETITION
+
+              FILE:
+              src/pages/Upload.jsx
+
+              MAIN URL:
+              /competition
+
+              OLD /upload URLS KEPT FOR SUPPORT
           ================================================= */}
+
+          <Route
+            path="/competition"
+            element={
+              <PageTransition>
+                <Upload />
+              </PageTransition>
+            }
+          />
 
           <Route
             path="/Upload"
@@ -290,7 +321,24 @@ function Layout() {
               </PageTransition>
             }
           />
-          <Route path="/book-artist" element={<BookArtist />} />
+          {/* =================================================
+              BOOK ARTIST
+
+              FILE:
+              src/pages/BookArtist.jsx
+
+              URL:
+              /book-artist
+          ================================================= */}
+
+          <Route
+            path="/book-artist"
+            element={
+              <PageTransition>
+                <BookArtist />
+              </PageTransition>
+            }
+          />
 
           {/* =================================================
               ADMIN ROOT

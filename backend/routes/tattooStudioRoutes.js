@@ -476,6 +476,20 @@ router.get(
           },
 
           {
+            email: regex,
+          },
+
+          {
+            phone:
+              String(search).replace(/\D/g, "").trim().length >= 4
+                ? new RegExp(
+                    String(search).replace(/\D/g, "").split("").join("\\D*"),
+                    "i",
+                  )
+                : regex,
+          },
+
+          {
             city: regex,
           },
 
@@ -548,15 +562,10 @@ router.get(
 
         total,
 
-        selectedCity:
-          city && String(city).trim()
-            ? String(city).trim()
-            : "ALL",
+        selectedCity: city && String(city).trim() ? String(city).trim() : "ALL",
 
         selectedState:
-          state && String(state).trim()
-            ? String(state).trim()
-            : "ALL",
+          state && String(state).trim() ? String(state).trim() : "ALL",
 
         paidOnly:
           String(paidOnly || "")
@@ -670,40 +679,39 @@ router.get(
          GET REAL VALUES FROM MONGODB
       ============================================= */
 
-      const [states, cities, categories, tattooStylesRaw] =
-        await Promise.all([
-          TattooStudio.distinct("state", {
-            state: {
-              $exists: true,
+      const [states, cities, categories, tattooStylesRaw] = await Promise.all([
+        TattooStudio.distinct("state", {
+          state: {
+            $exists: true,
 
-              $nin: ["", null],
-            },
-          }),
+            $nin: ["", null],
+          },
+        }),
 
-          TattooStudio.distinct("city", {
-            city: {
-              $exists: true,
+        TattooStudio.distinct("city", {
+          city: {
+            $exists: true,
 
-              $nin: ["", null],
-            },
-          }),
+            $nin: ["", null],
+          },
+        }),
 
-          TattooStudio.distinct("category", {
-            category: {
-              $exists: true,
+        TattooStudio.distinct("category", {
+          category: {
+            $exists: true,
 
-              $nin: ["", null],
-            },
-          }),
+            $nin: ["", null],
+          },
+        }),
 
-          TattooStudio.distinct("tattooStyles", {
-            tattooStyles: {
-              $exists: true,
+        TattooStudio.distinct("tattooStyles", {
+          tattooStyles: {
+            $exists: true,
 
-              $ne: [],
-            },
-          }),
-        ]);
+            $ne: [],
+          },
+        }),
+      ]);
 
       /* =============================================
          CLEAN + REMOVE DUPLICATES
@@ -772,38 +780,32 @@ router.get(
     try {
       await expireMemberships();
 
-      const [
-        total,
-        gold,
-        silver,
-        basic,
-        paidGold,
-        paidSilver,
-      ] = await Promise.all([
-        TattooStudio.countDocuments(),
+      const [total, gold, silver, basic, paidGold, paidSilver] =
+        await Promise.all([
+          TattooStudio.countDocuments(),
 
-        TattooStudio.countDocuments({
-          plan: "verified",
-        }),
+          TattooStudio.countDocuments({
+            plan: "verified",
+          }),
 
-        TattooStudio.countDocuments({
-          plan: "pro",
-        }),
+          TattooStudio.countDocuments({
+            plan: "pro",
+          }),
 
-        TattooStudio.countDocuments({
-          plan: "basic",
-        }),
+          TattooStudio.countDocuments({
+            plan: "basic",
+          }),
 
-        TattooStudio.countDocuments({
-          plan: "verified",
-          paymentStatus: "paid",
-        }),
+          TattooStudio.countDocuments({
+            plan: "verified",
+            paymentStatus: "paid",
+          }),
 
-        TattooStudio.countDocuments({
-          plan: "pro",
-          paymentStatus: "paid",
-        }),
-      ]);
+          TattooStudio.countDocuments({
+            plan: "pro",
+            paymentStatus: "paid",
+          }),
+        ]);
 
       return res.status(200).json({
         success: true,
@@ -830,8 +832,7 @@ router.get(
 
           basic,
 
-          paidFeatured:
-            paidGold + paidSilver,
+          paidFeatured: paidGold + paidSilver,
         },
       });
     } catch (error) {
@@ -860,9 +861,7 @@ router.delete(
 
   async (req, res) => {
     try {
-      const deletedStudio = await TattooStudio.findByIdAndDelete(
-        req.params.id,
-      );
+      const deletedStudio = await TattooStudio.findByIdAndDelete(req.params.id);
 
       if (!deletedStudio) {
         return res.status(404).json({

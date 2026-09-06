@@ -88,11 +88,13 @@ const stallBookingSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // Required later when your team speaks with the customer.
     advanceAmount: {
       type: Number,
       default: 1499,
     },
 
+    // Nothing is paid when the website form is submitted.
     paidAmount: {
       type: Number,
       default: 0,
@@ -109,60 +111,28 @@ const stallBookingSchema = new mongoose.Schema(
       default: "pending",
     },
 
+    // Request-first flow:
+    // new -> contacted -> confirmed/paid -> cancelled
     bookingStatus: {
       type: String,
       enum: ["new", "contacted", "confirmed", "paid", "cancelled"],
-      default: "confirmed",
+      default: "new",
     },
 
     status: {
       type: String,
-      default: "CONFIRMED",
+      default: "NEW REQUEST",
     },
 
-    razorpay_order_id: {
-      type: String,
-      default: "",
-    },
-
-    razorpay_payment_id: {
-      type: String,
-      default: "",
-    },
-
-    razorpay_signature: {
-      type: String,
-      default: "",
-    },
-
-    razorpayOrderId: {
-      type: String,
-      default: "",
-    },
-
-    razorpayPaymentId: {
-      type: String,
-      default: "",
-    },
-
-    razorpaySignature: {
-      type: String,
-      default: "",
-    },
-
-    orderId: {
-      type: String,
-      default: "",
-    },
-
-    paymentId: {
-      type: String,
-      default: "",
-    },
-
+    // Optional internal notes for your team/admin.
     notes: {
       type: String,
       default: "",
+    },
+
+    source: {
+      type: String,
+      default: "website_stall_request",
     },
 
     extraData: {

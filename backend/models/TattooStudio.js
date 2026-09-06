@@ -332,6 +332,16 @@ const tattooStudioSchema = new mongoose.Schema(
     },
 
     /* =====================================================
+       SILVER -> GOLD ONE-TIME UPGRADE
+    ===================================================== */
+
+    silverToGoldUpgradeUsed: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    /* =====================================================
        RAZORPAY INFORMATION
 
        DO NOT STORE:

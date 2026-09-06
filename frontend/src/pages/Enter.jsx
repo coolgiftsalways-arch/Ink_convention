@@ -117,7 +117,7 @@ const PLANS = [
     billing: "1 YEAR",
 
     description:
-      "Show the key contact details clients need while keeping premium profile details locked.",
+      "Send a Silver membership request. No online payment is taken here — our team will contact you within 24 hours.",
 
     benefits: [
       "Name visible",
@@ -143,7 +143,7 @@ const PLANS = [
     billing: "1 YEAR",
 
     description:
-      "Unlock the complete public artist profile, Gold verification and Hall of Fame visibility.",
+      "Send a Gold membership request. No online payment is taken here — our team will contact you within 24 hours.",
 
     benefits: [
       "Everything visible publicly",
@@ -352,60 +352,6 @@ async function apiRequest(path, options = {}) {
 }
 
 /* =========================================================
-   RAZORPAY SCRIPT
-========================================================= */
-
-const loadRazorpayScript = () => {
-  return new Promise((resolve) => {
-    if (window.Razorpay) {
-      resolve(true);
-
-      return;
-    }
-
-    const existing = document.querySelector(
-      'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
-    );
-
-    if (existing) {
-      existing.addEventListener(
-        "load",
-
-        () => resolve(true),
-
-        {
-          once: true,
-        },
-      );
-
-      existing.addEventListener(
-        "error",
-
-        () => resolve(false),
-
-        {
-          once: true,
-        },
-      );
-
-      return;
-    }
-
-    const script = document.createElement("script");
-
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-
-    script.async = true;
-
-    script.onload = () => resolve(true);
-
-    script.onerror = () => resolve(false);
-
-    document.body.appendChild(script);
-  });
-};
-
-/* =========================================================
    IMAGE COMPRESSION
 ========================================================= */
 
@@ -612,13 +558,11 @@ export default function Enter() {
   const [success, setSuccess] = useState("");
 
   /* =======================================================
-     BACKEND GOLD PRICE QUOTE
-
-     This is used only to DISPLAY the correct Gold price.
-     payment.js still makes the final secure pricing decision.
+     SILVER / GOLD MEMBERSHIP REQUEST
+     NO RAZORPAY
   ======================================================= */
 
-  const [goldPriceQuote, setGoldPriceQuote] = useState(null);
+  const [membershipRequest, setMembershipRequest] = useState(null);
 
   /* =======================================================
      HELPERS
@@ -984,79 +928,19 @@ export default function Enter() {
   );
 
   /* =======================================================
-     GOLD PRICE FROM BACKEND
+     SILVER -> GOLD REQUEST PRICE
 
-     WHY:
-     /api/claim/me can return a restricted/safe profile that may
-     not contain every payment field.
+     There is NO online payment on this page.
+     Existing Silver members can request the one-time
+     ₹699 Gold upgrade when the offer has not been used.
+   ======================================================= */
 
-     So the Gold card asks payment.js directly.
-
-     MongoDB source of truth:
-     Active Silver + unused offer -> ₹699
-     Otherwise -> ₹2,999
-  ======================================================= */
-
-  const pricingProfileId = String(
-    currentProfile?._id ||
-      currentProfile?.id ||
-      selectedArtist?._id ||
-      selectedArtist?.id ||
-      "",
-  );
-
-  useEffect(() => {
-    if (screen !== "plans" || !pricingProfileId) {
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    const loadGoldPriceQuote = async () => {
-      try {
-        const data = await apiRequest("/api/payment/membership-quote", {
-          method: "POST",
-          body: {
-            profileId: pricingProfileId,
-            packageId: "verified",
-          },
-        });
-
-        if (!cancelled) {
-          setGoldPriceQuote(data);
-        }
-      } catch (quoteError) {
-        console.error("❌ Gold price quote error:", quoteError);
-
-        if (!cancelled) {
-          setGoldPriceQuote(null);
-        }
-      }
-    };
-
-    void loadGoldPriceQuote();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [screen, pricingProfileId]);
-
-  /*
-    Immediate UI fallback:
-
-    If we already know the user is on Silver, show ₹699 straight
-    away while the backend quote is loading.
-
-    As soon as the backend responds, its answer wins.
-  */
-  const silverToGoldUpgradeAvailable = goldPriceQuote?.success
-    ? goldPriceQuote.pricingType === "silver-to-gold-upgrade" &&
-      Number(goldPriceQuote.amountRupees) === 699
-    : currentPlan === "pro" &&
-      !Boolean(
-        currentProfile?.silverToGoldUpgradeUsed ||
-        selectedArtist?.silverToGoldUpgradeUsed,
-      );
+  const silverToGoldUpgradeAvailable =
+    currentPlan === "pro" &&
+    !Boolean(
+      currentProfile?.silverToGoldUpgradeUsed ||
+      selectedArtist?.silverToGoldUpgradeUsed,
+    );
 
   /* =======================================================
      RESET TO SEARCH
@@ -1088,6 +972,8 @@ export default function Enter() {
     setNewPhoneOtp("");
 
     setNewPhoneOtpSent(false);
+
+    setMembershipRequest(null);
 
     clearMessages();
 
@@ -1970,272 +1856,124 @@ export default function Enter() {
   };
 
   /* =======================================================
-     SILVER / GOLD PAYMENT
+     SILVER / GOLD MEMBERSHIP REQUEST
 
      IMPORTANT:
-     NO /refresh-session HERE.
+     - NO RAZORPAY
+     - NO ONLINE PAYMENT
+     - NO PLAN ACTIVATION HERE
+     - Team contacts the artist within 24 hours
+     - FREE continues to use chooseFreePlan()
+   ======================================================= */
 
-     PAYMENT DOES NOT RESET
-     4-HOUR OTP TIMER.
-  ======================================================= */
-
-  const startPaidPlan = async (planId) => {
+  const requestPaidPlan = async (planId) => {
     if (!currentProfile) {
       setError("Profile information is missing.");
-
       return;
     }
 
     const selectedPlan = PLANS.find((plan) => plan.id === planId);
 
-    if (!selectedPlan || selectedPlan.amount <= 0) {
-      setError("Invalid membership plan.");
-
+    if (!selectedPlan || !["pro", "verified"].includes(selectedPlan.id)) {
+      setError("Please choose Silver or Gold.");
       return;
     }
 
-    try {
-      setSaving(true);
-
-      clearMessages();
-
-      const razorpayLoaded = await loadRazorpayScript();
-
-      if (!razorpayLoaded) {
-        throw new Error(
-          "Razorpay checkout could not be loaded. Please check your internet connection.",
-        );
-      }
-
-      const profileId =
-        currentProfile._id ||
+    const profileId = String(
+      currentProfile._id ||
         currentProfile.id ||
         selectedArtist?._id ||
         selectedArtist?.id ||
-        "";
+        "",
+    );
 
-      /* =========================================
-           BACKEND DECIDES REAL MEMBERSHIP PRICE
-        ========================================= */
+    if (!profileId) {
+      setError("Artist profile ID is missing.");
+      return;
+    }
 
-      const orderData = await apiRequest(
-        "/api/payment/create-order",
+    const isGoldUpgrade =
+      selectedPlan.id === "verified" && silverToGoldUpgradeAvailable;
 
-        {
-          method: "POST",
+    const requestedAmount = isGoldUpgrade ? 699 : selectedPlan.amount;
 
-          body: {
-            packageId: selectedPlan.id,
+    try {
+      setSaving(true);
+      clearMessages();
 
-            profileId,
+      const data = await apiRequest("/api/membership-requests", {
+        method: "POST",
+        body: {
+          profileId,
 
-            email: currentProfile.email || formData.email || "",
+          currentPlan,
 
-            phone: currentProfile.phone || currentProfile.mobile || "",
+          requestedPlan: selectedPlan.id,
+          requestedPlanName: selectedPlan.name,
 
-            name: currentProfile.name || formData.name || "",
-          },
-        },
-      );
+          requestedAmount,
 
-      if (!orderData.success) {
-        throw new Error(orderData.message || "Unable to create payment order.");
-      }
+          pricingType: isGoldUpgrade
+            ? "silver-to-gold-upgrade"
+            : "standard-membership",
 
-      const options = {
-        key: orderData.key,
-
-        amount: orderData.amount,
-
-        currency: orderData.currency || "INR",
-
-        name: "INK CONVENTION 2026",
-
-        description:
-          orderData.pricingType === "silver-to-gold-upgrade"
-            ? "Silver to Gold Upgrade - ₹699"
-            : selectedPlan.name,
-
-        order_id: orderData.orderId,
-
-        prefill: {
-          name: currentProfile.name || formData.name || "",
+          name:
+            currentProfile.name || formData.name || selectedArtist?.name || "",
 
           email: currentProfile.email || formData.email || "",
 
-          contact: currentProfile.phone || currentProfile.mobile || "",
+          phone:
+            currentProfile.phone ||
+            currentProfile.mobile ||
+            currentProfile.phoneNumber ||
+            "",
+
+          city: currentProfile.city || formData.city || "",
+
+          state: currentProfile.state || formData.state || "",
+
+          studio:
+            currentProfile.studio ||
+            currentProfile.studioName ||
+            formData.studio ||
+            "",
+
+          source: "artist_membership_page",
         },
+      });
 
-        theme: {
-          color: "#a855f7",
-        },
+      const request = data.request || data.membershipRequest || {};
 
-        handler: async (response) => {
-          try {
-            setSaving(true);
+      setMembershipRequest({
+        id: request._id || request.id || data.requestId || "",
 
-            clearMessages();
+        planId: selectedPlan.id,
 
-            const verifyData = await apiRequest(
-              "/api/payment/verify",
+        planName: selectedPlan.name,
 
-              {
-                method: "POST",
+        amount: requestedAmount,
 
-                body: {
-                  razorpay_order_id: response.razorpay_order_id,
+        pricingType: isGoldUpgrade
+          ? "silver-to-gold-upgrade"
+          : "standard-membership",
+      });
 
-                  razorpay_payment_id: response.razorpay_payment_id,
-
-                  razorpay_signature: response.razorpay_signature,
-
-                  profileId,
-
-                  packageId: selectedPlan.id,
-                },
-              },
-            );
-
-            if (!verifyData.success) {
-              throw new Error(
-                verifyData.message || "Payment verification failed.",
-              );
-            }
-
-            const backendProfile =
-              verifyData.profile || verifyData.artist || null;
-
-            const upgradedProfile = {
-              ...currentProfile,
-
-              ...(backendProfile || {}),
-
-              id:
-                backendProfile?._id ||
-                backendProfile?.id ||
-                currentProfile._id ||
-                currentProfile.id,
-
-              _id:
-                backendProfile?._id ||
-                backendProfile?.id ||
-                currentProfile._id ||
-                currentProfile.id,
-
-              plan: normalizePlan(backendProfile?.plan || selectedPlan.id),
-
-              paymentStatus: backendProfile?.paymentStatus || "paid",
-
-              paymentId: response.razorpay_payment_id,
-
-              orderId: response.razorpay_order_id,
-
-              updatedAt: backendProfile?.updatedAt || new Date().toISOString(),
-            };
-
-            /* ===================================
-                   KEEP PULLED LOCAL CACHE SUPPORT
-                =================================== */
-
-            const profiles = getStoredArray(PROFILE_KEY);
-
-            const updatedProfiles = profiles.map((profile) =>
-              String(profile.id || profile._id) ===
-              String(currentProfile.id || currentProfile._id)
-                ? upgradedProfile
-                : profile,
-            );
-
-            localStorage.setItem(
-              PROFILE_KEY,
-
-              JSON.stringify(updatedProfiles),
-            );
-
-            updateDirectory(upgradedProfile);
-
-            setCurrentProfile(upgradedProfile);
-
-            setGoldPriceQuote({
-              success: true,
-              pricingType: "standard-membership",
-              amountRupees: 2999,
-              upgradeDiscount: false,
-            });
-
-            const paidAmount = Number(
-              verifyData.amountRupees || orderData.amountRupees || 0,
-            );
-
-            setSuccess(
-              `${selectedPlan.name} activated successfully${
-                paidAmount > 0
-                  ? ` for ₹${paidAmount.toLocaleString("en-IN")}`
-                  : ""
-              }!`,
-            );
-
-            /* ===================================
-                   DO NOT REFRESH OTP SESSION
-                =================================== */
-
-            window.setTimeout(
-              () => {
-                navigate(
-                  "/artists",
-
-                  {
-                    state: {
-                      newArtistId: upgradedProfile._id || upgradedProfile.id,
-
-                      paidPlan: normalizePlan(upgradedProfile.plan),
-
-                      refreshDirectory: Date.now(),
-                    },
-                  },
-                );
-              },
-
-              1200,
-            );
-          } catch (verifyError) {
-            console.error("❌ Payment verification error:", verifyError);
-
-            setError(verifyError.message || "Payment verification failed.");
-          } finally {
-            setSaving(false);
-          }
-        },
-
-        modal: {
-          ondismiss: function () {
-            setSaving(false);
-          },
-        },
-      };
-
-      const razorpay = new window.Razorpay(options);
-
-      razorpay.on(
-        "payment.failed",
-
-        function (response) {
-          console.error("❌ Razorpay payment failed:", response);
-
-          setError(
-            response.error?.description || "Payment failed. Please try again.",
-          );
-
-          setSaving(false);
-        },
+      setSuccess(
+        `${selectedPlan.name} request received. Our team will contact you within 24 hours to confirm the membership and payment details.`,
       );
 
-      razorpay.open();
-    } catch (paymentError) {
-      console.error("❌ Razorpay initialization error:", paymentError);
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    } catch (requestError) {
+      console.error("❌ MEMBERSHIP REQUEST ERROR:", requestError);
 
-      setError(paymentError.message || "Unable to start payment.");
-
+      setError(
+        requestError.message ||
+          "Unable to send your membership request. Please try again.",
+      );
+    } finally {
       setSaving(false);
     }
   };
@@ -3816,6 +3554,105 @@ export default function Enter() {
             GOLD ALREADY ACTIVE
         ============================================= */}
 
+        {membershipRequest && (
+          <div
+            className="
+              enter-reveal
+              mt-8
+              max-w-3xl
+              mx-auto
+              rounded-[26px]
+              border
+              border-emerald-500/30
+              bg-emerald-500/[0.06]
+              p-6
+              sm:p-8
+              text-center
+            "
+          >
+            <CheckCircle2 size={38} className="mx-auto text-emerald-400" />
+
+            <p
+              className="
+                mt-5
+                text-[9px]
+                font-mono
+                font-black
+                tracking-[0.18em]
+                text-emerald-400
+              "
+            >
+              MEMBERSHIP REQUEST RECEIVED
+            </p>
+
+            <h2
+              className="
+                mt-3
+                text-2xl
+                sm:text-4xl
+                font-black
+                uppercase
+              "
+            >
+              OUR TEAM WILL CONTACT YOU
+              <br />
+              <span className="text-emerald-400">WITHIN 24 HOURS</span>
+            </h2>
+
+            <p
+              className="
+                mx-auto
+                mt-4
+                max-w-2xl
+                text-sm
+                text-gray-500
+                leading-relaxed
+              "
+            >
+              Your {membershipRequest.planName} request has been sent
+              successfully. No online payment was taken. Our team will contact
+              you to confirm the membership, payment method and activation.
+            </p>
+
+            <div
+              className="
+                mx-auto
+                mt-5
+                max-w-md
+                rounded-xl
+                border
+                border-white/10
+                bg-black/20
+                px-4
+                py-4
+              "
+            >
+              <p className="text-[8px] font-mono text-gray-600">
+                REQUESTED MEMBERSHIP
+              </p>
+
+              <p className="mt-2 text-lg font-black text-white">
+                {membershipRequest.planName}
+              </p>
+
+              <p className="mt-1 text-xl font-black text-emerald-400">
+                ₹{Number(membershipRequest.amount || 0).toLocaleString("en-IN")}
+              </p>
+
+              {membershipRequest.id && (
+                <p className="mt-3 text-[8px] font-mono text-gray-600 break-all">
+                  REQUEST ID: {membershipRequest.id}
+                </p>
+              )}
+            </div>
+
+            <p className="mt-5 text-[10px] text-gray-600">
+              Your current membership remains unchanged until our team confirms
+              your request.
+            </p>
+          </div>
+        )}
+
         {currentPlan === "verified" ? (
           <div
             className="
@@ -3936,7 +3773,7 @@ export default function Enter() {
                 onClick={() =>
                   plan.id === "basic"
                     ? chooseFreePlan()
-                    : startPaidPlan(plan.id)
+                    : requestPaidPlan(plan.id)
                 }
               />
             ))}
@@ -4196,7 +4033,7 @@ function PlanCard({
           button:
             "border-[#ffe59a]/60 bg-gradient-to-r from-[#b77b15] via-[#f2cf65] to-[#b77b15] text-[#211600]",
 
-          buttonText: "GET GOLD",
+          buttonText: "SEND GOLD REQUEST",
         }
       : {
           card: "border-slate-300/80 bg-gradient-to-br from-white/[0.07] via-[#111318] to-[#0b0b0d] shadow-[0_0_28px_rgba(226,232,240,0.10)]",
@@ -4210,7 +4047,7 @@ function PlanCard({
           button:
             "border-white/60 bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black",
 
-          buttonText: "GET SILVER",
+          buttonText: "SEND SILVER REQUEST",
         };
 
   return (
@@ -4453,7 +4290,7 @@ function PlanCard({
           {saving
             ? "PLEASE WAIT..."
             : silverToGoldUpgrade
-              ? "UPGRADE TO GOLD • ₹699"
+              ? "REQUEST GOLD UPGRADE • ₹699"
               : theme.buttonText}
         </span>
 

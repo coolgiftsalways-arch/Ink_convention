@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import gsap from "gsap";
 import "../Style/Navbar.css";
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [expoOpen, setExpoOpen] = useState(false);
+  const [mobileExpoOpen, setMobileExpoOpen] = useState(false);
 
   const mobileMenuRef = useRef(null);
 
@@ -20,6 +22,8 @@ function Navbar() {
 
   const closeMenu = () => {
     setIsOpen(false);
+    setExpoOpen(false);
+    setMobileExpoOpen(false);
   };
 
   /* =========================================================
@@ -167,11 +171,148 @@ function Navbar() {
               About
             </NavLink>
 
-            {/* EXPO 2026 */}
+            {/* EXPO 2026 DROPDOWN */}
 
-            <NavLink to="/upcoming" className={desktopNavClass}>
-              Expo 2026
-            </NavLink>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setExpoOpen((prev) => !prev)}
+                className={`
+                  relative
+                  py-2
+                  flex
+                  items-center
+                  gap-1.5
+                  text-gray-300
+                  hover:text-white
+                  transition-all
+                  duration-300
+
+                  after:content-['']
+                  after:absolute
+                  after:left-0
+                  after:-bottom-1
+                  after:h-[2px]
+                  after:rounded-full
+                  after:bg-[#a855f7]
+                  after:transition-all
+                  after:duration-300
+                  ${expoOpen ? "text-white after:w-full" : "after:w-0 hover:after:w-full"}
+                `}
+                aria-expanded={expoOpen}
+                aria-haspopup="menu"
+              >
+                <span>Expo 2026</span>
+
+                <ChevronDown
+                  size={14}
+                  className={`
+                    transition-transform
+                    duration-300
+                    ${expoOpen ? "rotate-180" : ""}
+                  `}
+                />
+              </button>
+
+              {expoOpen && (
+                <div
+                  className="
+                    absolute
+                    top-[calc(100%+14px)]
+                    left-1/2
+                    -translate-x-1/2
+                    w-64
+                    rounded-2xl
+                    border
+                    border-white/10
+                    bg-[#08080a]/95
+                    backdrop-blur-xl
+                    shadow-2xl
+                    shadow-black/50
+                    p-2
+                    z-[70]
+                  "
+                  role="menu"
+                >
+                  <NavLink
+                    to="/upcoming"
+                    onClick={() => setExpoOpen(false)}
+                    className="
+                      group
+                      flex
+                      items-center
+                      justify-between
+                      rounded-xl
+                      px-4
+                      py-3
+                      text-[11px]
+                      font-mono
+                      uppercase
+                      tracking-wider
+                      text-gray-300
+                      hover:text-white
+                      hover:bg-white/[0.06]
+                      transition
+                    "
+                  >
+                    <span>Upcoming Expo</span>
+                    <span className="text-[#a855f7]">01</span>
+                  </NavLink>
+
+                  <NavLink
+                    to="/stall-booking"
+                    onClick={() => setExpoOpen(false)}
+                    className="
+                      group
+                      flex
+                      items-center
+                      justify-between
+                      rounded-xl
+                      px-4
+                      py-3
+                      text-[11px]
+                      font-mono
+                      uppercase
+                      tracking-wider
+                      text-gray-300
+                      hover:text-white
+                      hover:bg-white/[0.06]
+                      transition
+                    "
+                  >
+                    <span>Book Your Stall</span>
+                    <span className="text-[#a855f7]">02</span>
+                  </NavLink>
+
+                  <NavLink
+                    to="/competition"
+                    onClick={() => setExpoOpen(false)}
+                    className="
+                      group
+                      flex
+                      items-center
+                      justify-between
+                      rounded-xl
+                      px-4
+                      py-3
+                      text-[11px]
+                      font-mono
+                      uppercase
+                      tracking-wider
+                      text-gray-300
+                      hover:text-white
+                      hover:bg-white/[0.06]
+                      transition
+                    "
+                  >
+                    <span>Competition</span>
+                    <span className="text-[#a855f7]">03</span>
+                  </NavLink>
+
+                 
+                </div>
+              )}
+            </div>
 
             {/* GALLERY */}
 
@@ -353,17 +494,140 @@ function Navbar() {
               <span className="text-xs font-mono text-gray-500">02</span>
             </NavLink>
 
-            {/* EXPO 2026 */}
+            {/* EXPO 2026 MOBILE DROPDOWN */}
 
-            <NavLink
-              to="/upcoming"
-              onClick={closeMenu}
-              className={mobileNavClass}
-            >
-              <span>Expo 2026</span>
+            <div className="border-b border-white/5 pb-2">
+              <button
+                type="button"
+                onClick={() => setMobileExpoOpen((prev) => !prev)}
+                className="
+                  w-full
+                  relative
+                  py-2
+                  flex
+                  items-center
+                  justify-between
+                  text-white
+                  hover:text-[#a855f7]
+                  transition-all
+                  duration-300
+                "
+              >
+                <span className="flex items-center gap-2">
+                  Expo 2026
+                  <ChevronDown
+                    size={18}
+                    className={`
+                      transition-transform
+                      duration-300
+                      ${mobileExpoOpen ? "rotate-180 text-[#a855f7]" : ""}
+                    `}
+                  />
+                </span>
 
-              <span className="text-xs font-mono text-gray-500">03</span>
-            </NavLink>
+                <span className="text-xs font-mono text-gray-500">03</span>
+              </button>
+
+              {mobileExpoOpen && (
+                <div className="mt-2 ml-3 pl-4 border-l border-[#a855f7]/30 space-y-1">
+                  <NavLink
+                    to="/upcoming"
+                    onClick={closeMenu}
+                    className="
+                      flex
+                      items-center
+                      justify-between
+                      rounded-lg
+                      px-3
+                      py-2.5
+                      text-sm
+                      font-mono
+                      uppercase
+                      tracking-wider
+                      text-gray-400
+                      hover:text-white
+                      hover:bg-white/[0.05]
+                      transition
+                    "
+                  >
+                    <span>Upcoming Expo</span>
+                    <span className="text-[#a855f7] text-[10px]">01</span>
+                  </NavLink>
+
+                  <NavLink
+                    to="/stall-booking"
+                    onClick={closeMenu}
+                    className="
+                      flex
+                      items-center
+                      justify-between
+                      rounded-lg
+                      px-3
+                      py-2.5
+                      text-sm
+                      font-mono
+                      uppercase
+                      tracking-wider
+                      text-gray-400
+                      hover:text-white
+                      hover:bg-white/[0.05]
+                      transition
+                    "
+                  >
+                    <span>Book Your Stall</span>
+                    <span className="text-[#a855f7] text-[10px]">02</span>
+                  </NavLink>
+
+                  <NavLink
+                    to="/competition"
+                    onClick={closeMenu}
+                    className="
+                      flex
+                      items-center
+                      justify-between
+                      rounded-lg
+                      px-3
+                      py-2.5
+                      text-sm
+                      font-mono
+                      uppercase
+                      tracking-wider
+                      text-gray-400
+                      hover:text-white
+                      hover:bg-white/[0.05]
+                      transition
+                    "
+                  >
+                    <span>Competition</span>
+                    <span className="text-[#a855f7] text-[10px]">03</span>
+                  </NavLink>
+
+                  <NavLink
+                    to="/book-artist"
+                    onClick={closeMenu}
+                    className="
+                      flex
+                      items-center
+                      justify-between
+                      rounded-lg
+                      px-3
+                      py-2.5
+                      text-sm
+                      font-mono
+                      uppercase
+                      tracking-wider
+                      text-gray-400
+                      hover:text-white
+                      hover:bg-white/[0.05]
+                      transition
+                    "
+                  >
+                    <span>Book Artist</span>
+                    <span className="text-[#a855f7] text-[10px]">04</span>
+                  </NavLink>
+                </div>
+              )}
+            </div>
 
             {/* GALLERY */}
 

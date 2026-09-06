@@ -37,6 +37,7 @@ const tattooStudioRoutes = require("./routes/tattooStudioRoutes");
 const claimRoutes = require("./routes/claimRoutes");
 const stallBookingRoutes = require("./routes/stallBookingRoutes");
 const artistBookingRoutes = require("./routes/artistBookingRoutes");
+const membershipRequestRoutes = require("./routes/membershipRequestRoutes");
 
 // =====================================================
 // MODELS
@@ -373,6 +374,15 @@ console.log("✅ Claim routes mounted at /api/claim");
 app.use("/api/artist-bookings", artistBookingRoutes);
 
 console.log("✅ Artist booking routes mounted at /api/artist-bookings");
+
+// =====================================================
+// SILVER / GOLD MEMBERSHIP REQUEST ROUTES
+// NO RAZORPAY - MANUAL TEAM CONFIRMATION
+// =====================================================
+
+app.use("/api/membership-requests", membershipRequestRoutes);
+
+console.log("✅ Membership request routes mounted at /api/membership-requests");
 
 // =====================================================
 // ADMIN LOGIN
@@ -1093,6 +1103,10 @@ app.listen(
 
     console.log(
       `🎯 Artist Bookings: http://localhost:${PORT}/api/artist-bookings`,
+    );
+
+    console.log(
+      `🥈🥇 Membership Requests: http://localhost:${PORT}/api/membership-requests`,
     );
 
     console.log("==============================================");

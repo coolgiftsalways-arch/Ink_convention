@@ -700,23 +700,24 @@ function Home() {
       </section>
 
       {/* =====================================================
-          3. THREE WAYS TO JOIN
+          3. FOUR WAYS TO JOIN
       ===================================================== */}
 
       <section
         className="
           w-full
-          py-24
-          px-6
-          sm:px-10
-          lg:px-12
+          py-12
+          lg:py-10
+          px-5
+          sm:px-8
+          lg:px-10
           bg-[#0b0b0f]
           border-t
           border-white/5
         "
       >
-        <div className="max-w-7xl mx-auto">
-          <div className="max-w-3xl mx-auto text-center mb-14">
+        <div className="max-w-[1560px] mx-auto">
+          <div className="max-w-3xl mx-auto text-center mb-8 lg:mb-7">
             <h4
               className="
                 text-[#a855f7]
@@ -734,30 +735,31 @@ function Home() {
             <h2
               className="
                 text-3xl
-                sm:text-5xl
+                sm:text-4xl
                 font-black
                 tracking-tight
                 text-white
                 uppercase
-                mt-4
+                mt-3
               "
             >
-              THREE WAYS TO BE PART OF INK CONVENTION
+              FOUR WAYS TO BE PART OF INK CONVENTION
             </h2>
 
             <p
               className="
                 text-gray-400
                 text-sm
-                sm:text-base
+                sm:text-sm
                 leading-relaxed
                 max-w-2xl
                 mx-auto
-                mt-5
+                mt-3
               "
             >
               Explore upcoming expo stall opportunities, book a tattoo artist,
-              or claim your artist profile.
+              enter the Ink Convention competition, or claim your artist
+              profile.
             </p>
           </div>
 
@@ -765,8 +767,10 @@ function Home() {
             className="
               grid
               grid-cols-1
-              lg:grid-cols-3
-              gap-6
+              md:grid-cols-2
+              xl:grid-cols-4
+              gap-4
+              2xl:gap-5
             "
           >
             {/* 01 / BOOK STALL */}
@@ -778,13 +782,13 @@ function Home() {
                 flex-col
                 relative
                 overflow-hidden
-                min-h-[460px]
+                min-h-[360px]
                 rounded-3xl
                 border
                 border-white/10
                 bg-[#08080a]
-                p-7
-                sm:p-8
+                p-4
+                sm:p-5
                 hover:border-white/20
                 transition-all
                 duration-500
@@ -807,8 +811,8 @@ function Home() {
 
               <div
                 className="
-                  w-14
-                  h-14
+                  w-11
+                  h-11
                   rounded-2xl
                   bg-white
                   text-black
@@ -817,13 +821,13 @@ function Home() {
                   justify-center
                 "
               >
-                <Store size={24} />
+                <Store size={19} />
               </div>
 
               <p
                 className="
-                  mt-8
-                  text-[9px]
+                  mt-4
+                  text-[8px]
                   font-mono
                   tracking-[0.18em]
                   text-gray-600
@@ -834,10 +838,12 @@ function Home() {
 
               <h3
                 className="
-                  text-3xl
+                  text-xl
+                  2xl:text-2xl
                   font-black
                   uppercase
-                  mt-3
+                  mt-1.5
+                  leading-tight
                 "
               >
                 BOOK YOUR STALL
@@ -845,32 +851,32 @@ function Home() {
 
               <p
                 className="
-                  text-sm
+                  text-[11px]
+                  2xl:text-xs
                   text-gray-400
-                  leading-relaxed
-                  mt-5
+                  leading-[1.55]
+                  mt-2
                 "
               >
-                Reserve your space at an Ink Convention regional expo and put
-                your studio, setup or brand directly in front of the tattoo
-                community.
+                Reserve a stall at a regional Ink Convention expo and showcase
+                your studio, brand or setup to the tattoo community.
               </p>
-              {/* STALL BOOKING STATUS */}
+              {/* STALL BOOKING INFO */}
 
               <div
                 className="
-                  mt-5
+                  mt-2.5
                   rounded-xl
                   border
                   border-white/15
                   bg-white/[0.05]
-                  px-4
-                  py-4
+                  px-3
+                  py-2.5
                 "
               >
                 <p
                   className="
-                    text-[9px]
+                    text-[8px]
                     font-mono
                     font-black
                     uppercase
@@ -878,28 +884,27 @@ function Home() {
                     text-white
                   "
                 >
-                  STALL BOOKING COMING SOON
+                  BOOK YOUR SPACE AT INK CONVENTION
                 </p>
 
                 <p
                   className="
-                    mt-2
+                    mt-1.5
                     text-[10px]
-                    sm:text-xs
+                    2xl:text-[11px]
                     text-gray-500
                     leading-relaxed
                   "
                 >
-                  Soon you will be able to choose your expo city, explore stall
-                  options and reserve your space directly through Ink
-                  Convention.
+                  Pick your expo city, compare stall options and reserve the
+                  space that best fits your studio or brand.
                 </p>
               </div>
 
-              <div className="space-y-2.5 mt-5">
+              <div className="space-y-1 mt-2.5">
                 <StepLine text="Choose your regional expo city" />
                 <StepLine text="Explore available stall options" />
-                <StepLine text="Booking access will be available soon" />
+                <StepLine text="Reserve your stall and showcase your brand" />
               </div>
               {/*
                 OLD STALL BOOKING LINK REMOVED FOR NOW.
@@ -911,11 +916,11 @@ function Home() {
                   mt-auto
                   w-full
                   border
-                  border-white/10
-                  bg-white/[0.04]
-                  text-gray-400
-                  px-6
-                  py-4
+                  border-white/20
+                  bg-white
+                  text-black
+                  px-4
+                  py-2.5
                   rounded-xl
                   font-black
                   text-[10px]
@@ -927,7 +932,7 @@ function Home() {
                   justify-center
                 "
               >
-                STALL BOOKINGS OPENING SOON
+                BOOK YOUR STALL
               </div>
             </article>
 
@@ -940,15 +945,15 @@ function Home() {
                 flex-col
                 relative
                 overflow-hidden
-                min-h-[460px]
+                min-h-[360px]
                 rounded-3xl
                 border
                 border-[#a855f7]/40
                 bg-gradient-to-b
                 from-[#a855f7]/10
                 to-[#08080a]
-                p-7
-                sm:p-8
+                p-4
+                sm:p-5
                 hover:border-[#a855f7]
                 transition-all
                 duration-500
@@ -971,8 +976,8 @@ function Home() {
 
               <div
                 className="
-                  w-14
-                  h-14
+                  w-11
+                  h-11
                   rounded-2xl
                   bg-[#a855f7]
                   text-white
@@ -982,13 +987,13 @@ function Home() {
                   shadow-[0_0_30px_rgba(168,85,247,0.25)]
                 "
               >
-                <Trophy size={24} />
+                <Trophy size={19} />
               </div>
 
               <p
                 className="
-                  mt-8
-                  text-[9px]
+                  mt-4
+                  text-[8px]
                   font-mono
                   tracking-[0.18em]
                   text-[#a855f7]
@@ -999,10 +1004,12 @@ function Home() {
 
               <h3
                 className="
-                  text-3xl
+                  text-xl
+                  2xl:text-2xl
                   font-black
                   uppercase
-                  mt-3
+                  mt-1.5
+                  leading-tight
                 "
               >
                 BOOK TATTOO ARTISTS
@@ -1010,33 +1017,33 @@ function Home() {
 
               <p
                 className="
-                  text-sm
+                  text-[11px]
+                  2xl:text-xs
                   text-gray-400
-                  leading-relaxed
-                  mt-5
+                  leading-[1.55]
+                  mt-2
                 "
               >
-                Browse tattoo artists by city and tattoo style, compare
-                profiles, and send a booking request directly to the artist you
-                want. Get an exclusive first-booking discount when you book
-                through Ink Convention.
+                Browse artists by city and tattoo style, compare profiles and
+                send a booking request directly. Booking through Ink Convention
+                can also unlock exclusive client benefits.
               </p>
               {/* ARTIST BOOKING BENEFIT */}
 
               <div
                 className="
-                  mt-5
+                  mt-2.5
                   rounded-xl
                   border
                   border-[#a855f7]/30
                   bg-[#a855f7]/10
-                  px-4
-                  py-4
+                  px-3
+                  py-2.5
                 "
               >
                 <p
                   className="
-                    text-[9px]
+                    text-[8px]
                     font-mono
                     font-black
                     uppercase
@@ -1044,24 +1051,24 @@ function Home() {
                     text-[#c084fc]
                   "
                 >
-                  MORE BOOKING BENEFITS COMING
+                  EXCLUSIVE BOOKING BENEFITS
                 </p>
 
                 <p
                   className="
-                    mt-2
+                    mt-1.5
                     text-[10px]
-                    sm:text-xs
+                    2xl:text-[11px]
                     text-gray-500
                     leading-relaxed
                   "
                 >
-                  Discover artists now. More exclusive booking features and
-                  client benefits will be introduced in the future.
+                  Discover artists now and access more booking tools and client
+                  benefits as Ink Convention grows.
                 </p>
               </div>
 
-              <div className="space-y-2.5 mt-5">
+              <div className="space-y-1 mt-2.5">
                 <StepLine text="Choose your tattoo style" accent />
                 <StepLine text="Find artists in your city" accent />
                 <StepLine text="Send your booking request" accent />
@@ -1075,8 +1082,8 @@ function Home() {
                   bg-[#a855f7]
                   hover:bg-[#9333ea]
                   text-white
-                  px-6
-                  py-4
+                  px-4
+                  py-2.5
                   rounded-xl
                   font-black
                   text-[10px]
@@ -1100,7 +1107,7 @@ function Home() {
               </Link>
             </article>
 
-            {/* 03 / FREE DIRECTORY */}
+            {/* 03 / COMPETITION */}
 
             <article
               className="
@@ -1109,13 +1116,186 @@ function Home() {
                 flex-col
                 relative
                 overflow-hidden
-                min-h-[460px]
+                min-h-[360px]
+                rounded-3xl
+                border
+                border-amber-400/30
+                bg-gradient-to-b
+                from-amber-400/[0.08]
+                to-[#08080a]
+                p-4
+                sm:p-5
+                hover:border-amber-300/70
+                transition-all
+                duration-500
+                hover:-translate-y-2
+              "
+            >
+              <div
+                className="
+                  absolute
+                  -right-16
+                  -top-16
+                  w-48
+                  h-48
+                  rounded-full
+                  bg-amber-400/10
+                  blur-3xl
+                  pointer-events-none
+                "
+              />
+
+              <div
+                className="
+                  w-11
+                  h-11
+                  rounded-2xl
+                  bg-amber-400/10
+                  border
+                  border-amber-300/20
+                  text-amber-300
+                  flex
+                  items-center
+                  justify-center
+                  shadow-[0_0_30px_rgba(251,191,36,0.10)]
+                "
+              >
+                <Medal size={19} />
+              </div>
+
+              <p
+                className="
+                  mt-4
+                  text-[8px]
+                  font-mono
+                  tracking-[0.18em]
+                  text-amber-300
+                "
+              >
+                03 / COMPETE
+              </p>
+
+              <h3
+                className="
+                  text-xl
+                  2xl:text-2xl
+                  font-black
+                  uppercase
+                  mt-1.5
+                  leading-tight
+                "
+              >
+                ENTER THE COMPETITION
+              </h3>
+
+              <p
+                className="
+                  text-[11px]
+                  2xl:text-xs
+                  text-gray-400
+                  leading-[1.55]
+                  mt-2
+                "
+              >
+                Enter your strongest tattoo work across seven categories, earn
+                ranking points and compete for Ink Convention recognition and
+                Hall of Fame placement.
+              </p>
+
+              <div
+                className="
+                  mt-2.5
+                  rounded-xl
+                  border
+                  border-amber-300/20
+                  bg-amber-400/[0.06]
+                  px-3
+                  py-2.5
+                "
+              >
+                <p
+                  className="
+                    text-[8px]
+                    font-mono
+                    font-black
+                    uppercase
+                    tracking-widest
+                    text-amber-300
+                  "
+                >
+                  7 CATEGORIES • FLEXIBLE ENTRY PACKAGES
+                </p>
+
+                <p
+                  className="
+                    mt-1.5
+                    text-[10px]
+                    2xl:text-[11px]
+                    text-gray-500
+                    leading-relaxed
+                  "
+                >
+                  1 entry ₹999 • 3 entries ₹1,499 • 5 entries ₹1,999. Choose the
+                  categories that match your best work and build ranking points.
+                </p>
+              </div>
+
+              <div className="space-y-1 mt-2.5">
+                <StepLine text="Choose from seven competition categories" />
+                <StepLine text="Select your entry package and submit your work" />
+                <StepLine text="Earn points and climb the artist rankings" />
+              </div>
+
+              <Link
+                to="/competition"
+                className="
+                  mt-auto
+                  w-full
+                  border
+                  border-amber-300/50
+                  hover:bg-amber-300/10
+                  text-white
+                  px-4
+                  py-2.5
+                  rounded-xl
+                  font-black
+                  text-[10px]
+                  font-mono
+                  tracking-widest
+                  uppercase
+                  flex
+                  items-center
+                  justify-between
+                  transition-all
+                "
+              >
+                ENTER COMPETITION
+                <ArrowRight
+                  size={15}
+                  className="
+                    transition-transform
+                    group-hover:translate-x-1
+                  "
+                />
+              </Link>
+            </article>
+
+            {/* 04 / FREE DIRECTORY */}
+
+            <article
+              className="
+                group
+                flex
+                flex-col
+                relative
+                overflow-hidden
+                min-h-[360px]
                 rounded-3xl
                 border
                 border-purple-500/20
                 bg-[#08080a]
-                p-7
-                sm:p-8
+                p-4
+                sm:p-5
                 hover:border-purple-500/60
                 transition-all
                 duration-500
@@ -1138,8 +1318,8 @@ function Home() {
 
               <div
                 className="
-                  w-14
-                  h-14
+                  w-11
+                  h-11
                   rounded-2xl
                   bg-purple-500/10
                   border
@@ -1150,27 +1330,29 @@ function Home() {
                   justify-center
                 "
               >
-                <Users size={24} />
+                <Users size={19} />
               </div>
 
               <p
                 className="
-                  mt-8
-                  text-[9px]
+                  mt-4
+                  text-[8px]
                   font-mono
                   tracking-[0.18em]
                   text-purple-400
                 "
               >
-                03 / JOIN FREE
+                04 / JOIN FREE
               </p>
 
               <h3
                 className="
-                  text-3xl
+                  text-xl
+                  2xl:text-2xl
                   font-black
                   uppercase
-                  mt-3
+                  mt-1.5
+                  leading-tight
                 "
               >
                 FREE ARTIST ENTRY
@@ -1178,31 +1360,32 @@ function Home() {
 
               <p
                 className="
-                  text-sm
+                  text-[11px]
+                  2xl:text-xs
                   text-gray-400
-                  leading-relaxed
-                  mt-5
+                  leading-[1.55]
+                  mt-2
                 "
               >
                 Claim your artist or studio profile and keep your basic Ink
-                Convention directory listing active for life — completely free.
+                Convention directory listing free for life.
               </p>
               {/* DIRECTORY MESSAGE */}
 
               <div
                 className="
-                  mt-5
+                  mt-2.5
                   rounded-xl
                   border
                   border-purple-500/30
                   bg-purple-500/10
-                  px-4
-                  py-4
+                  px-3
+                  py-2.5
                 "
               >
                 <p
                   className="
-                    text-[9px]
+                    text-[8px]
                     font-mono
                     font-black
                     uppercase
@@ -1215,19 +1398,19 @@ function Home() {
 
                 <p
                   className="
-                    mt-2
+                    mt-1.5
                     text-[10px]
-                    sm:text-xs
+                    2xl:text-[11px]
                     text-gray-500
                     leading-relaxed
                   "
                 >
-                  Create your artist profile now and unlock more visibility,
-                  profile tools and opportunities as Ink Convention grows.
+                  Build your profile, improve visibility and unlock more artist
+                  opportunities as Ink Convention grows.
                 </p>
               </div>
 
-              <div className="space-y-2.5 mt-5">
+              <div className="space-y-1 mt-2.5">
                 <StepLine text="Find and claim your existing profile" />
                 <StepLine text="Verify ownership with OTP" />
                 <StepLine text="Keep your basic listing free for life" />
@@ -1242,8 +1425,8 @@ function Home() {
                   border-[#a855f7]
                   hover:bg-[#a855f7]/10
                   text-white
-                  px-6
-                  py-4
+                  px-4
+                  py-2.5
                   rounded-xl
                   font-black
                   text-[10px]
@@ -1829,15 +2012,15 @@ function StepLine({ text, accent = false }) {
       <span
         className={`
           mt-1
-          w-2
-          h-2
+          w-1.5
+          h-1.5
           rounded-full
           shrink-0
           ${accent ? "bg-[#a855f7]" : "bg-white/30"}
         `}
       />
 
-      <span className="text-xs sm:text-sm text-gray-400 leading-relaxed">
+      <span className="text-[11px] sm:text-xs text-gray-400 leading-[1.45]">
         {text}
       </span>
     </div>
