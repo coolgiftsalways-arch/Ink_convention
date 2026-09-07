@@ -491,7 +491,7 @@ function AdminArtists() {
   const [directorySearchError, setDirectorySearchError] = useState("");
 
   // Live countdown shown on active Silver / Gold memberships.
-  const [membershipClock, setMembershipClock] = useState(Date.now());
+  const [membershipClock, setMembershipClock] = useState(0);
 
   const [loading, setLoading] = useState(true);
 
@@ -991,10 +991,15 @@ function AdminArtists() {
     const query = directorySearchQuery.trim();
 
     if (!query) {
-      setDirectorySearchResults([]);
-      setDirectorySearchError("");
-      setDirectorySearchLoading(false);
-      return undefined;
+      const clearTimer = window.setTimeout(() => {
+        setDirectorySearchResults([]);
+        setDirectorySearchError("");
+        setDirectorySearchLoading(false);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(clearTimer);
+      };
     }
 
     const timer = window.setTimeout(() => {
@@ -1012,11 +1017,15 @@ function AdminArtists() {
       return undefined;
     }
 
-    const timer = window.setInterval(() => {
+    const updateClock = () => {
       setMembershipClock(Date.now());
-    }, 1000);
+    };
+
+    const initialTimer = window.setTimeout(updateClock, 0);
+    const timer = window.setInterval(updateClock, 1000);
 
     return () => {
+      window.clearTimeout(initialTimer);
       window.clearInterval(timer);
     };
   }, [isAuthenticated]);
@@ -1328,7 +1337,7 @@ function AdminArtists() {
       return false;
     }
 
-    const age = Date.now() - created;
+    const age = membershipClock - created;
     const HOUR = 60 * 60 * 1000;
     const DAY = 24 * HOUR;
 
@@ -2322,7 +2331,7 @@ function MembershipMemberRow({
   tone,
   onAdminPlanChange,
   busy,
-  nowMs = Date.now(),
+  nowMs = 0,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";

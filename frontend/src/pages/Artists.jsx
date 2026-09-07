@@ -1412,19 +1412,19 @@ export default function Artists() {
 
         @keyframes inkGoldPulse {
           0%, 100% {
-            box-shadow: 0 0 10px rgba(245,196,81,.22);
+            box-shadow: 0 0 16px rgba(245,196,81,.38);
           }
           50% {
-            box-shadow: 0 0 34px rgba(245,196,81,.50);
+            box-shadow: 0 0 42px rgba(245,196,81,.72);
           }
         }
 
         @keyframes inkSilverPulse {
           0%, 100% {
-            box-shadow: 0 0 8px rgba(226,232,240,.12);
+            box-shadow: 0 0 14px rgba(226,232,240,.25);
           }
           50% {
-            box-shadow: 0 0 28px rgba(226,232,240,.32);
+            box-shadow: 0 0 36px rgba(226,232,240,.52);
           }
         }
 
@@ -2090,7 +2090,6 @@ export default function Artists() {
         {selectedArtist && (
           <ArtistModal
             artist={selectedArtist}
-            selectedCity={selectedCity}
             onClose={() => setSelectedArtist(null)}
           />
         )}
@@ -3438,19 +3437,19 @@ function ArtistRow({ artist, isNew, onClick }) {
           isGold
             ? `
               bg-gradient-to-r
-              from-[#f5c451]/[0.11]
-              via-[#f5c451]/[0.035]
+              from-[#f5c451]/[0.22]
+              via-[#f5c451]/[0.075]
               to-transparent
-              hover:from-[#f5c451]/[0.16]
+              hover:from-[#f5c451]/[0.30]
               ink-gold-card-pulse
             `
             : isPro
               ? `
                 bg-gradient-to-r
-                from-white/[0.065]
-                via-white/[0.02]
+                from-slate-200/[0.15]
+                via-slate-300/[0.055]
                 to-transparent
-                hover:from-white/[0.10]
+                hover:from-slate-100/[0.22]
                 ink-silver-card-pulse
               `
               : `
@@ -3489,7 +3488,7 @@ function ArtistRow({ artist, isNew, onClick }) {
               w-[10%]
               bg-gradient-to-r
               from-transparent
-              via-[#fff2a8]/20
+              via-[#fff2a8]/45
               to-transparent
             "
           />
@@ -3515,7 +3514,7 @@ function ArtistRow({ artist, isNew, onClick }) {
               w-[10%]
               bg-gradient-to-r
               from-transparent
-              via-white/15
+              via-slate-100/35
               to-transparent
             "
           />
@@ -3765,6 +3764,9 @@ function PlanBadge({ plan, compact = false }) {
           items-center
           justify-center
           rounded-full
+          border
+          border-[#ffe58d]/80
+          shadow-[0_0_18px_rgba(245,196,81,0.45)]
           bg-gradient-to-r
           from-[#c8911f]
           via-[#ffe58d]
@@ -3788,6 +3790,9 @@ function PlanBadge({ plan, compact = false }) {
           items-center
           justify-center
           rounded-full
+          border
+          border-white/80
+          shadow-[0_0_16px_rgba(226,232,240,0.35)]
           bg-gradient-to-r
           from-slate-300
           via-white
@@ -3912,7 +3917,7 @@ function PublicAvatar({ artist, size = "card", compact = false }) {
    PROFILE MODAL
 ========================================================= */
 
-function ArtistModal({ artist, selectedCity, onClose }) {
+function ArtistModal({ artist, onClose }) {
   const modalRef = React.useRef(null);
   const scrollRef = React.useRef(null);
 
@@ -4326,202 +4331,6 @@ function CompactProfileField({ title, value, locked, plan }) {
           {value || "-"}
         </p>
       )}
-    </div>
-  );
-}
-
-/* =========================================================
-   PUBLIC FIELD
-========================================================= */
-
-function PublicField({ title, value, locked, plan, multiline = false }) {
-  const normalized = normalizePlan(plan);
-
-  const accent =
-    normalized === "verified"
-      ? "text-[#f5c451]"
-      : normalized === "pro"
-        ? "text-slate-300"
-        : "text-purple-400";
-
-  return (
-    <div
-      className="
-        min-w-0
-        border-b
-        border-white/10
-        pb-5
-      "
-    >
-      <p
-        className={`
-          mb-2
-          text-[8px]
-          font-mono
-          tracking-[0.2em]
-          ${accent}
-        `}
-      >
-        {title}
-      </p>
-
-      {locked ? (
-        <div
-          className="
-            flex
-            items-center
-            gap-3
-          "
-        >
-          <span
-            className="
-              blur-[4px]
-              text-base
-              text-gray-600
-            "
-          >
-            LOCKED PRIVATE DETAIL
-          </span>
-
-          <span
-            className="
-              inline-flex
-              items-center
-              gap-1
-              text-[7px]
-              text-gray-600
-            "
-          >
-            <Lock size={9} />
-            LOCKED
-          </span>
-        </div>
-      ) : (
-        <p
-          className={`
-            text-base
-            font-semibold
-            text-white
-            ${multiline ? "whitespace-pre-wrap leading-relaxed" : "break-words"}
-          `}
-        >
-          {value || "-"}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* =========================================================
-   LOCKED PORTFOLIO
-========================================================= */
-
-function LockedPortfolio() {
-  return (
-    <div
-      className="
-        grid
-        grid-cols-3
-        gap-3
-      "
-    >
-      {[0, 1, 2].map((index) => (
-        <div
-          key={index}
-          className="
-              relative
-              aspect-square
-              rounded-2xl
-              border
-              border-white/10
-              bg-white/[0.03]
-              flex
-              items-center
-              justify-center
-            "
-        >
-          <Lock
-            size={18}
-            className="
-                text-gray-600
-              "
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* =========================================================
-   VISIBILITY MESSAGE
-========================================================= */
-
-function PlanVisibilityMessage({ plan }) {
-  const normalized = normalizePlan(plan);
-
-  let title = "FREE / BASIC PUBLIC PROFILE";
-
-  let text =
-    "Only Name and State are public. City, Photo, Phone, Email, Studio, Experience, Instagram, Bio and Portfolio remain locked.";
-
-  if (normalized === "pro") {
-    title = "SILVER / PRO PUBLIC PROFILE";
-
-    text =
-      "Name, State, City, Profile Photo, Phone and the first 5 Portfolio images are public. Email, Studio, Experience, Instagram and Bio remain locked.";
-  }
-
-  if (normalized === "verified") {
-    title = "GOLD / VERIFIED PUBLIC PROFILE";
-
-    text =
-      "The complete artist profile is public, including Photo, Phone, Email, Studio, Experience, Instagram, Bio and up to 10 Portfolio images.";
-  }
-
-  return (
-    <div
-      className="
-        mt-8
-        rounded-[22px]
-        border
-        border-white/10
-        bg-white/[0.03]
-        p-6
-      "
-    >
-      <div
-        className="
-          flex
-          items-center
-          gap-2
-        "
-      >
-        <Sparkles
-          size={15}
-          className="
-            text-purple-400
-          "
-        />
-
-        <p
-          className="
-            text-[9px]
-            font-black
-          "
-        >
-          {title}
-        </p>
-      </div>
-
-      <p
-        className="
-          mt-3
-          text-sm
-          text-gray-500
-        "
-      >
-        {text}
-      </p>
     </div>
   );
 }
