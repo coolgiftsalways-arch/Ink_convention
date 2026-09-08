@@ -935,12 +935,7 @@ export default function Enter() {
      ₹699 Gold upgrade when the offer has not been used.
    ======================================================= */
 
-  const silverToGoldUpgradeAvailable =
-    currentPlan === "pro" &&
-    !Boolean(
-      currentProfile?.silverToGoldUpgradeUsed ||
-      selectedArtist?.silverToGoldUpgradeUsed,
-    );
+  const silverToGoldUpgradeAvailable = currentPlan === "pro";
 
   /* =======================================================
      RESET TO SEARCH
@@ -1949,13 +1944,13 @@ export default function Enter() {
 
         planId: selectedPlan.id,
 
-        planName: selectedPlan.name,
+        planName: request.requestedPlanName || selectedPlan.name,
 
-        amount: requestedAmount,
+        amount: Number(request.requestedAmount) || requestedAmount,
 
-        pricingType: isGoldUpgrade
-          ? "silver-to-gold-upgrade"
-          : "standard-membership",
+        pricingType:
+          request.pricingType ||
+          (isGoldUpgrade ? "silver-to-gold-upgrade" : "standard-membership"),
       });
 
       setSuccess(
@@ -2969,8 +2964,6 @@ export default function Enter() {
                             ? "VERIFYING..."
                             : "VERIFY & CHANGE NUMBER"}
                         </button>
-
-                        
                       </>
                     )}
                   </div>
@@ -4186,7 +4179,7 @@ function PlanCard({
             text-gray-500
           "
         >
-          {silverToGoldUpgrade ? "ONE-TIME UPGRADE" : plan.billing}
+          {silverToGoldUpgrade ? "SILVER → GOLD UPGRADE" : plan.billing}
         </span>
       </div>
 
@@ -4224,8 +4217,8 @@ function PlanCard({
               text-gray-400
             "
           >
-            Upgrade your active Silver membership to Gold for ₹699. This special
-            upgrade price can be used only once. Future Gold renewal is ₹2,999.
+            Upgrade your active Silver membership to Gold for ₹699. This price
+            is available whenever your current active plan is Silver.
           </p>
         </div>
       )}
@@ -4326,7 +4319,7 @@ function PlanCard({
           {saving
             ? "PLEASE WAIT..."
             : silverToGoldUpgrade
-              ? "REQUEST GOLD UPGRADE • ₹699"
+              ? "UPGRADE TO GOLD • ₹699"
               : theme.buttonText}
         </span>
 

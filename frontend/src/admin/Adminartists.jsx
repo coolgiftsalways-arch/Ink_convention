@@ -40,7 +40,7 @@ const apiFetch = async (path, options = {}) => {
 
   const timeout = window.setTimeout(() => {
     controller.abort();
-  }, 15000);
+  }, 60000);
 
   try {
     return await fetch(`${API_URL}${path}`, {
@@ -433,6 +433,113 @@ const getArtistTone = (artist = {}) => {
   return artist.claimed ? "claimed" : "unclaimed";
 };
 
+const normalizeRequestStatus = (value) =>
+  String(value || "new")
+    .trim()
+    .toLowerCase();
+
+const normalizePaymentStatus = (value) =>
+  String(value || "pending")
+    .trim()
+    .toLowerCase();
+
+const ARTIST_STATUS_STORAGE_KEY = "inkConventionArtistAdminStatuses";
+
+const ARTIST_STATUS_OPTIONS = [
+  "NEW",
+  "CONTACTED",
+  "CONFIRMED",
+  "PAID",
+  "CANCELLED",
+];
+
+const normalizeArtistAdminStatus = (value) => {
+  const normalized = String(value || "NEW")
+    .trim()
+    .toUpperCase();
+
+  return ARTIST_STATUS_OPTIONS.includes(normalized) ? normalized : "NEW";
+};
+
+const loadArtistAdminStatuses = () => {
+  try {
+    const raw = localStorage.getItem(ARTIST_STATUS_STORAGE_KEY);
+
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    console.error("Unable to read artist admin statuses:", error);
+    return {};
+  }
+};
+
+const saveArtistAdminStatuses = (statuses) => {
+  try {
+    localStorage.setItem(ARTIST_STATUS_STORAGE_KEY, JSON.stringify(statuses));
+  } catch (error) {
+    console.error("Unable to save artist admin statuses:", error);
+  }
+};
+
+const getArtistStatusClasses = (status) => {
+  const normalized = normalizeArtistAdminStatus(status);
+
+  if (normalized === "PAID") {
+    return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
+  }
+
+  if (normalized === "CONFIRMED") {
+    return "border-blue-400/30 bg-blue-400/10 text-blue-300";
+  }
+
+  if (normalized === "CONTACTED") {
+    return "border-sky-400/30 bg-sky-400/10 text-sky-300";
+  }
+
+  if (normalized === "CANCELLED") {
+    return "border-red-400/30 bg-red-400/10 text-red-300";
+  }
+
+  return "border-purple-400/30 bg-purple-400/10 text-purple-300";
+};
+
+const isMembershipRequestPaid = (request = {}) => {
+  const requestStatus = normalizeRequestStatus(request.requestStatus);
+  const paymentStatus = normalizePaymentStatus(request.paymentStatus);
+
+  return (
+    requestStatus === "paid" ||
+    ["paid", "success", "successful", "completed"].includes(paymentStatus)
+  );
+};
+
+const getRequestStatusTone = (status) => {
+  const normalized = normalizeRequestStatus(status);
+
+  if (normalized === "contacted") {
+    return "border-sky-400/25 bg-sky-400/10 text-sky-300";
+  }
+
+  if (normalized === "paid") {
+    return "border-emerald-400/25 bg-emerald-400/10 text-emerald-300";
+  }
+
+  if (normalized === "completed") {
+    return "border-violet-400/25 bg-violet-400/10 text-violet-300";
+  }
+
+  if (normalized === "cancelled") {
+    return "border-red-400/25 bg-red-400/10 text-red-300";
+  }
+
+  return "border-purple-400/25 bg-purple-400/10 text-purple-300";
+};
+
 // =====================================================
 // DASHBOARD
 // =====================================================
@@ -473,13 +580,23 @@ function AdminArtists() {
   // basic-unclaimed = imported FREE profile not claimed yet
   // pro             = SILVER ₹1,999
   // verified        = GOLD ₹2,999
-  const [membershipFilter, setMembershipFilter] = useState("basic-claimed");
+  const [membershipFilter, setMembershipFilter] = useState("all");
+
+  // Unified artist status filter, similar to the Stall Booking dashboard.
+  const [directoryStatusFilter, setDirectoryStatusFilter] = useState("ALL");
+
+  const [artistAdminStatuses, setArtistAdminStatuses] = useState(() =>
+    loadArtistAdminStatuses(),
+  );
+
+  // State filter for the directory membership overview.
+  const [directoryStateFilter, setDirectoryStateFilter] = useState("ALL");
 
   // Silver / Gold requests waiting for manual team follow-up.
   const [membershipRequests, setMembershipRequests] = useState([]);
-  const [membershipRequestFilter, setMembershipRequestFilter] = useState("new");
+  const [membershipRequestFilter, setMembershipRequestFilter] = useState("all");
   const [membershipRequestAgeFilter, setMembershipRequestAgeFilter] =
-    useState("48h");
+    useState("all");
   const [membershipRequestError, setMembershipRequestError] = useState("");
   const [membershipRequestBusyId, setMembershipRequestBusyId] = useState("");
   const [directPlanBusyArtistId, setDirectPlanBusyArtistId] = useState("");
@@ -496,6 +613,8 @@ function AdminArtists() {
   const [loading, setLoading] = useState(true);
 
   const [selectedUser, setSelectedUser] = useState(null);
+
+  const [selectedDirectoryArtist, setSelectedDirectoryArtist] = useState(null);
 
   const [dashboardError, setDashboardError] = useState("");
 
@@ -595,6 +714,12 @@ function AdminArtists() {
       setSubmissions(users);
     } catch (error) {
       console.error("❌ User fetch error:", error);
+
+      if (error?.name === "AbortError") {
+        throw new Error(
+          "Tattoo entries took too long to load from the server.",
+        );
+      }
 
       throw error;
     }
@@ -706,9 +831,19 @@ function AdminArtists() {
 
       setDirectoryArtists([]);
 
-      setMembershipError(
-        error.message || "Could not load Free, Silver and Gold artists.",
-      );
+      if (error?.name === "AbortError") {
+        setMembershipError(
+          "The server is taking too long to load artist data. Please refresh and try again.",
+        );
+      } else if (error instanceof TypeError) {
+        setMembershipError(
+          "Cannot connect to the artist directory API. Check that the backend is online and CORS is configured correctly.",
+        );
+      } else {
+        setMembershipError(
+          error.message || "Could not load Free, Silver and Gold artists.",
+        );
+      }
     }
   }, []);
 
@@ -786,10 +921,22 @@ function AdminArtists() {
       setMembershipRequests(requests);
     } catch (error) {
       console.error("Membership request fetch error:", error);
+
       setMembershipRequests([]);
-      setMembershipRequestError(
-        error.message || "Could not load membership requests.",
-      );
+
+      if (error?.name === "AbortError") {
+        setMembershipRequestError(
+          "The server is taking too long to load membership requests. Please refresh and try again.",
+        );
+      } else if (error instanceof TypeError) {
+        setMembershipRequestError(
+          "Cannot connect to the membership API. Check that the backend is online and CORS is configured correctly.",
+        );
+      } else {
+        setMembershipRequestError(
+          error.message || "Could not load membership requests.",
+        );
+      }
     }
   }, []);
 
@@ -943,6 +1090,32 @@ function AdminArtists() {
   );
 
   // ===================================================
+  // ARTIST CARD STATUS
+  // Same workflow as Stall Booking dashboard
+  // ===================================================
+
+  const handleArtistStatusChange = useCallback((artistId, nextStatus) => {
+    const id = String(artistId || "").trim();
+
+    if (!id) {
+      return;
+    }
+
+    const normalizedStatus = normalizeArtistAdminStatus(nextStatus);
+
+    setArtistAdminStatuses((previous) => {
+      const updated = {
+        ...previous,
+        [id]: normalizedStatus,
+      };
+
+      saveArtistAdminStatuses(updated);
+
+      return updated;
+    });
+  }, []);
+
+  // ===================================================
   // REFRESH DASHBOARD
   // ===================================================
 
@@ -958,7 +1131,17 @@ function AdminArtists() {
         fetchMembershipRequests(),
       ]);
     } catch (error) {
-      setDashboardError(error.message || "Could not load dashboard.");
+      if (error?.name === "AbortError") {
+        setDashboardError(
+          "The server is taking too long to load dashboard data. Please refresh and try again.",
+        );
+      } else if (error instanceof TypeError) {
+        setDashboardError(
+          "Cannot connect to the backend API. Check that the server is online and CORS is configured correctly.",
+        );
+      } else {
+        setDashboardError(error.message || "Could not load dashboard.");
+      }
     } finally {
       setLoading(false);
     }
@@ -1022,7 +1205,7 @@ function AdminArtists() {
     };
 
     const initialTimer = window.setTimeout(updateClock, 0);
-    const timer = window.setInterval(updateClock, 1000);
+    const timer = window.setInterval(updateClock, 60000);
 
     return () => {
       window.clearTimeout(initialTimer);
@@ -1308,21 +1491,71 @@ function AdminArtists() {
     (artist) => artist.plan === "verified",
   );
 
+  // ===================================================
+  // DIRECTORY STATE FILTER + COUNTS
+  // ===================================================
+
+  const directoryStateOptions = [
+    "ALL",
+    ...Array.from(
+      new Set(
+        directoryArtists
+          .map((artist) =>
+            String(artist.state || "")
+              .trim()
+              .toUpperCase(),
+          )
+          .filter(Boolean),
+      ),
+    ).sort((first, second) => first.localeCompare(second)),
+  ];
+
+  const stateFilteredDirectoryArtists =
+    directoryStateFilter === "ALL"
+      ? directoryArtists
+      : directoryArtists.filter(
+          (artist) =>
+            String(artist.state || "")
+              .trim()
+              .toUpperCase() === directoryStateFilter,
+        );
+
+  const stateFreeArtists = stateFilteredDirectoryArtists.filter(
+    (artist) => artist.plan === "basic",
+  );
+
+  const stateSilverArtists = stateFilteredDirectoryArtists.filter(
+    (artist) => artist.plan === "pro",
+  );
+
+  const stateGoldArtists = stateFilteredDirectoryArtists.filter(
+    (artist) => artist.plan === "verified",
+  );
+
+  const selectedStateLabel =
+    directoryStateFilter === "ALL" ? "ALL STATES" : directoryStateFilter;
+
   const membershipRequestCounts = {
     all: membershipRequests.length,
     new: membershipRequests.filter((request) => request.requestStatus === "new")
       .length,
-    silver: membershipRequests.filter(
-      (request) => request.requestedPlan === "pro",
-    ).length,
-    gold: membershipRequests.filter(
-      (request) => request.requestedPlan === "verified",
-    ).length,
     contacted: membershipRequests.filter(
       (request) => request.requestStatus === "contacted",
     ).length,
+    paid: membershipRequests.filter((request) => {
+      const requestStatus = String(request.requestStatus || "").toLowerCase();
+      const paymentStatus = String(request.paymentStatus || "").toLowerCase();
+
+      return (
+        requestStatus === "paid" ||
+        ["paid", "success", "successful", "completed"].includes(paymentStatus)
+      );
+    }).length,
     completed: membershipRequests.filter(
       (request) => request.requestStatus === "completed",
+    ).length,
+    cancelled: membershipRequests.filter(
+      (request) => request.requestStatus === "cancelled",
     ).length,
   };
 
@@ -1365,55 +1598,186 @@ function AdminArtists() {
       return true;
     }
 
-    if (membershipRequestFilter === "silver") {
-      return request.requestedPlan === "pro";
-    }
+    if (membershipRequestFilter === "paid") {
+      const requestStatus = String(request.requestStatus || "").toLowerCase();
+      const paymentStatus = String(request.paymentStatus || "").toLowerCase();
 
-    if (membershipRequestFilter === "gold") {
-      return request.requestedPlan === "verified";
+      return (
+        requestStatus === "paid" ||
+        ["paid", "success", "successful", "completed"].includes(paymentStatus)
+      );
     }
 
     return request.requestStatus === membershipRequestFilter;
   });
+
+  const filterMembersByState = (members) =>
+    directoryStateFilter === "ALL"
+      ? members
+      : members.filter(
+          (artist) =>
+            String(artist.state || "")
+              .trim()
+              .toUpperCase() === directoryStateFilter,
+        );
+
+  const latestMembershipRequestByProfile = membershipRequests.reduce(
+    (accumulator, request) => {
+      const key = String(request.profileId || "").trim();
+
+      if (!key) {
+        return accumulator;
+      }
+
+      const previous = accumulator[key];
+      const currentTime = new Date(request.createdAt || 0).getTime() || 0;
+      const previousTime = new Date(previous?.createdAt || 0).getTime() || 0;
+
+      if (!previous || currentTime >= previousTime) {
+        accumulator[key] = request;
+      }
+
+      return accumulator;
+    },
+    {},
+  );
+
+  const getDirectoryArtistStatus = (artist) => {
+    const artistId = String(artist?.id || "").trim();
+
+    if (artistId && artistAdminStatuses[artistId]) {
+      return normalizeArtistAdminStatus(artistAdminStatuses[artistId]);
+    }
+
+    const request = latestMembershipRequestByProfile[artistId];
+
+    const requestStatus = String(request?.requestStatus || "")
+      .trim()
+      .toUpperCase();
+
+    const paymentStatus = String(
+      request?.paymentStatus || artist?.paymentStatus || "",
+    )
+      .trim()
+      .toUpperCase();
+
+    if (requestStatus === "CANCELLED") {
+      return "CANCELLED";
+    }
+
+    if (requestStatus === "CONFIRMED") {
+      return "CONFIRMED";
+    }
+
+    if (requestStatus === "CONTACTED") {
+      return "CONTACTED";
+    }
+
+    if (
+      requestStatus === "PAID" ||
+      ["PAID", "SUCCESS", "SUCCESSFUL", "COMPLETED", "VERIFIED"].includes(
+        paymentStatus,
+      ) ||
+      artist?.plan === "pro" ||
+      artist?.plan === "verified"
+    ) {
+      return "PAID";
+    }
+
+    return "NEW";
+  };
+
+  const planFilteredDirectoryArtists = filterMembersByState(
+    directoryArtists,
+  ).filter((artist) => {
+    if (membershipFilter === "all") {
+      return true;
+    }
+
+    if (membershipFilter === "free") {
+      return artist.plan === "basic";
+    }
+
+    if (membershipFilter === "pro") {
+      return artist.plan === "pro";
+    }
+
+    if (membershipFilter === "verified") {
+      return artist.plan === "verified";
+    }
+
+    return true;
+  });
+
+  const visibleDirectoryMembers = planFilteredDirectoryArtists.filter(
+    (artist) => {
+      if (directoryStatusFilter === "ALL") {
+        return true;
+      }
+
+      return getDirectoryArtistStatus(artist) === directoryStatusFilter;
+    },
+  );
 
   const selectedMembership =
     membershipFilter === "verified"
       ? {
           title: "Gold Verified",
           price: "₹2,999",
-          members: goldMembers,
+          members: visibleDirectoryMembers,
           tone: "gold",
           icon: <Trophy size={18} />,
-          description: "Artists who have taken the ₹2,999 Gold Verified plan.",
+          description:
+            "Gold artists matching the selected state and status filters.",
         }
       : membershipFilter === "pro"
         ? {
             title: "Silver Pro",
             price: "₹1,999",
-            members: silverMembers,
+            members: visibleDirectoryMembers,
             tone: "silver",
             icon: <Award size={18} />,
-            description: "Artists who have taken the ₹1,999 Silver Pro plan.",
+            description:
+              "Silver artists matching the selected state and status filters.",
           }
-        : membershipFilter === "basic-unclaimed"
+        : membershipFilter === "free"
           ? {
-              title: "Free Unclaimed",
+              title: "Free Artists",
               price: "₹0",
-              members: freeUnclaimedMembers,
-              tone: "unclaimed",
-              icon: <CircleDashed size={18} />,
-              description:
-                "Imported Free profiles that have not been claimed by their owner yet.",
-            }
-          : {
-              title: "Free Claimed",
-              price: "₹0",
-              members: freeClaimedMembers,
-              tone: "claimed",
+              members: visibleDirectoryMembers,
+              tone: "basic",
               icon: <BadgeCheck size={18} />,
               description:
-                "Free profiles whose owner has claimed and verified their profile.",
+                "All Free artists matching the selected state and status filters.",
+            }
+          : {
+              title: "All Directory Artists",
+              price: "",
+              members: visibleDirectoryMembers,
+              tone: "all",
+              icon: <LayoutDashboard size={18} />,
+              description:
+                "Free, Silver and Gold artists matching the selected filters.",
             };
+
+  const directoryStatusCounts = {
+    ALL: planFilteredDirectoryArtists.length,
+    NEW: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "NEW",
+    ).length,
+    CONTACTED: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "CONTACTED",
+    ).length,
+    CONFIRMED: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "CONFIRMED",
+    ).length,
+    PAID: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "PAID",
+    ).length,
+    CANCELLED: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "CANCELLED",
+    ).length,
+  };
 
   // ===================================================
   // DASHBOARD
@@ -1494,25 +1858,25 @@ function AdminArtists() {
 
             <DashboardStat
               label="Free Claimed"
-              value={freeClaimedMembers.length}
+              value={filterMembersByState(freeClaimedMembers).length}
               tone="claimed"
             />
 
             <DashboardStat
               label="Free Unclaimed"
-              value={freeUnclaimedMembers.length}
+              value={filterMembersByState(freeUnclaimedMembers).length}
               tone="unclaimed"
             />
 
             <DashboardStat
               label="Silver Pro ₹1,999"
-              value={silverMembers.length}
+              value={filterMembersByState(silverMembers).length}
               tone="silver"
             />
 
             <DashboardStat
               label="Gold Verified ₹2,999"
-              value={goldMembers.length}
+              value={filterMembersByState(goldMembers).length}
               tone="gold"
             />
 
@@ -1553,12 +1917,12 @@ function AdminArtists() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
               {[
-                ["new", "NEW", membershipRequestCounts.new],
-                ["silver", "SILVER", membershipRequestCounts.silver],
-                ["gold", "GOLD", membershipRequestCounts.gold],
-                ["contacted", "CONTACTED", membershipRequestCounts.contacted],
-                ["completed", "COMPLETED", membershipRequestCounts.completed],
                 ["all", "ALL", membershipRequestCounts.all],
+                ["new", "NEW", membershipRequestCounts.new],
+                ["contacted", "CONTACTED", membershipRequestCounts.contacted],
+                ["paid", "PAID", membershipRequestCounts.paid],
+                ["completed", "COMPLETED", membershipRequestCounts.completed],
+                ["cancelled", "CANCELLED", membershipRequestCounts.cancelled],
               ].map(([value, label, count]) => (
                 <button
                   key={value}
@@ -1585,7 +1949,8 @@ function AdminArtists() {
                     Request Time Filter
                   </p>
                   <p className="text-[10px] text-gray-600 mt-1">
-                    NEW + 48 HOURS is selected by default.
+                    Use the status buttons above to filter requests. ALL TIME is
+                    selected by default.
                   </p>
                 </div>
 
@@ -1650,15 +2015,38 @@ function AdminArtists() {
                           </p>
                         </div>
 
-                        <span
-                          className={`shrink-0 rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
-                            isGoldRequest
-                              ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
-                              : "border-slate-300/20 bg-slate-300/10 text-slate-200"
-                          }`}
-                        >
-                          {isGoldRequest ? "GOLD" : "SILVER"}
-                        </span>
+                        <div className="shrink-0 flex flex-col items-end gap-2">
+                          <span
+                            className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
+                              isGoldRequest
+                                ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
+                                : "border-slate-300/20 bg-slate-300/10 text-slate-200"
+                            }`}
+                          >
+                            {isGoldRequest ? "GOLD" : "SILVER"}
+                          </span>
+
+                          <span
+                            className={`rounded-full border px-3 py-1 text-[8px] font-black uppercase tracking-widest ${getRequestStatusTone(
+                              request.requestStatus,
+                            )}`}
+                          >
+                            {normalizeRequestStatus(request.requestStatus)}
+                          </span>
+
+                          <span
+                            className={`rounded-full border px-3 py-1 text-[8px] font-black uppercase tracking-widest ${
+                              isMembershipRequestPaid(request)
+                                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
+                                : "border-orange-400/20 bg-orange-400/10 text-orange-300"
+                            }`}
+                          >
+                            PAYMENT:{" "}
+                            {isMembershipRequestPaid(request)
+                              ? "PAID"
+                              : normalizePaymentStatus(request.paymentStatus)}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
@@ -1669,8 +2057,21 @@ function AdminArtists() {
                           ).toLocaleString("en-IN")}`}
                         />
                         <MembershipInfo
-                          label="Status"
-                          value={request.requestStatus.toUpperCase()}
+                          label="Request Status"
+                          value={normalizeRequestStatus(
+                            request.requestStatus,
+                          ).toUpperCase()}
+                        />
+
+                        <MembershipInfo
+                          label="Payment Status"
+                          value={
+                            isMembershipRequestPaid(request)
+                              ? "PAID"
+                              : normalizePaymentStatus(
+                                  request.paymentStatus,
+                                ).toUpperCase()
+                          }
                         />
                         <MembershipInfo
                           label="Phone"
@@ -1801,6 +2202,100 @@ function AdminArtists() {
               </p>
             </div>
 
+            {/* ==========================================
+                STATE FILTER + PLAN COUNTS
+            ========================================== */}
+
+            <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4 sm:p-5">
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-mono font-black uppercase tracking-[0.16em] text-gray-500">
+                    State Filter
+                  </p>
+
+                  <h3 className="mt-1 text-lg font-black uppercase text-white">
+                    {selectedStateLabel}
+                  </h3>
+
+                  <p className="mt-1 text-[10px] text-gray-600">
+                    Select a state to see exactly how many Free, Silver and Gold
+                    artists are registered there.
+                  </p>
+                </div>
+
+                <div className="w-full lg:w-[320px]">
+                  <select
+                    value={directoryStateFilter}
+                    onChange={(event) =>
+                      setDirectoryStateFilter(event.target.value)
+                    }
+                    className="
+                      w-full
+                      appearance-none
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-black/40
+                      px-4
+                      py-3.5
+                      text-[10px]
+                      font-black
+                      uppercase
+                      tracking-widest
+                      text-white
+                      outline-none
+                      transition
+                      focus:border-[#a855f7]/60
+                    "
+                  >
+                    {directoryStateOptions.map((state) => (
+                      <option key={state} value={state}>
+                        {state === "ALL" ? "ALL STATES" : state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-purple-500/20 bg-purple-500/[0.05] p-3">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-purple-300">
+                    Total Artists
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-white">
+                    {stateFilteredDirectoryArtists.length}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-gray-400">
+                    Free
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-white">
+                    {stateFreeArtists.length}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-300/25 bg-slate-300/[0.07] p-3">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-300">
+                    Silver
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-slate-100">
+                    {stateSilverArtists.length}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.07] p-3">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-amber-300">
+                    Gold
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-amber-200">
+                    {stateGoldArtists.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {membershipError && (
               <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
                 {membershipError}
@@ -1907,45 +2402,109 @@ function AdminArtists() {
             )}
 
             {/* ==========================================
-                4 ARTIST GROUP FILTERS
+                PLAN FILTERS
             ========================================== */}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <MembershipFilterButton
-                active={membershipFilter === "basic-claimed"}
-                onClick={() => setMembershipFilter("basic-claimed")}
-                title="FREE CLAIMED"
-                subtitle="Owner claimed profile"
-                count={freeClaimedMembers.length}
-                tone="claimed"
+                active={membershipFilter === "all"}
+                onClick={() => setMembershipFilter("all")}
+                title="ALL"
+                subtitle="Free + Silver + Gold"
+                count={stateFilteredDirectoryArtists.length}
+                tone="all"
               />
 
               <MembershipFilterButton
-                active={membershipFilter === "basic-unclaimed"}
-                onClick={() => setMembershipFilter("basic-unclaimed")}
-                title="FREE UNCLAIMED"
-                subtitle="Not claimed yet"
-                count={freeUnclaimedMembers.length}
-                tone="unclaimed"
+                active={membershipFilter === "free"}
+                onClick={() => setMembershipFilter("free")}
+                title="FREE"
+                subtitle="All Free artists"
+                count={stateFreeArtists.length}
+                tone="basic"
               />
 
               <MembershipFilterButton
                 active={membershipFilter === "pro"}
                 onClick={() => setMembershipFilter("pro")}
-                title="SILVER PRO"
+                title="SILVER"
                 subtitle="₹1,999 Plan"
-                count={silverMembers.length}
+                count={stateSilverArtists.length}
                 tone="silver"
               />
 
               <MembershipFilterButton
                 active={membershipFilter === "verified"}
                 onClick={() => setMembershipFilter("verified")}
-                title="GOLD VERIFIED"
+                title="GOLD"
                 subtitle="₹2,999 Plan"
-                count={goldMembers.length}
+                count={stateGoldArtists.length}
                 tone="gold"
               />
+            </div>
+
+            {/* ==========================================
+                STATUS FILTER - STALL DASHBOARD STYLE
+            ========================================== */}
+
+            <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <p className="text-[9px] font-mono font-black uppercase tracking-[0.16em] text-gray-500">
+                    Artist Status Filter
+                  </p>
+
+                  <p className="mt-1 text-[10px] text-gray-600">
+                    Choose a status to show matching artist cards.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <select
+                    value={directoryStatusFilter}
+                    onChange={(event) =>
+                      setDirectoryStatusFilter(event.target.value)
+                    }
+                    className="
+                      min-w-[210px]
+                      appearance-none
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-black/40
+                      px-4
+                      py-3
+                      text-[9px]
+                      font-black
+                      uppercase
+                      tracking-widest
+                      text-white
+                      outline-none
+                      transition
+                      focus:border-[#a855f7]/60
+                    "
+                  >
+                    <option value="ALL">
+                      ALL STATUS ({directoryStatusCounts.ALL})
+                    </option>
+                    <option value="NEW">
+                      NEW ({directoryStatusCounts.NEW})
+                    </option>
+                    <option value="CONTACTED">
+                      CONTACTED ({directoryStatusCounts.CONTACTED})
+                    </option>
+                    <option value="CONFIRMED">
+                      CONFIRMED ({directoryStatusCounts.CONFIRMED})
+                    </option>
+                    <option value="PAID">
+                      PAID ({directoryStatusCounts.PAID})
+                    </option>
+                    <option value="CANCELLED">
+                      CANCELLED ({directoryStatusCounts.CANCELLED})
+                    </option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             {/* ==========================================
@@ -1962,6 +2521,10 @@ function AdminArtists() {
               onAdminPlanChange={handleDirectPlanActivation}
               busyArtistId={directPlanBusyArtistId}
               nowMs={membershipClock}
+              getArtistStatus={getDirectoryArtistStatus}
+              latestRequestByProfile={latestMembershipRequestByProfile}
+              onStatusChange={handleArtistStatusChange}
+              onOpenArtist={setSelectedDirectoryArtist}
             />
           </section>
 
@@ -2117,6 +2680,23 @@ function AdminArtists() {
           onDelete={handleDelete}
         />
       )}
+
+      {selectedDirectoryArtist && (
+        <DirectoryArtistDetailsModal
+          artist={selectedDirectoryArtist}
+          status={getDirectoryArtistStatus(selectedDirectoryArtist)}
+          membershipRequest={
+            latestMembershipRequestByProfile?.[
+              String(selectedDirectoryArtist.id || "")
+            ] || null
+          }
+          onStatusChange={handleArtistStatusChange}
+          onAdminPlanChange={handleDirectPlanActivation}
+          busy={directPlanBusyArtistId === selectedDirectoryArtist.id}
+          nowMs={membershipClock}
+          onClose={() => setSelectedDirectoryArtist(null)}
+        />
+      )}
     </div>
   );
 }
@@ -2233,12 +2813,35 @@ function MembershipTierPanel({
   onAdminPlanChange,
   busyArtistId,
   nowMs,
+  getArtistStatus,
+  latestRequestByProfile,
+  onStatusChange,
+  onOpenArtist,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
   const isClaimed = tone === "claimed";
   const isUnclaimed = tone === "unclaimed";
   const isBasic = tone === "basic" || isClaimed || isUnclaimed;
+
+  const MEMBERS_PER_PAGE = 24;
+  const [memberPage, setMemberPage] = useState(0);
+
+  const totalMemberPages = Math.max(
+    1,
+    Math.ceil(members.length / MEMBERS_PER_PAGE),
+  );
+
+  const safeMemberPage = Math.min(memberPage, totalMemberPages - 1);
+  const memberStart = safeMemberPage * MEMBERS_PER_PAGE;
+  const visibleMembers = members.slice(
+    memberStart,
+    memberStart + MEMBERS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    setMemberPage(0);
+  }, [members]);
 
   const outerClass = isGold
     ? "border-amber-300/25 bg-amber-400/[0.025]"
@@ -2310,7 +2913,7 @@ function MembershipTierPanel({
         </div>
       ) : (
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-[560px] overflow-y-auto pr-1">
-          {members.map((artist, index) => (
+          {visibleMembers.map((artist, index) => (
             <MembershipMemberRow
               key={artist.id || `${artist.name}-${index}`}
               artist={artist}
@@ -2318,8 +2921,54 @@ function MembershipTierPanel({
               onAdminPlanChange={onAdminPlanChange}
               busy={busyArtistId === artist.id}
               nowMs={nowMs}
+              status={getArtistStatus ? getArtistStatus(artist) : "new"}
+              membershipRequest={
+                latestRequestByProfile?.[String(artist.id || "")] || null
+              }
+              onStatusChange={onStatusChange}
+              onOpenArtist={onOpenArtist}
             />
           ))}
+        </div>
+      )}
+
+      {members.length > MEMBERS_PER_PAGE && (
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-white/10 pt-4">
+          <p className="text-[9px] font-mono uppercase tracking-wider text-gray-600">
+            Showing {memberStart + 1}-
+            {Math.min(memberStart + MEMBERS_PER_PAGE, members.length)} of{" "}
+            {members.length}
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={safeMemberPage === 0}
+              onClick={() =>
+                setMemberPage((current) => Math.max(0, current - 1))
+              }
+              className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2 text-[9px] font-black uppercase tracking-wider text-gray-300 transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Previous
+            </button>
+
+            <span className="min-w-[76px] text-center text-[9px] font-mono text-purple-300">
+              {safeMemberPage + 1} / {totalMemberPages}
+            </span>
+
+            <button
+              type="button"
+              disabled={safeMemberPage >= totalMemberPages - 1}
+              onClick={() =>
+                setMemberPage((current) =>
+                  Math.min(totalMemberPages - 1, current + 1),
+                )
+              }
+              className="rounded-lg border border-purple-500/25 bg-purple-500/[0.07] px-4 py-2 text-[9px] font-black uppercase tracking-wider text-purple-300 transition hover:bg-purple-500/[0.13] disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -2332,6 +2981,10 @@ function MembershipMemberRow({
   onAdminPlanChange,
   busy,
   nowMs = 0,
+  status = "new",
+  membershipRequest = null,
+  onStatusChange,
+  onOpenArtist,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -2364,7 +3017,10 @@ function MembershipMemberRow({
         : "FREE UNCLAIMED";
 
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">
+    <div
+      className="rounded-2xl border border-white/[0.07] bg-black/25 p-4"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "260px" }}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -2384,11 +3040,21 @@ function MembershipMemberRow({
           )}
         </div>
 
-        <span
-          className={`shrink-0 text-[8px] font-black uppercase tracking-widest ${accentClass}`}
-        >
-          {planLabel}
-        </span>
+        <div className="shrink-0 flex flex-col items-end gap-2">
+          <span
+            className={`text-[8px] font-black uppercase tracking-widest ${accentClass}`}
+          >
+            {planLabel}
+          </span>
+
+          <span
+            className={`rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-widest ${getArtistStatusClasses(
+              status,
+            )}`}
+          >
+            {normalizeArtistAdminStatus(status)}
+          </span>
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
@@ -2403,25 +3069,32 @@ function MembershipMemberRow({
           Membership
         </span>
 
-        <span
-          className={`text-[9px] font-bold uppercase ${
-            isGold
-              ? "text-amber-300"
-              : isSilver
-                ? "text-slate-200"
-                : isClaimed
-                  ? "text-emerald-300"
-                  : "text-purple-300"
-          }`}
-        >
-          {isGold
-            ? artist.paymentStatus || "GOLD ACTIVE"
-            : isSilver
-              ? artist.paymentStatus || "SILVER ACTIVE"
-              : isClaimed
-                ? "CLAIMED"
-                : "UNCLAIMED"}
-        </span>
+        <div className="flex flex-col items-end gap-1 text-right">
+          <span
+            className={`text-[9px] font-bold uppercase ${
+              normalizeArtistAdminStatus(status) === "PAID"
+                ? "text-emerald-300"
+                : normalizeArtistAdminStatus(status) === "CONFIRMED"
+                  ? "text-blue-300"
+                  : normalizeArtistAdminStatus(status) === "CONTACTED"
+                    ? "text-sky-300"
+                    : normalizeArtistAdminStatus(status) === "CANCELLED"
+                      ? "text-red-300"
+                      : "text-purple-300"
+            }`}
+          >
+            {normalizeArtistAdminStatus(status)}
+          </span>
+
+          <span className="text-[7px] font-mono uppercase tracking-wider text-gray-600">
+            Payment:{" "}
+            {normalizeArtistAdminStatus(status) === "PAID"
+              ? "PAID"
+              : normalizePaymentStatus(
+                  membershipRequest?.paymentStatus || artist.paymentStatus,
+                ).toUpperCase()}
+          </span>
+        </div>
       </div>
 
       {(isSilver || isGold) && (
@@ -2453,6 +3126,47 @@ function MembershipMemberRow({
           </div>
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={() => onOpenArtist?.(artist)}
+        className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-[9px] font-black uppercase tracking-widest text-gray-300 transition hover:border-[#a855f7]/35 hover:bg-[#a855f7]/[0.07] hover:text-white"
+      >
+        VIEW DETAILS
+      </button>
+
+      <div className="mt-3 border-t border-white/[0.06] pt-3">
+        <p className="mb-2 text-[8px] font-mono font-black uppercase tracking-[0.14em] text-gray-600">
+          STATUS
+        </p>
+
+        <select
+          value={normalizeArtistAdminStatus(status)}
+          onChange={(event) => onStatusChange?.(artist.id, event.target.value)}
+          className={`
+            w-full
+            appearance-none
+            rounded-xl
+            border
+            bg-black/40
+            px-4
+            py-3
+            text-[9px]
+            font-black
+            uppercase
+            tracking-widest
+            outline-none
+            transition
+            ${getArtistStatusClasses(status)}
+          `}
+        >
+          {ARTIST_STATUS_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {onAdminPlanChange && (
         <div className="mt-3 flex flex-wrap gap-2 border-t border-white/[0.06] pt-3">
@@ -2574,6 +3288,221 @@ function NoMedia({ message }) {
       <ImageIcon size={30} className="mx-auto text-gray-700" />
 
       <p className="text-xs text-gray-600 font-mono mt-3">{message}</p>
+    </div>
+  );
+}
+
+// =====================================================
+// DIRECTORY ARTIST DETAILS MODAL
+// =====================================================
+
+function DirectoryArtistDetailsModal({
+  artist,
+  status,
+  membershipRequest,
+  onStatusChange,
+  onAdminPlanChange,
+  busy,
+  nowMs = 0,
+  onClose,
+}) {
+  const plan = normalizeDirectoryPlan(artist?.plan);
+  const isGold = plan === "verified";
+  const isSilver = plan === "pro";
+  const isFree = plan === "basic";
+
+  const planLabel = isGold ? "GOLD" : isSilver ? "SILVER" : "FREE";
+
+  const planTone = isGold
+    ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
+    : isSilver
+      ? "border-slate-300/25 bg-slate-300/10 text-slate-100"
+      : "border-purple-400/25 bg-purple-400/10 text-purple-300";
+
+  const paymentLabel =
+    normalizeArtistAdminStatus(status) === "PAID"
+      ? "PAID"
+      : normalizePaymentStatus(
+          membershipRequest?.paymentStatus || artist?.paymentStatus,
+        ).toUpperCase();
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 p-3 backdrop-blur-md sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0b0b0f] shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-white/10 bg-[#0b0b0f]/95 p-5 backdrop-blur-xl sm:p-6">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full border px-3 py-1 text-[8px] font-black uppercase tracking-widest ${planTone}`}
+              >
+                {planLabel}
+              </span>
+
+              <span
+                className={`rounded-full border px-3 py-1 text-[8px] font-black uppercase tracking-widest ${getArtistStatusClasses(status)}`}
+              >
+                {normalizeArtistAdminStatus(status)}
+              </span>
+            </div>
+
+            <h2 className="mt-3 truncate text-2xl font-black sm:text-3xl">
+              {artist?.name || "Tattoo Artist"}
+            </h2>
+
+            <p className="mt-1 text-xs text-gray-500">
+              {artist?.studio || "Studio not provided"}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-3 text-gray-400 transition hover:bg-white/10 hover:text-white"
+          >
+            <X size={19} />
+          </button>
+        </div>
+
+        <div className="space-y-5 p-5 sm:p-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <MembershipInfo label="City" value={artist?.city || "N/A"} />
+            <MembershipInfo label="State" value={artist?.state || "N/A"} />
+            <MembershipInfo label="Phone" value={artist?.phone || "N/A"} />
+            <MembershipInfo label="Email" value={artist?.email || "N/A"} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div
+              className={`rounded-2xl border p-4 ${getArtistStatusClasses(status)}`}
+            >
+              <p className="text-[8px] font-mono font-black uppercase tracking-widest opacity-70">
+                CURRENT STATUS
+              </p>
+              <p className="mt-2 text-xl font-black uppercase">
+                {normalizeArtistAdminStatus(status)}
+              </p>
+            </div>
+
+            <div
+              className={`rounded-2xl border p-4 ${paymentLabel === "PAID" ? "border-emerald-400/25 bg-emerald-400/10" : "border-orange-400/20 bg-orange-400/10"}`}
+            >
+              <p className="text-[8px] font-mono font-black uppercase tracking-widest text-gray-400">
+                PAYMENT STATUS
+              </p>
+              <p
+                className={`mt-2 text-xl font-black uppercase ${paymentLabel === "PAID" ? "text-emerald-300" : "text-orange-300"}`}
+              >
+                {paymentLabel || "PENDING"}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <p className="mb-2 text-[8px] font-mono font-black uppercase tracking-[0.14em] text-gray-500">
+              CHANGE STATUS
+            </p>
+
+            <select
+              value={normalizeArtistAdminStatus(status)}
+              onChange={(event) =>
+                onStatusChange?.(artist?.id, event.target.value)
+              }
+              className={`w-full appearance-none rounded-xl border bg-black/40 px-4 py-3 text-[9px] font-black uppercase tracking-widest outline-none transition ${getArtistStatusClasses(status)}`}
+            >
+              {ARTIST_STATUS_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(isSilver || isGold) && (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+              <p className="mb-3 text-[8px] font-mono font-black uppercase tracking-widest text-gray-500">
+                MEMBERSHIP
+              </p>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <MembershipInfo
+                  label="Started"
+                  value={formatMembershipDateTime(
+                    artist?.planStartedAt || artist?.paidAt,
+                  )}
+                />
+                <MembershipInfo
+                  label="Expires"
+                  value={formatMembershipDateTime(artist?.planExpiresAt)}
+                />
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-black/30 px-3 py-2">
+                <Clock
+                  size={13}
+                  className={isGold ? "text-amber-300" : "text-slate-200"}
+                />
+                <span className="text-[8px] font-mono uppercase tracking-widest text-gray-600">
+                  Time left
+                </span>
+                <span
+                  className={`ml-auto text-[10px] font-black ${isGold ? "text-amber-300" : "text-slate-200"}`}
+                >
+                  {getMembershipTimeLeft(artist?.planExpiresAt, nowMs)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {onAdminPlanChange && (
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+              <p className="mb-3 text-[8px] font-mono font-black uppercase tracking-widest text-gray-500">
+                CHANGE PLAN
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {!isFree && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onAdminPlanChange(artist, "basic")}
+                    className="rounded-lg border border-purple-400/25 bg-purple-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-purple-300 disabled:opacity-40"
+                  >
+                    {busy ? "Working..." : "Make Free"}
+                  </button>
+                )}
+
+                {!isSilver && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onAdminPlanChange(artist, "pro")}
+                    className="rounded-lg border border-slate-300/20 bg-slate-300/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-100 disabled:opacity-40"
+                  >
+                    {busy ? "Working..." : "Make Silver"}
+                  </button>
+                )}
+
+                {!isGold && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onAdminPlanChange(artist, "verified")}
+                    className="rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-amber-300 disabled:opacity-40"
+                  >
+                    {busy ? "Working..." : "Make Gold"}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

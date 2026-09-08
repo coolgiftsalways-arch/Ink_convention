@@ -1,16 +1,6 @@
 import { useMemo, useState } from "react";
 
-import {
-  Sparkles,
-  X,
-  MapPin,
-  Share2,
-  Heart,
-  Link as LinkIcon,
-  User,
-  ChevronRight,
-  Play,
-} from "lucide-react";
+import { Sparkles, X, User, ChevronRight, Play } from "lucide-react";
 
 import { Link } from "react-router-dom";
 
@@ -1382,7 +1372,7 @@ function Gallery() {
       </section>
 
       {/* =====================================================
-          POPUP
+          MEDIA VIEWER POPUP
       ===================================================== */}
 
       {selectedItem && (
@@ -1390,22 +1380,14 @@ function Gallery() {
           onClick={() => setSelectedItem(null)}
           className="
             fixed
-
             inset-0
-
             z-[9999]
-
             bg-black/95
-
             backdrop-blur-md
-
             flex
-
             items-center
-
             justify-center
-
-            p-4
+            p-3
             sm:p-6
           "
         >
@@ -1413,526 +1395,74 @@ function Gallery() {
             onClick={(event) => event.stopPropagation()}
             className="
               relative
-
-              max-w-6xl
-
               w-full
-
+              h-full
+              max-w-[1400px]
               max-h-[94vh]
-
-              bg-[#0b0b0f]
-
+              flex
+              items-center
+              justify-center
+              overflow-hidden
+              rounded-[24px]
+              bg-black
               border
               border-white/10
-
-              rounded-[28px]
-
-              overflow-hidden
-
               shadow-2xl
-
-              flex
-
-              flex-col
-              lg:flex-row
             "
           >
-            {/* CLOSE */}
-
             <button
               type="button"
               onClick={() => setSelectedItem(null)}
+              aria-label="Close media"
               className="
                 absolute
-
                 top-4
                 right-4
-
                 z-50
-
-                w-11
-                h-11
-
+                w-12
+                h-12
                 rounded-full
-
-                bg-black/70
-
+                bg-black/75
                 border
-                border-white/20
-
+                border-white/25
                 text-white
-
                 flex
-
                 items-center
-
                 justify-center
-
                 hover:bg-[#a855f7]
-
                 hover:border-[#a855f7]
-
                 transition
+                backdrop-blur-md
               "
             >
-              <X size={20} />
+              <X size={22} />
             </button>
 
-            {/* MEDIA */}
-
-            <div
-              className="
-                w-full
-
-                lg:w-[70%]
-
-                h-[52vh]
-
-                lg:h-[85vh]
-
-                bg-[#050507]
-
-                flex
-
-                items-center
-
-                justify-center
-              "
-            >
-              {selectedItem.type === "video" ? (
-                <video
-                  src={selectedItem.image}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="
-                    max-w-full
-
-                    max-h-full
-
-                    object-contain
-                  "
-                />
-              ) : (
-                <img
-                  src={selectedItem.image}
-                  alt={selectedItem.title}
-                  className="
-                    max-w-full
-
-                    max-h-full
-
-                    object-contain
-                  "
-                />
-              )}
-            </div>
-
-            {/* INFO */}
-
-            <div
-              className="
-                w-full
-
-                lg:w-[30%]
-
-                max-h-[42vh]
-
-                lg:max-h-[85vh]
-
-                overflow-y-auto
-
-                p-7
-                lg:p-8
-
-                bg-gradient-to-b
-
-                from-[#0b0b0f]
-
-                to-[#120a1f]
-              "
-            >
-              {/* TYPE */}
-
-              <div
+            {selectedItem.type === "video" ? (
+              <video
+                src={selectedItem.image}
+                controls
+                autoPlay
+                playsInline
                 className="
-                  flex
-
-                  items-center
-
-                  gap-2
-
-                  mb-5
-                "
-              >
-                <span
-                  className="
-                    text-[#a855f7]
-
-                    text-[9px]
-
-                    font-mono
-
-                    tracking-widest
-
-                    uppercase
-
-                    bg-[#a855f7]/10
-
-                    px-3
-                    py-1.5
-
-                    rounded-lg
-                  "
-                >
-                  {selectedItem.type}
-                </span>
-
-                <span
-                  className="
-                    text-gray-600
-
-                    text-[9px]
-
-                    font-mono
-                  "
-                >
-                  {selectedItem.season}
-                </span>
-              </div>
-
-              {/* TITLE */}
-
-              <h2
-                className="
-                  text-3xl
-
-                  font-black
-
-                  uppercase
-
-                  leading-[0.95]
-                "
-              >
-                {selectedItem.title}
-              </h2>
-
-              <p
-                className="
-                  mt-3
-
-                  text-[#a855f7]
-
-                  text-[10px]
-
-                  font-mono
-
-                  tracking-widest
-
-                  uppercase
-                "
-              >
-                {selectedItem.category}
-              </p>
-
-              <div
-                className="
-                  border-t
-
-                  border-white/10
-
-                  my-7
-                "
-              />
-
-              {/* ARTIST */}
-
-              <p
-                className="
-                  text-[9px]
-
-                  font-mono
-
-                  text-gray-600
-
-                  tracking-widest
-
-                  uppercase
-
-                  mb-4
-                "
-              >
-                ARTIST
-              </p>
-
-              <div
-                className="
-                  flex
-
-                  items-center
-
-                  gap-4
-                "
-              >
-                <div
-                  className="
-                    w-12
-                    h-12
-
-                    rounded-full
-
-                    bg-white/5
-
-                    border
-                    border-white/10
-
-                    flex
-
-                    items-center
-
-                    justify-center
-                  "
-                >
-                  <User
-                    size={19}
-                    className="
-                      text-gray-500
-                    "
-                  />
-                </div>
-
-                <div
-                  className="
-                    min-w-0
-                  "
-                >
-                  <h3
-                    className="
-                      text-sm
-
-                      font-bold
-
-                      truncate
-                    "
-                  >
-                    {selectedItem.artistName}
-                  </h3>
-
-                  <p
-                    className="
-                      mt-1
-
-                      text-[11px]
-
-                      text-gray-500
-
-                      flex
-
-                      items-center
-
-                      gap-1
-                    "
-                  >
-                    <MapPin
-                      size={11}
-                      className="
-                        text-[#a855f7]
-                      "
-                    />
-
-                    {selectedItem.city}
-                  </p>
-                </div>
-              </div>
-
-              {/* ARTIST PAGE */}
-
-              <Link
-                to="/artists"
-                className="
-                  mt-6
-
                   w-full
-
-                  flex
-
-                  items-center
-
-                  justify-center
-
-                  gap-2
-
-                  border
-
-                  border-white/10
-
-                  hover:border-[#a855f7]
-
-                  hover:bg-[#a855f7]/10
-
-                  rounded-xl
-
-                  px-4
-
-                  py-3
-
-                  text-[10px]
-
-                  font-mono
-
-                  uppercase
-
-                  tracking-widest
-
-                  transition
-                "
-              >
-                VIEW ARTIST
-                <ChevronRight size={13} />
-              </Link>
-
-              <div
-                className="
-                  border-t
-
-                  border-white/10
-
-                  my-7
+                  h-full
+                  object-contain
+                  bg-black
                 "
               />
-
-              {/* SHARE */}
-
-              <p
+            ) : (
+              <img
+                src={selectedItem.image}
+                alt={selectedItem.title || "Gallery"}
                 className="
-                  text-[9px]
-
-                  font-mono
-
-                  text-gray-600
-
-                  tracking-widest
-
-                  uppercase
-
-                  mb-4
+                  w-full
+                  h-full
+                  object-contain
+                  bg-black
                 "
-              >
-                SHARE
-              </p>
-
-              <div
-                className="
-                  grid
-
-                  grid-cols-3
-
-                  gap-2
-                "
-              >
-                <button
-                  type="button"
-                  className="
-                    bg-white/5
-
-                    hover:bg-white/10
-
-                    border
-
-                    border-white/5
-
-                    rounded-xl
-
-                    py-3
-
-                    flex
-
-                    items-center
-
-                    justify-center
-
-                    transition
-                  "
-                >
-                  <Heart size={16} />
-                </button>
-
-                <button
-                  type="button"
-                  className="
-                    bg-white/5
-
-                    hover:bg-white/10
-
-                    border
-
-                    border-white/5
-
-                    rounded-xl
-
-                    py-3
-
-                    flex
-
-                    items-center
-
-                    justify-center
-
-                    transition
-                  "
-                >
-                  <Share2 size={16} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (navigator.clipboard) {
-                      navigator.clipboard.writeText(window.location.href);
-                    }
-                  }}
-                  className="
-                    bg-white/5
-
-                    hover:bg-white/10
-
-                    border
-
-                    border-white/5
-
-                    rounded-xl
-
-                    py-3
-
-                    flex
-
-                    items-center
-
-                    justify-center
-
-                    transition
-                  "
-                >
-                  <LinkIcon size={16} />
-                </button>
-              </div>
-
-              <p
-                className="
-                  pt-8
-
-                  text-[9px]
-
-                  text-gray-700
-
-                  font-mono
-
-                  text-center
-                "
-              >
-                INK ID: {selectedItem.id}
-              </p>
-            </div>
+              />
+            )}
           </div>
         </div>
       )}

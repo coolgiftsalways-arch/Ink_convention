@@ -1438,19 +1438,31 @@ export default function Artists() {
 
         @keyframes inkGoldPulse {
           0%, 100% {
-            box-shadow: 0 0 16px rgba(245,196,81,.38);
+            box-shadow:
+              inset 0 0 0 1px rgba(255,215,86,.34),
+              0 0 18px rgba(245,196,81,.24),
+              0 10px 36px rgba(110,72,0,.16);
           }
           50% {
-            box-shadow: 0 0 42px rgba(245,196,81,.72);
+            box-shadow:
+              inset 0 0 0 1px rgba(255,225,130,.58),
+              0 0 38px rgba(245,196,81,.52),
+              0 14px 52px rgba(160,104,0,.24);
           }
         }
 
         @keyframes inkSilverPulse {
           0%, 100% {
-            box-shadow: 0 0 14px rgba(226,232,240,.25);
+            box-shadow:
+              inset 0 0 0 1px rgba(241,245,249,.28),
+              0 0 16px rgba(226,232,240,.18),
+              0 10px 34px rgba(148,163,184,.10);
           }
           50% {
-            box-shadow: 0 0 36px rgba(226,232,240,.52);
+            box-shadow:
+              inset 0 0 0 1px rgba(255,255,255,.52),
+              0 0 34px rgba(226,232,240,.40),
+              0 14px 48px rgba(148,163,184,.18);
           }
         }
 
@@ -1565,9 +1577,7 @@ export default function Artists() {
                   sm:flex-row
                   gap-3
                 "
-              >
-                
-              </div>
+              ></div>
             </div>
 
             {/* =================================================
@@ -1891,8 +1901,6 @@ export default function Artists() {
                     </span>
                   )}
                 </div>
-
-                
               </div>
             </div>
 
@@ -2657,7 +2665,7 @@ function CommunityMapBox({
               z-10
               grid
               grid-cols-1
-              md:grid-cols-[0.72fr_1.28fr]
+              md:grid-cols-[0.82fr_1.18fr]
               gap-4
               md:gap-6
               items-center
@@ -2675,7 +2683,7 @@ function CommunityMapBox({
               "
             >
               <p
-  className="
+                className="
     text-[11px]
     sm:text-[12px]
     font-mono
@@ -2684,18 +2692,29 @@ function CommunityMapBox({
     uppercase
     mb-4
   "
->
-  OUR CUSTOMERS IN
-</p>
+              >
+                OUR CUSTOMERS IN
+              </p>
 
               <h2
-                className="
-                  text-[clamp(2rem,4vw,3.7rem)]
+                className={`
+                  max-w-full
                   font-black
                   uppercase
-                  tracking-[-0.06em]
-                  leading-[0.88]
-                "
+                  tracking-[-0.055em]
+                  leading-[0.9]
+                  whitespace-normal
+                  ${
+                    currentCounter.city.length >= 12
+                      ? "text-[clamp(1.45rem,2.55vw,2.75rem)]"
+                      : currentCounter.city.length >= 9
+                        ? "text-[clamp(1.7rem,3vw,3.2rem)]"
+                        : "text-[clamp(2rem,4vw,3.7rem)]"
+                  }
+                `}
+                style={{
+                  overflowWrap: "anywhere",
+                }}
               >
                 {currentCounter.city}
               </h2>
@@ -3424,49 +3443,21 @@ async function copyArtistProfileLink(artist) {
   }
 }
 
-async function shareArtistProfileNative(artist) {
-  const { artist: a, profileUrl, text } = getArtistShareDetails(artist);
-
-  if (!navigator.share) {
-    await copyArtistProfileLink(a);
-    return;
-  }
-
-  try {
-    await navigator.share({
-      title: `${a.name} | Ink Convention`,
-      text,
-      url: profileUrl,
-    });
-  } catch (error) {
-    // AbortError simply means the user closed the phone share sheet.
-    if (error?.name !== "AbortError") {
-      console.error("Native share failed:", error);
-      await copyArtistProfileLink(a);
-    }
-  }
-}
-
 function shareArtistToWhatsApp(artist) {
   const { encodedText } = getArtistShareDetails(artist);
   openShareWindow(`https://wa.me/?text=${encodedText}`);
 }
 
-function shareArtistToTelegram(artist) {
-  const { encodedUrl, text } = getArtistShareDetails(artist);
-  openShareWindow(
-    `https://t.me/share/url?url=${encodedUrl}&text=${encodeURIComponent(text)}`,
-  );
-}
+async function shareArtistToInstagram(artist) {
+  const copied = await copyArtistProfileLink(artist);
 
-function shareArtistToFacebook(artist) {
-  const { encodedUrl } = getArtistShareDetails(artist);
-  openShareWindow(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`);
-}
+  if (copied) {
+    // Browsers do not provide a direct Instagram link-share API.
+    // Copy the artist profile link first, then open Instagram.
+    window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+  }
 
-function shareArtistToX(artist) {
-  const { encodedText } = getArtistShareDetails(artist);
-  openShareWindow(`https://twitter.com/intent/tweet?text=${encodedText}`);
+  return copied;
 }
 
 /* =========================================================
@@ -3523,20 +3514,16 @@ function ArtistRow({ artist, isNew, onClick }) {
         ${
           isGold
             ? `
-              bg-gradient-to-r
-              from-[#f5c451]/[0.22]
-              via-[#f5c451]/[0.075]
-              to-transparent
-              hover:from-[#f5c451]/[0.30]
+              border-[#f5c451]/35
+              bg-[linear-gradient(100deg,rgba(126,84,0,0.42)_0%,rgba(245,196,81,0.23)_28%,rgba(255,231,147,0.10)_52%,rgba(22,17,7,0.96)_78%,rgba(13,13,17,1)_100%)]
+              hover:bg-[linear-gradient(100deg,rgba(151,100,0,0.52)_0%,rgba(245,196,81,0.30)_30%,rgba(255,235,166,0.14)_55%,rgba(25,19,8,0.98)_80%,rgba(13,13,17,1)_100%)]
               ink-gold-card-pulse
             `
             : isPro
               ? `
-                bg-gradient-to-r
-                from-slate-200/[0.15]
-                via-slate-300/[0.055]
-                to-transparent
-                hover:from-slate-100/[0.22]
+                border-slate-200/30
+                bg-[linear-gradient(100deg,rgba(226,232,240,0.24)_0%,rgba(148,163,184,0.16)_26%,rgba(255,255,255,0.08)_48%,rgba(30,35,43,0.72)_74%,rgba(13,13,17,1)_100%)]
+                hover:bg-[linear-gradient(100deg,rgba(241,245,249,0.30)_0%,rgba(203,213,225,0.20)_28%,rgba(255,255,255,0.11)_52%,rgba(34,40,49,0.78)_76%,rgba(13,13,17,1)_100%)]
                 ink-silver-card-pulse
               `
               : `
@@ -3572,11 +3559,12 @@ function ArtistRow({ artist, isNew, onClick }) {
               -left-1/2
               top-0
               h-full
-              w-[10%]
+              w-[18%]
               bg-gradient-to-r
               from-transparent
-              via-[#fff2a8]/45
+              via-[#fff7c7]/75
               to-transparent
+              blur-[0.5px]
             "
           />
         </span>
@@ -3598,11 +3586,12 @@ function ArtistRow({ artist, isNew, onClick }) {
               -left-1/2
               top-0
               h-full
-              w-[10%]
+              w-[18%]
               bg-gradient-to-r
               from-transparent
-              via-slate-100/35
+              via-white/70
               to-transparent
+              blur-[0.5px]
             "
           />
         </span>
@@ -3637,17 +3626,17 @@ function ArtistRow({ artist, isNew, onClick }) {
 
             ${
               isGold
-                ? "text-[#caa33d]"
+                ? "text-[#ffd866] drop-shadow-[0_0_10px_rgba(245,196,81,0.45)]"
                 : isPro
-                  ? "text-slate-400"
+                  ? "text-slate-100 drop-shadow-[0_0_8px_rgba(226,232,240,0.28)]"
                   : "text-purple-400"
             }
           `}
         >
           {isGold
-            ? "VERIFIED SPOTLIGHT"
+            ? "★ GOLD VERIFIED SPOTLIGHT"
             : isPro
-              ? "SILVER PRO LISTING"
+              ? "✦ SILVER PRO LISTING"
               : a.claimed
                 ? "UPDATED FREE LISTING"
                 : "FREE DIRECTORY LISTING"}
@@ -4032,23 +4021,28 @@ function ArtistModal({ artist, onClose }) {
 
   const theme = isGold
     ? {
-        border: "border-[#f5c451]/70",
-        text: "text-[#f5c451]",
-        softText: "text-[#d7b85d]",
-        icon: "text-[#f5c451]",
-        button: "bg-[#f5c451] text-black hover:bg-[#ffe58d]",
-        softBorder: "border-[#f5c451]/25",
-        softBg: "bg-[#f5c451]/[0.05]",
+        border: "border-[#ffd866]/90 shadow-[0_0_34px_rgba(245,196,81,0.18)]",
+        text: "text-[#ffd866] drop-shadow-[0_0_10px_rgba(245,196,81,0.40)]",
+        softText: "text-[#e7c86c]",
+        icon: "text-[#ffd866] drop-shadow-[0_0_8px_rgba(245,196,81,0.35)]",
+        button:
+          "bg-gradient-to-r from-[#c99822] via-[#ffd866] to-[#e7b83d] text-black hover:brightness-110 shadow-[0_0_24px_rgba(245,196,81,0.28)]",
+        softBorder: "border-[#ffd866]/45",
+        softBg:
+          "bg-[linear-gradient(135deg,rgba(245,196,81,0.13),rgba(255,225,130,0.035))]",
       }
     : isSilver
       ? {
-          border: "border-slate-300/70",
-          text: "text-slate-200",
-          softText: "text-slate-400",
-          icon: "text-slate-300",
-          button: "bg-slate-200 text-black hover:bg-white",
-          softBorder: "border-slate-300/25",
-          softBg: "bg-slate-300/[0.05]",
+          border:
+            "border-slate-100/85 shadow-[0_0_30px_rgba(226,232,240,0.14)]",
+          text: "text-slate-100 drop-shadow-[0_0_8px_rgba(255,255,255,0.24)]",
+          softText: "text-slate-300",
+          icon: "text-white drop-shadow-[0_0_7px_rgba(226,232,240,0.30)]",
+          button:
+            "bg-gradient-to-r from-slate-400 via-white to-slate-300 text-black hover:brightness-110 shadow-[0_0_20px_rgba(226,232,240,0.22)]",
+          softBorder: "border-slate-100/40",
+          softBg:
+            "bg-[linear-gradient(135deg,rgba(226,232,240,0.12),rgba(148,163,184,0.035))]",
         }
       : {
           border: "border-purple-500/35",
@@ -4401,37 +4395,28 @@ function ArtistModal({ artist, onClose }) {
                       SHARE ARTIST PROFILE
                     </p>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => shareArtistToWhatsApp(a)}
-                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
+                        className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-3 text-[8px] font-black text-emerald-300 transition hover:bg-emerald-500/[0.15]"
                       >
                         WHATSAPP
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => shareArtistToTelegram(a)}
-                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
-                      >
-                        TELEGRAM
-                      </button>
+                        onClick={async () => {
+                          const copied = await shareArtistToInstagram(a);
+                          setCopyStatus(copied ? "copied" : "failed");
 
-                      <button
-                        type="button"
-                        onClick={() => shareArtistToFacebook(a)}
-                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
+                          window.setTimeout(() => {
+                            setCopyStatus("");
+                          }, 2000);
+                        }}
+                        className="rounded-xl border border-pink-500/25 bg-pink-500/[0.08] px-3 py-3 text-[8px] font-black text-pink-300 transition hover:bg-pink-500/[0.15]"
                       >
-                        FACEBOOK
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => shareArtistToX(a)}
-                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
-                      >
-                        X / TWITTER
+                        INSTAGRAM
                       </button>
 
                       <button
@@ -4453,16 +4438,6 @@ function ArtistModal({ artist, onClose }) {
                             ? "COPY FAILED"
                             : "COPY LINK"}
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void shareArtistProfileNative(a);
-                        }}
-                        className={`rounded-xl px-3 py-3 text-[8px] font-black transition ${theme.button}`}
-                      >
-                        MORE APPS
-                      </button>
                     </div>
 
                     {copyStatus === "copied" && (
@@ -4478,9 +4453,8 @@ function ArtistModal({ artist, onClose }) {
                     )}
 
                     <p className="mt-2 px-1 text-[7px] leading-relaxed text-gray-600">
-                      Instagram does not provide a standard browser link-share
-                      button. Use COPY LINK, then paste it in Instagram DM,
-                      Story, or Bio.
+                      Instagram will open after the profile link is copied.
+                      Paste the copied link in an Instagram DM, Story, or Bio.
                     </p>
                   </div>
                 )}
