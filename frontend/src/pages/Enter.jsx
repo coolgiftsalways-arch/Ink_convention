@@ -931,8 +931,8 @@ export default function Enter() {
      SILVER -> GOLD REQUEST PRICE
 
      There is NO online payment on this page.
-     Existing Silver members can request
-     the ₹699 Gold upgrade.
+     Existing Silver members can request the one-time
+     ₹699 Gold upgrade when the offer has not been used.
    ======================================================= */
 
   const silverToGoldUpgradeAvailable = currentPlan === "pro";
@@ -1944,13 +1944,13 @@ export default function Enter() {
 
         planId: selectedPlan.id,
 
-        planName: selectedPlan.name,
+        planName: request.requestedPlanName || selectedPlan.name,
 
-        amount: requestedAmount,
+        amount: Number(request.requestedAmount) || requestedAmount,
 
-        pricingType: isGoldUpgrade
-          ? "silver-to-gold-upgrade"
-          : "standard-membership",
+        pricingType:
+          request.pricingType ||
+          (isGoldUpgrade ? "silver-to-gold-upgrade" : "standard-membership"),
       });
 
       setSuccess(
@@ -4217,8 +4217,8 @@ function PlanCard({
               text-gray-400
             "
           >
-            Upgrade your active Silver membership to Gold for ₹699. Your backend
-            also verifies the current plan before creating the request.
+            Upgrade your active Silver membership to Gold for ₹699. This price
+            is available whenever your current active plan is Silver.
           </p>
         </div>
       )}
@@ -4319,7 +4319,7 @@ function PlanCard({
           {saving
             ? "PLEASE WAIT..."
             : silverToGoldUpgrade
-              ? "REQUEST GOLD UPGRADE • ₹699"
+              ? "UPGRADE TO GOLD • ₹699"
               : theme.buttonText}
         </span>
 
