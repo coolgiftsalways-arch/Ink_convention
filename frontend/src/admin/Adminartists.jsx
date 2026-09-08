@@ -614,6 +614,8 @@ function AdminArtists() {
 
   const [selectedUser, setSelectedUser] = useState(null);
 
+  const [selectedDirectoryArtist, setSelectedDirectoryArtist] = useState(null);
+
   const [dashboardError, setDashboardError] = useState("");
 
   // ===================================================
@@ -2522,6 +2524,7 @@ function AdminArtists() {
               getArtistStatus={getDirectoryArtistStatus}
               latestRequestByProfile={latestMembershipRequestByProfile}
               onStatusChange={handleArtistStatusChange}
+              onOpenArtist={setSelectedDirectoryArtist}
             />
           </section>
 
@@ -2677,6 +2680,23 @@ function AdminArtists() {
           onDelete={handleDelete}
         />
       )}
+
+      {selectedDirectoryArtist && (
+        <DirectoryArtistDetailsModal
+          artist={selectedDirectoryArtist}
+          status={getDirectoryArtistStatus(selectedDirectoryArtist)}
+          membershipRequest={
+            latestMembershipRequestByProfile?.[
+              String(selectedDirectoryArtist.id || "")
+            ] || null
+          }
+          onStatusChange={handleArtistStatusChange}
+          onAdminPlanChange={handleDirectPlanActivation}
+          busy={directPlanBusyArtistId === selectedDirectoryArtist.id}
+          nowMs={membershipClock}
+          onClose={() => setSelectedDirectoryArtist(null)}
+        />
+      )}
     </div>
   );
 }
@@ -2796,6 +2816,7 @@ function MembershipTierPanel({
   getArtistStatus,
   latestRequestByProfile,
   onStatusChange,
+  onOpenArtist,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -2905,6 +2926,7 @@ function MembershipTierPanel({
                 latestRequestByProfile?.[String(artist.id || "")] || null
               }
               onStatusChange={onStatusChange}
+              onOpenArtist={onOpenArtist}
             />
           ))}
         </div>
@@ -2962,6 +2984,7 @@ function MembershipMemberRow({
   status = "new",
   membershipRequest = null,
   onStatusChange,
+  onOpenArtist,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -3103,6 +3126,14 @@ function MembershipMemberRow({
           </div>
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={() => onOpenArtist?.(artist)}
+        className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-[9px] font-black uppercase tracking-widest text-gray-300 transition hover:border-[#a855f7]/35 hover:bg-[#a855f7]/[0.07] hover:text-white"
+      >
+        VIEW DETAILS
+      </button>
 
       <div className="mt-3 border-t border-white/[0.06] pt-3">
         <p className="mb-2 text-[8px] font-mono font-black uppercase tracking-[0.14em] text-gray-600">
@@ -3257,6 +3288,221 @@ function NoMedia({ message }) {
       <ImageIcon size={30} className="mx-auto text-gray-700" />
 
       <p className="text-xs text-gray-600 font-mono mt-3">{message}</p>
+    </div>
+  );
+}
+
+// =====================================================
+// DIRECTORY ARTIST DETAILS MODAL
+// =====================================================
+
+function DirectoryArtistDetailsModal({
+  artist,
+  status,
+  membershipRequest,
+  onStatusChange,
+  onAdminPlanChange,
+  busy,
+  nowMs = 0,
+  onClose,
+}) {
+  const plan = normalizeDirectoryPlan(artist?.plan);
+  const isGold = plan === "verified";
+  const isSilver = plan === "pro";
+  const isFree = plan === "basic";
+
+  const planLabel = isGold ? "GOLD" : isSilver ? "SILVER" : "FREE";
+
+  const planTone = isGold
+    ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
+    : isSilver
+      ? "border-slate-300/25 bg-slate-300/10 text-slate-100"
+      : "border-purple-400/25 bg-purple-400/10 text-purple-300";
+
+  const paymentLabel =
+    normalizeArtistAdminStatus(status) === "PAID"
+      ? "PAID"
+      : normalizePaymentStatus(
+          membershipRequest?.paymentStatus || artist?.paymentStatus,
+        ).toUpperCase();
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 p-3 backdrop-blur-md sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0b0b0f] shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-white/10 bg-[#0b0b0f]/95 p-5 backdrop-blur-xl sm:p-6">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full border px-3 py-1 text-[8px] font-black uppercase tracking-widest ${planTone}`}
+              >
+                {planLabel}
+              </span>
+
+              <span
+                className={`rounded-full border px-3 py-1 text-[8px] font-black uppercase tracking-widest ${getArtistStatusClasses(status)}`}
+              >
+                {normalizeArtistAdminStatus(status)}
+              </span>
+            </div>
+
+            <h2 className="mt-3 truncate text-2xl font-black sm:text-3xl">
+              {artist?.name || "Tattoo Artist"}
+            </h2>
+
+            <p className="mt-1 text-xs text-gray-500">
+              {artist?.studio || "Studio not provided"}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-3 text-gray-400 transition hover:bg-white/10 hover:text-white"
+          >
+            <X size={19} />
+          </button>
+        </div>
+
+        <div className="space-y-5 p-5 sm:p-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <MembershipInfo label="City" value={artist?.city || "N/A"} />
+            <MembershipInfo label="State" value={artist?.state || "N/A"} />
+            <MembershipInfo label="Phone" value={artist?.phone || "N/A"} />
+            <MembershipInfo label="Email" value={artist?.email || "N/A"} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div
+              className={`rounded-2xl border p-4 ${getArtistStatusClasses(status)}`}
+            >
+              <p className="text-[8px] font-mono font-black uppercase tracking-widest opacity-70">
+                CURRENT STATUS
+              </p>
+              <p className="mt-2 text-xl font-black uppercase">
+                {normalizeArtistAdminStatus(status)}
+              </p>
+            </div>
+
+            <div
+              className={`rounded-2xl border p-4 ${paymentLabel === "PAID" ? "border-emerald-400/25 bg-emerald-400/10" : "border-orange-400/20 bg-orange-400/10"}`}
+            >
+              <p className="text-[8px] font-mono font-black uppercase tracking-widest text-gray-400">
+                PAYMENT STATUS
+              </p>
+              <p
+                className={`mt-2 text-xl font-black uppercase ${paymentLabel === "PAID" ? "text-emerald-300" : "text-orange-300"}`}
+              >
+                {paymentLabel || "PENDING"}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <p className="mb-2 text-[8px] font-mono font-black uppercase tracking-[0.14em] text-gray-500">
+              CHANGE STATUS
+            </p>
+
+            <select
+              value={normalizeArtistAdminStatus(status)}
+              onChange={(event) =>
+                onStatusChange?.(artist?.id, event.target.value)
+              }
+              className={`w-full appearance-none rounded-xl border bg-black/40 px-4 py-3 text-[9px] font-black uppercase tracking-widest outline-none transition ${getArtistStatusClasses(status)}`}
+            >
+              {ARTIST_STATUS_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(isSilver || isGold) && (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+              <p className="mb-3 text-[8px] font-mono font-black uppercase tracking-widest text-gray-500">
+                MEMBERSHIP
+              </p>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <MembershipInfo
+                  label="Started"
+                  value={formatMembershipDateTime(
+                    artist?.planStartedAt || artist?.paidAt,
+                  )}
+                />
+                <MembershipInfo
+                  label="Expires"
+                  value={formatMembershipDateTime(artist?.planExpiresAt)}
+                />
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-black/30 px-3 py-2">
+                <Clock
+                  size={13}
+                  className={isGold ? "text-amber-300" : "text-slate-200"}
+                />
+                <span className="text-[8px] font-mono uppercase tracking-widest text-gray-600">
+                  Time left
+                </span>
+                <span
+                  className={`ml-auto text-[10px] font-black ${isGold ? "text-amber-300" : "text-slate-200"}`}
+                >
+                  {getMembershipTimeLeft(artist?.planExpiresAt, nowMs)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {onAdminPlanChange && (
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+              <p className="mb-3 text-[8px] font-mono font-black uppercase tracking-widest text-gray-500">
+                CHANGE PLAN
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {!isFree && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onAdminPlanChange(artist, "basic")}
+                    className="rounded-lg border border-purple-400/25 bg-purple-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-purple-300 disabled:opacity-40"
+                  >
+                    {busy ? "Working..." : "Make Free"}
+                  </button>
+                )}
+
+                {!isSilver && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onAdminPlanChange(artist, "pro")}
+                    className="rounded-lg border border-slate-300/20 bg-slate-300/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-100 disabled:opacity-40"
+                  >
+                    {busy ? "Working..." : "Make Silver"}
+                  </button>
+                )}
+
+                {!isGold && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onAdminPlanChange(artist, "verified")}
+                    className="rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-amber-300 disabled:opacity-40"
+                  >
+                    {busy ? "Working..." : "Make Gold"}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
