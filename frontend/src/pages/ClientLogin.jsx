@@ -43,7 +43,7 @@ const CONTACT_EMAIL = "info@inkconvention.com";
 
 export default function StallBooking() {
   const navigate = useNavigate();
-  const [redirectSeconds, setRedirectSeconds] = useState(3);
+  const [redirectSeconds, setRedirectSeconds] = useState(9);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -182,7 +182,7 @@ export default function StallBooking() {
       return undefined;
     }
 
-    setRedirectSeconds(3);
+    setRedirectSeconds(9);
 
     const timer = window.setInterval(() => {
       setRedirectSeconds((previous) => {
