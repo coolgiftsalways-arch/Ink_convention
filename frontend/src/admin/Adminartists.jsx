@@ -1203,7 +1203,7 @@ function AdminArtists() {
     };
 
     const initialTimer = window.setTimeout(updateClock, 0);
-    const timer = window.setInterval(updateClock, 1000);
+    const timer = window.setInterval(updateClock, 60000);
 
     return () => {
       window.clearTimeout(initialTimer);
@@ -2803,6 +2803,25 @@ function MembershipTierPanel({
   const isUnclaimed = tone === "unclaimed";
   const isBasic = tone === "basic" || isClaimed || isUnclaimed;
 
+  const MEMBERS_PER_PAGE = 24;
+  const [memberPage, setMemberPage] = useState(0);
+
+  const totalMemberPages = Math.max(
+    1,
+    Math.ceil(members.length / MEMBERS_PER_PAGE),
+  );
+
+  const safeMemberPage = Math.min(memberPage, totalMemberPages - 1);
+  const memberStart = safeMemberPage * MEMBERS_PER_PAGE;
+  const visibleMembers = members.slice(
+    memberStart,
+    memberStart + MEMBERS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    setMemberPage(0);
+  }, [members]);
+
   const outerClass = isGold
     ? "border-amber-300/25 bg-amber-400/[0.025]"
     : isSilver
@@ -2873,7 +2892,7 @@ function MembershipTierPanel({
         </div>
       ) : (
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-[560px] overflow-y-auto pr-1">
-          {members.map((artist, index) => (
+          {visibleMembers.map((artist, index) => (
             <MembershipMemberRow
               key={artist.id || `${artist.name}-${index}`}
               artist={artist}
@@ -2888,6 +2907,46 @@ function MembershipTierPanel({
               onStatusChange={onStatusChange}
             />
           ))}
+        </div>
+      )}
+
+      {members.length > MEMBERS_PER_PAGE && (
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-white/10 pt-4">
+          <p className="text-[9px] font-mono uppercase tracking-wider text-gray-600">
+            Showing {memberStart + 1}-
+            {Math.min(memberStart + MEMBERS_PER_PAGE, members.length)} of{" "}
+            {members.length}
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={safeMemberPage === 0}
+              onClick={() =>
+                setMemberPage((current) => Math.max(0, current - 1))
+              }
+              className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2 text-[9px] font-black uppercase tracking-wider text-gray-300 transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Previous
+            </button>
+
+            <span className="min-w-[76px] text-center text-[9px] font-mono text-purple-300">
+              {safeMemberPage + 1} / {totalMemberPages}
+            </span>
+
+            <button
+              type="button"
+              disabled={safeMemberPage >= totalMemberPages - 1}
+              onClick={() =>
+                setMemberPage((current) =>
+                  Math.min(totalMemberPages - 1, current + 1),
+                )
+              }
+              className="rounded-lg border border-purple-500/25 bg-purple-500/[0.07] px-4 py-2 text-[9px] font-black uppercase tracking-wider text-purple-300 transition hover:bg-purple-500/[0.13] disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -2935,7 +2994,10 @@ function MembershipMemberRow({
         : "FREE UNCLAIMED";
 
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">
+    <div
+      className="rounded-2xl border border-white/[0.07] bg-black/25 p-4"
+      style={{ contentVisibility: "auto", containIntrinsicSize: "260px" }}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
