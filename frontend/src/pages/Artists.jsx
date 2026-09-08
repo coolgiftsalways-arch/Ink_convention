@@ -1565,9 +1565,7 @@ export default function Artists() {
                   sm:flex-row
                   gap-3
                 "
-              >
-                
-              </div>
+              ></div>
             </div>
 
             {/* =================================================
@@ -1891,8 +1889,6 @@ export default function Artists() {
                     </span>
                   )}
                 </div>
-
-                
               </div>
             </div>
 
@@ -2675,7 +2671,7 @@ function CommunityMapBox({
               "
             >
               <p
-  className="
+                className="
     text-[11px]
     sm:text-[12px]
     font-mono
@@ -2684,9 +2680,9 @@ function CommunityMapBox({
     uppercase
     mb-4
   "
->
-  OUR CUSTOMERS IN
-</p>
+              >
+                OUR CUSTOMERS IN
+              </p>
 
               <h2
                 className="
@@ -3424,49 +3420,21 @@ async function copyArtistProfileLink(artist) {
   }
 }
 
-async function shareArtistProfileNative(artist) {
-  const { artist: a, profileUrl, text } = getArtistShareDetails(artist);
-
-  if (!navigator.share) {
-    await copyArtistProfileLink(a);
-    return;
-  }
-
-  try {
-    await navigator.share({
-      title: `${a.name} | Ink Convention`,
-      text,
-      url: profileUrl,
-    });
-  } catch (error) {
-    // AbortError simply means the user closed the phone share sheet.
-    if (error?.name !== "AbortError") {
-      console.error("Native share failed:", error);
-      await copyArtistProfileLink(a);
-    }
-  }
-}
-
 function shareArtistToWhatsApp(artist) {
   const { encodedText } = getArtistShareDetails(artist);
   openShareWindow(`https://wa.me/?text=${encodedText}`);
 }
 
-function shareArtistToTelegram(artist) {
-  const { encodedUrl, text } = getArtistShareDetails(artist);
-  openShareWindow(
-    `https://t.me/share/url?url=${encodedUrl}&text=${encodeURIComponent(text)}`,
-  );
-}
+async function shareArtistToInstagram(artist) {
+  const copied = await copyArtistProfileLink(artist);
 
-function shareArtistToFacebook(artist) {
-  const { encodedUrl } = getArtistShareDetails(artist);
-  openShareWindow(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`);
-}
+  if (copied) {
+    // Browsers do not provide a direct Instagram link-share API.
+    // Copy the artist profile link first, then open Instagram.
+    window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+  }
 
-function shareArtistToX(artist) {
-  const { encodedText } = getArtistShareDetails(artist);
-  openShareWindow(`https://twitter.com/intent/tweet?text=${encodedText}`);
+  return copied;
 }
 
 /* =========================================================
@@ -4401,37 +4369,28 @@ function ArtistModal({ artist, onClose }) {
                       SHARE ARTIST PROFILE
                     </p>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => shareArtistToWhatsApp(a)}
-                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
+                        className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-3 text-[8px] font-black text-emerald-300 transition hover:bg-emerald-500/[0.15]"
                       >
                         WHATSAPP
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => shareArtistToTelegram(a)}
-                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
-                      >
-                        TELEGRAM
-                      </button>
+                        onClick={async () => {
+                          const copied = await shareArtistToInstagram(a);
+                          setCopyStatus(copied ? "copied" : "failed");
 
-                      <button
-                        type="button"
-                        onClick={() => shareArtistToFacebook(a)}
-                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
+                          window.setTimeout(() => {
+                            setCopyStatus("");
+                          }, 2000);
+                        }}
+                        className="rounded-xl border border-pink-500/25 bg-pink-500/[0.08] px-3 py-3 text-[8px] font-black text-pink-300 transition hover:bg-pink-500/[0.15]"
                       >
-                        FACEBOOK
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => shareArtistToX(a)}
-                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
-                      >
-                        X / TWITTER
+                        INSTAGRAM
                       </button>
 
                       <button
@@ -4453,16 +4412,6 @@ function ArtistModal({ artist, onClose }) {
                             ? "COPY FAILED"
                             : "COPY LINK"}
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void shareArtistProfileNative(a);
-                        }}
-                        className={`rounded-xl px-3 py-3 text-[8px] font-black transition ${theme.button}`}
-                      >
-                        MORE APPS
-                      </button>
                     </div>
 
                     {copyStatus === "copied" && (
@@ -4478,9 +4427,8 @@ function ArtistModal({ artist, onClose }) {
                     )}
 
                     <p className="mt-2 px-1 text-[7px] leading-relaxed text-gray-600">
-                      Instagram does not provide a standard browser link-share
-                      button. Use COPY LINK, then paste it in Instagram DM,
-                      Story, or Bio.
+                      Instagram will open after the profile link is copied.
+                      Paste the copied link in an Instagram DM, Story, or Bio.
                     </p>
                   </div>
                 )}
