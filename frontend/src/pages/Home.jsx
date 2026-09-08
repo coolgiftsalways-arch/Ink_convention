@@ -858,20 +858,19 @@ function Home() {
                   mt-2
                 "
               >
-                Reserve a stall at a regional Ink Convention expo and showcase
-                your studio, brand or setup to the tattoo community.
+                Stall booking is available through your verified artist profile.
+                Follow the steps below to access your artist account securely.
               </p>
-              {/* STALL BOOKING INFO */}
 
               <div
                 className="
-                  mt-2.5
-                  rounded-xl
+                  mt-3
+                  rounded-2xl
                   border
-                  border-white/15
-                  bg-white/[0.05]
-                  px-3
-                  py-2.5
+                  border-white/10
+                  bg-white/[0.035]
+                  p-3
+                  sm:p-3.5
                 "
               >
                 <p
@@ -880,60 +879,119 @@ function Home() {
                     font-mono
                     font-black
                     uppercase
-                    tracking-widest
+                    tracking-[0.18em]
                     text-white
                   "
                 >
-                  BOOK YOUR SPACE AT INK CONVENTION
+                  HOW TO ACCESS STALL BOOKING
                 </p>
 
-                <p
-                  className="
-                    mt-1.5
-                    text-[10px]
-                    2xl:text-[11px]
-                    text-gray-500
-                    leading-relaxed
-                  "
-                >
-                  Pick your expo city, compare stall options and reserve the
-                  space that best fits your studio or brand.
-                </p>
+                <div className="mt-3 space-y-2.5">
+                  {[
+                    {
+                      number: "01",
+                      title: "OPEN ARTISTS",
+                      text: "Go to the Artists page from the website.",
+                    },
+                    {
+                      number: "02",
+                      title: "FIND YOUR PROFILE",
+                      text: "Search your name or city and find your artist profile.",
+                    },
+                    {
+                      number: "03",
+                      title: "CLICK VIEW",
+                      text: "Open your full artist profile by clicking View.",
+                    },
+                    {
+                      number: "04",
+                      title: "MANAGE PROFILE",
+                      text: "Click Manage Profile and continue with owner verification.",
+                    },
+                    {
+                      number: "05",
+                      title: "VERIFY WITH OTP",
+                      text: "Enter the OTP sent to your registered mobile number.",
+                    },
+                    {
+                      number: "06",
+                      title: "BOOK YOUR STALL",
+                      text: "After verification, open your artist dashboard and choose Book Your Stall.",
+                    },
+                  ].map((step) => (
+                    <div
+                      key={step.number}
+                      className="
+                        grid
+                        grid-cols-[30px_minmax(0,1fr)]
+                        gap-2.5
+                        items-start
+                      "
+                    >
+                      <span
+                        className="
+                          flex
+                          h-7
+                          w-7
+                          items-center
+                          justify-center
+                          rounded-lg
+                          border
+                          border-white/15
+                          bg-white/[0.05]
+                          text-[8px]
+                          font-black
+                          font-mono
+                          text-white
+                        "
+                      >
+                        {step.number}
+                      </span>
+
+                      <div className="min-w-0">
+                        <p
+                          className="
+                            text-[8px]
+                            font-black
+                            font-mono
+                            tracking-wider
+                            text-white
+                          "
+                        >
+                          {step.title}
+                        </p>
+
+                        <p
+                          className="
+                            mt-0.5
+                            text-[10px]
+                            2xl:text-[11px]
+                            leading-[1.4]
+                            text-gray-500
+                          "
+                        >
+                          {step.text}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="space-y-1 mt-2.5">
-                <StepLine text="Choose your regional expo city" />
-                <StepLine text="Explore available stall options" />
-                <StepLine text="Reserve your stall and showcase your brand" />
-              </div>
-              {/*
-                OLD STALL BOOKING LINK REMOVED FOR NOW.
-                Restore the /client-login route here when bookings go live.
-              */}
-
-              <div
+              <p
                 className="
                   mt-auto
-                  w-full
-                  border
-                  border-white/20
-                  bg-white
-                  text-black
-                  px-4
-                  py-2.5
-                  rounded-xl
-                  font-black
-                  text-[10px]
+                  pt-3
+                  text-[8px]
                   font-mono
-                  tracking-widest
                   uppercase
-                  flex
-                  items-center
-                  justify-center
+                  tracking-[0.12em]
+                  text-gray-600
                 "
               >
-                BOOK YOUR STALL
-              </div>
+                Your profile must be verified by OTP before owner-only options
+                are shown.
+              </p>
             </article>
 
             {/* 02 / BOOK ARTISTS */}
