@@ -1438,19 +1438,31 @@ export default function Artists() {
 
         @keyframes inkGoldPulse {
           0%, 100% {
-            box-shadow: 0 0 16px rgba(245,196,81,.38);
+            box-shadow:
+              inset 0 0 0 1px rgba(255,215,86,.34),
+              0 0 18px rgba(245,196,81,.24),
+              0 10px 36px rgba(110,72,0,.16);
           }
           50% {
-            box-shadow: 0 0 42px rgba(245,196,81,.72);
+            box-shadow:
+              inset 0 0 0 1px rgba(255,225,130,.58),
+              0 0 38px rgba(245,196,81,.52),
+              0 14px 52px rgba(160,104,0,.24);
           }
         }
 
         @keyframes inkSilverPulse {
           0%, 100% {
-            box-shadow: 0 0 14px rgba(226,232,240,.25);
+            box-shadow:
+              inset 0 0 0 1px rgba(241,245,249,.28),
+              0 0 16px rgba(226,232,240,.18),
+              0 10px 34px rgba(148,163,184,.10);
           }
           50% {
-            box-shadow: 0 0 36px rgba(226,232,240,.52);
+            box-shadow:
+              inset 0 0 0 1px rgba(255,255,255,.52),
+              0 0 34px rgba(226,232,240,.40),
+              0 14px 48px rgba(148,163,184,.18);
           }
         }
 
@@ -3502,20 +3514,16 @@ function ArtistRow({ artist, isNew, onClick }) {
         ${
           isGold
             ? `
-              bg-gradient-to-r
-              from-[#f5c451]/[0.22]
-              via-[#f5c451]/[0.075]
-              to-transparent
-              hover:from-[#f5c451]/[0.30]
+              border-[#f5c451]/35
+              bg-[linear-gradient(100deg,rgba(126,84,0,0.42)_0%,rgba(245,196,81,0.23)_28%,rgba(255,231,147,0.10)_52%,rgba(22,17,7,0.96)_78%,rgba(13,13,17,1)_100%)]
+              hover:bg-[linear-gradient(100deg,rgba(151,100,0,0.52)_0%,rgba(245,196,81,0.30)_30%,rgba(255,235,166,0.14)_55%,rgba(25,19,8,0.98)_80%,rgba(13,13,17,1)_100%)]
               ink-gold-card-pulse
             `
             : isPro
               ? `
-                bg-gradient-to-r
-                from-slate-200/[0.15]
-                via-slate-300/[0.055]
-                to-transparent
-                hover:from-slate-100/[0.22]
+                border-slate-200/30
+                bg-[linear-gradient(100deg,rgba(226,232,240,0.24)_0%,rgba(148,163,184,0.16)_26%,rgba(255,255,255,0.08)_48%,rgba(30,35,43,0.72)_74%,rgba(13,13,17,1)_100%)]
+                hover:bg-[linear-gradient(100deg,rgba(241,245,249,0.30)_0%,rgba(203,213,225,0.20)_28%,rgba(255,255,255,0.11)_52%,rgba(34,40,49,0.78)_76%,rgba(13,13,17,1)_100%)]
                 ink-silver-card-pulse
               `
               : `
@@ -3551,11 +3559,12 @@ function ArtistRow({ artist, isNew, onClick }) {
               -left-1/2
               top-0
               h-full
-              w-[10%]
+              w-[18%]
               bg-gradient-to-r
               from-transparent
-              via-[#fff2a8]/45
+              via-[#fff7c7]/75
               to-transparent
+              blur-[0.5px]
             "
           />
         </span>
@@ -3577,11 +3586,12 @@ function ArtistRow({ artist, isNew, onClick }) {
               -left-1/2
               top-0
               h-full
-              w-[10%]
+              w-[18%]
               bg-gradient-to-r
               from-transparent
-              via-slate-100/35
+              via-white/70
               to-transparent
+              blur-[0.5px]
             "
           />
         </span>
@@ -3616,17 +3626,17 @@ function ArtistRow({ artist, isNew, onClick }) {
 
             ${
               isGold
-                ? "text-[#caa33d]"
+                ? "text-[#ffd866] drop-shadow-[0_0_10px_rgba(245,196,81,0.45)]"
                 : isPro
-                  ? "text-slate-400"
+                  ? "text-slate-100 drop-shadow-[0_0_8px_rgba(226,232,240,0.28)]"
                   : "text-purple-400"
             }
           `}
         >
           {isGold
-            ? "VERIFIED SPOTLIGHT"
+            ? "★ GOLD VERIFIED SPOTLIGHT"
             : isPro
-              ? "SILVER PRO LISTING"
+              ? "✦ SILVER PRO LISTING"
               : a.claimed
                 ? "UPDATED FREE LISTING"
                 : "FREE DIRECTORY LISTING"}
@@ -4011,23 +4021,28 @@ function ArtistModal({ artist, onClose }) {
 
   const theme = isGold
     ? {
-        border: "border-[#f5c451]/70",
-        text: "text-[#f5c451]",
-        softText: "text-[#d7b85d]",
-        icon: "text-[#f5c451]",
-        button: "bg-[#f5c451] text-black hover:bg-[#ffe58d]",
-        softBorder: "border-[#f5c451]/25",
-        softBg: "bg-[#f5c451]/[0.05]",
+        border: "border-[#ffd866]/90 shadow-[0_0_34px_rgba(245,196,81,0.18)]",
+        text: "text-[#ffd866] drop-shadow-[0_0_10px_rgba(245,196,81,0.40)]",
+        softText: "text-[#e7c86c]",
+        icon: "text-[#ffd866] drop-shadow-[0_0_8px_rgba(245,196,81,0.35)]",
+        button:
+          "bg-gradient-to-r from-[#c99822] via-[#ffd866] to-[#e7b83d] text-black hover:brightness-110 shadow-[0_0_24px_rgba(245,196,81,0.28)]",
+        softBorder: "border-[#ffd866]/45",
+        softBg:
+          "bg-[linear-gradient(135deg,rgba(245,196,81,0.13),rgba(255,225,130,0.035))]",
       }
     : isSilver
       ? {
-          border: "border-slate-300/70",
-          text: "text-slate-200",
-          softText: "text-slate-400",
-          icon: "text-slate-300",
-          button: "bg-slate-200 text-black hover:bg-white",
-          softBorder: "border-slate-300/25",
-          softBg: "bg-slate-300/[0.05]",
+          border:
+            "border-slate-100/85 shadow-[0_0_30px_rgba(226,232,240,0.14)]",
+          text: "text-slate-100 drop-shadow-[0_0_8px_rgba(255,255,255,0.24)]",
+          softText: "text-slate-300",
+          icon: "text-white drop-shadow-[0_0_7px_rgba(226,232,240,0.30)]",
+          button:
+            "bg-gradient-to-r from-slate-400 via-white to-slate-300 text-black hover:brightness-110 shadow-[0_0_20px_rgba(226,232,240,0.22)]",
+          softBorder: "border-slate-100/40",
+          softBg:
+            "bg-[linear-gradient(135deg,rgba(226,232,240,0.12),rgba(148,163,184,0.035))]",
         }
       : {
           border: "border-purple-500/35",

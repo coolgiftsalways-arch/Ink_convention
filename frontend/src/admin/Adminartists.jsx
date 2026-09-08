@@ -1308,6 +1308,50 @@ function AdminArtists() {
     (artist) => artist.plan === "verified",
   );
 
+  // ===================================================
+  // STATE-WISE ARTIST COUNTS
+  // ===================================================
+
+  const stateArtistStats = Object.values(
+    directoryArtists.reduce((accumulator, artist) => {
+      const rawState = String(artist.state || "").trim();
+      const state = rawState || "STATE NOT PROVIDED";
+      const key = state.toUpperCase();
+
+      if (!accumulator[key]) {
+        accumulator[key] = {
+          state,
+          total: 0,
+          free: 0,
+          silver: 0,
+          gold: 0,
+        };
+      }
+
+      accumulator[key].total += 1;
+
+      if (artist.plan === "verified") {
+        accumulator[key].gold += 1;
+      } else if (artist.plan === "pro") {
+        accumulator[key].silver += 1;
+      } else {
+        accumulator[key].free += 1;
+      }
+
+      return accumulator;
+    }, {}),
+  ).sort((first, second) => {
+    if (second.total !== first.total) {
+      return second.total - first.total;
+    }
+
+    return first.state.localeCompare(second.state);
+  });
+
+  const totalStatesWithArtists = stateArtistStats.filter(
+    (item) => item.state !== "STATE NOT PROVIDED",
+  ).length;
+
   const membershipRequestCounts = {
     all: membershipRequests.length,
     new: membershipRequests.filter((request) => request.requestStatus === "new")
@@ -1518,6 +1562,126 @@ function AdminArtists() {
 
             <DashboardStat label="Server" value="LIVE" />
           </div>
+
+          {/* ==========================================
+              STATE-WISE ARTIST OVERVIEW
+          ========================================== */}
+
+          <section className="space-y-5">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#a855f7]">
+                  State Overview
+                </p>
+
+                <h2 className="text-2xl sm:text-3xl font-black mt-2">
+                  Artists by State
+                </h2>
+
+                <p className="text-xs sm:text-sm text-gray-600 mt-2">
+                  Live state-wise artist totals from the directory database.
+                  Each card also shows Free, Silver and Gold counts.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <div className="rounded-xl border border-white/10 bg-[#0b0b0f] px-4 py-3">
+                  <p className="text-[8px] font-mono uppercase tracking-widest text-gray-600">
+                    States
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {totalStatesWithArtists}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-purple-500/20 bg-purple-500/[0.05] px-4 py-3">
+                  <p className="text-[8px] font-mono uppercase tracking-widest text-purple-300">
+                    Directory Artists
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {directoryArtists.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {stateArtistStats.length === 0 ? (
+              <div className="rounded-3xl border border-white/10 bg-[#0b0b0f] px-5 py-12 text-center">
+                <p className="text-sm font-bold text-gray-400">
+                  No state data available yet.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {stateArtistStats.map((item) => (
+                  <div
+                    key={item.state}
+                    className="
+                      group
+                      rounded-2xl
+                      border
+                      border-white/10
+                      bg-[#0b0b0f]
+                      p-4
+                      transition
+                      hover:border-purple-500/30
+                      hover:bg-white/[0.025]
+                    "
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[8px] font-mono uppercase tracking-[0.16em] text-gray-600">
+                          State
+                        </p>
+
+                        <h3 className="mt-1 truncate text-base font-black uppercase text-white">
+                          {item.state}
+                        </h3>
+                      </div>
+
+                      <div className="shrink-0 rounded-xl border border-purple-500/20 bg-purple-500/[0.07] px-3 py-2 text-center">
+                        <p className="text-[7px] font-mono uppercase tracking-wider text-purple-300">
+                          Total
+                        </p>
+                        <p className="mt-0.5 text-xl font-black text-white">
+                          {item.total}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      <div className="rounded-xl border border-white/10 bg-black/25 px-2 py-2.5 text-center">
+                        <p className="text-[7px] font-black uppercase tracking-wider text-gray-500">
+                          Free
+                        </p>
+                        <p className="mt-1 text-sm font-black text-gray-200">
+                          {item.free}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-300/20 bg-slate-300/[0.06] px-2 py-2.5 text-center">
+                        <p className="text-[7px] font-black uppercase tracking-wider text-slate-300">
+                          Silver
+                        </p>
+                        <p className="mt-1 text-sm font-black text-slate-100">
+                          {item.silver}
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] px-2 py-2.5 text-center">
+                        <p className="text-[7px] font-black uppercase tracking-wider text-amber-300">
+                          Gold
+                        </p>
+                        <p className="mt-1 text-sm font-black text-amber-200">
+                          {item.gold}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           {/* ==========================================
               SILVER / GOLD MEMBERSHIP REQUESTS
