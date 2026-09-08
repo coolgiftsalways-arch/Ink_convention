@@ -40,7 +40,7 @@ const apiFetch = async (path, options = {}) => {
 
   const timeout = window.setTimeout(() => {
     controller.abort();
-  }, 15000);
+  }, 60000);
 
   try {
     return await fetch(`${API_URL}${path}`, {
@@ -596,6 +596,12 @@ function AdminArtists() {
     } catch (error) {
       console.error("❌ User fetch error:", error);
 
+      if (error?.name === "AbortError") {
+        throw new Error(
+          "Tattoo entries took too long to load from the server.",
+        );
+      }
+
       throw error;
     }
   }, []);
@@ -706,9 +712,19 @@ function AdminArtists() {
 
       setDirectoryArtists([]);
 
-      setMembershipError(
-        error.message || "Could not load Free, Silver and Gold artists.",
-      );
+      if (error?.name === "AbortError") {
+        setMembershipError(
+          "The server is taking too long to load artist data. Please refresh and try again.",
+        );
+      } else if (error instanceof TypeError) {
+        setMembershipError(
+          "Cannot connect to the artist directory API. Check that the backend is online and CORS is configured correctly.",
+        );
+      } else {
+        setMembershipError(
+          error.message || "Could not load Free, Silver and Gold artists.",
+        );
+      }
     }
   }, []);
 
@@ -786,10 +802,22 @@ function AdminArtists() {
       setMembershipRequests(requests);
     } catch (error) {
       console.error("Membership request fetch error:", error);
+
       setMembershipRequests([]);
-      setMembershipRequestError(
-        error.message || "Could not load membership requests.",
-      );
+
+      if (error?.name === "AbortError") {
+        setMembershipRequestError(
+          "The server is taking too long to load membership requests. Please refresh and try again.",
+        );
+      } else if (error instanceof TypeError) {
+        setMembershipRequestError(
+          "Cannot connect to the membership API. Check that the backend is online and CORS is configured correctly.",
+        );
+      } else {
+        setMembershipRequestError(
+          error.message || "Could not load membership requests.",
+        );
+      }
     }
   }, []);
 
@@ -958,7 +986,17 @@ function AdminArtists() {
         fetchMembershipRequests(),
       ]);
     } catch (error) {
-      setDashboardError(error.message || "Could not load dashboard.");
+      if (error?.name === "AbortError") {
+        setDashboardError(
+          "The server is taking too long to load dashboard data. Please refresh and try again.",
+        );
+      } else if (error instanceof TypeError) {
+        setDashboardError(
+          "Cannot connect to the backend API. Check that the server is online and CORS is configured correctly.",
+        );
+      } else {
+        setDashboardError(error.message || "Could not load dashboard.");
+      }
     } finally {
       setLoading(false);
     }
