@@ -1540,54 +1540,7 @@ export default function Artists() {
                   gap-3
                 "
               >
-                <Link
-                  to="/book-artist"
-                  className="
-                    group
-                    inline-flex
-                    items-center
-                    justify-center
-                    gap-3
-                    px-6
-                    py-4
-                    rounded-xl
-                    bg-purple-600
-                    hover:bg-purple-500
-                    border
-                    border-purple-400/40
-                    text-[9px]
-                    font-black
-                    tracking-[0.13em]
-                    transition
-                  "
-                >
-                  <Sparkles size={14} />
-                  BOOK YOUR ARTIST
-                  <ArrowRight size={14} />
-                </Link>
-
-                <Link
-                  to="/Enter"
-                  className="
-                    inline-flex
-                    items-center
-                    justify-center
-                    gap-3
-                    px-6
-                    py-4
-                    rounded-xl
-                    border
-                    border-white/10
-                    bg-white/[0.035]
-                    hover:bg-white/[0.07]
-                    text-[9px]
-                    font-black
-                    tracking-[0.13em]
-                  "
-                >
-                  FIND / UPDATE YOUR PROFILE
-                  <ArrowRight size={14} />
-                </Link>
+                
               </div>
             </div>
 
@@ -1913,27 +1866,7 @@ export default function Artists() {
                   )}
                 </div>
 
-                <Link
-                  to="/book-artist"
-                  className="
-                    inline-flex
-                    items-center
-                    justify-center
-                    gap-3
-                    px-6
-                    py-3.5
-                    rounded-xl
-                    bg-purple-600
-                    hover:bg-purple-500
-                    text-[9px]
-                    font-black
-                    tracking-widest
-                  "
-                >
-                  <Sparkles size={14} />
-                  BOOK YOUR ARTIST
-                  <ArrowRight size={14} />
-                </Link>
+                
               </div>
             </div>
 
@@ -2716,18 +2649,18 @@ function CommunityMapBox({
               "
             >
               <p
-                className="
-                  text-[8px]
-                  sm:text-[9px]
-                  font-mono
-                  tracking-[0.22em]
-                  text-gray-600
-                  uppercase
-                  mb-4
-                "
-              >
-                OUR COMMUNITY IN
-              </p>
+  className="
+    text-[11px]
+    sm:text-[12px]
+    font-mono
+    tracking-[0.22em]
+    text-white-600
+    uppercase
+    mb-4
+  "
+>
+  OUR CUSTOMERS IN
+</p>
 
               <h2
                 className="
