@@ -2969,11 +2969,47 @@ export default function Enter() {
                             ? "VERIFYING..."
                             : "VERIFY & CHANGE NUMBER"}
                         </button>
+
+                        
                       </>
                     )}
                   </div>
                 )}
               </div>
+
+              {/* =========================================
+                  BOOK YOUR STALL
+                  Opens stall booking page after profile verification
+              ========================================= */}
+              <button
+                type="button"
+                onClick={() => navigate("/stall-booking")}
+                className="
+                  mt-4
+                  w-full
+                  rounded-2xl
+                  border
+                  border-purple-500/30
+                  bg-purple-500/10
+                  px-5
+                  py-4
+                  text-[10px]
+                  font-black
+                  font-mono
+                  uppercase
+                  tracking-[0.14em]
+                  text-purple-400
+                  transition-all
+                  duration-300
+                  hover:bg-purple-500
+                  hover:text-white
+                  hover:border-purple-500
+                  hover:-translate-y-0.5
+                  hover:shadow-[0_0_25px_rgba(168,85,247,0.18)]
+                "
+              >
+                BOOK YOUR STALL →
+              </button>
             </div>
 
             {/* =========================================

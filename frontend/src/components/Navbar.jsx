@@ -259,30 +259,7 @@ function Navbar() {
                     <span className="text-[#a855f7]">01</span>
                   </NavLink>
 
-                  <NavLink
-                    to="/stall-booking"
-                    onClick={() => setExpoOpen(false)}
-                    className="
-                      group
-                      flex
-                      items-center
-                      justify-between
-                      rounded-xl
-                      px-4
-                      py-3
-                      text-[11px]
-                      font-mono
-                      uppercase
-                      tracking-wider
-                      text-gray-300
-                      hover:text-white
-                      hover:bg-white/[0.06]
-                      transition
-                    "
-                  >
-                    <span>Book Your Stall</span>
-                    <span className="text-[#a855f7]">02</span>
-                  </NavLink>
+                  
 
                   <NavLink
                     to="/competition"

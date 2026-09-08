@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowDown,
   ArrowRight,
@@ -41,24 +42,169 @@ const CONTACT_PHONE = "7039235169";
 const CONTACT_EMAIL = "info@inkconvention.com";
 
 export default function StallBooking() {
+  const navigate = useNavigate();
+  const [redirectSeconds, setRedirectSeconds] = useState(3);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [bookingId, setBookingId] = useState("");
   const successRef = useRef(null);
 
-  const API_URL = (
-    import.meta.env.VITE_API_URL || "http://localhost:5000"
-  ).replace(/\/$/, "");
+  /*
+    IMPORTANT:
+    Use the same API origin/session setup as Enter.jsx.
 
-  const [formData, setFormData] = useState({
-    brandName: "",
-    fullName: "",
-    email: "",
-    phone: "",
-    city: "",
-    duration: "1",
+    In development the Vite proxy can handle /api requests.
+    In production VITE_API_URL (or the production API URL) is used.
+  */
+  const API_URL = import.meta.env.DEV
+    ? ""
+    : String(import.meta.env.VITE_API_URL || "https://api.inkconvention.com")
+        .trim()
+        .replace(/\/$/, "");
+
+  const [verifiedProfile, setVerifiedProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  const makeBookingForm = (profile = {}, duration = "1") => ({
+    brandName:
+      profile.studio ||
+      profile.studioName ||
+      profile.brandName ||
+      "",
+
+    fullName:
+      profile.name ||
+      profile.artistName ||
+      profile.professionalName ||
+      profile.ownerName ||
+      "",
+
+    email: profile.email || "",
+
+    phone:
+      profile.phone ||
+      profile.mobile ||
+      profile.phoneNumber ||
+      profile.mobileNumber ||
+      "",
+
+    city: profile.city || "",
+
+    duration: String(duration || "1"),
   });
+
+  const [formData, setFormData] = useState(() => makeBookingForm());
+
+  /*
+    AUTO-FILL FROM THE VERIFIED BACKEND PROFILE
+
+    The artist has already verified OTP on Enter.jsx.
+    /api/claim/me uses that existing verified session and returns
+    the real MongoDB profile.
+
+    The form stays editable after auto-fill.
+  */
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadVerifiedProfile = async () => {
+      try {
+        setProfileLoading(true);
+
+        const response = await fetch(`${API_URL}/api/claim/me`, {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const backendError = new Error(
+            data?.message ||
+              data?.error ||
+              "Unable to load your verified artist details.",
+          );
+
+          backendError.status = response.status;
+          throw backendError;
+        }
+
+        const profile = data?.profile || data?.artist || data || null;
+
+        if (!profile || typeof profile !== "object") {
+          throw new Error("Verified artist profile was not returned.");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setVerifiedProfile(profile);
+
+        setFormData((previous) =>
+          makeBookingForm(profile, previous.duration || "1"),
+        );
+      } catch (profileError) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("Stall booking profile auto-fill error:", profileError);
+
+        /*
+          Do not block the page if there is no active verified session.
+          The visitor can still type the form manually.
+        */
+        setVerifiedProfile(null);
+      } finally {
+        if (!cancelled) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    void loadVerifiedProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [API_URL]);
+    /* =========================================================
+     RETURN TO VERIFIED PROFILE AFTER SUCCESS
+  ========================================================= */
+
+  useEffect(() => {
+    if (!submitted) {
+      return undefined;
+    }
+
+    setRedirectSeconds(3);
+
+    const timer = window.setInterval(() => {
+      setRedirectSeconds((previous) => {
+        if (previous <= 1) {
+          window.clearInterval(timer);
+
+          navigate("/Enter", {
+            replace: true,
+            state: {
+              manageProfile: true,
+            },
+          });
+
+          return 0;
+        }
+
+        return previous - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [submitted, navigate]);
 
   const selectedPackage =
     STALL_PACKAGES[formData.duration] || STALL_PACKAGES[1];
@@ -106,10 +252,24 @@ export default function StallBooking() {
 
       const response = await fetch(`${API_URL}/api/stall-bookings/request`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          // LINK THIS REQUEST TO THE VERIFIED ARTIST PROFILE
+          profileId:
+            verifiedProfile?._id ||
+            verifiedProfile?.id ||
+            verifiedProfile?.profileId ||
+            "",
+
+          artistId:
+            verifiedProfile?._id ||
+            verifiedProfile?.id ||
+            verifiedProfile?.profileId ||
+            "",
+
           // CUSTOMER / STUDIO
           brandName: formData.brandName.trim(),
           studioName: formData.brandName.trim(),
@@ -119,6 +279,15 @@ export default function StallBooking() {
           email: formData.email.trim(),
           phone: formData.phone.trim(),
           city: formData.city.trim(),
+
+          // EXTRA SAVED PROFILE DATA
+          state: String(verifiedProfile?.state || "").trim(),
+          instagram: String(verifiedProfile?.instagram || "").trim(),
+          currentPlan: String(
+            verifiedProfile?.plan ||
+              verifiedProfile?.membershipPlan ||
+              "",
+          ).trim(),
 
           // STALL OPTION
           duration: formData.duration,
@@ -181,14 +350,7 @@ export default function StallBooking() {
     setBookingId("");
     setError("");
 
-    setFormData({
-      brandName: "",
-      fullName: "",
-      email: "",
-      phone: "",
-      city: "",
-      duration: "1",
-    });
+    setFormData(makeBookingForm(verifiedProfile || {}, "1"));
 
     window.scrollTo({
       top: 0,
@@ -624,6 +786,29 @@ export default function StallBooking() {
                 >
                   Our team will contact you within 24 hours
                 </h3>
+                <div
+  className="
+    mx-auto
+    mt-5
+    max-w-md
+    rounded-xl
+    border
+    border-purple-500/20
+    bg-purple-500/[0.06]
+    px-4
+    py-3
+    text-center
+  "
+>
+  <p className="text-[8px] font-mono font-black uppercase tracking-[0.16em] text-purple-400">
+    Returning to your profile
+  </p>
+
+  <p className="mt-2 text-sm font-bold text-white">
+    Redirecting in {redirectSeconds} second
+    {redirectSeconds === 1 ? "" : "s"}...
+  </p>
+</div>
 
                 <p
                   className="
@@ -753,6 +938,48 @@ export default function StallBooking() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="relative z-10 space-y-5">
+                {/* BACKEND AUTO-FILL STATUS */}
+
+                {profileLoading ? (
+                  <div
+                    className="
+                      rounded-xl
+                      border
+                      border-purple-500/20
+                      bg-purple-500/[0.06]
+                      px-4
+                      py-3
+                      text-[9px]
+                      font-mono
+                      font-black
+                      uppercase
+                      tracking-[0.12em]
+                      text-purple-300
+                    "
+                  >
+                    Loading your verified profile details...
+                  </div>
+                ) : verifiedProfile ? (
+                  <div
+                    className="
+                      rounded-xl
+                      border
+                      border-emerald-500/20
+                      bg-emerald-500/[0.05]
+                      px-4
+                      py-3
+                      text-[9px]
+                      font-mono
+                      font-black
+                      uppercase
+                      tracking-[0.12em]
+                      text-emerald-300
+                    "
+                  >
+                    ✓ Details auto-filled from your verified profile
+                  </div>
+                ) : null}
+
                 {/* Brand */}
 
                 <InputField
