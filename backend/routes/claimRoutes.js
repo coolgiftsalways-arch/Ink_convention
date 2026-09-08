@@ -712,6 +712,16 @@ router.post(
 
         plan: normalizePlan(profile.plan),
 
+        paymentStatus: String(profile.paymentStatus || "unpaid")
+          .trim()
+          .toLowerCase(),
+
+        planStartedAt: profile.planStartedAt || null,
+
+        planExpiresAt: profile.planExpiresAt || null,
+
+        silverToGoldUpgradeUsed: Boolean(profile.silverToGoldUpgradeUsed),
+
         claimed: Boolean(profile.claimed),
 
         maskedPhone: maskPhone(profile.phone),

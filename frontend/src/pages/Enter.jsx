@@ -931,16 +931,11 @@ export default function Enter() {
      SILVER -> GOLD REQUEST PRICE
 
      There is NO online payment on this page.
-     Existing Silver members can request the one-time
-     ₹699 Gold upgrade when the offer has not been used.
+     Existing Silver members can request
+     the ₹699 Gold upgrade.
    ======================================================= */
 
-  const silverToGoldUpgradeAvailable =
-    currentPlan === "pro" &&
-    !Boolean(
-      currentProfile?.silverToGoldUpgradeUsed ||
-      selectedArtist?.silverToGoldUpgradeUsed,
-    );
+  const silverToGoldUpgradeAvailable = currentPlan === "pro";
 
   /* =======================================================
      RESET TO SEARCH
@@ -2969,8 +2964,6 @@ export default function Enter() {
                             ? "VERIFYING..."
                             : "VERIFY & CHANGE NUMBER"}
                         </button>
-
-                        
                       </>
                     )}
                   </div>
@@ -4186,7 +4179,7 @@ function PlanCard({
             text-gray-500
           "
         >
-          {silverToGoldUpgrade ? "ONE-TIME UPGRADE" : plan.billing}
+          {silverToGoldUpgrade ? "SILVER → GOLD UPGRADE" : plan.billing}
         </span>
       </div>
 
@@ -4224,8 +4217,8 @@ function PlanCard({
               text-gray-400
             "
           >
-            Upgrade your active Silver membership to Gold for ₹699. This special
-            upgrade price can be used only once. Future Gold renewal is ₹2,999.
+            Upgrade your active Silver membership to Gold for ₹699. Your backend
+            also verifies the current plan before creating the request.
           </p>
         </div>
       )}
