@@ -433,6 +433,48 @@ const getArtistTone = (artist = {}) => {
   return artist.claimed ? "claimed" : "unclaimed";
 };
 
+const normalizeRequestStatus = (value) =>
+  String(value || "new")
+    .trim()
+    .toLowerCase();
+
+const normalizePaymentStatus = (value) =>
+  String(value || "pending")
+    .trim()
+    .toLowerCase();
+
+const isMembershipRequestPaid = (request = {}) => {
+  const requestStatus = normalizeRequestStatus(request.requestStatus);
+  const paymentStatus = normalizePaymentStatus(request.paymentStatus);
+
+  return (
+    requestStatus === "paid" ||
+    ["paid", "success", "successful", "completed"].includes(paymentStatus)
+  );
+};
+
+const getRequestStatusTone = (status) => {
+  const normalized = normalizeRequestStatus(status);
+
+  if (normalized === "contacted") {
+    return "border-sky-400/25 bg-sky-400/10 text-sky-300";
+  }
+
+  if (normalized === "paid") {
+    return "border-emerald-400/25 bg-emerald-400/10 text-emerald-300";
+  }
+
+  if (normalized === "completed") {
+    return "border-violet-400/25 bg-violet-400/10 text-violet-300";
+  }
+
+  if (normalized === "cancelled") {
+    return "border-red-400/25 bg-red-400/10 text-red-300";
+  }
+
+  return "border-purple-400/25 bg-purple-400/10 text-purple-300";
+};
+
 // =====================================================
 // DASHBOARD
 // =====================================================
@@ -475,11 +517,14 @@ function AdminArtists() {
   // verified        = GOLD ₹2,999
   const [membershipFilter, setMembershipFilter] = useState("basic-claimed");
 
+  // State filter for the directory membership overview.
+  const [directoryStateFilter, setDirectoryStateFilter] = useState("ALL");
+
   // Silver / Gold requests waiting for manual team follow-up.
   const [membershipRequests, setMembershipRequests] = useState([]);
-  const [membershipRequestFilter, setMembershipRequestFilter] = useState("new");
+  const [membershipRequestFilter, setMembershipRequestFilter] = useState("all");
   const [membershipRequestAgeFilter, setMembershipRequestAgeFilter] =
-    useState("48h");
+    useState("all");
   const [membershipRequestError, setMembershipRequestError] = useState("");
   const [membershipRequestBusyId, setMembershipRequestBusyId] = useState("");
   const [directPlanBusyArtistId, setDirectPlanBusyArtistId] = useState("");
@@ -1347,64 +1392,70 @@ function AdminArtists() {
   );
 
   // ===================================================
-  // STATE-WISE ARTIST COUNTS
+  // DIRECTORY STATE FILTER + COUNTS
   // ===================================================
 
-  const stateArtistStats = Object.values(
-    directoryArtists.reduce((accumulator, artist) => {
-      const rawState = String(artist.state || "").trim();
-      const state = rawState || "STATE NOT PROVIDED";
-      const key = state.toUpperCase();
+  const directoryStateOptions = [
+    "ALL",
+    ...Array.from(
+      new Set(
+        directoryArtists
+          .map((artist) =>
+            String(artist.state || "")
+              .trim()
+              .toUpperCase(),
+          )
+          .filter(Boolean),
+      ),
+    ).sort((first, second) => first.localeCompare(second)),
+  ];
 
-      if (!accumulator[key]) {
-        accumulator[key] = {
-          state,
-          total: 0,
-          free: 0,
-          silver: 0,
-          gold: 0,
-        };
-      }
+  const stateFilteredDirectoryArtists =
+    directoryStateFilter === "ALL"
+      ? directoryArtists
+      : directoryArtists.filter(
+          (artist) =>
+            String(artist.state || "")
+              .trim()
+              .toUpperCase() === directoryStateFilter,
+        );
 
-      accumulator[key].total += 1;
+  const stateFreeArtists = stateFilteredDirectoryArtists.filter(
+    (artist) => artist.plan === "basic",
+  );
 
-      if (artist.plan === "verified") {
-        accumulator[key].gold += 1;
-      } else if (artist.plan === "pro") {
-        accumulator[key].silver += 1;
-      } else {
-        accumulator[key].free += 1;
-      }
+  const stateSilverArtists = stateFilteredDirectoryArtists.filter(
+    (artist) => artist.plan === "pro",
+  );
 
-      return accumulator;
-    }, {}),
-  ).sort((first, second) => {
-    if (second.total !== first.total) {
-      return second.total - first.total;
-    }
+  const stateGoldArtists = stateFilteredDirectoryArtists.filter(
+    (artist) => artist.plan === "verified",
+  );
 
-    return first.state.localeCompare(second.state);
-  });
-
-  const totalStatesWithArtists = stateArtistStats.filter(
-    (item) => item.state !== "STATE NOT PROVIDED",
-  ).length;
+  const selectedStateLabel =
+    directoryStateFilter === "ALL" ? "ALL STATES" : directoryStateFilter;
 
   const membershipRequestCounts = {
     all: membershipRequests.length,
     new: membershipRequests.filter((request) => request.requestStatus === "new")
       .length,
-    silver: membershipRequests.filter(
-      (request) => request.requestedPlan === "pro",
-    ).length,
-    gold: membershipRequests.filter(
-      (request) => request.requestedPlan === "verified",
-    ).length,
     contacted: membershipRequests.filter(
       (request) => request.requestStatus === "contacted",
     ).length,
+    paid: membershipRequests.filter((request) => {
+      const requestStatus = String(request.requestStatus || "").toLowerCase();
+      const paymentStatus = String(request.paymentStatus || "").toLowerCase();
+
+      return (
+        requestStatus === "paid" ||
+        ["paid", "success", "successful", "completed"].includes(paymentStatus)
+      );
+    }).length,
     completed: membershipRequests.filter(
       (request) => request.requestStatus === "completed",
+    ).length,
+    cancelled: membershipRequests.filter(
+      (request) => request.requestStatus === "cancelled",
     ).length,
   };
 
@@ -1447,23 +1498,35 @@ function AdminArtists() {
       return true;
     }
 
-    if (membershipRequestFilter === "silver") {
-      return request.requestedPlan === "pro";
-    }
+    if (membershipRequestFilter === "paid") {
+      const requestStatus = String(request.requestStatus || "").toLowerCase();
+      const paymentStatus = String(request.paymentStatus || "").toLowerCase();
 
-    if (membershipRequestFilter === "gold") {
-      return request.requestedPlan === "verified";
+      return (
+        requestStatus === "paid" ||
+        ["paid", "success", "successful", "completed"].includes(paymentStatus)
+      );
     }
 
     return request.requestStatus === membershipRequestFilter;
   });
+
+  const filterMembersByState = (members) =>
+    directoryStateFilter === "ALL"
+      ? members
+      : members.filter(
+          (artist) =>
+            String(artist.state || "")
+              .trim()
+              .toUpperCase() === directoryStateFilter,
+        );
 
   const selectedMembership =
     membershipFilter === "verified"
       ? {
           title: "Gold Verified",
           price: "₹2,999",
-          members: goldMembers,
+          members: filterMembersByState(goldMembers),
           tone: "gold",
           icon: <Trophy size={18} />,
           description: "Artists who have taken the ₹2,999 Gold Verified plan.",
@@ -1472,7 +1535,7 @@ function AdminArtists() {
         ? {
             title: "Silver Pro",
             price: "₹1,999",
-            members: silverMembers,
+            members: filterMembersByState(silverMembers),
             tone: "silver",
             icon: <Award size={18} />,
             description: "Artists who have taken the ₹1,999 Silver Pro plan.",
@@ -1481,7 +1544,7 @@ function AdminArtists() {
           ? {
               title: "Free Unclaimed",
               price: "₹0",
-              members: freeUnclaimedMembers,
+              members: filterMembersByState(freeUnclaimedMembers),
               tone: "unclaimed",
               icon: <CircleDashed size={18} />,
               description:
@@ -1490,7 +1553,7 @@ function AdminArtists() {
           : {
               title: "Free Claimed",
               price: "₹0",
-              members: freeClaimedMembers,
+              members: filterMembersByState(freeClaimedMembers),
               tone: "claimed",
               icon: <BadgeCheck size={18} />,
               description:
@@ -1576,150 +1639,30 @@ function AdminArtists() {
 
             <DashboardStat
               label="Free Claimed"
-              value={freeClaimedMembers.length}
+              value={filterMembersByState(freeClaimedMembers).length}
               tone="claimed"
             />
 
             <DashboardStat
               label="Free Unclaimed"
-              value={freeUnclaimedMembers.length}
+              value={filterMembersByState(freeUnclaimedMembers).length}
               tone="unclaimed"
             />
 
             <DashboardStat
               label="Silver Pro ₹1,999"
-              value={silverMembers.length}
+              value={filterMembersByState(silverMembers).length}
               tone="silver"
             />
 
             <DashboardStat
               label="Gold Verified ₹2,999"
-              value={goldMembers.length}
+              value={filterMembersByState(goldMembers).length}
               tone="gold"
             />
 
             <DashboardStat label="Server" value="LIVE" />
           </div>
-
-          {/* ==========================================
-              STATE-WISE ARTIST OVERVIEW
-          ========================================== */}
-
-          <section className="space-y-5">
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#a855f7]">
-                  State Overview
-                </p>
-
-                <h2 className="text-2xl sm:text-3xl font-black mt-2">
-                  Artists by State
-                </h2>
-
-                <p className="text-xs sm:text-sm text-gray-600 mt-2">
-                  Live state-wise artist totals from the directory database.
-                  Each card also shows Free, Silver and Gold counts.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <div className="rounded-xl border border-white/10 bg-[#0b0b0f] px-4 py-3">
-                  <p className="text-[8px] font-mono uppercase tracking-widest text-gray-600">
-                    States
-                  </p>
-                  <p className="mt-1 text-xl font-black text-white">
-                    {totalStatesWithArtists}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-purple-500/20 bg-purple-500/[0.05] px-4 py-3">
-                  <p className="text-[8px] font-mono uppercase tracking-widest text-purple-300">
-                    Directory Artists
-                  </p>
-                  <p className="mt-1 text-xl font-black text-white">
-                    {directoryArtists.length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {stateArtistStats.length === 0 ? (
-              <div className="rounded-3xl border border-white/10 bg-[#0b0b0f] px-5 py-12 text-center">
-                <p className="text-sm font-bold text-gray-400">
-                  No state data available yet.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {stateArtistStats.map((item) => (
-                  <div
-                    key={item.state}
-                    className="
-                      group
-                      rounded-2xl
-                      border
-                      border-white/10
-                      bg-[#0b0b0f]
-                      p-4
-                      transition
-                      hover:border-purple-500/30
-                      hover:bg-white/[0.025]
-                    "
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[8px] font-mono uppercase tracking-[0.16em] text-gray-600">
-                          State
-                        </p>
-
-                        <h3 className="mt-1 truncate text-base font-black uppercase text-white">
-                          {item.state}
-                        </h3>
-                      </div>
-
-                      <div className="shrink-0 rounded-xl border border-purple-500/20 bg-purple-500/[0.07] px-3 py-2 text-center">
-                        <p className="text-[7px] font-mono uppercase tracking-wider text-purple-300">
-                          Total
-                        </p>
-                        <p className="mt-0.5 text-xl font-black text-white">
-                          {item.total}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-2">
-                      <div className="rounded-xl border border-white/10 bg-black/25 px-2 py-2.5 text-center">
-                        <p className="text-[7px] font-black uppercase tracking-wider text-gray-500">
-                          Free
-                        </p>
-                        <p className="mt-1 text-sm font-black text-gray-200">
-                          {item.free}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-300/20 bg-slate-300/[0.06] px-2 py-2.5 text-center">
-                        <p className="text-[7px] font-black uppercase tracking-wider text-slate-300">
-                          Silver
-                        </p>
-                        <p className="mt-1 text-sm font-black text-slate-100">
-                          {item.silver}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] px-2 py-2.5 text-center">
-                        <p className="text-[7px] font-black uppercase tracking-wider text-amber-300">
-                          Gold
-                        </p>
-                        <p className="mt-1 text-sm font-black text-amber-200">
-                          {item.gold}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
 
           {/* ==========================================
               SILVER / GOLD MEMBERSHIP REQUESTS
@@ -1755,12 +1698,12 @@ function AdminArtists() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
               {[
-                ["new", "NEW", membershipRequestCounts.new],
-                ["silver", "SILVER", membershipRequestCounts.silver],
-                ["gold", "GOLD", membershipRequestCounts.gold],
-                ["contacted", "CONTACTED", membershipRequestCounts.contacted],
-                ["completed", "COMPLETED", membershipRequestCounts.completed],
                 ["all", "ALL", membershipRequestCounts.all],
+                ["new", "NEW", membershipRequestCounts.new],
+                ["contacted", "CONTACTED", membershipRequestCounts.contacted],
+                ["paid", "PAID", membershipRequestCounts.paid],
+                ["completed", "COMPLETED", membershipRequestCounts.completed],
+                ["cancelled", "CANCELLED", membershipRequestCounts.cancelled],
               ].map(([value, label, count]) => (
                 <button
                   key={value}
@@ -1787,7 +1730,8 @@ function AdminArtists() {
                     Request Time Filter
                   </p>
                   <p className="text-[10px] text-gray-600 mt-1">
-                    NEW + 48 HOURS is selected by default.
+                    Use the status buttons above to filter requests. ALL TIME is
+                    selected by default.
                   </p>
                 </div>
 
@@ -1852,15 +1796,38 @@ function AdminArtists() {
                           </p>
                         </div>
 
-                        <span
-                          className={`shrink-0 rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
-                            isGoldRequest
-                              ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
-                              : "border-slate-300/20 bg-slate-300/10 text-slate-200"
-                          }`}
-                        >
-                          {isGoldRequest ? "GOLD" : "SILVER"}
-                        </span>
+                        <div className="shrink-0 flex flex-col items-end gap-2">
+                          <span
+                            className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
+                              isGoldRequest
+                                ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
+                                : "border-slate-300/20 bg-slate-300/10 text-slate-200"
+                            }`}
+                          >
+                            {isGoldRequest ? "GOLD" : "SILVER"}
+                          </span>
+
+                          <span
+                            className={`rounded-full border px-3 py-1 text-[8px] font-black uppercase tracking-widest ${getRequestStatusTone(
+                              request.requestStatus,
+                            )}`}
+                          >
+                            {normalizeRequestStatus(request.requestStatus)}
+                          </span>
+
+                          <span
+                            className={`rounded-full border px-3 py-1 text-[8px] font-black uppercase tracking-widest ${
+                              isMembershipRequestPaid(request)
+                                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
+                                : "border-orange-400/20 bg-orange-400/10 text-orange-300"
+                            }`}
+                          >
+                            PAYMENT:{" "}
+                            {isMembershipRequestPaid(request)
+                              ? "PAID"
+                              : normalizePaymentStatus(request.paymentStatus)}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
@@ -1871,8 +1838,21 @@ function AdminArtists() {
                           ).toLocaleString("en-IN")}`}
                         />
                         <MembershipInfo
-                          label="Status"
-                          value={request.requestStatus.toUpperCase()}
+                          label="Request Status"
+                          value={normalizeRequestStatus(
+                            request.requestStatus,
+                          ).toUpperCase()}
+                        />
+
+                        <MembershipInfo
+                          label="Payment Status"
+                          value={
+                            isMembershipRequestPaid(request)
+                              ? "PAID"
+                              : normalizePaymentStatus(
+                                  request.paymentStatus,
+                                ).toUpperCase()
+                          }
                         />
                         <MembershipInfo
                           label="Phone"
@@ -2001,6 +1981,100 @@ function AdminArtists() {
               <p className="text-xs font-mono text-gray-600">
                 {directoryArtists.length} TOTAL DIRECTORY ARTISTS
               </p>
+            </div>
+
+            {/* ==========================================
+                STATE FILTER + PLAN COUNTS
+            ========================================== */}
+
+            <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4 sm:p-5">
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-mono font-black uppercase tracking-[0.16em] text-gray-500">
+                    State Filter
+                  </p>
+
+                  <h3 className="mt-1 text-lg font-black uppercase text-white">
+                    {selectedStateLabel}
+                  </h3>
+
+                  <p className="mt-1 text-[10px] text-gray-600">
+                    Select a state to see exactly how many Free, Silver and Gold
+                    artists are registered there.
+                  </p>
+                </div>
+
+                <div className="w-full lg:w-[320px]">
+                  <select
+                    value={directoryStateFilter}
+                    onChange={(event) =>
+                      setDirectoryStateFilter(event.target.value)
+                    }
+                    className="
+                      w-full
+                      appearance-none
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-black/40
+                      px-4
+                      py-3.5
+                      text-[10px]
+                      font-black
+                      uppercase
+                      tracking-widest
+                      text-white
+                      outline-none
+                      transition
+                      focus:border-[#a855f7]/60
+                    "
+                  >
+                    {directoryStateOptions.map((state) => (
+                      <option key={state} value={state}>
+                        {state === "ALL" ? "ALL STATES" : state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-purple-500/20 bg-purple-500/[0.05] p-3">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-purple-300">
+                    Total Artists
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-white">
+                    {stateFilteredDirectoryArtists.length}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-gray-400">
+                    Free
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-white">
+                    {stateFreeArtists.length}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-300/25 bg-slate-300/[0.07] p-3">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-300">
+                    Silver
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-slate-100">
+                    {stateSilverArtists.length}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.07] p-3">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-amber-300">
+                    Gold
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-amber-200">
+                    {stateGoldArtists.length}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {membershipError && (
