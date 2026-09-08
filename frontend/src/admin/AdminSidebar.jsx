@@ -4,7 +4,6 @@ import {
   Lock,
   LayoutDashboard,
   Store,
-  Users,
   Trophy,
   CalendarDays,
   LogOut,
@@ -16,12 +15,6 @@ import { useEffect, useState } from "react";
 
 /* =========================================================
    API BASE
-
-   LOCAL / TEST DOMAIN:
-   /api goes through Vite proxy -> 127.0.0.1:5000
-
-   PRODUCTION:
-   VITE_API_URL or api.inkconvention.com
 ========================================================= */
 
 const API_URL = import.meta.env.DEV
@@ -31,32 +24,51 @@ const API_URL = import.meta.env.DEV
       .replace(/\/$/, "");
 
 /* =========================================================
-   SAFE ARRAY HELPERS
+   HELPERS
 ========================================================= */
 
-const getClientsArray = (data) => {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.clients)) return data.clients;
-  if (Array.isArray(data?.users)) return data.users;
-  if (Array.isArray(data?.data)) return data.data;
+const getCompetitionArray = (data) => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.entries)) {
+    return data.entries;
+  }
+
+  if (Array.isArray(data?.competitions)) {
+    return data.competitions;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+
   return [];
 };
 
 const getBookingsArray = (data) => {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.bookings)) return data.bookings;
-  if (Array.isArray(data?.stalls)) return data.stalls;
-  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.bookings)) {
+    return data.bookings;
+  }
+
+  if (Array.isArray(data?.stalls)) {
+    return data.stalls;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+
   return [];
 };
 
 /* =========================================================
-   NAV ITEM COMPONENT
-
-   IMPORTANT:
-   This component MUST stay outside AdminSidebar().
-   React's static-components ESLint rule does not allow
-   components to be created during another component render.
+   NAV ITEM
 ========================================================= */
 
 function NavItem({ to, active, icon, title, subtitle, count, onNavigate }) {
@@ -75,21 +87,22 @@ function NavItem({ to, active, icon, title, subtitle, count, onNavigate }) {
         border
         transition-all
         duration-300
+
         ${
           active
             ? `
-                bg-purple-500/10
-                border-purple-500/30
-                text-[#a855f7]
-                shadow-[0_0_25px_rgba(168,85,247,0.08)]
-              `
+              bg-purple-500/10
+              border-purple-500/30
+              text-[#a855f7]
+              shadow-[0_0_25px_rgba(168,85,247,0.08)]
+            `
             : `
-                border-transparent
-                text-gray-400
-                hover:text-white
-                hover:bg-white/5
-                hover:border-white/10
-              `
+              border-transparent
+              text-gray-400
+              hover:text-white
+              hover:bg-white/5
+              hover:border-white/10
+            `
         }
       `}
     >
@@ -102,6 +115,7 @@ function NavItem({ to, active, icon, title, subtitle, count, onNavigate }) {
             flex
             items-center
             justify-center
+
             ${active ? "bg-purple-500/15" : "bg-white/[0.04]"}
           `}
         >
@@ -109,27 +123,11 @@ function NavItem({ to, active, icon, title, subtitle, count, onNavigate }) {
         </div>
 
         <div>
-          <p
-            className="
-              font-mono
-              text-[11px]
-              font-black
-              uppercase
-              tracking-widest
-            "
-          >
+          <p className="font-mono text-[11px] font-black uppercase tracking-widest">
             {title}
           </p>
 
-          <p
-            className="
-              text-[7px]
-              font-mono
-              text-gray-600
-              mt-1
-              tracking-wider
-            "
-          >
+          <p className="mt-1 font-mono text-[7px] tracking-wider text-gray-600">
             {subtitle}
           </p>
         </div>
@@ -140,10 +138,12 @@ function NavItem({ to, active, icon, title, subtitle, count, onNavigate }) {
   );
 }
 
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
 export default function AdminSidebar({
   onLogout,
-
-  // Parent pages may pass these.
   tattooCount,
   clientCount,
   stallCount,
@@ -154,18 +154,17 @@ export default function AdminSidebar({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Fallback live counts.
-  const [liveClientCount, setLiveClientCount] = useState(0);
+  const [liveCompetitionCount, setLiveCompetitionCount] = useState(0);
+
   const [liveStallCount, setLiveStallCount] = useState(0);
+
   const [liveArtistCount, setLiveArtistCount] = useState(0);
+
   const [liveBookingCount, setLiveBookingCount] = useState(0);
 
-  /* =========================================================
+  /* =======================================================
      ACTIVE ROUTES
-
-     IMPORTANT:
-     Each page is now completely separate.
-  ========================================================= */
+  ======================================================= */
 
   const isDashboardActive = location.pathname === "/admin/dashboard";
 
@@ -173,7 +172,7 @@ export default function AdminSidebar({
     location.pathname === "/admin/stalls" ||
     location.pathname.startsWith("/admin/stalls/");
 
-  const isClientsActive =
+  const isCompetitionActive =
     location.pathname === "/admin/clients" ||
     location.pathname.startsWith("/admin/clients/");
 
@@ -185,12 +184,9 @@ export default function AdminSidebar({
     location.pathname === "/admin/artist-bookings" ||
     location.pathname.startsWith("/admin/artist-bookings/");
 
-  /* =========================================================
-     LOAD SIDEBAR COUNTS
-
-     This prevents:
-     CLIENT COUNT being used as STALL COUNT.
-  ========================================================= */
+  /* =======================================================
+     LOAD LIVE COUNTS
+  ======================================================= */
 
   useEffect(() => {
     let cancelled = false;
@@ -199,29 +195,44 @@ export default function AdminSidebar({
       try {
         const results = await Promise.allSettled([
           fetch(`${API_URL}/api/stall-bookings`, {
-            headers: { Accept: "application/json" },
+            headers: {
+              Accept: "application/json",
+            },
+
             credentials: "include",
           }),
 
-          fetch(`${API_URL}/api/clients`, {
-            headers: { Accept: "application/json" },
+          fetch(`${API_URL}/api/competitions`, {
+            headers: {
+              Accept: "application/json",
+            },
+
             credentials: "include",
           }),
 
           fetch(`${API_URL}/api/admin/tattoo-studios/stats`, {
-            headers: { Accept: "application/json" },
+            headers: {
+              Accept: "application/json",
+            },
+
             credentials: "include",
           }),
 
           fetch(`${API_URL}/api/artist-bookings`, {
-            headers: { Accept: "application/json" },
+            headers: {
+              Accept: "application/json",
+            },
+
             credentials: "include",
           }),
         ]);
 
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
-        // STALL BOOKINGS
+        /* STALL */
+
         if (results[0].status === "fulfilled" && results[0].value.ok) {
           const data = await results[0].value.json().catch(() => ({}));
 
@@ -230,16 +241,18 @@ export default function AdminSidebar({
           }
         }
 
-        // CLIENTS
+        /* COMPETITIONS */
+
         if (results[1].status === "fulfilled" && results[1].value.ok) {
           const data = await results[1].value.json().catch(() => ({}));
 
           if (!cancelled) {
-            setLiveClientCount(getClientsArray(data).length);
+            setLiveCompetitionCount(getCompetitionArray(data).length);
           }
         }
 
-        // DIRECTORY ARTISTS
+        /* ARTISTS */
+
         if (results[2].status === "fulfilled" && results[2].value.ok) {
           const data = await results[2].value.json().catch(() => ({}));
 
@@ -252,7 +265,8 @@ export default function AdminSidebar({
           }
         }
 
-        // ARTIST BOOKINGS
+        /* BOOKINGS */
+
         if (results[3].status === "fulfilled" && results[3].value.ok) {
           const data = await results[3].value.json().catch(() => ({}));
 
@@ -280,13 +294,13 @@ export default function AdminSidebar({
     };
   }, [location.pathname]);
 
-  /* =========================================================
+  /* =======================================================
      FINAL COUNTS
-  ========================================================= */
+  ======================================================= */
 
   const finalTattooCount = tattooCount ?? 0;
 
-  const finalClientCount = clientCount ?? liveClientCount;
+  const finalCompetitionCount = clientCount ?? liveCompetitionCount;
 
   const finalStallCount = stallCount ?? liveStallCount;
 
@@ -298,11 +312,13 @@ export default function AdminSidebar({
     setSidebarOpen(false);
   };
 
+  /* =======================================================
+     RENDER
+  ======================================================= */
+
   return (
     <>
-      {/* =====================================================
-          MOBILE MENU BUTTON
-      ===================================================== */}
+      {/* MOBILE BUTTON */}
 
       <button
         type="button"
@@ -326,9 +342,7 @@ export default function AdminSidebar({
         {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* =====================================================
-          MOBILE BACKDROP
-      ===================================================== */}
+      {/* MOBILE BACKDROP */}
 
       {sidebarOpen && (
         <button
@@ -346,9 +360,7 @@ export default function AdminSidebar({
         />
       )}
 
-      {/* =====================================================
-          SIDEBAR
-      ===================================================== */}
+      {/* SIDEBAR */}
 
       <aside
         className={`
@@ -367,6 +379,7 @@ export default function AdminSidebar({
           transition-transform
           duration-300
           lg:translate-x-0
+
           ${
             sidebarOpen
               ? "translate-x-0 pt-20"
@@ -375,9 +388,7 @@ export default function AdminSidebar({
         `}
       >
         <div className="space-y-9">
-          {/* ===============================================
-              BRAND
-          =============================================== */}
+          {/* BRAND */}
 
           <div className="space-y-3">
             <div
@@ -402,37 +413,19 @@ export default function AdminSidebar({
               Private Control
             </div>
 
-            <h2
-              className="
-                text-xl
-                font-black
-                tracking-tighter
-                text-white
-              "
-            >
+            <h2 className="text-xl font-black tracking-tighter text-white">
               ADMIN PANEL
               <span className="text-[#a855f7]">.</span>
             </h2>
 
-            <p
-              className="
-                text-[9px]
-                font-mono
-                tracking-[0.16em]
-                text-gray-600
-              "
-            >
+            <p className="font-mono text-[9px] tracking-[0.16em] text-gray-600">
               INK CONVENTION CONTROL
             </p>
           </div>
 
-          {/* ===============================================
-              NAVIGATION
-          =============================================== */}
+          {/* NAV */}
 
           <nav className="space-y-3">
-            {/* 01 DASHBOARD */}
-
             <NavItem
               to="/admin/dashboard"
               active={isDashboardActive}
@@ -452,8 +445,6 @@ export default function AdminSidebar({
               onNavigate={closeMobileSidebar}
             />
 
-            {/* 02 BOOK STALL */}
-
             <NavItem
               to="/admin/stalls"
               active={isStallActive}
@@ -467,34 +458,30 @@ export default function AdminSidebar({
                   }
                 />
               }
-              title=" Stall Bookings"
+              title="Stall Bookings"
               subtitle="STALL BOOKINGS"
               count={finalStallCount}
               onNavigate={closeMobileSidebar}
             />
 
-            {/* 03 CLIENTS */}
-
             <NavItem
               to="/admin/clients"
-              active={isClientsActive}
+              active={isCompetitionActive}
               icon={
-                <Users
+                <Trophy
                   size={17}
                   className={
-                    isClientsActive
+                    isCompetitionActive
                       ? "text-[#a855f7]"
                       : "text-gray-500 group-hover:text-[#a855f7]"
                   }
                 />
               }
-              title="COmptetition"
-              subtitle="CLIENT REGISTRY"
-              count={finalClientCount}
+              title="Competition"
+              subtitle="COMPETITION ENTRIES"
+              count={finalCompetitionCount}
               onNavigate={closeMobileSidebar}
             />
-
-            {/* 04 ARTIST ENTER */}
 
             <NavItem
               to="/admin/artists"
@@ -514,8 +501,6 @@ export default function AdminSidebar({
               count={finalArtistCount}
               onNavigate={closeMobileSidebar}
             />
-
-            {/* 05 ARTIST BOOKINGS */}
 
             <NavItem
               to="/admin/artist-bookings"
@@ -538,11 +523,9 @@ export default function AdminSidebar({
           </nav>
         </div>
 
-        {/* =================================================
-            BOTTOM STATUS
-        ================================================= */}
+        {/* BOTTOM STATUS */}
 
-        <div className="space-y-4 mt-10">
+        <div className="mt-10 space-y-4">
           <div
             className="
               p-4
@@ -560,31 +543,21 @@ export default function AdminSidebar({
               <span>SYSTEM</span>
 
               <span className="flex items-center gap-1.5 text-emerald-400">
-                <span
-                  className="
-                    w-1.5
-                    h-1.5
-                    rounded-full
-                    bg-emerald-400
-                    animate-pulse
-                  "
-                />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 ONLINE
               </span>
             </div>
 
             <StatusRow label="STALL BOOKINGS" count={finalStallCount} />
 
-            <StatusRow label="CLIENTS" count={finalClientCount} />
+            <StatusRow label="COMPETITION" count={finalCompetitionCount} />
 
             <StatusRow label="ARTIST ENTER" count={finalArtistCount} />
 
             <StatusRow label="ARTIST BOOKINGS" count={finalBookingCount} />
           </div>
 
-          {/* ===============================================
-              LOGOUT
-          =============================================== */}
+          {/* LOGOUT */}
 
           <button
             type="button"
@@ -639,6 +612,7 @@ function CountBadge({ count, active }) {
         text-[10px]
         font-mono
         font-bold
+
         ${
           active ? "bg-[#a855f7]/15 text-[#a855f7]" : "bg-white/5 text-gray-500"
         }

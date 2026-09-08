@@ -8,6 +8,7 @@ import {
   MapPin,
   MapPinned,
   Search,
+  Share2,
   Sparkles,
   Users,
   X,
@@ -1200,6 +1201,31 @@ export default function Artists() {
       window.removeEventListener("focus", handleFocus);
     };
   }, [selectedCity, location.state?.refreshDirectory]);
+
+  /* =======================================================
+     OPEN SHARED ARTIST PROFILE FROM URL
+  ======================================================= */
+
+  React.useEffect(() => {
+    if (loading || artists.length === 0) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const sharedArtistId = params.get("artist");
+
+    if (!sharedArtistId) {
+      return;
+    }
+
+    const matchedArtist = artists.find(
+      (artist) => String(artist.id || "") === String(sharedArtistId),
+    );
+
+    if (matchedArtist) {
+      setSelectedArtist(matchedArtist);
+    }
+  }, [artists, loading]);
 
   /* =======================================================
      AUTO SCROLL
@@ -3316,6 +3342,134 @@ function CommunityMapBox({
 }
 
 /* =========================================================
+   SHARE ARTIST PROFILE
+========================================================= */
+
+function getPublicWebsiteBaseUrl() {
+  /*
+    IMPORTANT FOR SHARING:
+    - In production, never share localhost.
+    - VITE_WEBSITE_URL lets you override the public website domain from .env.
+    - The final fallback is the live Ink Convention domain.
+
+    Example .env:
+    VITE_WEBSITE_URL=https://inkconvention.com
+  */
+  const configuredUrl = String(
+    import.meta.env.VITE_WEBSITE_URL ||
+      import.meta.env.VITE_PUBLIC_SITE_URL ||
+      "",
+  )
+    .trim()
+    .replace(/\/$/, "");
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  // Always share a public URL. This prevents localhost links from being
+  // copied when you test the website on your computer.
+  return "https://inkconvention.com";
+}
+
+function getArtistShareDetails(artist) {
+  const a = normalizeArtist(artist);
+
+  const websiteBaseUrl = getPublicWebsiteBaseUrl();
+
+  const profileUrl = `${websiteBaseUrl}/artists?artist=${encodeURIComponent(
+    a.id,
+  )}`;
+
+  const text = `Check out ${a.name}'s tattoo artist profile on Ink Convention.`;
+
+  return {
+    artist: a,
+    profileUrl,
+    text,
+    encodedUrl: encodeURIComponent(profileUrl),
+    encodedText: encodeURIComponent(`${text} ${profileUrl}`),
+  };
+}
+
+function openShareWindow(url) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+async function copyArtistProfileLink(artist) {
+  const { profileUrl } = getArtistShareDetails(artist);
+
+  try {
+    await navigator.clipboard.writeText(profileUrl);
+    return true;
+  } catch (error) {
+    console.error("Copy failed:", error);
+
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = profileUrl;
+      textArea.setAttribute("readonly", "");
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      const copied = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      return copied;
+    } catch (fallbackError) {
+      console.error("Fallback copy failed:", fallbackError);
+      window.prompt("Copy this artist profile link:", profileUrl);
+      return false;
+    }
+  }
+}
+
+async function shareArtistProfileNative(artist) {
+  const { artist: a, profileUrl, text } = getArtistShareDetails(artist);
+
+  if (!navigator.share) {
+    await copyArtistProfileLink(a);
+    return;
+  }
+
+  try {
+    await navigator.share({
+      title: `${a.name} | Ink Convention`,
+      text,
+      url: profileUrl,
+    });
+  } catch (error) {
+    // AbortError simply means the user closed the phone share sheet.
+    if (error?.name !== "AbortError") {
+      console.error("Native share failed:", error);
+      await copyArtistProfileLink(a);
+    }
+  }
+}
+
+function shareArtistToWhatsApp(artist) {
+  const { encodedText } = getArtistShareDetails(artist);
+  openShareWindow(`https://wa.me/?text=${encodedText}`);
+}
+
+function shareArtistToTelegram(artist) {
+  const { encodedUrl, text } = getArtistShareDetails(artist);
+  openShareWindow(
+    `https://t.me/share/url?url=${encodedUrl}&text=${encodeURIComponent(text)}`,
+  );
+}
+
+function shareArtistToFacebook(artist) {
+  const { encodedUrl } = getArtistShareDetails(artist);
+  openShareWindow(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`);
+}
+
+function shareArtistToX(artist) {
+  const { encodedText } = getArtistShareDetails(artist);
+  openShareWindow(`https://twitter.com/intent/tweet?text=${encodedText}`);
+}
+
+/* =========================================================
    ARTIST ROW
 ========================================================= */
 
@@ -3853,6 +4007,8 @@ function PublicAvatar({ artist, size = "card", compact = false }) {
 function ArtistModal({ artist, onClose }) {
   const modalRef = React.useRef(null);
   const scrollRef = React.useRef(null);
+  const [shareOpen, setShareOpen] = React.useState(false);
+  const [copyStatus, setCopyStatus] = React.useState("idle");
 
   const a = normalizeArtist(artist);
   const isBasic = a.plan === "basic";
@@ -3860,6 +4016,19 @@ function ArtistModal({ artist, onClose }) {
   const isSilver = a.plan === "pro";
   const expiryText = formatExpiry(a.planExpiresAt);
   const visiblePortfolioImages = getVisiblePortfolioImages(a);
+
+  const handleCopyProfileLink = async () => {
+    const copied = await copyArtistProfileLink(a);
+
+    if (!copied) {
+      setCopyStatus("failed");
+      window.setTimeout(() => setCopyStatus("idle"), 2200);
+      return;
+    }
+
+    setCopyStatus("copied");
+    window.setTimeout(() => setCopyStatus("idle"), 2200);
+  };
 
   const theme = isGold
     ? {
@@ -4185,10 +4354,137 @@ function ArtistModal({ artist, onClose }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-[8px] font-black hover:bg-white/10"
+                aria-label="Cancel and close artist profile"
+                className={`
+                  inline-flex
+                  min-w-[96px]
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-lg
+                  border
+                  px-5
+                  py-2.5
+                  text-[8px]
+                  font-black
+                  tracking-[0.08em]
+                  transition
+                  ${
+                    isGold
+                      ? "border-[#f5c451]/55 bg-[#f5c451]/[0.08] text-[#f5c451] hover:border-[#f5c451] hover:bg-[#f5c451]/[0.16]"
+                      : isSilver
+                        ? "border-slate-300/40 bg-slate-300/[0.07] text-slate-200 hover:border-slate-200 hover:bg-slate-200/[0.14]"
+                        : "border-purple-500/40 bg-purple-500/[0.07] text-purple-300 hover:border-purple-400 hover:bg-purple-500/[0.14]"
+                  }
+                `}
               >
-                CLOSE
+                <X size={12} strokeWidth={2.4} />
+                CANCEL
               </button>
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShareOpen((current) => !current)}
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-lg border px-5 py-2.5 text-[8px] font-black transition ${theme.softBorder} ${theme.text} hover:bg-white/5`}
+                >
+                  <Share2 size={12} />
+                  SHARE
+                </button>
+
+                {shareOpen && (
+                  <div
+                    className="absolute bottom-[calc(100%+10px)] right-0 z-[80] w-[260px] rounded-2xl border border-white/10 bg-[#101014] p-3 shadow-2xl"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <p className="px-1 pb-2 text-[8px] font-black tracking-[0.14em] text-gray-500">
+                      SHARE ARTIST PROFILE
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => shareArtistToWhatsApp(a)}
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
+                      >
+                        WHATSAPP
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => shareArtistToTelegram(a)}
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
+                      >
+                        TELEGRAM
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => shareArtistToFacebook(a)}
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
+                      >
+                        FACEBOOK
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => shareArtistToX(a)}
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[8px] font-black text-white transition hover:bg-white/[0.08]"
+                      >
+                        X / TWITTER
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleCopyProfileLink();
+                        }}
+                        className={`rounded-xl border px-3 py-3 text-[8px] font-black transition ${
+                          copyStatus === "copied"
+                            ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-300"
+                            : copyStatus === "failed"
+                              ? "border-red-400/40 bg-red-500/10 text-red-300"
+                              : "border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
+                        }`}
+                      >
+                        {copyStatus === "copied"
+                          ? "✓ COPIED!"
+                          : copyStatus === "failed"
+                            ? "COPY FAILED"
+                            : "COPY LINK"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void shareArtistProfileNative(a);
+                        }}
+                        className={`rounded-xl px-3 py-3 text-[8px] font-black transition ${theme.button}`}
+                      >
+                        MORE APPS
+                      </button>
+                    </div>
+
+                    {copyStatus === "copied" && (
+                      <div className="mt-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.08] px-3 py-2 text-center text-[7px] font-black tracking-wider text-emerald-300">
+                        ✓ LINK COPIED SUCCESSFULLY
+                      </div>
+                    )}
+
+                    {copyStatus === "failed" && (
+                      <div className="mt-2 rounded-lg border border-red-400/20 bg-red-500/[0.08] px-3 py-2 text-center text-[7px] font-black tracking-wider text-red-300">
+                        COULD NOT COPY — PLEASE COPY MANUALLY
+                      </div>
+                    )}
+
+                    <p className="mt-2 px-1 text-[7px] leading-relaxed text-gray-600">
+                      Instagram does not provide a standard browser link-share
+                      button. Use COPY LINK, then paste it in Instagram DM,
+                      Story, or Bio.
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <Link
                 to="/book-artist"

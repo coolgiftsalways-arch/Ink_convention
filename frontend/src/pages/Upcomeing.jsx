@@ -12,7 +12,6 @@ import {
   Share2,
   Clock,
   ArrowRight,
-  ArrowDown,
 } from "lucide-react";
 
 import gsap from "gsap";
@@ -146,15 +145,7 @@ const eventsData = [
 export default function Upcomeing() {
   const [selectedEvent, setSelectedEvent] = useState(eventsData[0]);
 
-  // false = normal heading
-  // true = book your stall heading
-  const [showBookText, setShowBookText] = useState(false);
-
   const headingRef = useRef(null);
-  const bookingRef = useRef(null);
-  const arrowRef = useRef(null);
-  const glowRef = useRef(null);
-  const bookCalloutRef = useRef(null);
 
   // ======================================================
   // EVENT CARD ANIMATION
@@ -185,144 +176,12 @@ export default function Upcomeing() {
           },
         );
       });
-
-      if (bookCalloutRef.current) {
-        gsap.to(bookCalloutRef.current, {
-          y: -6,
-          scale: 1.02,
-          repeat: -1,
-          yoyo: true,
-          duration: 1.2,
-          ease: "power1.inOut",
-        });
-      }
     });
 
     return () => {
       ctx.revert();
     };
   }, []);
-
-  // ======================================================
-  // TEXT TIMER
-  //
-  // Normal heading: 2 seconds
-  // Book heading:   5 seconds
-  // ======================================================
-
-  useEffect(() => {
-    const time = showBookText ? 5000 : 2000;
-
-    const timer = setTimeout(() => {
-      if (!headingRef.current) {
-        setShowBookText((prev) => !prev);
-        return;
-      }
-
-      gsap.killTweensOf(headingRef.current);
-
-      gsap.to(headingRef.current, {
-        opacity: 0,
-        y: -30,
-        scale: 0.96,
-        filter: "blur(8px)",
-        duration: 0.35,
-        ease: "power2.in",
-        onComplete: () => {
-          setShowBookText((prev) => !prev);
-        },
-      });
-    }, time);
-
-    return () => clearTimeout(timer);
-  }, [showBookText]);
-
-  // ======================================================
-  // NEW TEXT ENTRANCE
-  // ======================================================
-
-  useEffect(() => {
-    if (!headingRef.current) return;
-
-    gsap.killTweensOf(headingRef.current);
-
-    gsap.fromTo(
-      headingRef.current,
-      {
-        opacity: 0,
-        y: 35,
-        scale: 0.94,
-        filter: "blur(8px)",
-      },
-      {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        filter: "blur(0px)",
-        duration: 0.65,
-        ease: "back.out(1.6)",
-      },
-    );
-  }, [showBookText]);
-
-  // ======================================================
-  // BOOK YOUR STALL ATTENTION ANIMATION
-  // ======================================================
-
-  useEffect(() => {
-    if (!showBookText) return;
-
-    const animations = [];
-
-    if (bookingRef.current) {
-      animations.push(
-        gsap.to(bookingRef.current, {
-          scale: 1.025,
-          duration: 0.7,
-          repeat: -1,
-          yoyo: true,
-          ease: "power1.inOut",
-        }),
-      );
-    }
-
-    if (arrowRef.current) {
-      animations.push(
-        gsap.to(arrowRef.current, {
-          x: 12,
-          duration: 0.55,
-          repeat: -1,
-          yoyo: true,
-          ease: "power2.inOut",
-        }),
-      );
-    }
-
-    if (glowRef.current) {
-      animations.push(
-        gsap.fromTo(
-          glowRef.current,
-          {
-            opacity: 0.15,
-            scale: 0.85,
-          },
-          {
-            opacity: 0.7,
-            scale: 1.15,
-            duration: 0.9,
-            repeat: -1,
-            yoyo: true,
-            ease: "sine.inOut",
-          },
-        ),
-      );
-    }
-
-    return () => {
-      animations.forEach((animation) => animation.kill());
-    };
-  }, [showBookText]);
-
   // ======================================================
   // SHARE
   // ======================================================
@@ -380,183 +239,35 @@ export default function Upcomeing() {
             <p className="text-purple-500 font-semibold tracking-widest text-sm mb-4">
               // UPCOMING EVENTS
             </p>
-
             {/* ================================================= */}
-            {/* ANIMATED HEADING */}
+            {/* HEADING */}
             {/* ================================================= */}
 
-            <div
-              className="
-                relative
-                mb-8
-                min-h-[145px]
-                sm:min-h-[155px]
-                flex
-                items-center
-              "
-            >
-              <div ref={headingRef} className="relative w-full">
-                {showBookText ? (
-                  <div className="relative block">
-                    {/*
-                      OLD CLIENT LOGIN LINK — KEEP FOR FUTURE TESTING
-
-                      <Link to="/client-login">
-                        BOOK YOUR STALL NOW
-                      </Link>
-                    */}
-
-                    <div
-                      ref={glowRef}
-                      className="
-                        absolute
-                        left-0
-                        top-1/2
-                        -translate-y-1/2
-                        w-[80%]
-                        h-[130%]
-                        bg-purple-600/20
-                        blur-[60px]
-                        rounded-full
-                        pointer-events-none
-                      "
-                    />
-
-                    <div ref={bookingRef} className="relative z-10">
-                      <h1
-                        className="
-                          text-4xl
-                          sm:text-5xl
-                          lg:text-5xl
-                          font-black
-                          uppercase
-                          leading-[1.05]
-                          tracking-tight
-                        "
-                      >
-                        <span className="block text-white">
-                          YOU CAN BOOK YOUR STALL
-                        </span>
-
-                        <span className="flex items-center gap-3 mt-1">
-                          <span
-                            className="
-                              text-purple-500
-                              drop-shadow-[0_0_25px_rgba(168,85,247,1)]
-                            "
-                          >
-                            COMING SOON
-                          </span>
-
-                          <Clock
-                            ref={arrowRef}
-                            className="
-                              w-10
-                              h-10
-                              sm:w-12
-                              sm:h-12
-                              text-purple-500
-                              drop-shadow-[0_0_18px_rgba(168,85,247,1)]
-                            "
-                          />
-
-                          <span className="relative flex h-4 w-4 ml-2">
-                            <span
-                              className="
-                                animate-ping
-                                absolute
-                                inline-flex
-                                h-full
-                                w-full
-                                rounded-full
-                                bg-purple-400
-                                opacity-75
-                              "
-                            />
-
-                            <span
-                              className="
-                                relative
-                                inline-flex
-                                rounded-full
-                                h-4
-                                w-4
-                                bg-purple-500
-                                shadow-[0_0_20px_#a855f7]
-                              "
-                            />
-                          </span>
-                        </span>
-                      </h1>
-
-                      <div
-                        className="
-                          relative
-                          mt-5
-                          w-full
-                          max-w-[430px]
-                          h-[2px]
-                          overflow-hidden
-                          bg-purple-500/20
-                        "
-                      >
-                        <div
-                          className="
-                            absolute
-                            top-0
-                            left-0
-                            h-full
-                            w-[35%]
-                            bg-gradient-to-r
-                            from-transparent
-                            via-purple-400
-                            to-transparent
-                            animate-[bookingShimmer_1.3s_linear_infinite]
-                          "
-                        />
-                      </div>
-
-                      <p
-                        className="
-                          text-[10px]
-                          sm:text-xs
-                          text-purple-300
-                          mt-3
-                          font-bold
-                          tracking-[0.25em]
-                          uppercase
-                        "
-                      >
-                        Stall booking will be available soon
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <h1
-                    className="
-                      text-4xl
-                      sm:text-5xl
-                      lg:text-5xl
-                      font-black
-                      uppercase
-                      leading-[1.05]
-                      tracking-tight
-                    "
-                  >
-                    See where Ink Convention
-                    <br />
-                    is headed{" "}
-                    <span
-                      className="
-                        text-purple-500
-                        drop-shadow-[0_0_18px_rgba(168,85,247,0.45)]
-                      "
-                    >
-                      next.
-                    </span>
-                  </h1>
-                )}
-              </div>
+            <div className="relative mb-8">
+              <h1
+                ref={headingRef}
+                className="
+                  text-4xl
+                  sm:text-5xl
+                  lg:text-5xl
+                  font-black
+                  uppercase
+                  leading-[1.05]
+                  tracking-tight
+                "
+              >
+                See where Ink Convention
+                <br />
+                is headed{" "}
+                <span
+                  className="
+                    text-purple-500
+                    drop-shadow-[0_0_18px_rgba(168,85,247,0.45)]
+                  "
+                >
+                  next.
+                </span>
+              </h1>
             </div>
 
             {/* ================================================= */}
@@ -845,127 +556,63 @@ export default function Upcomeing() {
                       ))}
                     </div>
                   </div>
-
                   {/* ================================================= */}
-                  {/* BOOKING AREA */}
+                  {/* EVENT ACTIONS */}
                   {/* ================================================= */}
 
-                  <div className="flex flex-col gap-3 mt-6 pt-2 relative">
-                    <div ref={bookCalloutRef} className="text-center py-1">
-                      <div
-                        className="
-                          inline-flex
-                          items-center
-                          gap-2
-                          text-amber-300
-                          text-xs
-                          font-black
-                          tracking-widest
-                          uppercase
-                          drop-shadow-[0_0_15px_rgba(251,191,36,0.9)]
-                        "
-                      >
-                        <ArrowDown size={16} className="text-amber-400" />
-
-                        <span>STALL BOOKINGS OPENING SOON</span>
-
-                        <ArrowDown size={16} className="text-amber-400" />
-                      </div>
-                    </div>
-
-                    {/* ================================================= */}
-                    {/* STALL BOOKING - COMING SOON */}
-                    {/* ================================================= */}
-
-                    {/*
-                      OLD CLIENT LOGIN BUTTON — KEEP FOR FUTURE TESTING
-
-                      <Link to="/client-login">
-                        BOOK YOUR STALL
-                      </Link>
-                    */}
-
-                    <div
+                  <div className="flex gap-3 mt-11 pt-2">
+                    <Link
+                      to="/artists"
                       className="
-                        relative
-                        w-full
+                        flex-1
+                        bg-white/5
+                        hover:bg-white/10
                         border
-                        border-purple-500/40
-                        bg-purple-500/10
-                        text-purple-200
-                        font-black
-                        py-4
-                        px-4
+                        border-gray-800
+                        text-gray-300
+                        hover:text-white
+                        font-bold
+                        py-2.5
+                        px-2
                         rounded-xl
-                        text-sm
+                        transition-colors
+                        text-xs
                         text-center
                         flex
                         items-center
                         justify-center
-                        gap-2
-                        cursor-default
                       "
                     >
-                      <Clock size={18} className="text-purple-400" />
-                      <span>STALL BOOKING — COMING SOON</span>
-                    </div>
+                      Artists
+                    </Link>
 
-                    {/* SECONDARY BUTTONS */}
-
-                    <div className="flex gap-3 mt-1">
-                      <Link
-                        to="/artists"
-                        className="
-                          flex-1
-                          bg-white/5
-                          hover:bg-white/10
-                          border
-                          border-gray-800
-                          text-gray-300
-                          hover:text-white
-                          font-bold
-                          py-2.5
-                          px-2
-                          rounded-xl
-                          transition-colors
-                          text-xs
-                          text-center
-                          flex
-                          items-center
-                          justify-center
-                        "
-                      >
-                        Artists
-                      </Link>
-
-                      <button
-                        type="button"
-                        onClick={handleShare}
-                        className="
-                          flex-1
-                          border
-                          border-gray-800
-                          hover:border-gray-600
-                          bg-transparent
-                          text-gray-400
-                          hover:text-white
-                          font-bold
-                          py-2.5
-                          px-2
-                          rounded-xl
-                          transition-colors
-                          text-xs
-                          flex
-                          items-center
-                          justify-center
-                          gap-1.5
-                          cursor-pointer
-                        "
-                      >
-                        <Share2 size={14} />
-                        SHARE EVENT
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      className="
+                        flex-1
+                        border
+                        border-gray-800
+                        hover:border-gray-600
+                        bg-transparent
+                        text-gray-400
+                        hover:text-white
+                        font-bold
+                        py-2.5
+                        px-2
+                        rounded-xl
+                        transition-colors
+                        text-xs
+                        flex
+                        items-center
+                        justify-center
+                        gap-1.5
+                        cursor-pointer
+                      "
+                    >
+                      <Share2 size={14} />
+                      SHARE EVENT
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -1080,24 +727,6 @@ export default function Upcomeing() {
           </div>
         </div>
       </div>
-
-      {/* ================================================= */}
-      {/* SHIMMER KEYFRAME */}
-      {/* ================================================= */}
-
-      <style>
-        {`
-          @keyframes bookingShimmer {
-            0% {
-              transform: translateX(-150%);
-            }
-
-            100% {
-              transform: translateX(400%);
-            }
-          }
-        `}
-      </style>
     </div>
   );
 }

@@ -39,6 +39,9 @@ const stallBookingRoutes = require("./routes/stallBookingRoutes");
 const artistBookingRoutes = require("./routes/artistBookingRoutes");
 const membershipRequestRoutes = require("./routes/membershipRequestRoutes");
 
+// NEW COMPETITION ROUTE
+const competitionRoutes = require("./routes/competitionRoutes");
+
 // =====================================================
 // MODELS
 // =====================================================
@@ -367,8 +370,6 @@ console.log("✅ Claim routes mounted at /api/claim");
 
 // =====================================================
 // ARTIST BOOKING ROUTES
-//
-// PULLED FEATURE KEPT
 // =====================================================
 
 app.use("/api/artist-bookings", artistBookingRoutes);
@@ -385,6 +386,16 @@ app.use("/api/membership-requests", membershipRequestRoutes);
 console.log("✅ Membership request routes mounted at /api/membership-requests");
 
 // =====================================================
+// COMPETITION ROUTES
+// NO RAZORPAY
+// TEAM REVIEW WITHIN 48 HOURS
+// =====================================================
+
+app.use("/api/competitions", competitionRoutes);
+
+console.log("🏆 Competition routes mounted at /api/competitions");
+
+// =====================================================
 // ADMIN LOGIN
 // =====================================================
 
@@ -398,25 +409,13 @@ const adminLogin = (req, res) => {
       passwordProvided: Boolean(req.body?.password),
     });
 
-    // =================================================
-    // SUPPORT EMAIL OR GMAIL
-    // =================================================
-
     const receivedEmail = req.body?.email || req.body?.gmail || "";
 
     const receivedPassword = req.body?.password || "";
 
-    // =================================================
-    // CLEAN VALUES
-    // =================================================
-
     const email = String(receivedEmail).trim().toLowerCase();
 
     const password = String(receivedPassword);
-
-    // =================================================
-    // VALIDATION
-    // =================================================
 
     if (!email) {
       return res.status(400).json({
@@ -434,10 +433,6 @@ const adminLogin = (req, res) => {
       });
     }
 
-    // =================================================
-    // ENV CHECK
-    // =================================================
-
     if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
       console.error("❌ ADMIN_EMAIL or ADMIN_PASSWORD missing in .env");
 
@@ -448,17 +443,9 @@ const adminLogin = (req, res) => {
       });
     }
 
-    // =================================================
-    // CLEAN ADMIN DETAILS
-    // =================================================
-
     const adminEmail = String(process.env.ADMIN_EMAIL).trim().toLowerCase();
 
     const adminPassword = String(process.env.ADMIN_PASSWORD);
-
-    // =================================================
-    // LOGIN CHECK
-    // =================================================
 
     if (email === adminEmail && password === adminPassword) {
       console.log("✅ Admin login successful:", email);
@@ -473,10 +460,6 @@ const adminLogin = (req, res) => {
         },
       });
     }
-
-    // =================================================
-    // WRONG LOGIN
-    // =================================================
 
     console.log("❌ Invalid admin login:", email);
 
@@ -507,7 +490,11 @@ app.post("/api/login", adminLogin);
 app.post("/api/admin/login", adminLogin);
 
 // =====================================================
-// COMPETITION SIGNUP
+// OLD COMPETITION SIGNUP
+//
+// KEEPING THIS FOR OLD FRONTEND SUPPORT.
+// NEW Upload.jsx SHOULD USE:
+// POST /api/competitions
 // =====================================================
 
 app.post(
@@ -579,10 +566,6 @@ app.post(
         razorpay_payment_id,
       } = req.body;
 
-      // =================================================
-      // VALIDATION
-      // =================================================
-
       if (
         !category ||
         !entryPackage ||
@@ -600,10 +583,6 @@ app.post(
         });
       }
 
-      // =================================================
-      // DATABASE CHECK
-      // =================================================
-
       if (mongoose.connection.readyState !== 1) {
         return res.status(503).json({
           success: false,
@@ -612,15 +591,7 @@ app.post(
         });
       }
 
-      // =================================================
-      // CLEAN EMAIL
-      // =================================================
-
       const cleanEmail = gmail.trim().toLowerCase();
-
-      // =================================================
-      // EXISTING USER
-      // =================================================
 
       const existingUser = await User.findOne({
         gmail: cleanEmail,
@@ -634,25 +605,13 @@ app.post(
         });
       }
 
-      // =================================================
-      // IMAGES
-      // =================================================
-
       const imagePaths = req.files?.images
         ? req.files.images.map((file) => `uploads/${file.filename}`)
         : [];
 
-      // =================================================
-      // VIDEOS
-      // =================================================
-
       const videoPaths = req.files?.videos
         ? req.files.videos.map((file) => `uploads/${file.filename}`)
         : [];
-
-      // =================================================
-      // IMAGE REQUIRED
-      // =================================================
 
       if (imagePaths.length === 0) {
         return res.status(400).json({
@@ -662,21 +621,9 @@ app.post(
         });
       }
 
-      // =================================================
-      // ENTRY ID
-      // =================================================
-
       const entryId = `INK26-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      // =================================================
-      // BOOLEAN FUNCTION
-      // =================================================
-
       const toBoolean = (value) => value === true || value === "true";
-
-      // =================================================
-      // CREATE USER
-      // =================================================
 
       const newUser = new User({
         entryId,
@@ -734,17 +681,9 @@ app.post(
         razorpay_payment_id: razorpay_payment_id || "",
       });
 
-      // =================================================
-      // SAVE USER
-      // =================================================
-
       await newUser.save();
 
       console.log("✅ Artist saved:", entryId);
-
-      // =================================================
-      // SEND EMAIL
-      // =================================================
 
       let emailSent = false;
 
@@ -766,7 +705,6 @@ app.post(
                   color: white;
                 "
               >
-
                 <h1 style="color:#a855f7;">
                   INK CONVENTION 2026
                 </h1>
@@ -782,7 +720,6 @@ app.post(
                 <h2>
                   Entry ID: ${entryId}
                 </h2>
-
               </div>
             `,
           });
@@ -794,10 +731,6 @@ app.post(
           console.error("❌ Email:", emailError.message);
         }
       }
-
-      // =================================================
-      // SUCCESS
-      // =================================================
 
       return res.status(201).json({
         success: true,
@@ -1071,6 +1004,7 @@ app.listen(
 
   () => {
     console.log("");
+
     console.log("==============================================");
 
     console.log(`🚀 Server running on port ${PORT}`);
@@ -1108,6 +1042,8 @@ app.listen(
     console.log(
       `🥈🥇 Membership Requests: http://localhost:${PORT}/api/membership-requests`,
     );
+
+    console.log(`🏆 Competitions: http://localhost:${PORT}/api/competitions`);
 
     console.log("==============================================");
 
