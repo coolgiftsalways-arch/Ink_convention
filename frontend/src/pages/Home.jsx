@@ -1579,32 +1579,7 @@ function Home() {
             </p>
 
             <div className="pt-4">
-              <Link
-                to="/rankings"
-                className="
-                  inline-flex
-                  items-center
-                  gap-3
-                  bg-white/5
-                  hover:bg-white/10
-                  border
-                  border-white/10
-                  text-white
-                  px-6
-                  py-3
-                  rounded-xl
-                  font-medium
-                  text-xs
-                  font-mono
-                  uppercase
-                  tracking-widest
-                  transition
-                  duration-300
-                "
-              >
-                VIEW LIVE RANKINGS
-                <ArrowRight size={16} />
-              </Link>
+             
             </div>
           </div>
 
@@ -1890,30 +1865,7 @@ function Home() {
             and the rapidly growing global tattoo industry.
           </p>
 
-          <Link
-            to="/sponsors"
-            className="
-              inline-block
-              bg-transparent
-              border
-              border-[#a855f7]
-              text-[#a855f7]
-              hover:bg-[#a855f7]
-              hover:text-white
-              px-8
-              py-3
-              rounded-xl
-              font-bold
-              text-xs
-              font-mono
-              uppercase
-              tracking-widest
-              transition
-              duration-300
-            "
-          >
-            BECOME A SPONSOR
-          </Link>
+        
         </div>
       </section>
 

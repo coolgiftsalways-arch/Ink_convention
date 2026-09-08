@@ -1555,19 +1555,7 @@ export default function Artists() {
                 </span>
               </h1>
 
-              <p
-                className="
-                  mt-6
-                  max-w-2xl
-                  text-sm
-                  sm:text-base
-                  leading-relaxed
-                  text-gray-500
-                "
-              >
-                Real artists from your MongoDB directory. Select a city and the
-                order stays Gold first, Silver second and Free after them.
-              </p>
+             
 
               <div
                 className="
