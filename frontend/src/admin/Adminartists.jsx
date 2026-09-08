@@ -443,6 +443,71 @@ const normalizePaymentStatus = (value) =>
     .trim()
     .toLowerCase();
 
+const ARTIST_STATUS_STORAGE_KEY = "inkConventionArtistAdminStatuses";
+
+const ARTIST_STATUS_OPTIONS = [
+  "NEW",
+  "CONTACTED",
+  "CONFIRMED",
+  "PAID",
+  "CANCELLED",
+];
+
+const normalizeArtistAdminStatus = (value) => {
+  const normalized = String(value || "NEW")
+    .trim()
+    .toUpperCase();
+
+  return ARTIST_STATUS_OPTIONS.includes(normalized) ? normalized : "NEW";
+};
+
+const loadArtistAdminStatuses = () => {
+  try {
+    const raw = localStorage.getItem(ARTIST_STATUS_STORAGE_KEY);
+
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    console.error("Unable to read artist admin statuses:", error);
+    return {};
+  }
+};
+
+const saveArtistAdminStatuses = (statuses) => {
+  try {
+    localStorage.setItem(ARTIST_STATUS_STORAGE_KEY, JSON.stringify(statuses));
+  } catch (error) {
+    console.error("Unable to save artist admin statuses:", error);
+  }
+};
+
+const getArtistStatusClasses = (status) => {
+  const normalized = normalizeArtistAdminStatus(status);
+
+  if (normalized === "PAID") {
+    return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
+  }
+
+  if (normalized === "CONFIRMED") {
+    return "border-blue-400/30 bg-blue-400/10 text-blue-300";
+  }
+
+  if (normalized === "CONTACTED") {
+    return "border-sky-400/30 bg-sky-400/10 text-sky-300";
+  }
+
+  if (normalized === "CANCELLED") {
+    return "border-red-400/30 bg-red-400/10 text-red-300";
+  }
+
+  return "border-purple-400/30 bg-purple-400/10 text-purple-300";
+};
+
 const isMembershipRequestPaid = (request = {}) => {
   const requestStatus = normalizeRequestStatus(request.requestStatus);
   const paymentStatus = normalizePaymentStatus(request.paymentStatus);
@@ -518,7 +583,11 @@ function AdminArtists() {
   const [membershipFilter, setMembershipFilter] = useState("all");
 
   // Unified artist status filter, similar to the Stall Booking dashboard.
-  const [directoryStatusFilter, setDirectoryStatusFilter] = useState("all");
+  const [directoryStatusFilter, setDirectoryStatusFilter] = useState("ALL");
+
+  const [artistAdminStatuses, setArtistAdminStatuses] = useState(() =>
+    loadArtistAdminStatuses(),
+  );
 
   // State filter for the directory membership overview.
   const [directoryStateFilter, setDirectoryStateFilter] = useState("ALL");
@@ -1017,6 +1086,32 @@ function AdminArtists() {
     },
     [fetchMembershipRequests, fetchMemberships],
   );
+
+  // ===================================================
+  // ARTIST CARD STATUS
+  // Same workflow as Stall Booking dashboard
+  // ===================================================
+
+  const handleArtistStatusChange = useCallback((artistId, nextStatus) => {
+    const id = String(artistId || "").trim();
+
+    if (!id) {
+      return;
+    }
+
+    const normalizedStatus = normalizeArtistAdminStatus(nextStatus);
+
+    setArtistAdminStatuses((previous) => {
+      const updated = {
+        ...previous,
+        [id]: normalizedStatus,
+      };
+
+      saveArtistAdminStatuses(updated);
+
+      return updated;
+    });
+  }, []);
 
   // ===================================================
   // REFRESH DASHBOARD
@@ -1546,33 +1641,48 @@ function AdminArtists() {
   );
 
   const getDirectoryArtistStatus = (artist) => {
-    const request = latestMembershipRequestByProfile[String(artist.id || "")];
+    const artistId = String(artist?.id || "").trim();
 
-    const requestStatus = normalizeRequestStatus(request?.requestStatus);
-    const paymentStatus = normalizePaymentStatus(
-      request?.paymentStatus || artist.paymentStatus,
-    );
+    if (artistId && artistAdminStatuses[artistId]) {
+      return normalizeArtistAdminStatus(artistAdminStatuses[artistId]);
+    }
 
-    if (requestStatus === "cancelled") {
-      return "cancelled";
+    const request = latestMembershipRequestByProfile[artistId];
+
+    const requestStatus = String(request?.requestStatus || "")
+      .trim()
+      .toUpperCase();
+
+    const paymentStatus = String(
+      request?.paymentStatus || artist?.paymentStatus || "",
+    )
+      .trim()
+      .toUpperCase();
+
+    if (requestStatus === "CANCELLED") {
+      return "CANCELLED";
+    }
+
+    if (requestStatus === "CONFIRMED") {
+      return "CONFIRMED";
+    }
+
+    if (requestStatus === "CONTACTED") {
+      return "CONTACTED";
     }
 
     if (
-      requestStatus === "paid" ||
-      ["paid", "success", "successful", "completed", "verified"].includes(
+      requestStatus === "PAID" ||
+      ["PAID", "SUCCESS", "SUCCESSFUL", "COMPLETED", "VERIFIED"].includes(
         paymentStatus,
       ) ||
-      artist.plan === "pro" ||
-      artist.plan === "verified"
+      artist?.plan === "pro" ||
+      artist?.plan === "verified"
     ) {
-      return "paid";
+      return "PAID";
     }
 
-    if (requestStatus === "contacted") {
-      return "contacted";
-    }
-
-    return "new";
+    return "NEW";
   };
 
   const planFilteredDirectoryArtists = filterMembersByState(
@@ -1599,7 +1709,7 @@ function AdminArtists() {
 
   const visibleDirectoryMembers = planFilteredDirectoryArtists.filter(
     (artist) => {
-      if (directoryStatusFilter === "all") {
+      if (directoryStatusFilter === "ALL") {
         return true;
       }
 
@@ -1649,18 +1759,21 @@ function AdminArtists() {
             };
 
   const directoryStatusCounts = {
-    all: planFilteredDirectoryArtists.length,
-    new: planFilteredDirectoryArtists.filter(
-      (artist) => getDirectoryArtistStatus(artist) === "new",
+    ALL: planFilteredDirectoryArtists.length,
+    NEW: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "NEW",
     ).length,
-    contacted: planFilteredDirectoryArtists.filter(
-      (artist) => getDirectoryArtistStatus(artist) === "contacted",
+    CONTACTED: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "CONTACTED",
     ).length,
-    paid: planFilteredDirectoryArtists.filter(
-      (artist) => getDirectoryArtistStatus(artist) === "paid",
+    CONFIRMED: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "CONFIRMED",
     ).length,
-    cancelled: planFilteredDirectoryArtists.filter(
-      (artist) => getDirectoryArtistStatus(artist) === "cancelled",
+    PAID: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "PAID",
+    ).length,
+    CANCELLED: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "CANCELLED",
     ).length,
   };
 
@@ -2329,53 +2442,65 @@ function AdminArtists() {
             </div>
 
             {/* ==========================================
-                STATUS FILTERS
+                STATUS FILTER - STALL DASHBOARD STYLE
             ========================================== */}
 
-            <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-3 sm:p-4">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <p className="text-[9px] font-mono font-black uppercase tracking-[0.16em] text-gray-500">
-                    Artist Status
+                    Artist Status Filter
                   </p>
+
                   <p className="mt-1 text-[10px] text-gray-600">
-                    Filter the selected plan exactly like the Stall Booking
-                    dashboard.
+                    Choose a status to show matching artist cards.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 w-full lg:w-auto">
-                  {[
-                    ["all", "ALL STATUS", directoryStatusCounts.all],
-                    ["new", "NEW", directoryStatusCounts.new],
-                    ["contacted", "CONTACTED", directoryStatusCounts.contacted],
-                    ["paid", "PAID", directoryStatusCounts.paid],
-                    ["cancelled", "CANCELLED", directoryStatusCounts.cancelled],
-                  ].map(([value, label, count]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setDirectoryStatusFilter(value)}
-                      className={`rounded-xl border px-3 py-2.5 text-left transition ${
-                        directoryStatusFilter === value
-                          ? value === "paid"
-                            ? "border-emerald-400/50 bg-emerald-400/10"
-                            : value === "cancelled"
-                              ? "border-red-400/40 bg-red-400/10"
-                              : value === "contacted"
-                                ? "border-sky-400/40 bg-sky-400/10"
-                                : "border-[#a855f7]/70 bg-[#a855f7]/10"
-                          : "border-white/10 bg-black/20 hover:border-white/20"
-                      }`}
-                    >
-                      <span className="block text-[7px] font-black uppercase tracking-widest text-gray-500">
-                        {label}
-                      </span>
-                      <span className="mt-1 block text-lg font-black text-white">
-                        {count}
-                      </span>
-                    </button>
-                  ))}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <select
+                    value={directoryStatusFilter}
+                    onChange={(event) =>
+                      setDirectoryStatusFilter(event.target.value)
+                    }
+                    className="
+                      min-w-[210px]
+                      appearance-none
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-black/40
+                      px-4
+                      py-3
+                      text-[9px]
+                      font-black
+                      uppercase
+                      tracking-widest
+                      text-white
+                      outline-none
+                      transition
+                      focus:border-[#a855f7]/60
+                    "
+                  >
+                    <option value="ALL">
+                      ALL STATUS ({directoryStatusCounts.ALL})
+                    </option>
+                    <option value="NEW">
+                      NEW ({directoryStatusCounts.NEW})
+                    </option>
+                    <option value="CONTACTED">
+                      CONTACTED ({directoryStatusCounts.CONTACTED})
+                    </option>
+                    <option value="CONFIRMED">
+                      CONFIRMED ({directoryStatusCounts.CONFIRMED})
+                    </option>
+                    <option value="PAID">
+                      PAID ({directoryStatusCounts.PAID})
+                    </option>
+                    <option value="CANCELLED">
+                      CANCELLED ({directoryStatusCounts.CANCELLED})
+                    </option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -2396,6 +2521,7 @@ function AdminArtists() {
               nowMs={membershipClock}
               getArtistStatus={getDirectoryArtistStatus}
               latestRequestByProfile={latestMembershipRequestByProfile}
+              onStatusChange={handleArtistStatusChange}
             />
           </section>
 
@@ -2669,6 +2795,7 @@ function MembershipTierPanel({
   nowMs,
   getArtistStatus,
   latestRequestByProfile,
+  onStatusChange,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -2758,6 +2885,7 @@ function MembershipTierPanel({
               membershipRequest={
                 latestRequestByProfile?.[String(artist.id || "")] || null
               }
+              onStatusChange={onStatusChange}
             />
           ))}
         </div>
@@ -2774,6 +2902,7 @@ function MembershipMemberRow({
   nowMs = 0,
   status = "new",
   membershipRequest = null,
+  onStatusChange,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -2834,17 +2963,11 @@ function MembershipMemberRow({
           </span>
 
           <span
-            className={`rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-widest ${
-              status === "paid"
-                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
-                : status === "contacted"
-                  ? "border-sky-400/25 bg-sky-400/10 text-sky-300"
-                  : status === "cancelled"
-                    ? "border-red-400/25 bg-red-400/10 text-red-300"
-                    : "border-purple-400/25 bg-purple-400/10 text-purple-300"
-            }`}
+            className={`rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-widest ${getArtistStatusClasses(
+              status,
+            )}`}
           >
-            {status}
+            {normalizeArtistAdminStatus(status)}
           </span>
         </div>
       </div>
@@ -2864,21 +2987,23 @@ function MembershipMemberRow({
         <div className="flex flex-col items-end gap-1 text-right">
           <span
             className={`text-[9px] font-bold uppercase ${
-              status === "paid"
+              normalizeArtistAdminStatus(status) === "PAID"
                 ? "text-emerald-300"
-                : status === "contacted"
-                  ? "text-sky-300"
-                  : status === "cancelled"
-                    ? "text-red-300"
-                    : "text-purple-300"
+                : normalizeArtistAdminStatus(status) === "CONFIRMED"
+                  ? "text-blue-300"
+                  : normalizeArtistAdminStatus(status) === "CONTACTED"
+                    ? "text-sky-300"
+                    : normalizeArtistAdminStatus(status) === "CANCELLED"
+                      ? "text-red-300"
+                      : "text-purple-300"
             }`}
           >
-            {status}
+            {normalizeArtistAdminStatus(status)}
           </span>
 
           <span className="text-[7px] font-mono uppercase tracking-wider text-gray-600">
             Payment:{" "}
-            {status === "paid"
+            {normalizeArtistAdminStatus(status) === "PAID"
               ? "PAID"
               : normalizePaymentStatus(
                   membershipRequest?.paymentStatus || artist.paymentStatus,
@@ -2916,6 +3041,39 @@ function MembershipMemberRow({
           </div>
         </div>
       )}
+
+      <div className="mt-3 border-t border-white/[0.06] pt-3">
+        <p className="mb-2 text-[8px] font-mono font-black uppercase tracking-[0.14em] text-gray-600">
+          STATUS
+        </p>
+
+        <select
+          value={normalizeArtistAdminStatus(status)}
+          onChange={(event) => onStatusChange?.(artist.id, event.target.value)}
+          className={`
+            w-full
+            appearance-none
+            rounded-xl
+            border
+            bg-black/40
+            px-4
+            py-3
+            text-[9px]
+            font-black
+            uppercase
+            tracking-widest
+            outline-none
+            transition
+            ${getArtistStatusClasses(status)}
+          `}
+        >
+          {ARTIST_STATUS_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {onAdminPlanChange && (
         <div className="mt-3 flex flex-wrap gap-2 border-t border-white/[0.06] pt-3">
