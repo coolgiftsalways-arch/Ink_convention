@@ -515,7 +515,10 @@ function AdminArtists() {
   // basic-unclaimed = imported FREE profile not claimed yet
   // pro             = SILVER ₹1,999
   // verified        = GOLD ₹2,999
-  const [membershipFilter, setMembershipFilter] = useState("basic-claimed");
+  const [membershipFilter, setMembershipFilter] = useState("all");
+
+  // Unified artist status filter, similar to the Stall Booking dashboard.
+  const [directoryStatusFilter, setDirectoryStatusFilter] = useState("all");
 
   // State filter for the directory membership overview.
   const [directoryStateFilter, setDirectoryStateFilter] = useState("ALL");
@@ -1521,44 +1524,145 @@ function AdminArtists() {
               .toUpperCase() === directoryStateFilter,
         );
 
+  const latestMembershipRequestByProfile = membershipRequests.reduce(
+    (accumulator, request) => {
+      const key = String(request.profileId || "").trim();
+
+      if (!key) {
+        return accumulator;
+      }
+
+      const previous = accumulator[key];
+      const currentTime = new Date(request.createdAt || 0).getTime() || 0;
+      const previousTime = new Date(previous?.createdAt || 0).getTime() || 0;
+
+      if (!previous || currentTime >= previousTime) {
+        accumulator[key] = request;
+      }
+
+      return accumulator;
+    },
+    {},
+  );
+
+  const getDirectoryArtistStatus = (artist) => {
+    const request = latestMembershipRequestByProfile[String(artist.id || "")];
+
+    const requestStatus = normalizeRequestStatus(request?.requestStatus);
+    const paymentStatus = normalizePaymentStatus(
+      request?.paymentStatus || artist.paymentStatus,
+    );
+
+    if (requestStatus === "cancelled") {
+      return "cancelled";
+    }
+
+    if (
+      requestStatus === "paid" ||
+      ["paid", "success", "successful", "completed", "verified"].includes(
+        paymentStatus,
+      ) ||
+      artist.plan === "pro" ||
+      artist.plan === "verified"
+    ) {
+      return "paid";
+    }
+
+    if (requestStatus === "contacted") {
+      return "contacted";
+    }
+
+    return "new";
+  };
+
+  const planFilteredDirectoryArtists = filterMembersByState(
+    directoryArtists,
+  ).filter((artist) => {
+    if (membershipFilter === "all") {
+      return true;
+    }
+
+    if (membershipFilter === "free") {
+      return artist.plan === "basic";
+    }
+
+    if (membershipFilter === "pro") {
+      return artist.plan === "pro";
+    }
+
+    if (membershipFilter === "verified") {
+      return artist.plan === "verified";
+    }
+
+    return true;
+  });
+
+  const visibleDirectoryMembers = planFilteredDirectoryArtists.filter(
+    (artist) => {
+      if (directoryStatusFilter === "all") {
+        return true;
+      }
+
+      return getDirectoryArtistStatus(artist) === directoryStatusFilter;
+    },
+  );
+
   const selectedMembership =
     membershipFilter === "verified"
       ? {
           title: "Gold Verified",
           price: "₹2,999",
-          members: filterMembersByState(goldMembers),
+          members: visibleDirectoryMembers,
           tone: "gold",
           icon: <Trophy size={18} />,
-          description: "Artists who have taken the ₹2,999 Gold Verified plan.",
+          description:
+            "Gold artists matching the selected state and status filters.",
         }
       : membershipFilter === "pro"
         ? {
             title: "Silver Pro",
             price: "₹1,999",
-            members: filterMembersByState(silverMembers),
+            members: visibleDirectoryMembers,
             tone: "silver",
             icon: <Award size={18} />,
-            description: "Artists who have taken the ₹1,999 Silver Pro plan.",
+            description:
+              "Silver artists matching the selected state and status filters.",
           }
-        : membershipFilter === "basic-unclaimed"
+        : membershipFilter === "free"
           ? {
-              title: "Free Unclaimed",
+              title: "Free Artists",
               price: "₹0",
-              members: filterMembersByState(freeUnclaimedMembers),
-              tone: "unclaimed",
-              icon: <CircleDashed size={18} />,
-              description:
-                "Imported Free profiles that have not been claimed by their owner yet.",
-            }
-          : {
-              title: "Free Claimed",
-              price: "₹0",
-              members: filterMembersByState(freeClaimedMembers),
-              tone: "claimed",
+              members: visibleDirectoryMembers,
+              tone: "basic",
               icon: <BadgeCheck size={18} />,
               description:
-                "Free profiles whose owner has claimed and verified their profile.",
+                "All Free artists matching the selected state and status filters.",
+            }
+          : {
+              title: "All Directory Artists",
+              price: "",
+              members: visibleDirectoryMembers,
+              tone: "all",
+              icon: <LayoutDashboard size={18} />,
+              description:
+                "Free, Silver and Gold artists matching the selected filters.",
             };
+
+  const directoryStatusCounts = {
+    all: planFilteredDirectoryArtists.length,
+    new: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "new",
+    ).length,
+    contacted: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "contacted",
+    ).length,
+    paid: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "paid",
+    ).length,
+    cancelled: planFilteredDirectoryArtists.filter(
+      (artist) => getDirectoryArtistStatus(artist) === "cancelled",
+    ).length,
+  };
 
   // ===================================================
   // DASHBOARD
@@ -2183,45 +2287,97 @@ function AdminArtists() {
             )}
 
             {/* ==========================================
-                4 ARTIST GROUP FILTERS
+                PLAN FILTERS
             ========================================== */}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <MembershipFilterButton
-                active={membershipFilter === "basic-claimed"}
-                onClick={() => setMembershipFilter("basic-claimed")}
-                title="FREE CLAIMED"
-                subtitle="Owner claimed profile"
-                count={freeClaimedMembers.length}
-                tone="claimed"
+                active={membershipFilter === "all"}
+                onClick={() => setMembershipFilter("all")}
+                title="ALL"
+                subtitle="Free + Silver + Gold"
+                count={stateFilteredDirectoryArtists.length}
+                tone="all"
               />
 
               <MembershipFilterButton
-                active={membershipFilter === "basic-unclaimed"}
-                onClick={() => setMembershipFilter("basic-unclaimed")}
-                title="FREE UNCLAIMED"
-                subtitle="Not claimed yet"
-                count={freeUnclaimedMembers.length}
-                tone="unclaimed"
+                active={membershipFilter === "free"}
+                onClick={() => setMembershipFilter("free")}
+                title="FREE"
+                subtitle="All Free artists"
+                count={stateFreeArtists.length}
+                tone="basic"
               />
 
               <MembershipFilterButton
                 active={membershipFilter === "pro"}
                 onClick={() => setMembershipFilter("pro")}
-                title="SILVER PRO"
+                title="SILVER"
                 subtitle="₹1,999 Plan"
-                count={silverMembers.length}
+                count={stateSilverArtists.length}
                 tone="silver"
               />
 
               <MembershipFilterButton
                 active={membershipFilter === "verified"}
                 onClick={() => setMembershipFilter("verified")}
-                title="GOLD VERIFIED"
+                title="GOLD"
                 subtitle="₹2,999 Plan"
-                count={goldMembers.length}
+                count={stateGoldArtists.length}
                 tone="gold"
               />
+            </div>
+
+            {/* ==========================================
+                STATUS FILTERS
+            ========================================== */}
+
+            <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-3 sm:p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-mono font-black uppercase tracking-[0.16em] text-gray-500">
+                    Artist Status
+                  </p>
+                  <p className="mt-1 text-[10px] text-gray-600">
+                    Filter the selected plan exactly like the Stall Booking
+                    dashboard.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 w-full lg:w-auto">
+                  {[
+                    ["all", "ALL STATUS", directoryStatusCounts.all],
+                    ["new", "NEW", directoryStatusCounts.new],
+                    ["contacted", "CONTACTED", directoryStatusCounts.contacted],
+                    ["paid", "PAID", directoryStatusCounts.paid],
+                    ["cancelled", "CANCELLED", directoryStatusCounts.cancelled],
+                  ].map(([value, label, count]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setDirectoryStatusFilter(value)}
+                      className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                        directoryStatusFilter === value
+                          ? value === "paid"
+                            ? "border-emerald-400/50 bg-emerald-400/10"
+                            : value === "cancelled"
+                              ? "border-red-400/40 bg-red-400/10"
+                              : value === "contacted"
+                                ? "border-sky-400/40 bg-sky-400/10"
+                                : "border-[#a855f7]/70 bg-[#a855f7]/10"
+                          : "border-white/10 bg-black/20 hover:border-white/20"
+                      }`}
+                    >
+                      <span className="block text-[7px] font-black uppercase tracking-widest text-gray-500">
+                        {label}
+                      </span>
+                      <span className="mt-1 block text-lg font-black text-white">
+                        {count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* ==========================================
@@ -2238,6 +2394,8 @@ function AdminArtists() {
               onAdminPlanChange={handleDirectPlanActivation}
               busyArtistId={directPlanBusyArtistId}
               nowMs={membershipClock}
+              getArtistStatus={getDirectoryArtistStatus}
+              latestRequestByProfile={latestMembershipRequestByProfile}
             />
           </section>
 
@@ -2509,6 +2667,8 @@ function MembershipTierPanel({
   onAdminPlanChange,
   busyArtistId,
   nowMs,
+  getArtistStatus,
+  latestRequestByProfile,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -2594,6 +2754,10 @@ function MembershipTierPanel({
               onAdminPlanChange={onAdminPlanChange}
               busy={busyArtistId === artist.id}
               nowMs={nowMs}
+              status={getArtistStatus ? getArtistStatus(artist) : "new"}
+              membershipRequest={
+                latestRequestByProfile?.[String(artist.id || "")] || null
+              }
             />
           ))}
         </div>
@@ -2608,6 +2772,8 @@ function MembershipMemberRow({
   onAdminPlanChange,
   busy,
   nowMs = 0,
+  status = "new",
+  membershipRequest = null,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -2660,11 +2826,27 @@ function MembershipMemberRow({
           )}
         </div>
 
-        <span
-          className={`shrink-0 text-[8px] font-black uppercase tracking-widest ${accentClass}`}
-        >
-          {planLabel}
-        </span>
+        <div className="shrink-0 flex flex-col items-end gap-2">
+          <span
+            className={`text-[8px] font-black uppercase tracking-widest ${accentClass}`}
+          >
+            {planLabel}
+          </span>
+
+          <span
+            className={`rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-widest ${
+              status === "paid"
+                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
+                : status === "contacted"
+                  ? "border-sky-400/25 bg-sky-400/10 text-sky-300"
+                  : status === "cancelled"
+                    ? "border-red-400/25 bg-red-400/10 text-red-300"
+                    : "border-purple-400/25 bg-purple-400/10 text-purple-300"
+            }`}
+          >
+            {status}
+          </span>
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
@@ -2679,25 +2861,30 @@ function MembershipMemberRow({
           Membership
         </span>
 
-        <span
-          className={`text-[9px] font-bold uppercase ${
-            isGold
-              ? "text-amber-300"
-              : isSilver
-                ? "text-slate-200"
-                : isClaimed
-                  ? "text-emerald-300"
-                  : "text-purple-300"
-          }`}
-        >
-          {isGold
-            ? artist.paymentStatus || "GOLD ACTIVE"
-            : isSilver
-              ? artist.paymentStatus || "SILVER ACTIVE"
-              : isClaimed
-                ? "CLAIMED"
-                : "UNCLAIMED"}
-        </span>
+        <div className="flex flex-col items-end gap-1 text-right">
+          <span
+            className={`text-[9px] font-bold uppercase ${
+              status === "paid"
+                ? "text-emerald-300"
+                : status === "contacted"
+                  ? "text-sky-300"
+                  : status === "cancelled"
+                    ? "text-red-300"
+                    : "text-purple-300"
+            }`}
+          >
+            {status}
+          </span>
+
+          <span className="text-[7px] font-mono uppercase tracking-wider text-gray-600">
+            Payment:{" "}
+            {status === "paid"
+              ? "PAID"
+              : normalizePaymentStatus(
+                  membershipRequest?.paymentStatus || artist.paymentStatus,
+                ).toUpperCase()}
+          </span>
+        </div>
       </div>
 
       {(isSilver || isGold) && (
