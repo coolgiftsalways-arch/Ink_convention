@@ -1832,17 +1832,7 @@ export default function Artists() {
                       : "DISCOVER ARTISTS"}
                 </h2>
 
-                <p
-                  className="
-                    mt-3
-                    text-xs
-                    text-gray-600
-                  "
-                >
-                  {selectedCity === "ALL"
-                    ? "All directory profiles are shown with Gold → Silver → Free priority."
-                    : `All ${selectedCity} profiles are shown with Gold → Silver → Free priority.`}
-                </p>
+               
               </div>
 
               <div
