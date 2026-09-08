@@ -2653,7 +2653,7 @@ function CommunityMapBox({
               z-10
               grid
               grid-cols-1
-              md:grid-cols-[0.72fr_1.28fr]
+              md:grid-cols-[0.82fr_1.18fr]
               gap-4
               md:gap-6
               items-center
@@ -2685,13 +2685,24 @@ function CommunityMapBox({
               </p>
 
               <h2
-                className="
-                  text-[clamp(2rem,4vw,3.7rem)]
+                className={`
+                  max-w-full
                   font-black
                   uppercase
-                  tracking-[-0.06em]
-                  leading-[0.88]
-                "
+                  tracking-[-0.055em]
+                  leading-[0.9]
+                  whitespace-normal
+                  ${
+                    currentCounter.city.length >= 12
+                      ? "text-[clamp(1.45rem,2.55vw,2.75rem)]"
+                      : currentCounter.city.length >= 9
+                        ? "text-[clamp(1.7rem,3vw,3.2rem)]"
+                        : "text-[clamp(2rem,4vw,3.7rem)]"
+                  }
+                `}
+                style={{
+                  overflowWrap: "anywhere",
+                }}
               >
                 {currentCounter.city}
               </h2>
