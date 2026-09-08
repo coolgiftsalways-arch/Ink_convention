@@ -402,9 +402,17 @@ export default function AdminStalls() {
           booking.orderId,
         ].some((value) => safeText(value).includes(query));
 
+      const normalizedBookingStatus = normalizeStatusValue(booking.status);
+      const normalizedPaymentStatus = String(booking.paymentStatus || "")
+        .trim()
+        .toUpperCase();
+
       const matchesStatus =
         statusFilter === "ALL" ||
-        normalizeStatusValue(booking.status) === statusFilter;
+        (statusFilter === "PAID"
+          ? normalizedBookingStatus === "PAID" ||
+            normalizedPaymentStatus === "PAID"
+          : normalizedBookingStatus === statusFilter);
 
       const matchesDate = matchesDateFilter(
         booking.submittedAt || booking.createdAt,
@@ -986,6 +994,28 @@ export default function AdminStalls() {
   );
 }
 
+function getStatusBadgeClasses(status) {
+  const normalized = normalizeStatusValue(status);
+
+  if (normalized === "PAID") {
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-400";
+  }
+
+  if (normalized === "CONFIRMED") {
+    return "border-blue-500/30 bg-blue-500/10 text-blue-400";
+  }
+
+  if (normalized === "CONTACTED") {
+    return "border-amber-500/30 bg-amber-500/10 text-amber-300";
+  }
+
+  if (normalized === "CANCELLED") {
+    return "border-red-500/30 bg-red-500/10 text-red-400";
+  }
+
+  return "border-purple-500/30 bg-purple-500/10 text-purple-300";
+}
+
 // =====================================================
 // BOOKING CARD
 // =====================================================
@@ -1074,6 +1104,21 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
               text-[7px]
               font-black
               tracking-widest
+              ${getStatusBadgeClasses(booking.status)}
+            `}
+          >
+            {normalizeStatusValue(booking.status)}
+          </span>
+
+          <span
+            className={`
+              rounded-full
+              border
+              px-3
+              py-2
+              text-[7px]
+              font-black
+              tracking-widest
               ${
                 isPaid
                   ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
@@ -1081,7 +1126,7 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
               }
             `}
           >
-            {isPaid ? "PAID" : booking.paymentStatus}
+            PAYMENT: {isPaid ? "PAID" : booking.paymentStatus}
           </span>
         </div>
       </div>
@@ -1128,7 +1173,11 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
           highlight
         />
 
-        <SmallInfo label="STATUS" value={booking.status} />
+        <SmallInfo
+          label="STATUS"
+          value={normalizeStatusValue(booking.status)}
+          status={booking.status}
+        />
       </div>
 
       <div
@@ -1173,7 +1222,7 @@ function BookingCard({ booking, onOpen, onStatusChange, onDelete, deleting }) {
         "
       >
         <select
-          value={booking.status}
+          value={normalizeStatusValue(booking.status)}
           onChange={(event) => onStatusChange(event.target.value)}
           onClick={(event) => event.stopPropagation()}
           className="
@@ -1467,7 +1516,10 @@ function BookingModal({
 
           <Detail label="PAYMENT STATUS" value={booking.paymentStatus} />
 
-          <Detail label="BOOKING STATUS" value={booking.status} />
+          <Detail
+            label="BOOKING STATUS"
+            value={normalizeStatusValue(booking.status)}
+          />
 
           <Detail label="PAYMENT ID" value={booking.paymentId} />
 
@@ -1516,7 +1568,7 @@ function BookingModal({
           </p>
 
           <select
-            value={booking.status}
+            value={normalizeStatusValue(booking.status)}
             onChange={(event) => onStatusChange(event.target.value)}
             className="
               mt-3
@@ -1611,7 +1663,7 @@ function BookingModal({
 // SMALL INFO
 // =====================================================
 
-function SmallInfo({ label, value, highlight = false }) {
+function SmallInfo({ label, value, highlight = false, status = "" }) {
   return (
     <div
       className="
@@ -1633,7 +1685,21 @@ function SmallInfo({ label, value, highlight = false }) {
           font-black
           uppercase
           break-words
-          ${highlight ? "text-purple-400" : "text-gray-300"}
+          ${
+            status
+              ? normalizeStatusValue(status) === "PAID"
+                ? "text-emerald-400"
+                : normalizeStatusValue(status) === "CONFIRMED"
+                  ? "text-blue-400"
+                  : normalizeStatusValue(status) === "CONTACTED"
+                    ? "text-amber-300"
+                    : normalizeStatusValue(status) === "CANCELLED"
+                      ? "text-red-400"
+                      : "text-purple-300"
+              : highlight
+                ? "text-purple-400"
+                : "text-gray-300"
+          }
         `}
       >
         {value || "-"}
