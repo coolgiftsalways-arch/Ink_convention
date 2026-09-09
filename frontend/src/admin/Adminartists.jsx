@@ -298,7 +298,8 @@ const normalizeMembershipRequest = (source = {}) => ({
     (normalizeDirectoryPlan(source.requestedPlan) === "verified"
       ? "GOLD / VERIFIED"
       : "SILVER / PRO"),
-  requestedAmount: Number(source.requestedAmount || 0),
+  requestedAmount:
+    normalizeDirectoryPlan(source.requestedPlan) === "verified" ? 5999 : 2999,
   pricingType: source.pricingType || "standard-membership",
   requestStatus: String(source.requestStatus || "new")
     .trim()
@@ -578,8 +579,8 @@ function AdminArtists() {
   // Directory membership filter:
   // basic-claimed   = FREE profile claimed by owner
   // basic-unclaimed = imported FREE profile not claimed yet
-  // pro             = SILVER ₹1,999
-  // verified        = GOLD ₹2,999
+  // pro             = SILVER ₹2,999
+  // verified        = GOLD ₹5,999
   const [membershipFilter, setMembershipFilter] = useState("all");
 
   // Unified artist status filter, similar to the Stall Booking dashboard.
@@ -1723,7 +1724,7 @@ function AdminArtists() {
     membershipFilter === "verified"
       ? {
           title: "Gold Verified",
-          price: "₹2,999",
+          price: "₹5,999",
           members: visibleDirectoryMembers,
           tone: "gold",
           icon: <Trophy size={18} />,
@@ -1733,7 +1734,7 @@ function AdminArtists() {
       : membershipFilter === "pro"
         ? {
             title: "Silver Pro",
-            price: "₹1,999",
+            price: "₹2,999",
             members: visibleDirectoryMembers,
             tone: "silver",
             icon: <Award size={18} />,
@@ -1869,13 +1870,13 @@ function AdminArtists() {
             />
 
             <DashboardStat
-              label="Silver Pro ₹1,999"
+              label="Silver Pro ₹2,999"
               value={filterMembersByState(silverMembers).length}
               tone="silver"
             />
 
             <DashboardStat
-              label="Gold Verified ₹2,999"
+              label="Gold Verified ₹5,999"
               value={filterMembersByState(goldMembers).length}
               tone="gold"
             />
@@ -2052,8 +2053,11 @@ function AdminArtists() {
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                         <MembershipInfo
                           label="Amount"
-                          value={`₹${Number(
-                            request.requestedAmount || 0,
+                          value={`₹${(normalizeDirectoryPlan(
+                            request.requestedPlan,
+                          ) === "verified"
+                            ? 5999
+                            : 2999
                           ).toLocaleString("en-IN")}`}
                         />
                         <MembershipInfo
@@ -2193,7 +2197,7 @@ function AdminArtists() {
 
                 <p className="text-xs sm:text-sm text-gray-600 mt-2">
                   Free profiles are separated by ownership claim status • Silver
-                  = ₹1,999 • Gold = ₹2,999
+                  = ₹2,999 • Gold = ₹5,999
                 </p>
               </div>
 
@@ -2428,7 +2432,7 @@ function AdminArtists() {
                 active={membershipFilter === "pro"}
                 onClick={() => setMembershipFilter("pro")}
                 title="SILVER"
-                subtitle="₹1,999 Plan"
+                subtitle="₹2,999 Plan"
                 count={stateSilverArtists.length}
                 tone="silver"
               />
@@ -2437,7 +2441,7 @@ function AdminArtists() {
                 active={membershipFilter === "verified"}
                 onClick={() => setMembershipFilter("verified")}
                 title="GOLD"
-                subtitle="₹2,999 Plan"
+                subtitle="₹5,999 Plan"
                 count={stateGoldArtists.length}
                 tone="gold"
               />

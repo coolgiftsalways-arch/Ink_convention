@@ -110,9 +110,9 @@ const PLANS = [
 
     name: "SILVER / PRO",
 
-    price: "₹1,999",
+    price: "₹2,999",
 
-    amount: 1999,
+    amount: 2999,
 
     billing: "1 YEAR",
 
@@ -136,9 +136,9 @@ const PLANS = [
 
     name: "GOLD / VERIFIED",
 
-    price: "₹2,999",
+    price: "₹5,999",
 
-    amount: 2999,
+    amount: 5999,
 
     billing: "1 YEAR",
 
@@ -928,14 +928,12 @@ export default function Enter() {
   );
 
   /* =======================================================
-     SILVER -> GOLD REQUEST PRICE
+     SILVER -> GOLD POLICY
 
-     There is NO online payment on this page.
-     Existing Silver members can request the one-time
-     ₹699 Gold upgrade when the offer has not been used.
+     Existing Silver members may move to Gold,
+     but Gold is always charged at the full ₹5,999 price.
+     There is no upgrade discount or balance deduction.
    ======================================================= */
-
-  const silverToGoldUpgradeAvailable = currentPlan === "pro";
 
   /* =======================================================
      RESET TO SEARCH
@@ -1886,11 +1884,7 @@ export default function Enter() {
       setError("Artist profile ID is missing.");
       return;
     }
-
-    const isGoldUpgrade =
-      selectedPlan.id === "verified" && silverToGoldUpgradeAvailable;
-
-    const requestedAmount = isGoldUpgrade ? 699 : selectedPlan.amount;
+    const requestedAmount = selectedPlan.amount;
 
     try {
       setSaving(true);
@@ -1907,10 +1901,7 @@ export default function Enter() {
           requestedPlanName: selectedPlan.name,
 
           requestedAmount,
-
-          pricingType: isGoldUpgrade
-            ? "silver-to-gold-upgrade"
-            : "standard-membership",
+          pricingType: "standard-membership",
 
           name:
             currentProfile.name || formData.name || selectedArtist?.name || "",
@@ -1947,10 +1938,7 @@ export default function Enter() {
         planName: request.requestedPlanName || selectedPlan.name,
 
         amount: Number(request.requestedAmount) || requestedAmount,
-
-        pricingType:
-          request.pricingType ||
-          (isGoldUpgrade ? "silver-to-gold-upgrade" : "standard-membership"),
+        pricingType: request.pricingType || "standard-membership",
       });
 
       setSuccess(
@@ -3796,9 +3784,6 @@ export default function Enter() {
                 key={plan.id}
                 plan={plan}
                 saving={saving}
-                silverToGoldUpgrade={
-                  plan.id === "verified" && silverToGoldUpgradeAvailable
-                }
                 onClick={() =>
                   plan.id === "basic"
                     ? chooseFreePlan()
@@ -4026,8 +4011,6 @@ function PlanCard({
 
   saving,
 
-  silverToGoldUpgrade = false,
-
   onClick,
 }) {
   const isBasic = plan.id === "basic";
@@ -4168,7 +4151,7 @@ function PlanCard({
             ${theme.price}
           `}
         >
-          {silverToGoldUpgrade ? "₹699" : plan.price}
+          {plan.price}
         </p>
 
         <span
@@ -4179,49 +4162,9 @@ function PlanCard({
             text-gray-500
           "
         >
-          {silverToGoldUpgrade ? "SILVER → GOLD UPGRADE" : plan.billing}
+          {plan.billing}
         </span>
       </div>
-
-      {silverToGoldUpgrade && (
-        <div
-          className="
-            relative
-            z-10
-            mt-4
-            rounded-xl
-            border
-            border-[#f5c451]/25
-            bg-[#f5c451]/[0.06]
-            px-4
-            py-3
-          "
-        >
-          <p
-            className="
-              text-[9px]
-              font-black
-              font-mono
-              tracking-wider
-              text-[#ffe59a]
-            "
-          >
-            ACTIVE SILVER UPGRADE OFFER
-          </p>
-
-          <p
-            className="
-              mt-1
-              text-[10px]
-              leading-relaxed
-              text-gray-400
-            "
-          >
-            Upgrade your active Silver membership to Gold for ₹699. This price
-            is available whenever your current active plan is Silver.
-          </p>
-        </div>
-      )}
 
       <p
         className="
@@ -4315,13 +4258,7 @@ function PlanCard({
           ${theme.button}
         `}
       >
-        <span>
-          {saving
-            ? "PLEASE WAIT..."
-            : silverToGoldUpgrade
-              ? "UPGRADE TO GOLD • ₹699"
-              : theme.buttonText}
-        </span>
+        <span>{saving ? "PLEASE WAIT..." : theme.buttonText}</span>
 
         {!saving && (
           <ArrowRight
