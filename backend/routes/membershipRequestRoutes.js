@@ -18,7 +18,9 @@ function isValidObjectId(value) {
 }
 
 function standardAmount(plan) {
-  return plan === "verified" ? 2999 : 1999;
+  if (plan === "verified") return 5999;
+  if (plan === "pro") return 2999;
+  return 0;
 }
 
 /* =========================================================
@@ -75,17 +77,10 @@ router.post("/", async (req, res) => {
       });
     }
 
-    let pricingType = "standard-membership";
-    let requestedAmount = standardAmount(requestedPlan);
-
-    if (
-      requestedPlan === "verified" &&
-      currentPlan === "pro" &&
-      !studio.silverToGoldUpgradeUsed
-    ) {
-      pricingType = "silver-to-gold-upgrade";
-      requestedAmount = 699;
-    }
+    // Silver and Gold always use their full standard price.
+    // Silver -> Gold is NOT discounted; Gold remains ₹5,999.
+    const pricingType = "standard-membership";
+    const requestedAmount = standardAmount(requestedPlan);
 
     const existingRequest = await MembershipRequest.findOne({
       profileId: studio._id,
@@ -94,6 +89,19 @@ router.post("/", async (req, res) => {
     }).sort({ createdAt: -1 });
 
     if (existingRequest) {
+      // Keep older pending requests in sync with the current pricing.
+      // This also fixes requests created when Silver/Gold used older prices.
+      if (
+        Number(existingRequest.requestedAmount) !== requestedAmount ||
+        existingRequest.pricingType !== "standard-membership"
+      ) {
+        existingRequest.requestedAmount = requestedAmount;
+        existingRequest.pricingType = "standard-membership";
+        existingRequest.requestedPlanName =
+          requestedPlan === "verified" ? "GOLD / VERIFIED" : "SILVER / PRO";
+        await existingRequest.save();
+      }
+
       return res.status(200).json({
         success: true,
         duplicate: true,
@@ -306,16 +314,10 @@ router.patch("/admin/activate-profile", async (req, res) => {
     }
 
     const now = new Date();
-    let amount = standardAmount(targetPlan);
 
-    if (
-      currentPlan === "pro" &&
-      targetPlan === "verified" &&
-      !studio.silverToGoldUpgradeUsed
-    ) {
-      amount = 699;
-      studio.silverToGoldUpgradeUsed = true;
-    }
+    // Always charge the full current plan price.
+    // Silver -> Gold costs the full Gold price: ₹5,999.
+    const amount = standardAmount(targetPlan);
 
     studio.plan = targetPlan;
     studio.paymentStatus = "paid";
@@ -479,8 +481,12 @@ router.patch("/:id/activate", async (req, res) => {
     studio.planExpiresAt = addOneCalendarYear(now);
 
     studio.paidAt = now;
-    studio.paymentAmount =
-      Number(request.requestedAmount) || standardAmount(targetPlan);
+    // Always store the current full plan price, even if an older request
+    // in MongoDB contains a legacy amount such as ₹1,999 or ₹699.
+    studio.paymentAmount = standardAmount(targetPlan);
+
+    request.requestedAmount = standardAmount(targetPlan);
+    request.pricingType = "standard-membership";
     studio.paymentCurrency = "INR";
 
     // Manual payment flow: clear old Razorpay identifiers so this activation
@@ -488,13 +494,6 @@ router.patch("/:id/activate", async (req, res) => {
     studio.razorpayOrderId = "";
     studio.razorpayPaymentId = "";
     studio.razorpaySignature = "";
-
-    if (
-      targetPlan === "verified" &&
-      request.pricingType === "silver-to-gold-upgrade"
-    ) {
-      studio.silverToGoldUpgradeUsed = true;
-    }
 
     await studio.save();
 
