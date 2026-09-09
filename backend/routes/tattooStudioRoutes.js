@@ -20,7 +20,9 @@ const router = express.Router();
    START MEMBERSHIP EXPIRY WORKER
 ========================================================= */
 
-startMembershipExpiryWorker();
+if (process.env.NODE_ENV !== "test") {
+  startMembershipExpiryWorker();
+}
 
 /* =========================================================
    SAFE REGEX

@@ -1016,6 +1016,8 @@ export default function Artists() {
   const [selectedArtist, setSelectedArtist] = React.useState(null);
 
   const [page, setPage] = React.useState(0);
+  const [totalArtists, setTotalArtists] = React.useState(0);
+const [totalArtistPages, setTotalArtistPages] = React.useState(1);
 
   const artistSectionRef = React.useRef(null);
 
@@ -1087,121 +1089,97 @@ export default function Artists() {
   /* =======================================================
      LOAD REAL ARTISTS
   ======================================================= */
+React.useEffect(() => {
+  const controller = new AbortController();
 
-  React.useEffect(() => {
-    const controller = new AbortController();
-
-    let cancelled = false;
-
-    async function loadArtists() {
+  async function loadArtists() {
+    try {
       setLoading(true);
       setError("");
 
-      const allResults = [];
+      const params = new URLSearchParams({
+  page: String(page + 1),
+  limit: String(ARTISTS_PER_PAGE),
+});
 
-      const limit = 1000;
+if (selectedCity !== "ALL") {
+  params.set("city", selectedCity);
+}
 
-      let currentPage = 1;
+const cleanSearch = searchQuery.trim();
 
-      try {
-        while (!cancelled && !controller.signal.aborted) {
-          const params = new URLSearchParams({
-            page: String(currentPage),
+if (cleanSearch.length >= MIN_SEARCH_CHARACTERS) {
+  params.set("search", cleanSearch);
+}
 
-            limit: String(limit),
-          });
+      const response = await fetch(
+        `${getApiBase()}/api/admin/tattoo-studios?${params.toString()}`,
+        {
+          signal: controller.signal,
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
 
-          if (selectedCity !== "ALL") {
-            // Selected city = Gold + Silver + Free from that city
-            params.set("city", selectedCity);
-          }
+      if (!response.ok) {
+        throw new Error(`Artist directory HTTP ${response.status}`);
+      }
 
-          const response = await fetch(
-            `${getApiBase()}/api/admin/tattoo-studios?${params.toString()}`,
-            {
-              signal: controller.signal,
+      const data = await response.json();
 
-              credentials: "include",
+      const results = Array.isArray(data?.artists)
+        ? data.artists
+        : Array.isArray(data?.data)
+          ? data.data
+          : Array.isArray(data?.users)
+            ? data.users
+            : [];
 
-              headers: {
-                Accept: "application/json",
-              },
-            },
-          );
+      const normalized = results.map(normalizeArtist);
 
-          if (!response.ok) {
-            throw new Error(`Artist directory HTTP ${response.status}`);
-          }
+      setArtists(sortArtists(normalized));
 
-          const data = await response.json();
+      setTotalArtists(
+        Number(data?.pagination?.total || results.length),
+      );
 
-          const currentResults = Array.isArray(data?.artists)
-            ? data.artists
-            : Array.isArray(data?.data)
-              ? data.data
-              : Array.isArray(data?.users)
-                ? data.users
-                : [];
+      setTotalArtistPages(
+        Math.max(
+          1,
+          Number(data?.pagination?.totalPages || 1),
+        ),
+      );
+    } catch (requestError) {
+      if (requestError?.name === "AbortError") {
+        return;
+      }
 
-          allResults.push(...currentResults);
+      console.error("❌ Artist directory error:", requestError);
 
-          const responseTotalPages = Math.max(
-            1,
-            Number(data?.pagination?.totalPages || 1),
-          );
-
-          if (currentPage >= responseTotalPages) {
-            break;
-          }
-
-          currentPage += 1;
-        }
-
-        if (cancelled || controller.signal.aborted) {
-          return;
-        }
-
-        const normalized = allResults.map(normalizeArtist);
-
-        setArtists(sortArtists(normalized));
-      } catch (requestError) {
-        if (requestError?.name === "AbortError") {
-          return;
-        }
-
-        console.error("❌ Artist directory error:", requestError);
-
-        if (!cancelled) {
-          setArtists([]);
-
-          setError("Unable to load artists. Please try again.");
-        }
-      } finally {
-        if (!cancelled && !controller.signal.aborted) {
-          setLoading(false);
-        }
+      setArtists([]);
+      setTotalArtists(0);
+      setTotalArtistPages(1);
+      setError("Unable to load artists. Please try again.");
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
       }
     }
+  }
 
-    void loadArtists();
+  void loadArtists();
 
-    const handleFocus = () => {
-      if (!cancelled && !controller.signal.aborted) {
-        void loadArtists();
-      }
-    };
-
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
-      cancelled = true;
-
-      controller.abort();
-
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [selectedCity, location.state?.refreshDirectory]);
-
+  return () => {
+    controller.abort();
+  };
+}, [
+  page,
+  selectedCity,
+  searchQuery,
+  location.state?.refreshDirectory,
+]);
   /* =======================================================
      OPEN SHARED ARTIST PROFILE FROM URL
   ======================================================= */
@@ -1256,72 +1234,29 @@ export default function Artists() {
   const isSearchActive = normalizedSearchQuery.length >= MIN_SEARCH_CHARACTERS;
 
   const filteredArtists = React.useMemo(() => {
-    /*
-      Search begins ONLY after 3 characters.
-
-      Example:
-      A   -> normal directory
-      Ah  -> normal directory
-      Ahm -> matching artists such as Ahmed / Ahmad / Ahmer
-
-      Search uses only the public fields allowed by the artist's plan.
-    */
-    if (!isSearchActive) {
-      return sortArtists(artists);
-    }
-
-    const query = normalizedSearchQuery;
-
-    const results = artists.filter((artist) => {
-      const plan = normalizePlan(artist.plan);
-
-      const publicValues = [artist.name, artist.state];
-
-      if (plan === "pro" || plan === "verified") {
-        publicValues.push(artist.city, artist.phone);
-      }
-
-      if (plan === "verified") {
-        publicValues.push(
-          artist.email,
-          artist.studio,
-          artist.experience,
-          artist.instagram,
-          artist.bio,
-        );
-      }
-
-      return publicValues.some((value) => safeText(value).includes(query));
-    });
-
-    return sortArtists(results);
-  }, [artists, isSearchActive, normalizedSearchQuery]);
+  return sortArtists(artists);
+}, [artists]);
 
   /* =======================================================
      PAGINATION
   ======================================================= */
 
-  const totalArtistPages = Math.max(
-    1,
-    Math.ceil(filteredArtists.length / ARTISTS_PER_PAGE),
-  );
+  const safeArtistPage = Math.min(
+  page,
+  Math.max(0, totalArtistPages - 1),
+);
 
-  const safeArtistPage = Math.min(page, totalArtistPages - 1);
+const artistPageStart = safeArtistPage * ARTISTS_PER_PAGE;
 
-  const artistPageStart = safeArtistPage * ARTISTS_PER_PAGE;
+const visibleArtists = filteredArtists;
 
-  const visibleArtists = filteredArtists.slice(
-    artistPageStart,
-    artistPageStart + ARTISTS_PER_PAGE,
-  );
+const firstVisibleArtistNumber =
+  totalArtists === 0 ? 0 : artistPageStart + 1;
 
-  const firstVisibleArtistNumber =
-    filteredArtists.length === 0 ? 0 : artistPageStart + 1;
-
-  const lastVisibleArtistNumber = Math.min(
-    artistPageStart + ARTISTS_PER_PAGE,
-    filteredArtists.length,
-  );
+const lastVisibleArtistNumber = Math.min(
+  artistPageStart + visibleArtists.length,
+  totalArtists,
+);
 
   React.useEffect(() => {
     /*
@@ -1860,11 +1795,11 @@ export default function Artists() {
                     "
                   >
                     {loading
-                      ? "LOADING..."
-                      : `${filteredArtists.length} ARTISTS`}
+  ? "LOADING..."
+  : `${totalArtists} ARTISTS`}
                   </span>
 
-                  {filteredArtists.length > ARTISTS_PER_PAGE && (
+                  {totalArtists > ARTISTS_PER_PAGE && (
                     <span
                       className="
                         text-[8px]
