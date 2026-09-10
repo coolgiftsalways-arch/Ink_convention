@@ -142,6 +142,20 @@ const tattooStudioSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    /* =====================================================
+   PROFILE LINKS
+
+   SAVED FOR ALL PLANS:
+   FREE / SILVER / GOLD
+
+   Public visibility is controlled by membership.
+   Only GOLD displays these links publicly.
+===================================================== */
+
+profileLinks: {
+  type: [String],
+  default: [],
+},
 
     bio: {
       type: String,
@@ -547,6 +561,14 @@ tattooStudioSchema.pre(
       this.portfolioImages = [];
     }
 
+    if (Array.isArray(this.profileLinks)) {
+  this.profileLinks = this.profileLinks
+    .map((link) => String(link || "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+} else {
+  this.profileLinks = [];
+}
     /* =============================================
        PREMIUM FLAGS
     ============================================= */
@@ -572,6 +594,15 @@ tattooStudioSchema.pre(
     if (!setData || typeof setData !== "object") {
       return;
     }
+
+    if (setData.profileLinks !== undefined) {
+  setData.profileLinks = Array.isArray(setData.profileLinks)
+    ? setData.profileLinks
+        .map((link) => String(link || "").trim())
+        .filter(Boolean)
+        .slice(0, 3)
+    : [];
+}
 
     /* =============================================
        PLAN

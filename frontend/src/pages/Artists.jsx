@@ -846,8 +846,9 @@ function getDefaultLocked(plan) {
     instagram: normalized !== "verified",
 
     bio: normalized !== "verified",
+     // Only Gold can show these publicly
+    profileLinks: normalized !== "verified",
 
-    website: normalized !== "verified",
 
     portfolioImages: normalized === "basic",
   };
@@ -889,15 +890,18 @@ function normalizeArtist(source = {}) {
 
     instagram: source.instagram || "",
 
-    website: source.website || source.websiteUrl || "",
+bio: source.bio || "",
 
-    tattooStyles: Array.isArray(source.tattooStyles) ? source.tattooStyles : [],
+profileLinks: Array.isArray(source.profileLinks)
+  ? source.profileLinks
+      .map((link) => String(link || "").trim())
+      .filter(Boolean)
+      .slice(0, 3)
+  : [],
 
-    bio: source.bio || "",
-
-    portfolioImages: Array.isArray(source.portfolioImages)
-      ? source.portfolioImages.slice(0, 10)
-      : [],
+portfolioImages: Array.isArray(source.portfolioImages)
+  ? source.portfolioImages.slice(0, 10)
+  : [],
 
     locked: {
       ...getDefaultLocked(plan),
@@ -4196,43 +4200,89 @@ function ArtistModal({ artist, onClose }) {
               locked={a.locked.instagram}
               plan={a.plan}
             />
-            <CompactProfileField
-              title="WEBSITE"
-              value={a.website}
-              locked={a.locked.website}
-              plan={a.plan}
-            />
-          </div>
+            {isGold && a.profileLinks.length > 0 && (
+  <div className="mt-4 border-t border-white/10 pt-4">
+    <div className="flex flex-col gap-3">
+      
+      <div>
+        <p
+          className={`text-[7px] font-mono font-black tracking-[0.18em] ${theme.text}`}
+        >
+          CONNECT WITH ARTIST
+        </p>
 
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <p
-              className={`mb-2 text-[7px] font-mono font-black tracking-[0.18em] ${theme.text}`}
+        <p className="mt-1 text-[9px] text-gray-500">
+          Follow or visit this artist on their social platforms.
+        </p>
+      </div>
+
+      <div className="flex w-full flex-row flex-nowrap items-center gap-3">
+        {a.profileLinks.map((link, index) => {
+          let label = `Link ${index + 1}`;
+
+          try {
+            const url = new URL(link);
+            const host = url.hostname.toLowerCase();
+
+            if (host.includes("instagram.com")) {
+              label = "Instagram";
+            } else if (
+              host.includes("youtube.com") ||
+              host.includes("youtu.be")
+            ) {
+              label = "YouTube";
+            } else if (host.includes("facebook.com")) {
+              label = "Facebook";
+            } else if (
+              host.includes("twitter.com") ||
+              host.includes("x.com")
+            ) {
+              label = "X / Twitter";
+            } else if (host.includes("tiktok.com")) {
+              label = "TikTok";
+            } else {
+              label = "Website";
+            }
+          } catch {
+            label = `Link ${index + 1}`;
+          }
+
+          return (
+            <a
+              key={`${link}-${index}`}
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="
+                inline-flex
+                shrink-0
+                items-center
+                justify-center
+                whitespace-nowrap
+                rounded-lg
+                border
+                border-[#f5c451]/30
+                bg-[#f5c451]/[0.06]
+                px-5
+                py-3
+                text-[8px]
+                font-black
+                tracking-wider
+                text-[#f5c451]
+                transition
+                hover:border-[#f5c451]/60
+                hover:bg-[#f5c451]/[0.12]
+              "
             >
-              TATTOO STYLES
-            </p>
-            {a.locked.tattooStyles ? (
-              <div className="flex min-h-[46px] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3">
-                <Lock size={10} className="text-gray-600" />
-                <span className="text-[9px] text-gray-600">
-                  TATTOO STYLES LOCKED
-                </span>
-              </div>
-            ) : a.tattooStyles.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {a.tattooStyles.map((style) => (
-                  <span
-                    key={style}
-                    className={`rounded-full border px-3 py-1.5 text-[8px] font-black ${theme.softBorder} ${theme.softText}`}
-                  >
-                    {style}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[9px] text-gray-600">
-                No tattoo styles added yet.
-              </p>
-            )}
+              {label} ↗
+            </a>
+          );
+        })}
+      </div>
+
+    </div>
+  </div>
+)}
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 border-t border-white/10 pt-4 lg:grid-cols-[0.9fr_1.1fr]">

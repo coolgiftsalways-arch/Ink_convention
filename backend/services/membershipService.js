@@ -150,7 +150,9 @@ function publicLockedMap(plan) {
     experience: !isVerified,
     instagram: !isVerified,
     bio: !isVerified,
+    profileLinks: !isVerified,
     portfolioImages: isBasic,
+    
   };
 }
 
@@ -215,6 +217,12 @@ function serializePublicArtist(source = {}) {
   result.experience = studio.experience || "";
   result.instagram = studio.instagram || "";
   result.bio = studio.bio || "";
+  result.profileLinks = Array.isArray(studio.profileLinks)
+  ? studio.profileLinks
+      .map((link) => String(link || "").trim())
+      .filter(Boolean)
+      .slice(0, 3)
+  : [];
   result.portfolioImages = Array.isArray(studio.portfolioImages)
     ? studio.portfolioImages.slice(0, 10)
     : [];

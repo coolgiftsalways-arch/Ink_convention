@@ -184,6 +184,7 @@ const EMPTY_FORM = {
   tattooStyles: [],
 
   bio: "",
+  profileLinks: ["", "", ""],
 };
 
 /* =========================================================
@@ -307,6 +308,13 @@ function makeForm(profile = {}) {
       : [],
 
     bio: profile.bio || "",
+    profileLinks: Array.isArray(profile.profileLinks)
+      ? [
+          profile.profileLinks[0] || "",
+          profile.profileLinks[1] || "",
+          profile.profileLinks[2] || "",
+        ]
+      : ["", "", ""],
   };
 }
 
@@ -1524,9 +1532,16 @@ export default function Enter() {
 
             bio: formData.bio.trim(),
 
-            profileImage,
+profileLinks: Array.isArray(formData.profileLinks)
+  ? formData.profileLinks
+      .map((link) => String(link || "").trim())
+      .filter(Boolean)
+      .slice(0, 3)
+  : [],
 
-            portfolioImages,
+profileImage,
+
+portfolioImages,
           },
         },
       );
@@ -3261,6 +3276,97 @@ export default function Enter() {
                 maxLength={1500}
                 required={false}
               />
+
+              {/* =====================================
+    PROFILE LINKS
+    SAVED FOR EVERYONE
+    PUBLICLY VISIBLE ONLY FOR GOLD
+===================================== */}
+
+<div
+  className="
+    rounded-2xl
+    border
+    border-white/10
+    bg-[#0d0d11]
+    p-5
+    space-y-4
+  "
+>
+  <div>
+    <p className="text-[9px] font-mono tracking-[0.14em] text-purple-400">
+      PROFILE LINKS
+    </p>
+
+    <h3 className="mt-2 text-lg font-black uppercase">
+      Add Your Links
+    </h3>
+
+    <p className="mt-2 text-xs text-gray-500 leading-relaxed">
+      Add up to 3 links. Your links stay saved with your profile.
+      They are publicly visible only with an active Gold membership.
+    </p>
+  </div>
+
+  {[0, 1, 2].map((index) => (
+    <InputField
+      key={index}
+      label={`LINK ${index + 1}`}
+      type="url"
+      value={formData.profileLinks?.[index] || ""}
+      onChange={(event) => {
+        const value = event.target.value;
+
+        setFormData((previous) => {
+          const links = Array.isArray(previous.profileLinks)
+            ? [...previous.profileLinks]
+            : ["", "", ""];
+
+          links[index] = value;
+
+          return {
+            ...previous,
+            profileLinks: links,
+          };
+        });
+
+        clearMessages();
+      }}
+      placeholder={
+        index === 0
+          ? "https://instagram.com/..."
+          : index === 1
+            ? "https://youtube.com/..."
+            : "https://yourwebsite.com"
+      }
+      required={false}
+    />
+  ))}
+
+  {currentPlan !== "verified" && (
+    <div
+      className="
+        rounded-xl
+        border
+        border-yellow-400/20
+        bg-yellow-400/[0.04]
+        px-4
+        py-3
+      "
+    >
+      <p className="text-[10px] text-yellow-400 leading-relaxed">
+        Your links are saved privately. Upgrade to Gold to display them
+        publicly on your artist profile.
+      </p>
+    </div>
+  )}
+
+  {currentPlan === "verified" && (
+    <p className="text-[10px] text-green-400">
+      ✓ Your links are visible on your public Gold profile.
+    </p>
+  )}
+</div>
 
               {/* =====================================
                   PORTFOLIO

@@ -212,19 +212,11 @@ export default function HallOfFame() {
      OPEN ARTIST
   ======================================================= */
 
-  const handleArtistClick = (artist) => {
-    if (artist.standaloneProfileUrl) {
-      navigate(artist.standaloneProfileUrl);
+const [selectedArtist, setSelectedArtist] = useState(null);
 
-      return;
-    }
-
-    navigate("/artists", {
-      state: {
-        selectedArtistId: artist.id,
-      },
-    });
-  };
+const handleArtistClick = (artist) => {
+  setSelectedArtist(artist);
+};
 
   return (
     <main
@@ -704,6 +696,121 @@ export default function HallOfFame() {
           </section>
         )}
       </div>
+      {selectedArtist && (
+  <div
+    className="
+      fixed inset-0 z-[9999]
+      bg-black/80 backdrop-blur-sm
+      flex items-center justify-center
+      p-4
+    "
+    onClick={() => setSelectedArtist(null)}
+  >
+    <div
+      className="
+        relative
+        w-full max-w-3xl
+        max-h-[90vh]
+        overflow-y-auto
+        rounded-[28px]
+        border border-yellow-300/20
+        bg-[#0b0b0f]
+        p-6 sm:p-8
+      "
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        onClick={() => setSelectedArtist(null)}
+        className="
+          absolute
+          top-4 right-4
+          w-10 h-10
+          rounded-full
+          bg-white/10
+          text-white
+          flex items-center justify-center
+          hover:bg-white/20
+        "
+      >
+        ✕
+      </button>
+
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="md:w-[280px] shrink-0">
+          <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-[#111]">
+            {selectedArtist.profileImage ? (
+              <img
+                src={selectedArtist.profileImage}
+                alt={selectedArtist.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Users size={50} className="text-yellow-400/30" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1">
+          <p className="text-[9px] font-black tracking-[0.15em] text-yellow-400">
+            GOLD VERIFIED ARTIST
+          </p>
+
+          <h2 className="mt-3 text-4xl sm:text-5xl font-black uppercase">
+            {selectedArtist.name}
+          </h2>
+
+          {selectedArtist.studio && (
+            <p className="mt-3 text-gray-400">
+              {selectedArtist.studio}
+            </p>
+          )}
+
+          <div className="mt-6 space-y-3">
+            {(selectedArtist.city || selectedArtist.state) && (
+              <ProfileInfo
+                label="LOCATION"
+                value={[selectedArtist.city, selectedArtist.state]
+                  .filter(Boolean)
+                  .join(", ")}
+              />
+            )}
+
+            {selectedArtist.experience && (
+              <ProfileInfo
+                label="EXPERIENCE"
+                value={selectedArtist.experience}
+              />
+            )}
+
+            {selectedArtist.instagram && (
+              <ProfileInfo
+                label="INSTAGRAM"
+                value={selectedArtist.instagram}
+              />
+            )}
+
+            {selectedArtist.email && (
+              <ProfileInfo
+                label="EMAIL"
+                value={selectedArtist.email}
+              />
+            )}
+
+            {selectedArtist.phone && (
+              <ProfileInfo
+                label="PHONE"
+                value={selectedArtist.phone}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </main>
   );
 }

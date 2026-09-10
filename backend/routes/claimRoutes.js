@@ -1112,30 +1112,32 @@ router.post(
   async (req, res) => {
     try {
       const {
-        profileId,
+  profileId,
 
-        name,
+  name,
 
-        email,
+  email,
 
-        city,
+  city,
 
-        state,
+  state,
 
-        studio,
+  studio,
 
-        experience,
+  experience,
 
-        instagram,
+  instagram,
 
-        tattooStyles,
+  tattooStyles,
 
-        bio,
+  bio,
 
-        profileImage,
+  profileLinks,
 
-        portfolioImages,
-      } = req.body || {};
+  profileImage,
+
+  portfolioImages,
+} = req.body || {};
 
       /* =============================================
          SECURITY
@@ -1244,6 +1246,27 @@ router.post(
 
         artist.bio = cleanBio;
       }
+
+      /* =============================================
+   PROFILE LINKS
+
+   MAXIMUM 3 SAVED
+   SAVED FOR FREE / SILVER / GOLD
+============================================= */
+
+if (profileLinks !== undefined) {
+  if (!Array.isArray(profileLinks)) {
+    return res.status(400).json({
+      success: false,
+      message: "profileLinks must be an array.",
+    });
+  }
+
+  artist.profileLinks = profileLinks
+    .map((link) => String(link || "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
 
       /* =============================================
          PROFILE IMAGE
