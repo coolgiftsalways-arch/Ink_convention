@@ -20,7 +20,7 @@ import gsap from "gsap";
 ========================================================= */
 
 const ARTISTS_PER_PAGE = 20;
-const AUTO_ROTATE_MS = 4000;
+
 const MIN_SEARCH_CHARACTERS = 3;
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -1016,6 +1016,15 @@ export default function Artists() {
   const [selectedCity, setSelectedCity] = React.useState("ALL");
 
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+
+React.useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(searchQuery.trim());
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [searchQuery]);
 
   const [directoryCities, setDirectoryCities] = React.useState([]);
 
@@ -1034,6 +1043,40 @@ export default function Artists() {
   const artistSectionRef = React.useRef(null);
 
   const artistGridRef = React.useRef(null);
+
+
+  const openArtistProfile = async (artist) => {
+  try {
+    const response = await fetch(
+      `${getApiBase()}/api/admin/tattoo-studios/public/${artist.id}`,
+      {
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Unable to load artist profile");
+    }
+
+    const data = await response.json();
+
+    const fullArtist = data?.artist || data?.profile;
+
+    if (!fullArtist) {
+      setSelectedArtist(artist);
+      return;
+    }
+
+    setSelectedArtist(normalizeArtist(fullArtist));
+  } catch (error) {
+    console.error("Profile load error:", error);
+
+    setSelectedArtist(artist);
+  }
+};
 
   /* =======================================================
      LOAD REAL CITIES
@@ -1118,7 +1161,7 @@ export default function Artists() {
           params.set("city", selectedCity);
         }
 
-        const cleanSearch = searchQuery.trim();
+        const cleanSearch = debouncedSearch;
 
         if (cleanSearch.length >= MIN_SEARCH_CHARACTERS) {
           params.set("search", cleanSearch);
@@ -1181,7 +1224,7 @@ export default function Artists() {
     return () => {
       controller.abort();
     };
-  }, [page, selectedCity, searchQuery, location.state?.refreshDirectory]);
+  }, [page, selectedCity, debouncedSearch, location.state?.refreshDirectory]);
   /* =======================================================
      OPEN SHARED ARTIST PROFILE FROM URL
   ======================================================= */
@@ -1236,47 +1279,8 @@ export default function Artists() {
   const isSearchActive = normalizedSearchQuery.length >= MIN_SEARCH_CHARACTERS;
 
   const filteredArtists = React.useMemo(() => {
-    /*
-      Search begins ONLY after 3 characters.
-
-      Example:
-      A   -> normal directory
-      Ah  -> normal directory
-      Ahm -> matching artists such as Ahmed / Ahmad / Ahmer
-
-      Search uses only the public fields allowed by the artist's plan.
-    */
-    if (!isSearchActive) {
-      return sortArtists(artists);
-    }
-
-    const query = normalizedSearchQuery;
-
-    const results = artists.filter((artist) => {
-      const plan = normalizePlan(artist.plan);
-
-      const publicValues = [artist.name, artist.state];
-
-      if (plan === "pro" || plan === "verified") {
-        publicValues.push(artist.city, artist.phone);
-      }
-
-      if (plan === "verified") {
-        publicValues.push(
-          artist.email,
-          artist.studio,
-          artist.experience,
-          artist.instagram,
-          artist.website,
-          artist.bio,
-        );
-      }
-
-      return publicValues.some((value) => safeText(value).includes(query));
-    });
-
-    return sortArtists(results);
-  }, [artists, isSearchActive, normalizedSearchQuery]);
+  return artists;
+}, [artists]);
 
   /* =======================================================
      PAGINATION
@@ -1295,25 +1299,7 @@ export default function Artists() {
     totalArtists,
   );
 
-  React.useEffect(() => {
-    /*
-      IMPORTANT:
-      AUTO ROTATION STOPS while a real search is active.
-
-      The user can manually use NEXT / PREVIOUS to move
-      through search-result pages without the page changing
-      automatically every 4 seconds.
-    */
-    if (isSearchActive || totalArtistPages <= 1 || selectedArtist) {
-      return undefined;
-    }
-
-    const timer = window.setInterval(() => {
-      setPage((current) => (current + 1) % totalArtistPages);
-    }, AUTO_ROTATE_MS);
-
-    return () => window.clearInterval(timer);
-  }, [isSearchActive, totalArtistPages, selectedArtist]);
+ 
 
   React.useEffect(() => {
     if (!artistGridRef.current || visibleArtists.length === 0) {
@@ -1972,7 +1958,7 @@ export default function Artists() {
                             String(location.state?.newArtistId || "") ===
                             String(artist.id || "")
                           }
-                          onClick={() => setSelectedArtist(artist)}
+                          onClick={() => openArtistProfile(artist)}
                         />
                       );
                     })}

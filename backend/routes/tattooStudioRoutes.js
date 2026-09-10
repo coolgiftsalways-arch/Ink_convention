@@ -15,6 +15,10 @@ const {
 } = require("../services/membershipService");
 
 const router = express.Router();
+let filterCache = null;
+let filterCacheTime = 0;
+
+const FILTER_CACHE_TTL = 10 * 60 * 1000;
 
 /* =========================================================
    START MEMBERSHIP EXPIRY WORKER
@@ -249,8 +253,6 @@ router.get(
          EXPIRE OLD PAID PLANS FIRST
       ============================================= */
 
-      await expireMemberships();
-
       /* =============================================
          PAGINATION
       ============================================= */
@@ -259,7 +261,7 @@ router.get(
 
       const requestedLimit = parseInt(req.query.limit, 10) || 20;
 
-      const limit = Math.min(Math.max(requestedLimit, 1), 1000);
+      const limit = Math.min(Math.max(requestedLimit, 1), 50);
 
       const skip = (page - 1) * limit;
 
@@ -325,18 +327,12 @@ router.get(
       ============================================= */
 
       if (
-        city &&
-        String(city).trim() &&
-        String(city).trim().toUpperCase() !== "ALL"
-      ) {
-        const cityValue = String(city).trim();
-
-        filter.city = {
-          $regex: `^${escapeRegex(cityValue)}$`,
-
-          $options: "i",
-        };
-      }
+  city &&
+  String(city).trim() &&
+  String(city).trim().toUpperCase() !== "ALL"
+) {
+  filter.city = String(city).trim();
+}
 
       /* =============================================
          STATE FILTER
@@ -521,26 +517,96 @@ router.get(
          FREE
       ============================================= */
 
-      const [studios, total] = await Promise.all([
-        TattooStudio.find(filter)
-          .sort({
-            verified: -1,
+     const hasFilters = Object.keys(filter).length > 0;
 
-            spotlight: -1,
+const hasCityFilter =
+  city &&
+  String(city).trim() &&
+  String(city).trim().toUpperCase() !== "ALL";
 
-            plan: -1,
+/* =====================================================
+   ARTIST QUERY
+===================================================== */
 
-            updatedAt: -1,
+let artistQuery = TattooStudio.find(filter)
+  .select({
+    _id: 1,
 
-            name: 1,
-          })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+    name: 1,
+    artistName: 1,
+    professionalName: 1,
 
-        TattooStudio.countDocuments(filter),
-      ]);
+    studio: 1,
+    studioName: 1,
 
+    city: 1,
+    state: 1,
+    category: 1,
+    tattooStyles: 1,
+
+    plan: 1,
+    paymentStatus: 1,
+
+    verified: 1,
+    spotlight: 1,
+    hallOfFameEligible: 1,
+
+    rating: 1,
+    experience: 1,
+
+    phone: 1,
+    email: 1,
+
+    instagram: 1,
+    website: 1,
+
+
+    updatedAt: 1,
+  });
+
+if (hasCityFilter) {
+  artistQuery = artistQuery.collation({
+    locale: "en",
+    strength: 2,
+  });
+}
+
+artistQuery = artistQuery
+  .sort({
+    plan: -1,
+    updatedAt: -1,
+    name: 1,
+  })
+  .skip(skip)
+  .limit(limit)
+  .lean();
+/* =====================================================
+   COUNT QUERY
+===================================================== */
+
+let countQuery;
+
+if (hasFilters) {
+  countQuery = TattooStudio.countDocuments(filter);
+
+  if (hasCityFilter) {
+    countQuery = countQuery.collation({
+      locale: "en",
+      strength: 2,
+    });
+  }
+} else {
+  countQuery = TattooStudio.estimatedDocumentCount();
+}
+
+/* =====================================================
+   RUN BOTH TOGETHER
+===================================================== */
+
+const [studios, total] = await Promise.all([
+  artistQuery,
+  countQuery,
+]);
       /* =============================================
          PUBLIC PRIVACY SERIALIZER
       ============================================= */
@@ -556,11 +622,11 @@ router.get(
       return res.status(200).json({
         success: true,
 
-        data: publicStudios,
+        
 
         artists: publicStudios,
 
-        users: publicStudios,
+        
 
         total,
 
@@ -712,7 +778,18 @@ router.get(
 
   async (req, res) => {
     try {
-      await expireMemberships();
+      if (
+  filterCache &&
+  Date.now() - filterCacheTime < FILTER_CACHE_TTL
+) {
+  return res.status(200).json({
+    success: true,
+    filters: filterCache,
+  });
+}
+      /* =============================================
+         GET REAL VALUES FROM MONGODB
+      ============================================= */
 
       /* =============================================
          GET REAL VALUES FROM MONGODB
@@ -768,29 +845,26 @@ router.get(
           )
           .sort((a, b) => a.localeCompare(b));
 
+          filterCache = {
+  states: cleanSort(states),
+  cities: cleanSort(cities),
+  categories: cleanSort(categories),
+  tattooStyles: cleanSort(tattooStylesRaw),
+  plans: ["basic", "pro", "verified"],
+  ratings: [5, 4.5, 4, 3.5, 3],
+  verified: [true, false],
+};
+
+filterCacheTime = Date.now();
+
       /* =============================================
          RESPONSE
       ============================================= */
 
       return res.status(200).json({
-        success: true,
-
-        filters: {
-          states: cleanSort(states),
-
-          cities: cleanSort(cities),
-
-          categories: cleanSort(categories),
-
-          tattooStyles: cleanSort(tattooStylesRaw),
-
-          plans: ["basic", "pro", "verified"],
-
-          ratings: [5, 4.5, 4, 3.5, 3],
-
-          verified: [true, false],
-        },
-      });
+  success: true,
+  filters: filterCache,
+});
     } catch (error) {
       console.error("❌ Tattoo directory filters error:", error);
 
@@ -817,7 +891,7 @@ router.get(
 
   async (req, res) => {
     try {
-      await expireMemberships();
+     
 
       const [total, gold, silver, basic, paidGold, paidSilver] =
         await Promise.all([
