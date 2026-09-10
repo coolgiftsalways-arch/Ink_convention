@@ -26,9 +26,6 @@ function standardAmount(plan) {
 /* =========================================================
    CREATE SILVER / GOLD REQUEST
    POST /api/membership-requests
-
-   NO RAZORPAY.
-   THIS DOES NOT ACTIVATE THE PLAN.
 ========================================================= */
 
 router.post("/", async (req, res) => {
@@ -77,8 +74,6 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Silver and Gold always use their full standard price.
-    // Silver -> Gold is NOT discounted; Gold remains ₹5,999.
     const pricingType = "standard-membership";
     const requestedAmount = standardAmount(requestedPlan);
 
@@ -89,7 +84,6 @@ router.post("/", async (req, res) => {
     }).sort({ createdAt: -1 });
 
     if (existingRequest) {
-      // Keep older pending requests in sync with current pricing.
       if (
         Number(existingRequest.requestedAmount) !== requestedAmount ||
         existingRequest.pricingType !== "standard-membership"
@@ -206,25 +200,11 @@ router.get("/", async (req, res) => {
 /* =========================================================
    DIRECT ADMIN ACTIVATION
    PATCH /api/membership-requests/admin/activate-profile
-
-   USE FROM ADMIN DASHBOARD ONLY.
-
-   Allows:
-   FREE / BASIC -> SILVER / PRO
-   FREE / BASIC -> GOLD / VERIFIED
-   SILVER / PRO -> FREE / BASIC
-   SILVER / PRO -> GOLD / VERIFIED
-   GOLD / VERIFIED -> SILVER / PRO
-   GOLD / VERIFIED -> FREE / BASIC
-
-   NO RAZORPAY.
-   PAID ACTIVATIONS REQUIRE MANUAL PAYMENT CONFIRMATION.
 ========================================================= */
 
 router.patch("/admin/activate-profile", async (req, res) => {
   try {
     const profileId = cleanText(req.body?.profileId);
-
     const targetPlan = normalizePlan(req.body?.plan);
 
     if (!isValidObjectId(profileId)) {
@@ -252,10 +232,6 @@ router.patch("/admin/activate-profile", async (req, res) => {
 
     const currentPlan = normalizePlan(studio.plan);
 
-    /* ================================
-         CHANGE TO FREE
-      ================================= */
-
     if (targetPlan === "basic") {
       if (currentPlan === "basic" && studio.paymentStatus !== "paid") {
         return res.status(200).json({
@@ -268,14 +244,12 @@ router.patch("/admin/activate-profile", async (req, res) => {
 
       studio.plan = "basic";
       studio.paymentStatus = "unpaid";
-
       studio.verified = false;
       studio.spotlight = false;
       studio.hallOfFameEligible = false;
 
       studio.planStartedAt = null;
       studio.planExpiresAt = null;
-
       studio.paidAt = null;
 
       studio.paymentAmount = 0;
@@ -294,38 +268,25 @@ router.patch("/admin/activate-profile", async (req, res) => {
       });
     }
 
-    /* ================================
-         ALREADY ACTIVE
-      ================================= */
-
     if (currentPlan === targetPlan && studio.paymentStatus === "paid") {
       return res.status(200).json({
         success: true,
         duplicate: true,
-
         message:
           targetPlan === "verified"
             ? "Gold membership is already active."
             : "Silver membership is already active.",
-
         artist: studio,
       });
     }
 
-    /* ================================
-         GOLD -> SILVER
-      ================================= */
-
     if (currentPlan === "verified" && targetPlan === "pro") {
       studio.plan = "pro";
-
       studio.paymentStatus = "paid";
-
       studio.verified = false;
       studio.spotlight = false;
       studio.hallOfFameEligible = false;
 
-      // Keep existing paid/start/expiry dates.
       await studio.save();
 
       return res.status(200).json({
@@ -335,31 +296,17 @@ router.patch("/admin/activate-profile", async (req, res) => {
       });
     }
 
-    /* ================================
-         ACTIVATE PAID PLAN
-      ================================= */
-
     const now = new Date();
-
-    // Full standard plan price.
-    // Silver -> Gold = full ₹5,999.
     const amount = standardAmount(targetPlan);
 
     studio.plan = targetPlan;
-
     studio.paymentStatus = "paid";
-
     studio.planStartedAt = now;
-
     studio.planExpiresAt = addOneCalendarYear(now);
-
     studio.paidAt = now;
-
     studio.paymentAmount = amount;
-
     studio.paymentCurrency = "INR";
 
-    // Manual admin activation.
     studio.razorpayOrderId = "";
     studio.razorpayPaymentId = "";
     studio.razorpaySignature = "";
@@ -368,12 +315,10 @@ router.patch("/admin/activate-profile", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-
       message:
         targetPlan === "verified"
           ? "Gold membership activated from admin dashboard."
           : "Silver membership activated from admin dashboard.",
-
       artist: studio,
     });
   } catch (error) {
@@ -381,9 +326,7 @@ router.patch("/admin/activate-profile", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-
       message: "Unable to activate membership from admin dashboard.",
-
       error: process.env.NODE_ENV === "production" ? undefined : error.message,
     });
   }
@@ -427,7 +370,6 @@ router.patch("/:id/contacted", async (req, res) => {
     }
 
     request.requestStatus = "contacted";
-
     request.contactedAt = request.contactedAt || new Date();
 
     await request.save();
@@ -443,6 +385,74 @@ router.patch("/:id/contacted", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Unable to update membership request.",
+    });
+  }
+});
+
+/* =========================================================
+   MARK PAYMENT AS PAID
+   PATCH /api/membership-requests/:id/paid
+
+   This DOES NOT activate membership.
+========================================================= */
+
+router.patch("/:id/paid", async (req, res) => {
+  try {
+    const requestId = cleanText(req.params.id);
+
+    if (!isValidObjectId(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid membership request ID.",
+      });
+    }
+
+    const request = await MembershipRequest.findById(requestId);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Membership request not found.",
+      });
+    }
+
+    if (request.requestStatus === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancelled request cannot be marked as paid.",
+      });
+    }
+
+    if (request.paymentStatus === "paid") {
+      return res.status(200).json({
+        success: true,
+        duplicate: true,
+        message: "Payment is already marked as paid.",
+        request,
+      });
+    }
+
+    request.paymentStatus = "paid";
+    request.paidAt = new Date();
+
+    if (request.requestStatus !== "completed") {
+      request.requestStatus = "contacted";
+    }
+
+    await request.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment marked as paid successfully.",
+      request,
+    });
+  } catch (error) {
+    console.error("❌ MARK PAYMENT PAID ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to mark payment as paid.",
+      error: process.env.NODE_ENV === "production" ? undefined : error.message,
     });
   }
 });
@@ -485,12 +495,16 @@ router.patch("/:id/activate", async (req, res) => {
       return res.status(200).json({
         success: true,
         duplicate: true,
-
         message: "Membership is already active.",
-
         request,
-
         artist: alreadyActiveStudio,
+      });
+    }
+
+    if (request.paymentStatus !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Mark the payment as PAID before activating the membership.",
       });
     }
 
@@ -499,7 +513,6 @@ router.patch("/:id/activate", async (req, res) => {
     if (!studio) {
       return res.status(404).json({
         success: false,
-
         message: "Artist profile linked to this request was not found.",
       });
     }
@@ -509,65 +522,48 @@ router.patch("/:id/activate", async (req, res) => {
     if (!["pro", "verified"].includes(targetPlan)) {
       return res.status(400).json({
         success: false,
-
         message: "This request does not contain a valid paid membership plan.",
       });
     }
 
     const now = new Date();
 
-    /* ==========================
-         UPDATE ARTIST MEMBERSHIP
-      ========================== */
-
     studio.plan = targetPlan;
-
     studio.paymentStatus = "paid";
 
     studio.planStartedAt = now;
-
     studio.planExpiresAt = addOneCalendarYear(now);
 
     studio.paidAt = now;
 
-    // Always current full plan price.
     studio.paymentAmount = standardAmount(targetPlan);
 
     studio.paymentCurrency = "INR";
 
-    // Manual payment activation.
     studio.razorpayOrderId = "";
     studio.razorpayPaymentId = "";
     studio.razorpaySignature = "";
 
     await studio.save();
 
-    /* ==========================
-         UPDATE REQUEST
-      ========================== */
-
     request.requestedAmount = standardAmount(targetPlan);
 
     request.pricingType = "standard-membership";
 
     request.paymentStatus = "paid";
-
     request.requestStatus = "completed";
 
     request.activatedAt = now;
-
     request.completedAt = now;
 
     await request.save();
 
     return res.status(200).json({
       success: true,
-
       message:
         targetPlan === "verified"
           ? "Gold membership activated successfully."
           : "Silver membership activated successfully.",
-
       request,
       artist: studio,
     });
@@ -576,16 +572,14 @@ router.patch("/:id/activate", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-
       message: "Unable to activate membership.",
-
       error: process.env.NODE_ENV === "production" ? undefined : error.message,
     });
   }
 });
 
 /* =========================================================
-   CANCEL MEMBERSHIP REQUEST
+   CANCEL
    PATCH /api/membership-requests/:id/cancel
 ========================================================= */
 
@@ -594,7 +588,6 @@ router.patch("/:id/cancel", async (req, res) => {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({
         success: false,
-
         message: "Invalid membership request ID.",
       });
     }
@@ -604,7 +597,6 @@ router.patch("/:id/cancel", async (req, res) => {
     if (!request) {
       return res.status(404).json({
         success: false,
-
         message: "Membership request not found.",
       });
     }
@@ -612,22 +604,18 @@ router.patch("/:id/cancel", async (req, res) => {
     if (request.requestStatus === "completed") {
       return res.status(400).json({
         success: false,
-
         message: "An activated membership request cannot be cancelled here.",
       });
     }
 
     request.requestStatus = "cancelled";
-
     request.cancelledAt = new Date();
 
     await request.save();
 
     return res.status(200).json({
       success: true,
-
       message: "Membership request cancelled.",
-
       request,
     });
   } catch (error) {
@@ -635,7 +623,6 @@ router.patch("/:id/cancel", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-
       message: "Unable to cancel membership request.",
     });
   }
@@ -645,45 +632,30 @@ router.patch("/:id/cancel", async (req, res) => {
    DELETE MEMBERSHIP REQUEST
    DELETE /api/membership-requests/:id
 
-   IMPORTANT:
-   - Deletes only MembershipRequest
-   - Does NOT delete TattooStudio
-   - Does NOT remove active Silver/Gold membership
+   Deletes request only.
+   Does NOT delete artist profile.
+   Does NOT remove active membership.
 ========================================================= */
 
 router.delete("/:id", async (req, res) => {
   try {
     const requestId = cleanText(req.params.id);
 
-    /* ==========================
-       VALIDATE ID
-    ========================== */
-
     if (!isValidObjectId(requestId)) {
       return res.status(400).json({
         success: false,
-
         message: "Invalid membership request ID.",
       });
     }
-
-    /* ==========================
-       FIND REQUEST
-    ========================== */
 
     const request = await MembershipRequest.findById(requestId);
 
     if (!request) {
       return res.status(404).json({
         success: false,
-
         message: "Membership request not found.",
       });
     }
-
-    /* ==========================
-       DELETE REQUEST
-    ========================== */
 
     await MembershipRequest.findByIdAndDelete(requestId);
 
@@ -691,9 +663,7 @@ router.delete("/:id", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-
       message: "Membership request deleted successfully.",
-
       deletedRequestId: requestId,
     });
   } catch (error) {
@@ -701,9 +671,7 @@ router.delete("/:id", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-
       message: "Unable to delete membership request.",
-
       error: process.env.NODE_ENV === "production" ? undefined : error.message,
     });
   }
