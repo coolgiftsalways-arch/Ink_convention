@@ -1024,6 +1024,33 @@ function AdminArtists() {
           );
         }
 
+        // After activation, immediately remove the request card and make
+        // the artist appear under Artist Status Filter -> PAID.
+        if (action === "activate") {
+          setMembershipRequests((previous) =>
+            previous.filter((item) => item.id !== request.id),
+          );
+
+          if (request.profileId) {
+            setArtistAdminStatuses((previous) => {
+              const updated = {
+                ...previous,
+                [String(request.profileId)]: "PAID",
+              };
+
+              saveArtistAdminStatuses(updated);
+              return updated;
+            });
+          }
+        }
+
+        // Cancelled requests should also disappear from the pending request area.
+        if (action === "cancel") {
+          setMembershipRequests((previous) =>
+            previous.filter((item) => item.id !== request.id),
+          );
+        }
+
         await Promise.all([fetchMembershipRequests(), fetchMemberships()]);
       } catch (error) {
         console.error("Membership request action error:", error);
@@ -1722,9 +1749,15 @@ function AdminArtists() {
 
   const getDirectoryArtistStatus = (artist) => {
     const artistId = String(artist?.id || "").trim();
+    const artistPlan = normalizeDirectoryPlan(artist?.plan);
 
-    if (artistId && artistAdminStatuses[artistId]) {
-      return normalizeArtistAdminStatus(artistAdminStatuses[artistId]);
+    // IMPORTANT:
+    // Once an artist has an active Silver or Gold membership,
+    // the real membership plan is the source of truth.
+    // This prevents an old localStorage status such as NEW/CONTACTED
+    // from hiding an activated Silver/Gold artist from the PAID filter.
+    if (artistPlan === "pro" || artistPlan === "verified") {
+      return "PAID";
     }
 
     const request = latestMembershipRequestByProfile[artistId];
@@ -1739,27 +1772,29 @@ function AdminArtists() {
       .trim()
       .toUpperCase();
 
-    if (requestStatus === "CANCELLED") {
-      return "CANCELLED";
-    }
-
-    if (requestStatus === "CONFIRMED") {
-      return "CONFIRMED";
+    if (
+      requestStatus === "PAID" ||
+      ["PAID", "SUCCESS", "SUCCESSFUL", "COMPLETED", "VERIFIED"].includes(
+        paymentStatus,
+      )
+    ) {
+      return "PAID";
     }
 
     if (requestStatus === "CONTACTED") {
       return "CONTACTED";
     }
 
-    if (
-      requestStatus === "PAID" ||
-      ["PAID", "SUCCESS", "SUCCESSFUL", "COMPLETED", "VERIFIED"].includes(
-        paymentStatus,
-      ) ||
-      artist?.plan === "pro" ||
-      artist?.plan === "verified"
-    ) {
-      return "PAID";
+    if (requestStatus === "CONFIRMED") {
+      return "CONFIRMED";
+    }
+
+    if (requestStatus === "CANCELLED") {
+      return "CANCELLED";
+    }
+
+    if (artistId && artistAdminStatuses[artistId]) {
+      return normalizeArtistAdminStatus(artistAdminStatuses[artistId]);
     }
 
     return "NEW";
