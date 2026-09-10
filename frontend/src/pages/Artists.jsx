@@ -1024,6 +1024,8 @@ export default function Artists() {
   const [selectedArtist, setSelectedArtist] = React.useState(null);
 
   const [page, setPage] = React.useState(0);
+  const [totalArtists, setTotalArtists] = React.useState(0);
+  const [totalArtistPages, setTotalArtistPages] = React.useState(1);
 
   const artistSectionRef = React.useRef(null);
 
@@ -1095,83 +1097,63 @@ export default function Artists() {
   /* =======================================================
      LOAD REAL ARTISTS
   ======================================================= */
-
   React.useEffect(() => {
     const controller = new AbortController();
 
-    let cancelled = false;
-
     async function loadArtists() {
-      setLoading(true);
-      setError("");
-
-      const allResults = [];
-
-      const limit = 1000;
-
-      let currentPage = 1;
-
       try {
-        while (!cancelled && !controller.signal.aborted) {
-          const params = new URLSearchParams({
-            page: String(currentPage),
+        setLoading(true);
+        setError("");
 
-            limit: String(limit),
-          });
+        const params = new URLSearchParams({
+          page: String(page + 1),
+          limit: String(ARTISTS_PER_PAGE),
+        });
 
-          if (selectedCity !== "ALL") {
-            // Selected city = Gold + Silver + Free from that city
-            params.set("city", selectedCity);
-          }
+        if (selectedCity !== "ALL") {
+          params.set("city", selectedCity);
+        }
 
-          const response = await fetch(
-            `${getApiBase()}/api/admin/tattoo-studios?${params.toString()}`,
-            {
-              signal: controller.signal,
+        const cleanSearch = searchQuery.trim();
 
-              credentials: "include",
+        if (cleanSearch.length >= MIN_SEARCH_CHARACTERS) {
+          params.set("search", cleanSearch);
+        }
 
-              headers: {
-                Accept: "application/json",
-              },
+        const response = await fetch(
+          `${getApiBase()}/api/admin/tattoo-studios?${params.toString()}`,
+          {
+            signal: controller.signal,
+            credentials: "include",
+            headers: {
+              Accept: "application/json",
             },
-          );
+          },
+        );
 
-          if (!response.ok) {
-            throw new Error(`Artist directory HTTP ${response.status}`);
-          }
-
-          const data = await response.json();
-
-          const currentResults = Array.isArray(data?.artists)
-            ? data.artists
-            : Array.isArray(data?.data)
-              ? data.data
-              : Array.isArray(data?.users)
-                ? data.users
-                : [];
-
-          allResults.push(...currentResults);
-
-          const responseTotalPages = Math.max(
-            1,
-            Number(data?.pagination?.totalPages || 1),
-          );
-
-          if (currentPage >= responseTotalPages) {
-            break;
-          }
-
-          currentPage += 1;
+        if (!response.ok) {
+          throw new Error(`Artist directory HTTP ${response.status}`);
         }
 
-        if (cancelled || controller.signal.aborted) {
-          return;
-        }
+        const data = await response.json();
 
-        const normalized = allResults.map(normalizeArtist);
+        const results = Array.isArray(data?.artists)
+          ? data.artists
+          : Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data?.users)
+              ? data.users
+              : [];
+
+        const normalized = results.map(normalizeArtist);
 
         setArtists(sortArtists(normalized));
+
+        setTotalArtists(Number(data?.pagination?.total || results.length));
+
+        setTotalArtistPages(
+          Math.max(1, Number(data?.pagination?.totalPages || 1)),
+        );
       } catch (requestError) {
         if (requestError?.name === "AbortError") {
           return;
@@ -1179,13 +1161,12 @@ export default function Artists() {
 
         console.error("❌ Artist directory error:", requestError);
 
-        if (!cancelled) {
-          setArtists([]);
-
-          setError("Unable to load artists. Please try again.");
-        }
+        setArtists([]);
+        setTotalArtists(0);
+        setTotalArtistPages(1);
+        setError("Unable to load artists. Please try again.");
       } finally {
-        if (!cancelled && !controller.signal.aborted) {
+        if (!controller.signal.aborted) {
           setLoading(false);
         }
       }
@@ -1193,23 +1174,10 @@ export default function Artists() {
 
     void loadArtists();
 
-    const handleFocus = () => {
-      if (!cancelled && !controller.signal.aborted) {
-        void loadArtists();
-      }
-    };
-
-    window.addEventListener("focus", handleFocus);
-
     return () => {
-      cancelled = true;
-
       controller.abort();
-
-      window.removeEventListener("focus", handleFocus);
     };
-  }, [selectedCity, location.state?.refreshDirectory]);
-
+  }, [page, selectedCity, searchQuery, location.state?.refreshDirectory]);
   /* =======================================================
      OPEN SHARED ARTIST PROFILE FROM URL
   ======================================================= */
@@ -1310,26 +1278,17 @@ export default function Artists() {
      PAGINATION
   ======================================================= */
 
-  const totalArtistPages = Math.max(
-    1,
-    Math.ceil(filteredArtists.length / ARTISTS_PER_PAGE),
-  );
-
-  const safeArtistPage = Math.min(page, totalArtistPages - 1);
+  const safeArtistPage = Math.min(page, Math.max(0, totalArtistPages - 1));
 
   const artistPageStart = safeArtistPage * ARTISTS_PER_PAGE;
 
-  const visibleArtists = filteredArtists.slice(
-    artistPageStart,
-    artistPageStart + ARTISTS_PER_PAGE,
-  );
+  const visibleArtists = filteredArtists;
 
-  const firstVisibleArtistNumber =
-    filteredArtists.length === 0 ? 0 : artistPageStart + 1;
+  const firstVisibleArtistNumber = totalArtists === 0 ? 0 : artistPageStart + 1;
 
   const lastVisibleArtistNumber = Math.min(
-    artistPageStart + ARTISTS_PER_PAGE,
-    filteredArtists.length,
+    artistPageStart + visibleArtists.length,
+    totalArtists,
   );
 
   React.useEffect(() => {
@@ -1864,12 +1823,10 @@ export default function Artists() {
                       text-gray-600
                     "
                   >
-                    {loading
-                      ? "LOADING..."
-                      : `${filteredArtists.length} ARTISTS`}
+                    {loading ? "LOADING..." : `${totalArtists} ARTISTS`}
                   </span>
 
-                  {filteredArtists.length > ARTISTS_PER_PAGE && (
+                  {totalArtists > ARTISTS_PER_PAGE && (
                     <span
                       className="
                         text-[8px]

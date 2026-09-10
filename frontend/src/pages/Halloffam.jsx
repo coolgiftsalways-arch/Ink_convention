@@ -163,86 +163,50 @@ export default function HallOfFame() {
   ======================================================= */
 
   useEffect(() => {
-    let cancelled = false;
+  let cancelled = false;
 
-    const loadHallOfFame = async () => {
-      setLoading(true);
-      setError("");
+  const loadHallOfFame = async () => {
+    setLoading(true);
+    setError("");
 
-      try {
-        const PAGE_SIZE = 1000;
+    try {
+      const data = await apiRequest(
+        "/api/admin/tattoo-studios/hall-of-fame"
+      );
 
-        let page = 1;
+      if (cancelled) return;
 
-        let totalPages = 1;
+      const hallOfFameArtists = getArtistsArray(data)
+        .map((artist) => normalizeArtist(artist))
+        .filter(
+          (artist) =>
+            artist.plan === "verified" &&
+            artist.hallOfFameEligible
+        );
 
-        const allDirectoryArtists = [];
+      setArtists(hallOfFameArtists);
+    } catch (loadError) {
+      console.error("Hall Of Fame loading error:", loadError);
 
-        do {
-          const data = await apiRequest(
-            `/api/admin/tattoo-studios?page=${page}&limit=${PAGE_SIZE}`,
-          );
-
-          if (cancelled) {
-            return;
-          }
-
-          const pageArtists = getArtistsArray(data);
-
-          allDirectoryArtists.push(...pageArtists);
-
-          totalPages = Math.max(
-            1,
-
-            Number(data?.pagination?.totalPages || data?.totalPages || 1),
-          );
-
-          page += 1;
-        } while (page <= totalPages && !cancelled);
-
-        if (cancelled) {
-          return;
-        }
-
-        const verifiedArtists = allDirectoryArtists
-          .map((artist) => normalizeArtist(artist))
-          .filter(
-            (artist) => artist.plan === "verified" && artist.hallOfFameEligible,
-          )
-          .sort((first, second) => {
-            const firstTime = new Date(
-              first.updatedAt || first.createdAt || 0,
-            ).getTime();
-
-            const secondTime = new Date(
-              second.updatedAt || second.createdAt || 0,
-            ).getTime();
-
-            return secondTime - firstTime;
-          });
-
-        setArtists(verifiedArtists);
-      } catch (loadError) {
-        console.error("Hall Of Fame loading error:", loadError);
-
-        if (!cancelled) {
-          setArtists([]);
-
-          setError(loadError.message || "Unable to load Hall of Fame.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      if (!cancelled) {
+        setArtists([]);
+        setError(
+          loadError.message || "Unable to load Hall of Fame."
+        );
       }
-    };
+    } finally {
+      if (!cancelled) {
+        setLoading(false);
+      }
+    }
+  };
 
-    void loadHallOfFame();
+  void loadHallOfFame();
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
   /* =======================================================
      OPEN ARTIST

@@ -20,7 +20,9 @@ const router = express.Router();
    START MEMBERSHIP EXPIRY WORKER
 ========================================================= */
 
-startMembershipExpiryWorker();
+if (process.env.NODE_ENV !== "test") {
+  startMembershipExpiryWorker();
+}
 
 /* =========================================================
    SAFE REGEX
@@ -602,6 +604,43 @@ router.get(
   },
 );
 
+/* =========================================================
+   HALL OF FAME - GOLD MEMBERS ONLY
+
+   GET
+   /api/admin/tattoo-studios/hall-of-fame
+========================================================= */
+
+router.get("/hall-of-fame", async (req, res) => {
+  try {
+    const studios = await TattooStudio.find({
+      plan: "verified",
+      paymentStatus: "paid",
+      hallOfFameEligible: true,
+    })
+      .sort({
+        updatedAt: -1,
+        name: 1,
+      })
+      .lean();
+
+    const artists = studios.map(serializePublicArtist);
+
+    return res.status(200).json({
+      success: true,
+      artists,
+      total: artists.length,
+    });
+  } catch (error) {
+    console.error("❌ Hall Of Fame fetch error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load Hall of Fame.",
+      error: error.message,
+    });
+  }
+});
 /* =========================================================
    PUBLIC SINGLE ARTIST PROFILE
 
