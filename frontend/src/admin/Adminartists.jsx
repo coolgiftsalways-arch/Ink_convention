@@ -1031,6 +1031,76 @@ function AdminArtists() {
   );
 
   // ===================================================
+  // DELETE SILVER / GOLD MEMBERSHIP REQUEST
+  // ===================================================
+
+  const handleDeleteMembershipRequest = useCallback(async (request) => {
+    if (!request?.id) {
+      setMembershipRequestError(
+        "Cannot delete this membership request because its ID is missing.",
+      );
+      return;
+    }
+
+    const planLabel = request.requestedPlan === "verified" ? "Gold" : "Silver";
+
+    const confirmed = window.confirm(
+      `Delete ${request.name}'s ${planLabel} membership request permanently?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setMembershipRequestBusyId(request.id);
+    setMembershipRequestError("");
+
+    try {
+      const response = await apiFetch(
+        `/api/membership-requests/${request.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      const data = await getJson(response);
+
+      if (!response.ok || data.success === false) {
+        throw new Error(
+          data.message || data.error || "Unable to delete membership request.",
+        );
+      }
+
+      // Remove only this card immediately from the dashboard.
+      setMembershipRequests((previous) =>
+        previous.filter((item) => item.id !== request.id),
+      );
+    } catch (error) {
+      console.error("Delete membership request error:", error);
+
+      if (error?.name === "AbortError") {
+        setMembershipRequestError(
+          "The server took too long to delete the membership request.",
+        );
+      } else if (error instanceof TypeError) {
+        setMembershipRequestError(
+          "Cannot connect to the membership API. Check that the backend is online.",
+        );
+      } else {
+        setMembershipRequestError(
+          error.message || "Unable to delete membership request.",
+        );
+      }
+    } finally {
+      setMembershipRequestBusyId("");
+    }
+  }, []);
+
+  // ===================================================
   // DIRECT ADMIN PLAN CHANGE
   // FREE -> SILVER / GOLD
   // SILVER -> FREE / GOLD
@@ -2357,6 +2427,18 @@ function AdminArtists() {
                               Cancel Request
                             </button>
                           )}
+
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              void handleDeleteMembershipRequest(request)
+                            }
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-red-400 transition hover:border-red-500/50 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Trash2 size={12} />
+                            {busy ? "Working..." : "Delete"}
+                          </button>
 
                           {isCompleted && (
                             <span className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-emerald-300">
