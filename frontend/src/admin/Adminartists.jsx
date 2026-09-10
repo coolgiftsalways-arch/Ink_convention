@@ -923,8 +923,15 @@ function AdminArtists() {
         );
       }
 
+      // Silver / Gold Requests should contain ONLY requests that still
+      // need admin action. Completed/cancelled history is intentionally
+      // hidden from this section.
       const requests = Array.isArray(data?.requests)
-        ? data.requests.map(normalizeMembershipRequest)
+        ? data.requests
+            .map(normalizeMembershipRequest)
+            .filter((request) =>
+              ["new", "contacted"].includes(request.requestStatus),
+            )
         : [];
 
       setMembershipRequests(requests);
@@ -1631,20 +1638,8 @@ function AdminArtists() {
     contacted: membershipRequests.filter(
       (request) => request.requestStatus === "contacted",
     ).length,
-    paid: membershipRequests.filter((request) => {
-      const requestStatus = String(request.requestStatus || "").toLowerCase();
-      const paymentStatus = String(request.paymentStatus || "").toLowerCase();
-
-      return (
-        requestStatus === "paid" ||
-        ["paid", "success", "successful", "completed"].includes(paymentStatus)
-      );
-    }).length,
-    completed: membershipRequests.filter(
-      (request) => request.requestStatus === "completed",
-    ).length,
-    cancelled: membershipRequests.filter(
-      (request) => request.requestStatus === "cancelled",
+    paid: membershipRequests.filter((request) =>
+      isMembershipRequestPaid(request),
     ).length,
   };
 
@@ -1688,13 +1683,7 @@ function AdminArtists() {
     }
 
     if (membershipRequestFilter === "paid") {
-      const requestStatus = String(request.requestStatus || "").toLowerCase();
-      const paymentStatus = String(request.paymentStatus || "").toLowerCase();
-
-      return (
-        requestStatus === "paid" ||
-        ["paid", "success", "successful", "completed"].includes(paymentStatus)
-      );
+      return isMembershipRequestPaid(request);
     }
 
     return request.requestStatus === membershipRequestFilter;
@@ -1988,13 +1977,13 @@ function AdminArtists() {
                 </h2>
 
                 <p className="text-xs sm:text-sm text-gray-600 mt-2">
-                  Call the artist, mark them contacted, manually confirm
-                  payment, then activate the requested membership.
+                  Only pending Silver / Gold requests are shown here. Contact
+                  the artist, confirm payment, then activate the membership.
                 </p>
               </div>
 
               <p className="text-xs font-mono text-gray-600">
-                {membershipRequests.length} TOTAL REQUESTS
+                {membershipRequests.length} ACTIVE REQUESTS
               </p>
             </div>
 
@@ -2004,14 +1993,12 @@ function AdminArtists() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 ["all", "ALL", membershipRequestCounts.all],
                 ["new", "NEW", membershipRequestCounts.new],
                 ["contacted", "CONTACTED", membershipRequestCounts.contacted],
                 ["paid", "PAID", membershipRequestCounts.paid],
-                ["completed", "COMPLETED", membershipRequestCounts.completed],
-                ["cancelled", "CANCELLED", membershipRequestCounts.cancelled],
               ].map(([value, label, count]) => (
                 <button
                   key={value}

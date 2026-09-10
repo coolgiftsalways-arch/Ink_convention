@@ -26,6 +26,9 @@ function standardAmount(plan) {
 /* =========================================================
    CREATE SILVER / GOLD REQUEST
    POST /api/membership-requests
+
+   NO RAZORPAY.
+   THIS DOES NOT ACTIVATE THE PLAN.
 ========================================================= */
 
 router.post("/", async (req, res) => {
@@ -74,6 +77,8 @@ router.post("/", async (req, res) => {
       });
     }
 
+    // Silver and Gold always use their full standard price.
+    // Silver -> Gold is NOT discounted; Gold remains ₹5,999.
     const pricingType = "standard-membership";
     const requestedAmount = standardAmount(requestedPlan);
 
@@ -84,16 +89,16 @@ router.post("/", async (req, res) => {
     }).sort({ createdAt: -1 });
 
     if (existingRequest) {
+      // Keep older pending requests in sync with the current pricing.
+      // This also fixes requests created when Silver/Gold used older prices.
       if (
         Number(existingRequest.requestedAmount) !== requestedAmount ||
         existingRequest.pricingType !== "standard-membership"
       ) {
         existingRequest.requestedAmount = requestedAmount;
         existingRequest.pricingType = "standard-membership";
-
         existingRequest.requestedPlanName =
           requestedPlan === "verified" ? "GOLD / VERIFIED" : "SILVER / PRO";
-
         await existingRequest.save();
       }
 
@@ -157,16 +162,30 @@ router.post("/", async (req, res) => {
 });
 
 /* =========================================================
-   GET REQUESTS FOR ADMIN
+   GET ACTIVE REQUESTS FOR ADMIN
    GET /api/membership-requests
+
+   ONLY RETURNS REQUESTS THAT STILL NEED ADMIN ACTION:
+   - new
+   - contacted
+
+   HIDDEN FROM THIS SECTION:
+   - completed
+   - cancelled
 ========================================================= */
 
 router.get("/", async (req, res) => {
   try {
-    const filter = {};
+    const filter = {
+      requestStatus: { $in: ["new", "contacted"] },
+    };
 
     if (req.query.status) {
-      filter.requestStatus = cleanText(req.query.status).toLowerCase();
+      const requestedStatus = cleanText(req.query.status).toLowerCase();
+
+      if (["new", "contacted"].includes(requestedStatus)) {
+        filter.requestStatus = requestedStatus;
+      }
     }
 
     if (req.query.plan) {
@@ -200,6 +219,17 @@ router.get("/", async (req, res) => {
 /* =========================================================
    DIRECT ADMIN ACTIVATION
    PATCH /api/membership-requests/admin/activate-profile
+
+   USE FROM ADMIN DASHBOARD ONLY.
+   Allows:
+   FREE / BASIC -> SILVER / PRO
+   FREE / BASIC -> GOLD / VERIFIED
+   SILVER / PRO -> FREE / BASIC
+   SILVER / PRO -> GOLD / VERIFIED
+   GOLD / VERIFIED -> SILVER / PRO
+   GOLD / VERIFIED -> FREE / BASIC
+
+   NO RAZORPAY. PAID ACTIVATIONS REQUIRE MANUAL PAYMENT CONFIRMATION.
 ========================================================= */
 
 router.patch("/admin/activate-profile", async (req, res) => {
@@ -247,14 +277,11 @@ router.patch("/admin/activate-profile", async (req, res) => {
       studio.verified = false;
       studio.spotlight = false;
       studio.hallOfFameEligible = false;
-
       studio.planStartedAt = null;
       studio.planExpiresAt = null;
       studio.paidAt = null;
-
       studio.paymentAmount = 0;
       studio.paymentCurrency = "INR";
-
       studio.razorpayOrderId = "";
       studio.razorpayPaymentId = "";
       studio.razorpaySignature = "";
@@ -280,6 +307,8 @@ router.patch("/admin/activate-profile", async (req, res) => {
       });
     }
 
+    // GOLD -> SILVER is an admin downgrade.
+    // No new payment is taken and the existing membership dates are preserved.
     if (currentPlan === "verified" && targetPlan === "pro") {
       studio.plan = "pro";
       studio.paymentStatus = "paid";
@@ -287,6 +316,8 @@ router.patch("/admin/activate-profile", async (req, res) => {
       studio.spotlight = false;
       studio.hallOfFameEligible = false;
 
+      // Keep the existing paid/start/expiry dates because this is a downgrade,
+      // not a new Silver purchase.
       await studio.save();
 
       return res.status(200).json({
@@ -297,6 +328,9 @@ router.patch("/admin/activate-profile", async (req, res) => {
     }
 
     const now = new Date();
+
+    // Always charge the full current plan price.
+    // Silver -> Gold costs the full Gold price: ₹5,999.
     const amount = standardAmount(targetPlan);
 
     studio.plan = targetPlan;
@@ -307,6 +341,7 @@ router.patch("/admin/activate-profile", async (req, res) => {
     studio.paymentAmount = amount;
     studio.paymentCurrency = "INR";
 
+    // This is a manual admin activation, not Razorpay.
     studio.razorpayOrderId = "";
     studio.razorpayPaymentId = "";
     studio.razorpaySignature = "";
@@ -393,7 +428,10 @@ router.patch("/:id/contacted", async (req, res) => {
    MARK PAYMENT AS PAID
    PATCH /api/membership-requests/:id/paid
 
-   This DOES NOT activate membership.
+   IMPORTANT:
+   - Marks payment as paid
+   - Keeps request visible
+   - Does NOT activate Silver / Gold yet
 ========================================================= */
 
 router.patch("/:id/paid", async (req, res) => {
@@ -423,6 +461,13 @@ router.patch("/:id/paid", async (req, res) => {
       });
     }
 
+    if (request.requestStatus === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "This membership request is already completed.",
+      });
+    }
+
     if (request.paymentStatus === "paid") {
       return res.status(200).json({
         success: true,
@@ -434,10 +479,7 @@ router.patch("/:id/paid", async (req, res) => {
 
     request.paymentStatus = "paid";
     request.paidAt = new Date();
-
-    if (request.requestStatus !== "completed") {
-      request.requestStatus = "contacted";
-    }
+    request.requestStatus = "contacted";
 
     await request.save();
 
@@ -504,7 +546,7 @@ router.patch("/:id/activate", async (req, res) => {
     if (request.paymentStatus !== "paid") {
       return res.status(400).json({
         success: false,
-        message: "Mark the payment as PAID before activating the membership.",
+        message: "Mark payment as PAID before activating the membership.",
       });
     }
 
@@ -535,24 +577,24 @@ router.patch("/:id/activate", async (req, res) => {
     studio.planExpiresAt = addOneCalendarYear(now);
 
     studio.paidAt = now;
-
+    // Always store the current full plan price, even if an older request
+    // in MongoDB contains a legacy amount such as ₹1,999 or ₹699.
     studio.paymentAmount = standardAmount(targetPlan);
 
+    request.requestedAmount = standardAmount(targetPlan);
+    request.pricingType = "standard-membership";
     studio.paymentCurrency = "INR";
 
+    // Manual payment flow: clear old Razorpay identifiers so this activation
+    // cannot be mistaken for a Razorpay transaction.
     studio.razorpayOrderId = "";
     studio.razorpayPaymentId = "";
     studio.razorpaySignature = "";
 
     await studio.save();
 
-    request.requestedAmount = standardAmount(targetPlan);
-
-    request.pricingType = "standard-membership";
-
     request.paymentStatus = "paid";
     request.requestStatus = "completed";
-
     request.activatedAt = now;
     request.completedAt = now;
 
@@ -632,9 +674,10 @@ router.patch("/:id/cancel", async (req, res) => {
    DELETE MEMBERSHIP REQUEST
    DELETE /api/membership-requests/:id
 
-   Deletes request only.
-   Does NOT delete artist profile.
-   Does NOT remove active membership.
+   IMPORTANT:
+   - Deletes only the MembershipRequest record
+   - Does NOT delete the artist / TattooStudio profile
+   - Does NOT remove an already active membership
 ========================================================= */
 
 router.delete("/:id", async (req, res) => {
@@ -658,8 +701,6 @@ router.delete("/:id", async (req, res) => {
     }
 
     await MembershipRequest.findByIdAndDelete(requestId);
-
-    console.log(`🗑️ Membership request deleted: ${requestId}`);
 
     return res.status(200).json({
       success: true,
