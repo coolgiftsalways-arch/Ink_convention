@@ -959,12 +959,22 @@ function AdminArtists() {
         return;
       }
 
+      if (action === "paid") {
+        const confirmed = window.confirm(
+          `Mark ${request.name}'s membership request as PAID?`,
+        );
+
+        if (!confirmed) {
+          return;
+        }
+      }
+
       if (action === "activate") {
         const planLabel =
           request.requestedPlan === "verified" ? "Gold" : "Silver";
 
         const confirmed = window.confirm(
-          `Activate ${planLabel} for ${request.name}? Only continue after you have manually confirmed the payment.`,
+          `Mark this request DONE and activate ${planLabel} for ${request.name}?`,
         );
 
         if (!confirmed) {
@@ -2005,6 +2015,8 @@ function AdminArtists() {
                   const isGoldRequest = request.requestedPlan === "verified";
                   const isCompleted = request.requestStatus === "completed";
                   const isCancelled = request.requestStatus === "cancelled";
+                  const isPaid = isMembershipRequestPaid(request);
+                  const isPending = !isPaid && !isCompleted && !isCancelled;
                   const busy = membershipRequestBusyId === request.id;
                   const callPhone = normalizeCallPhone(request.phone);
 
@@ -2032,7 +2044,9 @@ function AdminArtists() {
                                 : "border-slate-300/20 bg-slate-300/10 text-slate-200"
                             }`}
                           >
-                            {isGoldRequest ? "GOLD" : "SILVER"}
+                            {isGoldRequest
+                              ? "APPLIED FOR GOLD"
+                              : "APPLIED FOR SILVER"}
                           </span>
 
                           <span
@@ -2056,6 +2070,31 @@ function AdminArtists() {
                               : normalizePaymentStatus(request.paymentStatus)}
                           </span>
                         </div>
+                      </div>
+
+                      <div
+                        className={`mt-4 rounded-xl border px-4 py-3 ${
+                          isGoldRequest
+                            ? "border-amber-400/30 bg-amber-400/[0.08]"
+                            : "border-slate-300/25 bg-slate-300/[0.07]"
+                        }`}
+                      >
+                        <p className="text-[8px] font-mono uppercase tracking-[0.16em] text-gray-500">
+                          User Membership Choice
+                        </p>
+                        <p
+                          className={`mt-1 text-sm font-black uppercase tracking-wide ${
+                            isGoldRequest ? "text-amber-300" : "text-slate-100"
+                          }`}
+                        >
+                          {isCompleted
+                            ? isGoldRequest
+                              ? "APPLIED FOR GOLD • NOW ACTIVE"
+                              : "APPLIED FOR SILVER • NOW ACTIVE"
+                            : isGoldRequest
+                              ? "APPLIED FOR GOLD"
+                              : "APPLIED FOR SILVER"}
+                        </p>
                       </div>
 
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
@@ -2109,77 +2148,222 @@ function AdminArtists() {
                         </div>
                       )}
 
-                      <div className="mt-4 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
-                        {callPhone && (
-                          <a
-                            href={`tel:${callPhone}`}
-                            className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-300"
-                          >
-                            Call User
-                          </a>
-                        )}
+                      <div className="mt-4 border-t border-white/[0.06] pt-4">
+                        <p className="mb-2 text-[8px] font-mono font-black uppercase tracking-[0.16em] text-gray-600">
+                          CHANGE MEMBERSHIP
+                        </p>
 
-                        {!isCompleted && !isCancelled && (
+                        <div className="grid grid-cols-3 gap-2">
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() =>
-                              void handleMembershipRequestAction(
-                                request,
-                                "contacted",
+                              void handleDirectPlanActivation(
+                                {
+                                  id: request.profileId,
+                                  name: request.name,
+                                  plan: request.currentPlan,
+                                },
+                                "basic",
                               )
                             }
-                            className="rounded-lg border border-sky-400/20 bg-sky-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-sky-300 disabled:opacity-40"
+                            className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] px-3 py-3 text-[8px] font-black uppercase tracking-wider text-emerald-300 transition hover:bg-emerald-400/15 disabled:opacity-40"
                           >
-                            Mark Contacted
+                            MAKE FREE
                           </button>
-                        )}
 
-                        {!isCompleted && !isCancelled && (
                           <button
                             type="button"
-                            disabled={busy}
+                            disabled={
+                              busy ||
+                              normalizeDirectoryPlan(request.currentPlan) ===
+                                "pro"
+                            }
+                            onClick={() =>
+                              void handleDirectPlanActivation(
+                                {
+                                  id: request.profileId,
+                                  name: request.name,
+                                  plan: request.currentPlan,
+                                },
+                                "pro",
+                              )
+                            }
+                            className={`rounded-xl border px-3 py-3 text-[8px] font-black uppercase tracking-wider transition ${
+                              normalizeDirectoryPlan(request.currentPlan) ===
+                              "pro"
+                                ? "cursor-default border-slate-200/40 bg-slate-200/15 text-slate-100"
+                                : "border-slate-300/25 bg-slate-300/[0.07] text-slate-100 hover:bg-slate-300/15"
+                            } disabled:opacity-70`}
+                          >
+                            {normalizeDirectoryPlan(request.currentPlan) ===
+                            "pro"
+                              ? "SILVER • CURRENT"
+                              : "MAKE SILVER"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              busy ||
+                              normalizeDirectoryPlan(request.currentPlan) ===
+                                "verified"
+                            }
+                            onClick={() =>
+                              void handleDirectPlanActivation(
+                                {
+                                  id: request.profileId,
+                                  name: request.name,
+                                  plan: request.currentPlan,
+                                },
+                                "verified",
+                              )
+                            }
+                            className={`rounded-xl border px-3 py-3 text-[8px] font-black uppercase tracking-wider transition ${
+                              normalizeDirectoryPlan(request.currentPlan) ===
+                              "verified"
+                                ? "cursor-default border-amber-400/40 bg-amber-400/15 text-amber-300"
+                                : "border-amber-400/25 bg-amber-400/[0.07] text-amber-300 hover:bg-amber-400/15"
+                            } disabled:opacity-70`}
+                          >
+                            {normalizeDirectoryPlan(request.currentPlan) ===
+                            "verified"
+                              ? "GOLD • CURRENT"
+                              : "MAKE GOLD"}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 border-t border-white/[0.06] pt-4">
+                        <div className="mb-3">
+                          <p className="text-[8px] font-mono font-black uppercase tracking-[0.16em] text-gray-600">
+                            REQUEST WORKFLOW
+                          </p>
+                          <p className="mt-1 text-[10px] text-gray-500">
+                            Pending → Paid → Done
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div
+                            className={`rounded-xl border px-3 py-3 text-center ${
+                              isPending
+                                ? "border-orange-400/40 bg-orange-400/10 text-orange-300"
+                                : "border-white/10 bg-white/[0.02] text-gray-600"
+                            }`}
+                          >
+                            <span className="block text-[8px] font-black uppercase tracking-wider">
+                              {isPending ? "● PENDING" : "PENDING"}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={
+                              busy || isPaid || isCompleted || isCancelled
+                            }
+                            onClick={() =>
+                              void handleMembershipRequestAction(
+                                request,
+                                "paid",
+                              )
+                            }
+                            className={`rounded-xl border px-3 py-3 text-center transition ${
+                              isPaid && !isCompleted
+                                ? "border-emerald-400/45 bg-emerald-400/12 text-emerald-300"
+                                : isCompleted
+                                  ? "border-emerald-400/15 bg-emerald-400/[0.03] text-emerald-700"
+                                  : "border-emerald-400/25 bg-emerald-400/[0.07] text-emerald-300 hover:bg-emerald-400/15"
+                            } disabled:cursor-default disabled:opacity-70`}
+                          >
+                            <span className="block text-[8px] font-black uppercase tracking-wider">
+                              {busy
+                                ? "WORKING..."
+                                : isPaid && !isCompleted
+                                  ? "● PAID"
+                                  : isCompleted
+                                    ? "PAID ✓"
+                                    : "MARK PAID"}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              busy || isCompleted || isCancelled || !isPaid
+                            }
                             onClick={() =>
                               void handleMembershipRequestAction(
                                 request,
                                 "activate",
                               )
                             }
-                            className={`rounded-lg border px-3 py-2 text-[10px] font-black uppercase tracking-wider disabled:opacity-40 ${
-                              isGoldRequest
-                                ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
-                                : "border-slate-300/20 bg-slate-300/10 text-slate-100"
-                            }`}
+                            className={`rounded-xl border px-3 py-3 text-center transition ${
+                              isCompleted
+                                ? "border-violet-400/45 bg-violet-400/12 text-violet-300"
+                                : isPaid
+                                  ? "border-violet-400/25 bg-violet-400/[0.07] text-violet-300 hover:bg-violet-400/15"
+                                  : "border-white/10 bg-white/[0.02] text-gray-600"
+                            } disabled:cursor-not-allowed disabled:opacity-70`}
                           >
-                            {busy
-                              ? "Working..."
-                              : isGoldRequest
-                                ? "Activate Gold"
-                                : "Activate Silver"}
+                            <span className="block text-[8px] font-black uppercase tracking-wider">
+                              {busy
+                                ? "WORKING..."
+                                : isCompleted
+                                  ? "● DONE"
+                                  : "DONE / ACTIVATE"}
+                            </span>
                           </button>
-                        )}
+                        </div>
 
-                        {!isCompleted && !isCancelled && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              void handleMembershipRequestAction(
-                                request,
-                                "cancel",
-                              )
-                            }
-                            className="rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-red-300 disabled:opacity-40"
-                          >
-                            Cancel
-                          </button>
-                        )}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {callPhone && (
+                            <a
+                              href={`tel:${callPhone}`}
+                              className="rounded-lg border border-sky-400/20 bg-sky-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-sky-300"
+                            >
+                              Call User
+                            </a>
+                          )}
 
-                        {isCompleted && (
-                          <span className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-300">
-                            Membership Active
-                          </span>
-                        )}
+                          {!isCompleted && !isCancelled && (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void handleMembershipRequestAction(
+                                  request,
+                                  "contacted",
+                                )
+                              }
+                              className="rounded-lg border border-blue-400/20 bg-blue-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-blue-300 disabled:opacity-40"
+                            >
+                              Mark Contacted
+                            </button>
+                          )}
+
+                          {!isCompleted && !isCancelled && (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void handleMembershipRequestAction(
+                                  request,
+                                  "cancel",
+                                )
+                              }
+                              className="rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-red-300 disabled:opacity-40"
+                            >
+                              Cancel Request
+                            </button>
+                          )}
+
+                          {isCompleted && (
+                            <span className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-emerald-300">
+                              Membership Active
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -3028,6 +3212,33 @@ function MembershipMemberRow({
         ? "FREE CLAIMED"
         : "FREE UNCLAIMED";
 
+  // Show clearly what membership this artist has requested.
+  // "verified" = Gold, "pro" = Silver.
+  const requestedPlan = membershipRequest?.requestedPlan
+    ? normalizeDirectoryPlan(membershipRequest.requestedPlan)
+    : "";
+
+  const requestStatus = normalizeRequestStatus(
+    membershipRequest?.requestStatus || "",
+  );
+
+  const hasMembershipApplication =
+    Boolean(membershipRequest) &&
+    ["pro", "verified"].includes(requestedPlan) &&
+    !["cancelled"].includes(requestStatus);
+
+  const appliedPlanLabel =
+    requestedPlan === "verified"
+      ? "GOLD"
+      : requestedPlan === "pro"
+        ? "SILVER"
+        : "";
+
+  const applicationIsActivated =
+    requestStatus === "completed" ||
+    (requestedPlan === "verified" && artist.plan === "verified") ||
+    (requestedPlan === "pro" && artist.plan === "pro");
+
   return (
     <div
       className="rounded-2xl border border-white/[0.07] bg-black/25 p-4"
@@ -3068,6 +3279,52 @@ function MembershipMemberRow({
           </span>
         </div>
       </div>
+
+      {hasMembershipApplication && (
+        <div
+          className={`mt-3 flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 ${
+            requestedPlan === "verified"
+              ? "border-amber-400/30 bg-amber-400/10"
+              : "border-slate-300/25 bg-slate-300/10"
+          }`}
+        >
+          <div className="min-w-0">
+            <p className="text-[7px] font-mono uppercase tracking-[0.16em] text-gray-500">
+              Membership Request
+            </p>
+
+            <p
+              className={`mt-0.5 text-[10px] font-black uppercase tracking-wider ${
+                requestedPlan === "verified"
+                  ? "text-amber-300"
+                  : "text-slate-100"
+              }`}
+            >
+              {applicationIsActivated
+                ? `${appliedPlanLabel} ACTIVATED`
+                : `APPLIED FOR ${appliedPlanLabel}`}
+            </p>
+          </div>
+
+          <span
+            className={`shrink-0 rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-widest ${
+              requestedPlan === "verified"
+                ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
+                : "border-slate-300/25 bg-slate-300/10 text-slate-200"
+            }`}
+          >
+            {requestStatus === "new"
+              ? "NEW REQUEST"
+              : requestStatus === "contacted"
+                ? "CONTACTED"
+                : requestStatus === "paid"
+                  ? "PAID"
+                  : requestStatus === "completed"
+                    ? "COMPLETED"
+                    : requestStatus.toUpperCase() || "REQUESTED"}
+          </span>
+        </div>
+      )}
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
         <MembershipInfo label="City" value={artist.city || "N/A"} />
@@ -3181,39 +3438,63 @@ function MembershipMemberRow({
       </div>
 
       {onAdminPlanChange && (
-        <div className="mt-3 flex flex-wrap gap-2 border-t border-white/[0.06] pt-3">
-          {(isSilver || isGold) && (
+        <div className="mt-3 border-t border-white/[0.06] pt-3">
+          <p className="mb-2 text-[8px] font-mono font-black uppercase tracking-[0.14em] text-gray-600">
+            CHANGE MEMBERSHIP
+          </p>
+
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || isBasic}
               onClick={() => void onAdminPlanChange(artist, "basic")}
-              className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-emerald-300 disabled:opacity-40"
+              className={`rounded-lg border px-2 py-2.5 text-[8px] font-black uppercase tracking-wider transition ${
+                isBasic
+                  ? "cursor-default border-emerald-400/40 bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/20"
+                  : "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-300 hover:bg-emerald-400/12"
+              } disabled:opacity-70`}
             >
-              {busy ? "Working..." : "Make Free"}
+              {busy && !isBasic
+                ? "Working..."
+                : isBasic
+                  ? "FREE • CURRENT"
+                  : "MAKE FREE"}
             </button>
-          )}
 
-          {(isBasic || isGold) && (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || isSilver}
               onClick={() => void onAdminPlanChange(artist, "pro")}
-              className="rounded-lg border border-slate-300/20 bg-slate-300/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-100 disabled:opacity-40"
+              className={`rounded-lg border px-2 py-2.5 text-[8px] font-black uppercase tracking-wider transition ${
+                isSilver
+                  ? "cursor-default border-slate-200/40 bg-slate-200/15 text-slate-100 ring-1 ring-slate-200/20"
+                  : "border-slate-300/20 bg-slate-300/[0.06] text-slate-100 hover:bg-slate-300/12"
+              } disabled:opacity-70`}
             >
-              {busy ? "Working..." : "Make Silver"}
+              {busy && !isSilver
+                ? "Working..."
+                : isSilver
+                  ? "SILVER • CURRENT"
+                  : "MAKE SILVER"}
             </button>
-          )}
 
-          {(isBasic || isSilver) && (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || isGold}
               onClick={() => void onAdminPlanChange(artist, "verified")}
-              className="rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-amber-300 disabled:opacity-40"
+              className={`rounded-lg border px-2 py-2.5 text-[8px] font-black uppercase tracking-wider transition ${
+                isGold
+                  ? "cursor-default border-amber-400/40 bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/20"
+                  : "border-amber-400/20 bg-amber-400/[0.06] text-amber-300 hover:bg-amber-400/12"
+              } disabled:opacity-70`}
             >
-              {busy ? "Working..." : "Make Gold"}
+              {busy && !isGold
+                ? "Working..."
+                : isGold
+                  ? "GOLD • CURRENT"
+                  : "MAKE GOLD"}
             </button>
-          )}
+          </div>
         </div>
       )}
     </div>
