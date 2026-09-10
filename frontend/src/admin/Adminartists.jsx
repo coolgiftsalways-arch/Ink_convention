@@ -237,6 +237,14 @@ const normalizeDirectoryArtist = (source = {}) => ({
     .trim()
     .toLowerCase(),
   profileImage: source.profileImage || source.image || source.photo || "",
+  experience: source.experience || "",
+  instagram: source.instagram || "",
+  bio: source.bio || "",
+  website: source.website || source.websiteUrl || "",
+  tattooStyles: Array.isArray(source.tattooStyles) ? source.tattooStyles : [],
+  portfolioImages: Array.isArray(source.portfolioImages)
+    ? source.portfolioImages
+    : [],
 
   // A FREE profile is considered claimed if the owner has completed
   // the claim / OTP ownership flow.
@@ -3379,6 +3387,70 @@ function DirectoryArtistDetailsModal({
             <MembershipInfo label="State" value={artist?.state || "N/A"} />
             <MembershipInfo label="Phone" value={artist?.phone || "N/A"} />
             <MembershipInfo label="Email" value={artist?.email || "N/A"} />
+            <MembershipInfo label="Studio" value={artist?.studio || "N/A"} />
+            <MembershipInfo
+              label="Experience"
+              value={artist?.experience || "N/A"}
+            />
+            <MembershipInfo
+              label="Instagram"
+              value={artist?.instagram || "N/A"}
+            />
+            <MembershipInfo label="Website" value={artist?.website || "N/A"} />
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <p className="mb-3 text-[8px] font-mono font-black uppercase tracking-widest text-gray-500">
+              FULL PROFILE DATA — ADMIN VIEW
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <DetailsField
+                label="Tattoo Styles"
+                value={
+                  artist?.tattooStyles?.length
+                    ? artist.tattooStyles.join(", ")
+                    : "N/A"
+                }
+                fullWidth
+              />
+              <DetailsField
+                label="Bio / About"
+                value={artist?.bio || "N/A"}
+                fullWidth
+              />
+              <DetailsField
+                label="Portfolio Images Saved"
+                value={
+                  Array.isArray(artist?.portfolioImages)
+                    ? artist.portfolioImages.length
+                    : 0
+                }
+              />
+              <DetailsField
+                label="Public Visibility"
+                value={
+                  isGold
+                    ? "All profile fields visible"
+                    : isSilver
+                      ? "Silver public fields only"
+                      : "Name and state only"
+                }
+              />
+              <DetailsField
+                label="Gold Directory Boost"
+                value={
+                  isGold
+                    ? "Eligible / Active when backend enables boost"
+                    : "Not included"
+                }
+              />
+              <DetailsField
+                label="Gold Gallery Feature"
+                value={
+                  isGold ? "1 image OR 1 video entitlement" : "Not included"
+                }
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

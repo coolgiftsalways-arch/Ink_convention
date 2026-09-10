@@ -48,6 +48,8 @@ export default function ArtistBookings() {
 
   const [deletingId, setDeletingId] = React.useState("");
 
+  const [updatingId, setUpdatingId] = React.useState("");
+
   /* =========================================================
      LOGOUT
   ========================================================= */
@@ -197,15 +199,128 @@ export default function ArtistBookings() {
   };
 
   /* =========================================================
+     UPDATE BOOKING STATUS
+
+     pending -> confirmed -> completed
+  ========================================================= */
+
+  const updateBookingStatus = async (booking, nextStatus) => {
+    const bookingId = String(booking?._id || booking?.id || "").trim();
+
+    if (!bookingId) {
+      window.alert("Booking ID is missing.");
+      return;
+    }
+
+    try {
+      setUpdatingId(bookingId);
+      setError("");
+
+      const response = await fetch(
+        `${API_URL}/api/artist-bookings/${bookingId}/status`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: nextStatus }),
+        },
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message || `Status update failed with HTTP ${response.status}`,
+        );
+      }
+
+      setBookings((previous) =>
+        previous.map((item) => {
+          const itemId = String(item?._id || item?.id || "");
+
+          if (itemId !== bookingId) {
+            return item;
+          }
+
+          return {
+            ...item,
+            ...(data?.booking || {}),
+            status: data?.booking?.status || nextStatus,
+          };
+        }),
+      );
+
+      setSelectedBooking((previous) => {
+        const selectedId = String(previous?._id || previous?.id || "");
+
+        if (selectedId !== bookingId) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          ...(data?.booking || {}),
+          status: data?.booking?.status || nextStatus,
+        };
+      });
+    } catch (statusError) {
+      console.error("Artist booking status update error:", statusError);
+      window.alert(statusError?.message || "Unable to update booking status.");
+    } finally {
+      setUpdatingId("");
+    }
+  };
+
+  /* =========================================================
      SELECTED ARTIST NAME
   ========================================================= */
 
+  const getSelectedArtistRecord = (booking) => {
+    if (
+      booking?.selectedArtistId &&
+      typeof booking.selectedArtistId === "object"
+    ) {
+      return booking.selectedArtistId;
+    }
+
+    if (booking?.selectedArtist && typeof booking.selectedArtist === "object") {
+      return booking.selectedArtist;
+    }
+
+    if (booking?.artist && typeof booking.artist === "object") {
+      return booking.artist;
+    }
+
+    return null;
+  };
+
   const getSelectedArtistName = (booking) => {
+    const artist = getSelectedArtistRecord(booking);
+
     return (
-      booking?.selectedArtist?.name ||
-      booking?.artist?.name ||
+      artist?.professionalName ||
+      artist?.studioName ||
+      artist?.studio ||
+      artist?.name ||
       booking?.selectedArtistName ||
       booking?.artistName ||
+      booking?.preferredArtist ||
+      ""
+    );
+  };
+
+  const getSelectedArtistPhone = (booking) => {
+    const artist = getSelectedArtistRecord(booking);
+
+    return (
+      artist?.phone ||
+      artist?.mobile ||
+      artist?.phoneNumber ||
+      booking?.artistPhone ||
+      booking?.selectedArtistPhone ||
       ""
     );
   };
@@ -288,7 +403,11 @@ export default function ArtistBookings() {
     return bookings.filter((booking) => {
       const status = getStatus(booking);
 
-      const matchesStatus = statusFilter === "all" || status === statusFilter;
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "done"
+          ? status === "completed"
+          : status === statusFilter);
 
       const searchableText = [
         booking?.name,
@@ -299,6 +418,7 @@ export default function ArtistBookings() {
         booking?.preferredArtist,
         booking?.tattooIdea,
         getSelectedArtistName(booking),
+        getSelectedArtistPhone(booking),
       ]
         .filter(Boolean)
         .join(" ")
@@ -318,15 +438,14 @@ export default function ArtistBookings() {
     (booking) => getStatus(booking) === "pending",
   ).length;
 
-  const selectedCount = bookings.filter(
-    (booking) => getStatus(booking) === "artist selected",
-  ).length;
-
-  const acceptedCount = bookings.filter((booking) => {
+  const confirmedCount = bookings.filter((booking) => {
     const status = getStatus(booking);
-
-    return status === "accepted" || status === "confirmed";
+    return status === "confirmed" || status === "accepted";
   }).length;
+
+  const doneCount = bookings.filter(
+    (booking) => getStatus(booking) === "completed",
+  ).length;
 
   /* =========================================================
      STATUS COLORS
@@ -335,11 +454,15 @@ export default function ArtistBookings() {
   const getStatusStyle = (status) => {
     const value = String(status || "").toLowerCase();
 
-    if (
-      value === "accepted" ||
-      value === "confirmed" ||
-      value === "completed"
-    ) {
+    if (value === "completed") {
+      return `
+        border-sky-500/30
+        bg-sky-500/10
+        text-sky-400
+      `;
+    }
+
+    if (value === "accepted" || value === "confirmed") {
       return `
         border-emerald-500/30
         bg-emerald-500/10
@@ -536,27 +659,35 @@ export default function ArtistBookings() {
             "
           >
             <StatCard
-              label="TOTAL BOOKINGS"
+              label="ALL BOOKINGS"
               value={bookings.length}
               icon={<CalendarDays size={19} />}
+              active={statusFilter === "all"}
+              onClick={() => setStatusFilter("all")}
             />
 
             <StatCard
               label="PENDING"
               value={pendingCount}
               icon={<Clock3 size={19} />}
+              active={statusFilter === "pending"}
+              onClick={() => setStatusFilter("pending")}
             />
 
             <StatCard
-              label="ARTIST SELECTED"
-              value={selectedCount}
+              label="CONFIRMED"
+              value={confirmedCount}
               icon={<UserRoundCheck size={19} />}
+              active={statusFilter === "confirmed"}
+              onClick={() => setStatusFilter("confirmed")}
             />
 
             <StatCard
-              label="ACCEPTED"
-              value={acceptedCount}
+              label="DONE"
+              value={doneCount}
               icon={<Sparkles size={19} />}
+              active={statusFilter === "done"}
+              onClick={() => setStatusFilter("done")}
             />
           </div>
 
@@ -675,11 +806,9 @@ export default function ArtistBookings() {
 
                 <option value="pending">Pending</option>
 
-                <option value="artist selected">Artist Selected</option>
-
-                <option value="accepted">Accepted</option>
-
                 <option value="confirmed">Confirmed</option>
+
+                <option value="done">Done</option>
 
                 <option value="rejected">Rejected</option>
 
@@ -961,7 +1090,17 @@ export default function ArtistBookings() {
                           {/* SELECTED ARTIST */}
 
                           <TableCell>
-                            {getSelectedArtistName(booking) || (
+                            {getSelectedArtistName(booking) ? (
+                              <div>
+                                <p className="font-black text-white">
+                                  {getSelectedArtistName(booking)}
+                                </p>
+                                <p className="mt-1 text-[10px] text-gray-600">
+                                  {getSelectedArtistPhone(booking) ||
+                                    "Artist number unavailable"}
+                                </p>
+                              </div>
+                            ) : (
                               <span className="text-gray-700">
                                 Not selected
                               </span>
@@ -1024,6 +1163,87 @@ export default function ArtistBookings() {
                                 <Eye size={13} />
                                 VIEW
                               </button>
+
+                              {status === "pending" && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void updateBookingStatus(
+                                      booking,
+                                      "confirmed",
+                                    )
+                                  }
+                                  disabled={
+                                    updatingId ===
+                                    String(booking?._id || booking?.id || "")
+                                  }
+                                  className="
+                                    inline-flex
+                                    items-center
+                                    gap-2
+                                    rounded-lg
+                                    border
+                                    border-emerald-500/25
+                                    bg-emerald-500/10
+                                    hover:bg-emerald-500/20
+                                    px-4
+                                    py-2.5
+                                    text-[8px]
+                                    font-black
+                                    text-emerald-400
+                                    transition
+                                    disabled:cursor-not-allowed
+                                    disabled:opacity-50
+                                  "
+                                >
+                                  <UserRoundCheck size={13} />
+                                  {updatingId ===
+                                  String(booking?._id || booking?.id || "")
+                                    ? "SAVING..."
+                                    : "CONFIRM"}
+                                </button>
+                              )}
+
+                              {(status === "confirmed" ||
+                                status === "accepted") && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void updateBookingStatus(
+                                      booking,
+                                      "completed",
+                                    )
+                                  }
+                                  disabled={
+                                    updatingId ===
+                                    String(booking?._id || booking?.id || "")
+                                  }
+                                  className="
+                                    inline-flex
+                                    items-center
+                                    gap-2
+                                    rounded-lg
+                                    border
+                                    border-sky-500/25
+                                    bg-sky-500/10
+                                    hover:bg-sky-500/20
+                                    px-4
+                                    py-2.5
+                                    text-[8px]
+                                    font-black
+                                    text-sky-400
+                                    transition
+                                    disabled:cursor-not-allowed
+                                    disabled:opacity-50
+                                  "
+                                >
+                                  <Sparkles size={13} />
+                                  {updatingId ===
+                                  String(booking?._id || booking?.id || "")
+                                    ? "SAVING..."
+                                    : "DONE"}
+                                </button>
+                              )}
 
                               <button
                                 type="button"
@@ -1246,6 +1466,39 @@ export default function ArtistBookings() {
             </div>
 
             {/* =================================================
+                BOOKED ARTIST INFORMATION
+            ================================================= */}
+
+            <SectionTitle title="BOOKED ARTIST INFORMATION" />
+
+            <div
+              className="
+                grid
+                grid-cols-1
+                md:grid-cols-2
+                gap-3
+              "
+            >
+              <Detail
+                icon={<UserRoundCheck size={15} />}
+                label="Artist Name"
+                value={
+                  getSelectedArtistName(selectedBooking) ||
+                  "Artist not selected"
+                }
+              />
+
+              <Detail
+                icon={<Phone size={15} />}
+                label="Artist Phone Number"
+                value={
+                  getSelectedArtistPhone(selectedBooking) ||
+                  "Artist number unavailable"
+                }
+              />
+            </div>
+
+            {/* =================================================
                 TATTOO REQUIREMENT
             ================================================= */}
 
@@ -1371,6 +1624,73 @@ export default function ArtistBookings() {
             ================================================= */}
 
             <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {getStatus(selectedBooking) === "pending" && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void updateBookingStatus(selectedBooking, "confirmed")
+                  }
+                  disabled={
+                    updatingId ===
+                    String(selectedBooking?._id || selectedBooking?.id || "")
+                  }
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-emerald-500/25
+                    bg-emerald-500/10
+                    hover:bg-emerald-500/20
+                    py-4
+                    text-[9px]
+                    font-black
+                    tracking-[0.12em]
+                    text-emerald-400
+                    transition
+                    disabled:opacity-50
+                  "
+                >
+                  {updatingId ===
+                  String(selectedBooking?._id || selectedBooking?.id || "")
+                    ? "SAVING..."
+                    : "CONFIRM BOOKING"}
+                </button>
+              )}
+
+              {(getStatus(selectedBooking) === "confirmed" ||
+                getStatus(selectedBooking) === "accepted") && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void updateBookingStatus(selectedBooking, "completed")
+                  }
+                  disabled={
+                    updatingId ===
+                    String(selectedBooking?._id || selectedBooking?.id || "")
+                  }
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-sky-500/25
+                    bg-sky-500/10
+                    hover:bg-sky-500/20
+                    py-4
+                    text-[9px]
+                    font-black
+                    tracking-[0.12em]
+                    text-sky-400
+                    transition
+                    disabled:opacity-50
+                  "
+                >
+                  {updatingId ===
+                  String(selectedBooking?._id || selectedBooking?.id || "")
+                    ? "SAVING..."
+                    : "MARK AS DONE"}
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => void deleteBooking(selectedBooking)}
@@ -1433,19 +1753,25 @@ export default function ArtistBookings() {
    STAT CARD
 ========================================================= */
 
-function StatCard({ label, value, icon }) {
+function StatCard({ label, value, icon, onClick, active = false }) {
   return (
-    <div
-      className="
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
+        w-full
+        text-left
         rounded-2xl
-
         border
-        border-white/10
-
-        bg-[#0d0d11]
-
         p-5
-      "
+        transition-all
+        duration-300
+        ${
+          active
+            ? "border-purple-500/50 bg-purple-500/[0.10] shadow-[0_0_30px_rgba(168,85,247,0.10)]"
+            : "border-white/10 bg-[#0d0d11] hover:border-purple-500/25 hover:bg-white/[0.025]"
+        }
+      `}
     >
       <div
         className="
@@ -1503,7 +1829,7 @@ function StatCard({ label, value, icon }) {
           {icon}
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 

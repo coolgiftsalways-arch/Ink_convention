@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import "../Style/About.css";
 import image from "../assets/gall18.JPG";
+import ecosystemBg from "../assets/about-ecosystem-bg.png";
 
 function About() {
   return (
@@ -284,15 +285,151 @@ function About() {
       {/* =========================================
           6. THE INK CONVENTION ECOSYSTEM
       ========================================= */}
-      <section className="w-full py-24 px-6 sm:px-10 lg:px-12 bg-[#0b0b0f] border-y border-white/5">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-6">
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight text-white uppercase">
+      <section
+        className="
+          relative
+          w-full
+          py-24
+          px-6
+          sm:px-10
+          lg:px-12
+          border-y
+          border-white/5
+          overflow-hidden
+          bg-[#07070a]
+        "
+      >
+        {/* BACKGROUND IMAGE */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <img
+            src={ecosystemBg}
+            alt=""
+            aria-hidden="true"
+            className="
+              absolute
+              inset-0
+              w-full
+              h-full
+              object-cover
+              object-center
+              scale-[1.03]
+              opacity-55
+            "
+          />
+
+          {/* DARK CINEMATIC LAYER */}
+          <div
+            className="
+              absolute
+              inset-0
+              bg-gradient-to-r
+              from-[#050507]/95
+              via-[#050507]/80
+              to-[#050507]/62
+            "
+          />
+
+          {/* TOP / BOTTOM FADE */}
+          <div
+            className="
+              absolute
+              inset-0
+              bg-gradient-to-b
+              from-[#08080a]/80
+              via-transparent
+              to-[#08080a]/90
+            "
+          />
+
+          {/* PURPLE ATMOSPHERE */}
+          <div
+            className="
+              absolute
+              -right-24
+              top-1/2
+              -translate-y-1/2
+              w-[520px]
+              h-[520px]
+              rounded-full
+              bg-[#a855f7]/10
+              blur-[120px]
+            "
+          />
+        </div>
+
+        <div
+          className="
+            relative
+            z-10
+            max-w-7xl
+            mx-auto
+            grid
+            grid-cols-1
+            lg:grid-cols-2
+            gap-14
+            lg:gap-16
+            items-center
+          "
+        >
+          {/* LEFT CONTENT */}
+          <div className="space-y-6 max-w-xl">
+            <p
+              className="
+                text-[#a855f7]
+                font-mono
+                text-xs
+                sm:text-sm
+                tracking-[0.3em]
+                uppercase
+                font-semibold
+              "
+            >
+              // THE INK CONVENTION ECOSYSTEM
+            </p>
+
+            <h2
+              className="
+                text-3xl
+                sm:text-4xl
+                lg:text-5xl
+                font-black
+                tracking-tight
+                leading-[1.04]
+                text-white
+                uppercase
+              "
+            >
               BUILDING AN ECOSYSTEM AROUND TATTOO ART
             </h2>
+
+            <p
+              className="
+                text-gray-300
+                text-sm
+                sm:text-base
+                leading-relaxed
+                font-light
+                max-w-lg
+              "
+            >
+              Ink Convention brings artists, judges, audiences and industry
+              brands into one connected platform built around tattoo culture,
+              professional recognition and long-term creative growth.
+            </p>
+
+            <div
+              className="
+                w-20
+                h-[2px]
+                bg-gradient-to-r
+                from-[#a855f7]
+                to-transparent
+              "
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {/* RIGHT CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {[
               {
                 icon: PenTool,
@@ -317,15 +454,88 @@ function About() {
             ].map((block, i) => (
               <div
                 key={i}
-                className="bg-[#050507] p-6 rounded-2xl border border-white/5 space-y-4"
+                className="
+                  group
+                  relative
+                  overflow-hidden
+                  min-h-[170px]
+                  rounded-2xl
+                  border
+                  border-white/10
+                  bg-black/55
+                  backdrop-blur-md
+                  p-6
+                  space-y-4
+                  transition-all
+                  duration-500
+                  hover:-translate-y-1.5
+                  hover:border-[#a855f7]/50
+                  hover:bg-black/70
+                  shadow-[0_20px_60px_rgba(0,0,0,0.35)]
+                "
               >
-                <block.icon size={24} className="text-[#a855f7]" />
-                <h3 className="text-sm font-bold text-white tracking-widest uppercase">
-                  {block.title}
-                </h3>
-                <p className="text-xs text-gray-400 font-light leading-relaxed">
-                  {block.desc}
-                </p>
+                <div
+                  className="
+                    absolute
+                    -right-14
+                    -top-14
+                    w-36
+                    h-36
+                    rounded-full
+                    bg-[#a855f7]/10
+                    blur-3xl
+                    opacity-0
+                    group-hover:opacity-100
+                    transition-opacity
+                    duration-500
+                  "
+                />
+
+                <div
+                  className="
+                    relative
+                    z-10
+                    w-11
+                    h-11
+                    rounded-xl
+                    border
+                    border-[#a855f7]/20
+                    bg-[#a855f7]/10
+                    flex
+                    items-center
+                    justify-center
+                    text-[#a855f7]
+                  "
+                >
+                  <block.icon size={22} />
+                </div>
+
+                <div className="relative z-10">
+                  <h3
+                    className="
+                      text-sm
+                      font-black
+                      text-white
+                      tracking-widest
+                      uppercase
+                    "
+                  >
+                    {block.title}
+                  </h3>
+
+                  <p
+                    className="
+                      mt-3
+                      text-xs
+                      sm:text-[13px]
+                      text-gray-400
+                      font-light
+                      leading-relaxed
+                    "
+                  >
+                    {block.desc}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

@@ -97,10 +97,10 @@ const PLANS = [
       "Keep your full information saved privately while your public card shows only your name and state.",
 
     benefits: [
-      "Name visible",
-      "State visible",
-      "All other entered details stay saved",
-      "City, image, phone and premium details stay locked publicly",
+      "Name visible publicly",
+      "State visible publicly",
+      "All profile information stays saved in your account",
+      "City, photo, phone, tattoo styles, portfolio and premium details stay hidden publicly",
       "No payment",
     ],
   },
@@ -120,13 +120,13 @@ const PLANS = [
       "Send a Silver membership request. No online payment is taken here — our team will contact you within 24 hours.",
 
     benefits: [
-      "Name visible",
-      "State visible",
-      "City visible",
+      "Name, state and city visible publicly",
       "Profile image visible",
       "Phone number visible",
-      "Email, studio, experience, Instagram and bio stay locked",
-      "First 5 portfolio images are visible publicly",
+      "Tattoo styles visible",
+      "First 5 portfolio images visible publicly",
+      "Email, studio, experience, Instagram, bio and website stay locked publicly",
+      "Silver membership badge",
       "Active for 1 year",
     ],
   },
@@ -146,13 +146,14 @@ const PLANS = [
       "Send a Gold membership request. No online payment is taken here — our team will contact you within 24 hours.",
 
     benefits: [
-      "Everything visible publicly",
-      "Profile image and phone",
-      "Email and studio",
-      "Experience and Instagram",
-      "Bio / About",
+      "Everything in your public artist profile is visible",
+      "Profile image, phone, email and studio",
+      "Tattoo styles, experience, Instagram and bio",
+      "Website link visible on your public profile",
       "Up to 10 portfolio images",
       "Gold Verified badge",
+      "Priority profile / card boost in the artist directory",
+      "1 Gallery feature — choose 1 image OR 1 video",
       "Hall of Fame inclusion",
       "Active for 1 year",
     ],
@@ -177,6 +178,8 @@ const EMPTY_FORM = {
   experience: "",
 
   instagram: "",
+
+  website: "",
 
   tattooStyles: [],
 
@@ -296,6 +299,8 @@ function makeForm(profile = {}) {
     experience: profile.experience || "",
 
     instagram: profile.instagram || "",
+
+    website: profile.website || profile.websiteUrl || "",
 
     tattooStyles: Array.isArray(profile.tattooStyles)
       ? profile.tattooStyles
@@ -1512,6 +1517,8 @@ export default function Enter() {
             experience: formData.experience.trim(),
 
             instagram: formData.instagram.trim(),
+
+            website: formData.website.trim(),
 
             tattooStyles: formData.tattooStyles,
 
@@ -3233,6 +3240,15 @@ export default function Enter() {
                 value={formData.instagram}
                 onChange={handleChange}
                 placeholder="@username"
+                required={false}
+              />
+
+              <InputField
+                label="WEBSITE LINK"
+                name="website"
+                value={formData.website}
+                onChange={handleChange}
+                placeholder="https://yourwebsite.com"
                 required={false}
               />
 

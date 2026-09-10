@@ -17,6 +17,8 @@ import { Link } from "react-router-dom";
 
 import "../Style/Home.css";
 
+import HOME from "../assets/tattoo-cards-bg.png";
+
 /* =========================================================
    HOME
 ========================================================= */
@@ -705,6 +707,7 @@ function Home() {
 
       <section
         className="
+          relative
           w-full
           py-12
           lg:py-10
@@ -714,9 +717,42 @@ function Home() {
           bg-[#0b0b0f]
           border-t
           border-white/5
+          overflow-hidden
         "
       >
-        <div className="max-w-[1560px] mx-auto">
+        {/* BACKGROUND IMAGE BEHIND THE 4 CARDS */}
+        <div className="absolute inset-0 pointer-events-none">
+          <img
+            src={HOME}
+            alt=""
+            aria-hidden="true"
+            className="
+              w-full
+              h-full
+              object-cover
+              object-center
+              opacity-75
+              scale-105
+            "
+          />
+
+          {/* DARK OVERLAY - keeps all card text readable */}
+          <div className="absolute inset-0 bg-black/30" />
+
+          {/* SOFT GRADIENT OVERLAY */}
+          <div
+            className="
+              absolute
+              inset-0
+              bg-gradient-to-b
+              from-[#08080a]/35
+              via-transparent
+              to-[#08080a]/55
+            "
+          />
+        </div>
+
+        <div className="relative z-10 max-w-[1560px] mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-8 lg:mb-7">
             <h4
               className="
@@ -786,7 +822,8 @@ function Home() {
                 rounded-3xl
                 border
                 border-white/10
-                bg-[#08080a]
+                bg-[#08080a]/78
+                backdrop-blur-[2px]
                 p-4
                 sm:p-5
                 hover:border-white/20
@@ -1008,8 +1045,9 @@ function Home() {
                 border
                 border-[#a855f7]/40
                 bg-gradient-to-b
-                from-[#a855f7]/10
-                to-[#08080a]
+                from-[#a855f7]/15
+                to-[#08080a]/78
+                backdrop-blur-[2px]
                 p-4
                 sm:p-5
                 hover:border-[#a855f7]
@@ -1179,8 +1217,9 @@ function Home() {
                 border
                 border-amber-400/30
                 bg-gradient-to-b
-                from-amber-400/[0.08]
-                to-[#08080a]
+                from-amber-400/[0.10]
+                to-[#08080a]/78
+                backdrop-blur-[2px]
                 p-4
                 sm:p-5
                 hover:border-amber-300/70
@@ -1351,7 +1390,8 @@ function Home() {
                 rounded-3xl
                 border
                 border-purple-500/20
-                bg-[#08080a]
+                bg-[#08080a]/78
+                backdrop-blur-[2px]
                 p-4
                 sm:p-5
                 hover:border-purple-500/60
@@ -1578,9 +1618,7 @@ function Home() {
               recognition. Compete, score points, and climb the global ladder.
             </p>
 
-            <div className="pt-4">
-             
-            </div>
+            <div className="pt-4"></div>
           </div>
 
           <div
@@ -1864,8 +1902,6 @@ function Home() {
             Connect your brand with tattoo artists, studios, tattoo enthusiasts
             and the rapidly growing global tattoo industry.
           </p>
-
-        
         </div>
       </section>
 

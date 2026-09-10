@@ -19,6 +19,7 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 
 import mumbai from "../assets/mumbai.png";
 import pune from "../assets/pune.png";
+import expoPageBg from "../assets/expo-page-bg.png";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -207,7 +208,62 @@ export default function Upcomeing() {
   // ======================================================
 
   return (
-    <div className="bg-[#0a0a0c] text-white font-sans selection:bg-purple-500/30">
+    <div
+      className="
+        relative
+        min-h-screen
+        text-white
+        font-sans
+        selection:bg-purple-500/30
+        overflow-hidden
+        isolate
+        bg-[#0a0a0c]
+      "
+    >
+      {/* FULL PAGE BACKGROUND IMAGE */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <img
+          src={expoPageBg}
+          alt=""
+          aria-hidden="true"
+          className="
+            w-full
+            h-full
+            object-cover
+            object-center
+            opacity-58
+            scale-[1.02]
+          "
+        />
+
+        {/* Slight dark layer — not too dark */}
+        <div className="absolute inset-0 bg-black/32" />
+
+        {/* Soft purple/black cinematic tone */}
+        <div
+          className="
+            absolute
+            inset-0
+            bg-gradient-to-r
+            from-[#08080a]/72
+            via-[#08080a]/46
+            to-[#08080a]/58
+          "
+        />
+
+        {/* Bottom fade for readability */}
+        <div
+          className="
+            absolute
+            inset-0
+            bg-gradient-to-b
+            from-transparent
+            via-transparent
+            to-[#08080a]/70
+          "
+        />
+      </div>
+
       <div
         className="
           min-h-screen
@@ -219,9 +275,10 @@ export default function Upcomeing() {
           pt-24
           lg:pt-32
           flex
-          gap-12
+          gap-10 xl:gap-12
           relative
-          max-w-7xl
+          z-10
+          max-w-[1480px]
           mx-auto
           items-start
         "
@@ -235,7 +292,7 @@ export default function Upcomeing() {
           {/* TOP */}
           {/* ================================================= */}
 
-          <div className="mb-10">
+          <div className="mb-6 lg:mb-9">
             <p className="text-purple-500 font-semibold tracking-widest text-sm mb-4">
               // UPCOMING EVENTS
             </p>
@@ -249,7 +306,8 @@ export default function Upcomeing() {
                 className="
                   text-4xl
                   sm:text-5xl
-                  lg:text-5xl
+                  lg:text-[3.55rem]
+                  xl:text-[4rem]
                   font-black
                   uppercase
                   leading-[1.05]
@@ -280,12 +338,13 @@ export default function Upcomeing() {
                   w-6
                   h-10
                   border-2
-                  border-gray-700
+                  border-white/20
                   rounded-full
                   flex
                   justify-center
                   pt-2
-                  bg-[#121215]
+                  bg-black/35
+                  backdrop-blur-md
                 "
               >
                 <div className="w-1 h-2 bg-purple-500 rounded-full animate-bounce" />
@@ -327,11 +386,12 @@ export default function Upcomeing() {
                     transition-all
                     duration-300
                     border
+                    shadow-[0_12px_28px_rgba(0,0,0,0.22)]
 
                     ${
                       isSelected
-                        ? "border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/5"
-                        : "border-gray-800 bg-[#121215] hover:border-gray-600 hover:bg-[#161619]"
+                        ? "border-purple-400/90 bg-[#17131c]/78 backdrop-blur-xl shadow-[0_14px_40px_rgba(168,85,247,0.14)] ring-1 ring-purple-500/10"
+                        : "border-white/10 bg-[#111115]/76 backdrop-blur-xl hover:border-purple-500/35 hover:bg-[#17131c]/86 hover:-translate-y-0.5"
                     }
                   `}
                 >
@@ -387,19 +447,37 @@ export default function Upcomeing() {
         >
           <div
             className="
-              bg-[#121215]
+              bg-[#101014]/78
+              backdrop-blur-xl
               border
-              border-gray-800
-              rounded-2xl
+              border-white/10
+              rounded-[26px]
               p-6
               h-full
               flex
               flex-col
-              shadow-2xl
+              shadow-[0_24px_80px_rgba(0,0,0,0.45)]
+              ring-1
+              ring-white/[0.025]
               relative
+              overflow-hidden
             "
           >
-            <div className="flex justify-between items-center mb-6">
+            <div
+              className="
+                absolute
+                -right-24
+                -top-24
+                w-72
+                h-72
+                rounded-full
+                bg-purple-500/10
+                blur-[90px]
+                pointer-events-none
+              "
+            />
+
+            <div className="relative z-10 flex justify-between items-center mb-6">
               <h4 className="text-purple-500 text-xs font-bold tracking-widest uppercase">
                 {selectedEvent?.status === "active"
                   ? "Active Event"
@@ -413,7 +491,7 @@ export default function Upcomeing() {
                 // ACTIVE EVENT
                 // =================================================
 
-                <div className="flex flex-col h-full fade-in-panel">
+                <div className="relative z-10 flex flex-col h-full fade-in-panel">
                   {/* IMAGE + INFO */}
 
                   <div className="flex gap-6 mb-8">
@@ -422,7 +500,9 @@ export default function Upcomeing() {
                         w-32
                         h-40
                         bg-gray-900
-                        rounded-xl
+                        rounded-2xl
+                        border
+                        border-white/10
                         overflow-hidden
                         shrink-0
                         relative
@@ -432,7 +512,7 @@ export default function Upcomeing() {
                         <img
                           src={selectedEvent.image}
                           alt={selectedEvent.city}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                         />
                       )}
                     </div>
@@ -538,9 +618,12 @@ export default function Upcomeing() {
                             text-center
                             p-2
                             border
-                            border-gray-800
+                            border-white/10
                             rounded-xl
-                            bg-[#0a0a0c]/50
+                            bg-black/30
+                            backdrop-blur-md
+                            hover:border-purple-500/30
+                            transition-colors
                             flex-1
                           "
                         >
@@ -565,10 +648,11 @@ export default function Upcomeing() {
                       to="/artists"
                       className="
                         flex-1
-                        bg-white/5
-                        hover:bg-white/10
+                        bg-white/[0.06]
+                        hover:bg-purple-500/10
                         border
-                        border-gray-800
+                        border-white/10
+                        hover:border-purple-500/40
                         text-gray-300
                         hover:text-white
                         font-bold
@@ -592,9 +676,10 @@ export default function Upcomeing() {
                       className="
                         flex-1
                         border
-                        border-gray-800
-                        hover:border-gray-600
-                        bg-transparent
+                        border-white/10
+                        hover:border-purple-500/40
+                        bg-black/20
+                        hover:bg-purple-500/10
                         text-gray-400
                         hover:text-white
                         font-bold
@@ -622,6 +707,8 @@ export default function Upcomeing() {
 
                 <div
                   className="
+                    relative
+                    z-10
                     flex
                     flex-col
                     items-center

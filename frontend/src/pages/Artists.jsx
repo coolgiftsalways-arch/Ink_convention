@@ -835,6 +835,8 @@ function getDefaultLocked(plan) {
 
     phone: normalized === "basic",
 
+    tattooStyles: normalized === "basic",
+
     email: normalized !== "verified",
 
     studio: normalized !== "verified",
@@ -844,6 +846,8 @@ function getDefaultLocked(plan) {
     instagram: normalized !== "verified",
 
     bio: normalized !== "verified",
+
+    website: normalized !== "verified",
 
     portfolioImages: normalized === "basic",
   };
@@ -884,6 +888,10 @@ function normalizeArtist(source = {}) {
     experience: source.experience || "",
 
     instagram: source.instagram || "",
+
+    website: source.website || source.websiteUrl || "",
+
+    tattooStyles: Array.isArray(source.tattooStyles) ? source.tattooStyles : [],
 
     bio: source.bio || "",
 
@@ -1287,6 +1295,7 @@ export default function Artists() {
           artist.studio,
           artist.experience,
           artist.instagram,
+          artist.website,
           artist.bio,
         );
       }
@@ -1554,8 +1563,6 @@ export default function Artists() {
                   ARTIST.
                 </span>
               </h1>
-
-             
 
               <div
                 className="
@@ -1831,8 +1838,6 @@ export default function Artists() {
                       ? `${selectedCity} ARTISTS`
                       : "DISCOVER ARTISTS"}
                 </h2>
-
-               
               </div>
 
               <div
@@ -4234,6 +4239,43 @@ function ArtistModal({ artist, onClose }) {
               locked={a.locked.instagram}
               plan={a.plan}
             />
+            <CompactProfileField
+              title="WEBSITE"
+              value={a.website}
+              locked={a.locked.website}
+              plan={a.plan}
+            />
+          </div>
+
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <p
+              className={`mb-2 text-[7px] font-mono font-black tracking-[0.18em] ${theme.text}`}
+            >
+              TATTOO STYLES
+            </p>
+            {a.locked.tattooStyles ? (
+              <div className="flex min-h-[46px] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] px-3">
+                <Lock size={10} className="text-gray-600" />
+                <span className="text-[9px] text-gray-600">
+                  TATTOO STYLES LOCKED
+                </span>
+              </div>
+            ) : a.tattooStyles.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {a.tattooStyles.map((style) => (
+                  <span
+                    key={style}
+                    className={`rounded-full border px-3 py-1.5 text-[8px] font-black ${theme.softBorder} ${theme.softText}`}
+                  >
+                    {style}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[9px] text-gray-600">
+                No tattoo styles added yet.
+              </p>
+            )}
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 border-t border-white/10 pt-4 lg:grid-cols-[0.9fr_1.1fr]">

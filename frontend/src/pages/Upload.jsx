@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import "../Style/Home.css";
+import competitionPackageBg from "../assets/competition-package-bg.png";
 
 const CATEGORIES = [
   "Black & Grey",
@@ -28,6 +29,7 @@ const CATEGORIES = [
 const PACKAGES = [
   {
     id: "single",
+    price: 999,
     maxCategories: 1,
     subs: "1 competition submission",
     details:
@@ -35,12 +37,14 @@ const PACKAGES = [
   },
   {
     id: "pro",
+    price: 1499,
     maxCategories: 2,
     subs: "Up to 2 submissions",
     details: "Up to 2 categories allowed\nArtist profile\nRanking eligibility",
   },
   {
     id: "multi",
+    price: 1999,
     maxCategories: 3,
     subs: "Up to 3 submissions",
     details: "Up to 3 categories allowed\nEnhanced artist profile benefits",
@@ -385,8 +389,69 @@ function Upload() {
     : 1;
 
   return (
-    <div className="w-full min-h-screen bg-[#08080a] text-white select-none pt-24 pb-32 px-4 sm:px-6 lg:px-12 overflow-x-hidden font-sans">
-      <div className="max-w-4xl mx-auto w-full">
+    <div
+      className="
+        relative
+        isolate
+        w-full
+        min-h-screen
+        text-white
+        select-none
+        pt-24
+        pb-32
+        px-4
+        sm:px-6
+        lg:px-12
+        overflow-hidden
+        font-sans
+        bg-[#08080a]
+      "
+    >
+      {/* FULL PAGE BACKGROUND - STOPS BEFORE FOOTER */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <img
+          src={competitionPackageBg}
+          alt=""
+          aria-hidden="true"
+          className="
+            w-full
+            h-full
+            object-cover
+            object-center
+            opacity-58
+            scale-[1.03]
+          "
+        />
+
+        {/* Slight dark layer — image still clearly visible */}
+        <div className="absolute inset-0 bg-black/38" />
+
+        {/* Cinematic gradient for readability */}
+        <div
+          className="
+            absolute
+            inset-0
+            bg-gradient-to-r
+            from-[#08080a]/78
+            via-[#08080a]/46
+            to-[#08080a]/62
+          "
+        />
+
+        {/* Top and bottom fade */}
+        <div
+          className="
+            absolute
+            inset-0
+            bg-gradient-to-b
+            from-[#08080a]/60
+            via-transparent
+            to-[#08080a]/80
+          "
+        />
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto w-full">
         {/* ==========================================
             HEADER
         ========================================== */}
@@ -480,53 +545,79 @@ function Upload() {
 
         {step === 1 && (
           <div className="space-y-10 animate-fade-in">
-            <div className="space-y-4">
-              <h2 className="text-2xl font-black text-white uppercase tracking-tight">
-                1. SELECT ENTRY PACKAGE
-              </h2>
+            <div
+              className="
+                relative
+                overflow-hidden
+                rounded-[28px]
+                border
+                border-white/10
+                bg-black/20
+                backdrop-blur-[2px]
+                px-5
+                py-7
+                sm:px-7
+                sm:py-8
+                shadow-[0_28px_80px_rgba(0,0,0,0.38)]
+              "
+            >
+              <div className="relative z-10 space-y-5">
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+                  1. SELECT ENTRY PACKAGE
+                </h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {PACKAGES.map((pkg) => (
-                  <div
-                    key={pkg.id}
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {PACKAGES.map((pkg) => (
+                    <div
+                      key={pkg.id}
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
 
-                        entryPackage: pkg.id,
+                          entryPackage: pkg.id,
 
-                        categories: [],
-                      }))
-                    }
-                    className={`p-6 rounded-2xl border relative cursor-pointer transition-all duration-300 flex flex-col ${
-                      formData.entryPackage === pkg.id
-                        ? "bg-gradient-to-b from-[#140a24] to-[#0b0b0f] border-[#a855f7] shadow-[0_0_30px_rgba(168,85,247,0.15)]"
-                        : "bg-[#0b0b0f] border-white/5 hover:border-white/20"
-                    }`}
-                  >
-                    {formData.entryPackage === pkg.id && (
-                      <div className="absolute top-4 right-4 text-[#a855f7]">
-                        <CheckCircle2 size={20} />
+                          categories: [],
+                        }))
+                      }
+                      className={`p-6 rounded-2xl border relative cursor-pointer transition-all duration-300 flex flex-col min-h-[245px] backdrop-blur-md ${
+                        formData.entryPackage === pkg.id
+                          ? "bg-gradient-to-b from-[#160b27]/92 to-[#0b0b0f]/88 border-[#a855f7] shadow-[0_0_34px_rgba(168,85,247,0.20)]"
+                          : "bg-[#0b0b0f]/82 border-white/10 hover:border-[#a855f7]/40 hover:bg-[#101015]/88"
+                      }`}
+                    >
+                      {formData.entryPackage === pkg.id && (
+                        <div className="absolute top-4 right-4 text-[#a855f7]">
+                          <CheckCircle2 size={20} />
+                        </div>
+                      )}
+
+                      <h4 className="text-sm font-bold text-white tracking-widest">
+                        {pkg.id === "single"
+                          ? "Single Entry"
+                          : pkg.id === "pro"
+                            ? "Professional Bundle"
+                            : "Multi-Entry Bundle"}
+                      </h4>
+
+                      <div className="mt-5 flex items-end gap-2">
+                        <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                          ₹{pkg.price.toLocaleString("en-IN")}
+                        </span>
+                        <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest pb-1">
+                          / entry
+                        </span>
                       </div>
-                    )}
 
-                    <h4 className="text-sm font-bold text-white tracking-widest">
-                      {pkg.id === "single"
-                        ? "Single Entry"
-                        : pkg.id === "pro"
-                          ? "Professional Bundle"
-                          : "Multi-Entry Bundle"}
-                    </h4>
+                      <p className="text-sm font-semibold text-gray-300 mt-4 mb-4">
+                        {pkg.subs}
+                      </p>
 
-                    <p className="text-sm font-semibold text-gray-300 mt-4 mb-4">
-                      {pkg.subs}
-                    </p>
-
-                    <p className="text-xs text-gray-500 whitespace-pre-line font-mono mt-auto pt-4 border-t border-white/5">
-                      {pkg.details}
-                    </p>
-                  </div>
-                ))}
+                      <p className="text-xs text-gray-500 whitespace-pre-line font-mono mt-auto pt-4 border-t border-white/5">
+                        {pkg.details}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
