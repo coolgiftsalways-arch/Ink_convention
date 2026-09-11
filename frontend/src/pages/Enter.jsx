@@ -197,6 +197,7 @@ const PLANS = [
       "Gold Verified membership special offer: regular price ₹7,999, now ₹4,999 for 1 year. Send your request and our team will contact you within 24 hours to confirm the membership and payment details.",
 
     benefits: [
+      "Receive 1–2 Guaranteed Client Leads Every Month",
       "Everything in your public artist profile is visible",
       "Profile image, phone, email and studio",
       "Tattoo styles, experience, Instagram and bio",
@@ -4447,19 +4448,36 @@ function PlanCard({
           ${isVerified ? "sm:grid-cols-2" : ""}
         `}
       >
-        {plan.benefits.map((benefit) => (
-          <div
-            key={benefit}
-            className="
+        {plan.benefits.map((benefit) => {
+          const isClientLeadBenefit =
+            benefit === "Receive 1–2 Guaranteed Client Leads Every Month";
+
+          return (
+            <div
+              key={benefit}
+              className={`
                 flex
                 items-start
                 gap-2
                 text-[10px]
                 sm:text-[11px]
-              "
-          >
-            <span
-              className="
+                ${
+                  isClientLeadBenefit
+                    ? `
+                      rounded-lg
+                      border
+                      border-[#f5c451]/25
+                      bg-[#f5c451]/[0.07]
+                      px-2
+                      py-1.5
+                      shadow-[0_0_18px_rgba(245,196,81,0.10)]
+                    `
+                    : ""
+                }
+              `}
+            >
+              <span
+                className={`
                   mt-[1px]
                   flex
                   h-4
@@ -4469,23 +4487,41 @@ function PlanCard({
                   justify-center
                   rounded-full
                   border
-                  border-white/15
-                  bg-white/[0.06]
                   text-[8px]
-                "
-            >
-              ✓
-            </span>
+                  ${
+                    isClientLeadBenefit
+                      ? `
+                        border-[#f5c451]/50
+                        bg-[#f5c451]/15
+                        text-[#f5c451]
+                        shadow-[0_0_10px_rgba(245,196,81,0.25)]
+                      `
+                      : `
+                        border-white/15
+                        bg-white/[0.06]
+                      `
+                  }
+                `}
+              >
+                ✓
+              </span>
 
-            <span
-              className="
-                  text-gray-300
-                "
-            >
-              {benefit}
-            </span>
-          </div>
-        ))}
+              <span
+                className={
+                  isClientLeadBenefit
+                    ? `
+                      font-semibold
+                      text-[#ffe4a0]
+                      drop-shadow-[0_0_6px_rgba(245,196,81,0.25)]
+                    `
+                    : "text-gray-300"
+                }
+              >
+                {benefit}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <button
