@@ -23,6 +23,20 @@ const ARTISTS_PER_PAGE = 20;
 
 const MIN_SEARCH_CHARACTERS = 3;
 
+/* =========================================================
+   FAST ARTIST CACHE
+
+   Refresh behavior:
+   1. Show cached artists instantly.
+   2. Refresh MongoDB silently in background.
+   3. Replace cache only after fresh response arrives.
+========================================================= */
+const ARTIST_CACHE_KEY = "inkConventionArtistsPageCacheV2";
+const ARTIST_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const CITY_FILTER_CACHE_KEY = "inkConventionArtistCitiesV1";
+const CITY_FILTER_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const INITIAL_DAY_INDEX = Math.floor(Date.now() / ONE_DAY);
 const CITY_COUNTER_KEY = "inkConventionCityCounters";
@@ -846,9 +860,8 @@ function getDefaultLocked(plan) {
     instagram: normalized !== "verified",
 
     bio: normalized !== "verified",
-     // Only Gold can show these publicly
+    // Only Gold can show these publicly
     profileLinks: normalized !== "verified",
-
 
     portfolioImages: normalized === "basic",
   };
@@ -890,18 +903,18 @@ function normalizeArtist(source = {}) {
 
     instagram: source.instagram || "",
 
-bio: source.bio || "",
+    bio: source.bio || "",
 
-profileLinks: Array.isArray(source.profileLinks)
-  ? source.profileLinks
-      .map((link) => String(link || "").trim())
-      .filter(Boolean)
-      .slice(0, 3)
-  : [],
+    profileLinks: Array.isArray(source.profileLinks)
+      ? source.profileLinks
+          .map((link) => String(link || "").trim())
+          .filter(Boolean)
+          .slice(0, 3)
+      : [],
 
-portfolioImages: Array.isArray(source.portfolioImages)
-  ? source.portfolioImages.slice(0, 10)
-  : [],
+    portfolioImages: Array.isArray(source.portfolioImages)
+      ? source.portfolioImages.slice(0, 10)
+      : [],
 
     locked: {
       ...getDefaultLocked(plan),
@@ -921,8 +934,8 @@ portfolioImages: Array.isArray(source.portfolioImages)
 
     spotlight: plan === "verified" && Boolean(source.spotlight),
 
-    hallOfFameEligible:
-      plan === "verified" && Boolean(source.hallOfFameEligible),
+    // Every real Gold / Verified profile is automatically Hall of Fame eligible.
+    hallOfFameEligible: plan === "verified",
 
     planStartedAt: source.planStartedAt || null,
 
@@ -937,9 +950,10 @@ portfolioImages: Array.isArray(source.portfolioImages)
 /* =========================================================
    PUBLIC PORTFOLIO LIMIT
 
-   FREE   -> 0
-   SILVER -> 5
-   GOLD   -> 10
+   FREE -> 0
+   GOLD -> 10
+
+   Legacy SILVER records are hidden from this directory.
 ========================================================= */
 
 function getVisiblePortfolioImages(artist) {
@@ -1007,6 +1021,127 @@ function formatExpiry(value) {
 }
 
 /* =========================================================
+   ARTIST CACHE HELPERS
+========================================================= */
+
+function getArtistCacheKey({ page, city, search }) {
+  return [
+    "page",
+    Number(page) || 0,
+    "city",
+    String(city || "ALL")
+      .trim()
+      .toUpperCase(),
+    "search",
+    String(search || "")
+      .trim()
+      .toLowerCase(),
+  ].join(":");
+}
+
+function readArtistCache(cacheKey) {
+  try {
+    const raw = localStorage.getItem(ARTIST_CACHE_KEY);
+
+    if (!raw) {
+      return null;
+    }
+
+    const cache = JSON.parse(raw);
+
+    const entry = cache?.[cacheKey];
+
+    if (!entry || !Array.isArray(entry.artists)) {
+      return null;
+    }
+
+    return entry;
+  } catch (error) {
+    console.warn("Artist cache read failed:", error);
+
+    return null;
+  }
+}
+
+function writeArtistCache(cacheKey, value) {
+  try {
+    const raw = localStorage.getItem(ARTIST_CACHE_KEY);
+
+    const cache = raw ? JSON.parse(raw) : {};
+
+    cache[cacheKey] = {
+      ...value,
+      savedAt: Date.now(),
+    };
+
+    // Keep cache small: newest 12 page/filter combinations only.
+    const trimmed = Object.fromEntries(
+      Object.entries(cache)
+        .sort(
+          (first, second) =>
+            Number(second?.[1]?.savedAt || 0) -
+            Number(first?.[1]?.savedAt || 0),
+        )
+        .slice(0, 12),
+    );
+
+    localStorage.setItem(ARTIST_CACHE_KEY, JSON.stringify(trimmed));
+  } catch (error) {
+    console.warn("Artist cache write failed:", error);
+  }
+}
+
+function isArtistCacheFresh(entry) {
+  return (
+    entry &&
+    Number(entry.savedAt) > 0 &&
+    Date.now() - Number(entry.savedAt) < ARTIST_CACHE_TTL
+  );
+}
+
+function readCityFilterCache() {
+  try {
+    const raw = localStorage.getItem(CITY_FILTER_CACHE_KEY);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+
+    if (!Array.isArray(parsed?.cities)) {
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeCityFilterCache(cities) {
+  try {
+    localStorage.setItem(
+      CITY_FILTER_CACHE_KEY,
+      JSON.stringify({
+        cities,
+        savedAt: Date.now(),
+      }),
+    );
+  } catch (error) {
+    // Ignore cache write errors.
+  }
+}
+
+function isCityFilterCacheFresh(cache) {
+  return (
+    cache &&
+    Number(cache.savedAt) > 0 &&
+    Date.now() - Number(cache.savedAt) < CITY_FILTER_CACHE_TTL
+  );
+}
+
+/* =========================================================
    MAIN PAGE
 ========================================================= */
 
@@ -1016,67 +1151,108 @@ export default function Artists() {
   const [selectedCity, setSelectedCity] = React.useState("ALL");
 
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState("");
 
-React.useEffect(() => {
-  const timer = setTimeout(() => {
-    setDebouncedSearch(searchQuery.trim());
-  }, 400);
+  const initialCityCache = React.useMemo(() => readCityFilterCache(), []);
 
-  return () => clearTimeout(timer);
-}, [searchQuery]);
+  const [directoryCities, setDirectoryCities] = React.useState(() =>
+    Array.isArray(initialCityCache?.cities) ? initialCityCache.cities : [],
+  );
 
-  const [directoryCities, setDirectoryCities] = React.useState([]);
+  const initialCache = React.useMemo(
+    () =>
+      readArtistCache(
+        getArtistCacheKey({
+          page: 0,
+          city: "ALL",
+          search: "",
+        }),
+      ),
+    [],
+  );
 
-  const [artists, setArtists] = React.useState([]);
+  const [artists, setArtists] = React.useState(() =>
+    Array.isArray(initialCache?.artists) ? initialCache.artists : [],
+  );
 
-  const [loading, setLoading] = React.useState(true);
+  // Full loader only when there is literally nothing cached to show.
+  const [loading, setLoading] = React.useState(
+    !Array.isArray(initialCache?.artists) || initialCache.artists.length === 0,
+  );
+
+  // Silent network refresh indicator. Does not hide artist cards.
+  const [refreshingArtists, setRefreshingArtists] = React.useState(false);
 
   const [error, setError] = React.useState("");
 
   const [selectedArtist, setSelectedArtist] = React.useState(null);
 
   const [page, setPage] = React.useState(0);
-  const [totalArtists, setTotalArtists] = React.useState(0);
-  const [totalArtistPages, setTotalArtistPages] = React.useState(1);
+
+  const [totalArtists, setTotalArtists] = React.useState(
+    Number(initialCache?.totalArtists || initialCache?.artists?.length || 0),
+  );
+
+  const [totalArtistPages, setTotalArtistPages] = React.useState(
+    Math.max(1, Number(initialCache?.totalArtistPages || 1)),
+  );
 
   const artistSectionRef = React.useRef(null);
 
   const artistGridRef = React.useRef(null);
 
-
   const openArtistProfile = async (artist) => {
-  try {
-    const response = await fetch(
-      `${getApiBase()}/api/admin/tattoo-studios/public/${artist.id}`,
-      {
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
+    try {
+      const response = await fetch(
+        `${getApiBase()}/api/admin/tattoo-studios/public/${artist.id}`,
+        {
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+          },
         },
-      },
-    );
+      );
 
-    if (!response.ok) {
-      throw new Error("Unable to load artist profile");
-    }
+      if (!response.ok) {
+        throw new Error("Unable to load artist profile");
+      }
 
-    const data = await response.json();
+      const data = await response.json();
 
-    const fullArtist = data?.artist || data?.profile;
+      const fullArtist = data?.artist || data?.profile;
 
-    if (!fullArtist) {
+      if (!fullArtist) {
+        setSelectedArtist(artist);
+        return;
+      }
+
+      setSelectedArtist(normalizeArtist(fullArtist));
+    } catch (error) {
+      console.error("Profile load error:", error);
+
       setSelectedArtist(artist);
-      return;
+    }
+  };
+
+  /* =======================================================
+     DEBOUNCE SEARCH
+     Only hit backend after 3+ characters and a short pause.
+  ======================================================= */
+  React.useEffect(() => {
+    const clean = searchQuery.trim();
+
+    if (clean.length < MIN_SEARCH_CHARACTERS) {
+      setDebouncedSearchQuery("");
+      return undefined;
     }
 
-    setSelectedArtist(normalizeArtist(fullArtist));
-  } catch (error) {
-    console.error("Profile load error:", error);
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchQuery(clean);
+      setPage(0);
+    }, 300);
 
-    setSelectedArtist(artist);
-  }
-};
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
 
   /* =======================================================
      LOAD REAL CITIES
@@ -1085,15 +1261,23 @@ React.useEffect(() => {
   React.useEffect(() => {
     const controller = new AbortController();
 
-    async function loadCities() {
+    /*
+      If cities are already cached, do NOT block the page.
+      Refresh them later in the background.
+    */
+    const cachedCities = readCityFilterCache();
+
+    if (cachedCities && Array.isArray(cachedCities.cities)) {
+      setDirectoryCities(cachedCities.cities);
+    }
+
+    const loadCities = async () => {
       try {
         const response = await fetch(
           `${getApiBase()}/api/admin/tattoo-studios/filters`,
           {
             signal: controller.signal,
-
             credentials: "include",
-
             headers: {
               Accept: "application/json",
             },
@@ -1120,23 +1304,29 @@ React.useEffect(() => {
               )
               .filter(Boolean),
           ),
-        ).sort((a, b) => a.localeCompare(b));
+        ).sort((first, second) => first.localeCompare(second));
 
-        setDirectoryCities(uniqueCities);
-      } catch (requestError) {
-        if (requestError?.name === "AbortError") {
-          return;
+        if (!controller.signal.aborted) {
+          setDirectoryCities(uniqueCities);
+          writeCityFilterCache(uniqueCities);
         }
-
-        console.error("❌ City filter error:", requestError);
-
-        setDirectoryCities([]);
+      } catch (requestError) {
+        if (requestError?.name !== "AbortError") {
+          console.warn("City filter refresh skipped:", requestError);
+        }
       }
-    }
+    };
 
-    void loadCities();
+    // Fresh cache: refresh after 8 seconds so artist cards load first.
+    // Missing/stale cache: refresh after 1.2 seconds, still non-blocking.
+    const delay = isCityFilterCacheFresh(cachedCities) ? 8000 : 1200;
+
+    const timer = window.setTimeout(() => {
+      void loadCities();
+    }, delay);
 
     return () => {
+      window.clearTimeout(timer);
       controller.abort();
     };
   }, []);
@@ -1148,10 +1338,43 @@ React.useEffect(() => {
     const controller = new AbortController();
 
     async function loadArtists() {
-      try {
-        setLoading(true);
-        setError("");
+      const cleanSearch = debouncedSearchQuery.trim();
 
+      const cacheKey = getArtistCacheKey({
+        page,
+        city: selectedCity,
+        search: cleanSearch,
+      });
+
+      const cached = readArtistCache(cacheKey);
+
+      /*
+        SMART REFRESH:
+        Show cached artists immediately.
+
+        Even if the cache is older than 5 minutes, we still show it first.
+        MongoDB refresh then happens silently in the background.
+      */
+      if (cached && Array.isArray(cached.artists)) {
+        setArtists(cached.artists);
+        setTotalArtists(
+          Number(cached.totalArtists || cached.artists.length || 0),
+        );
+        setTotalArtistPages(Math.max(1, Number(cached.totalArtistPages || 1)));
+        setLoading(false);
+      } else {
+        /*
+          Never blank the directory while searching.
+          Keep the current cards visible and search silently in background.
+          Full loader is only allowed when there are literally no cards yet.
+        */
+        setLoading(artists.length === 0);
+      }
+
+      setRefreshingArtists(true);
+      setError("");
+
+      try {
         const params = new URLSearchParams({
           page: String(page + 1),
           limit: String(ARTISTS_PER_PAGE),
@@ -1160,8 +1383,6 @@ React.useEffect(() => {
         if (selectedCity !== "ALL") {
           params.set("city", selectedCity);
         }
-
-        const cleanSearch = debouncedSearch;
 
         if (cleanSearch.length >= MIN_SEARCH_CHARACTERS) {
           params.set("search", cleanSearch);
@@ -1194,13 +1415,32 @@ React.useEffect(() => {
 
         const normalized = results.map(normalizeArtist);
 
-        setArtists(sortArtists(normalized));
-
-        setTotalArtists(Number(data?.pagination?.total || results.length));
-
-        setTotalArtistPages(
-          Math.max(1, Number(data?.pagination?.totalPages || 1)),
+        // Public directory currently renders FREE + GOLD.
+        const freeAndGoldArtists = normalized.filter(
+          (artist) => normalizePlan(artist.plan) !== "pro",
         );
+
+        const sortedArtists = sortArtists(freeAndGoldArtists);
+
+        const nextTotal = Number(data?.pagination?.total || results.length);
+
+        const nextTotalPages = Math.max(
+          1,
+          Number(data?.pagination?.totalPages || 1),
+        );
+
+        if (!controller.signal.aborted) {
+          setArtists(sortedArtists);
+          setTotalArtists(nextTotal);
+          setTotalArtistPages(nextTotalPages);
+          setLoading(false);
+
+          writeArtistCache(cacheKey, {
+            artists: sortedArtists,
+            totalArtists: nextTotal,
+            totalArtistPages: nextTotalPages,
+          });
+        }
       } catch (requestError) {
         if (requestError?.name === "AbortError") {
           return;
@@ -1208,13 +1448,24 @@ React.useEffect(() => {
 
         console.error("❌ Artist directory error:", requestError);
 
-        setArtists([]);
-        setTotalArtists(0);
-        setTotalArtistPages(1);
-        setError("Unable to load artists. Please try again.");
+        /*
+          If old cache exists, keep showing it.
+          Don't replace a usable directory with an error screen.
+        */
+        if (
+          !cached ||
+          !Array.isArray(cached.artists) ||
+          cached.artists.length === 0
+        ) {
+          setArtists([]);
+          setTotalArtists(0);
+          setTotalArtistPages(1);
+          setError("Unable to load artists. Please try again.");
+        }
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
+          setRefreshingArtists(false);
         }
       }
     }
@@ -1224,7 +1475,13 @@ React.useEffect(() => {
     return () => {
       controller.abort();
     };
-  }, [page, selectedCity, debouncedSearch, location.state?.refreshDirectory]);
+  }, [
+    page,
+    selectedCity,
+    debouncedSearchQuery,
+    location.state?.refreshDirectory,
+  ]);
+
   /* =======================================================
      OPEN SHARED ARTIST PROFILE FROM URL
   ======================================================= */
@@ -1279,8 +1536,47 @@ React.useEffect(() => {
   const isSearchActive = normalizedSearchQuery.length >= MIN_SEARCH_CHARACTERS;
 
   const filteredArtists = React.useMemo(() => {
-  return artists;
-}, [artists]);
+    /*
+      Search begins ONLY after 3 characters.
+
+      Example:
+      A   -> normal directory
+      Ah  -> normal directory
+      Ahm -> matching artists such as Ahmed / Ahmad / Ahmer
+
+      Search uses only the public fields allowed by the artist's plan.
+    */
+    if (!isSearchActive) {
+      return sortArtists(artists);
+    }
+
+    const query = normalizedSearchQuery;
+
+    const results = artists.filter((artist) => {
+      const plan = normalizePlan(artist.plan);
+
+      const publicValues = [artist.name, artist.state];
+
+      if (plan === "verified") {
+        publicValues.push(artist.city, artist.phone);
+
+        // Gold can also be searched by the complete public profile.
+
+        publicValues.push(
+          artist.email,
+          artist.studio,
+          artist.experience,
+          artist.instagram,
+          artist.website,
+          artist.bio,
+        );
+      }
+
+      return publicValues.some((value) => safeText(value).includes(query));
+    });
+
+    return sortArtists(results);
+  }, [artists, isSearchActive, normalizedSearchQuery]);
 
   /* =======================================================
      PAGINATION
@@ -1298,8 +1594,6 @@ React.useEffect(() => {
     artistPageStart + visibleArtists.length,
     totalArtists,
   );
-
- 
 
   React.useEffect(() => {
     if (!artistGridRef.current || visibleArtists.length === 0) {
@@ -1813,7 +2107,11 @@ React.useEffect(() => {
                       text-gray-600
                     "
                   >
-                    {loading ? "LOADING..." : `${totalArtists} ARTISTS`}
+                    {loading
+                      ? "LOADING..."
+                      : refreshingArtists
+                        ? `${totalArtists} ARTISTS • REFRESHING`
+                        : `${totalArtists} ARTISTS`}
                   </span>
 
                   {totalArtists > ARTISTS_PER_PAGE && (
@@ -1851,10 +2149,16 @@ React.useEffect(() => {
               </div>
             )}
 
-            {loading ? (
-              <DirectoryLoader />
-            ) : filteredArtists.length === 0 ? (
-              <EmptyState />
+            {filteredArtists.length === 0 ? (
+              loading ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-10 text-center">
+                  <p className="text-[10px] font-mono tracking-widest text-gray-600">
+                    LOADING...
+                  </p>
+                </div>
+              ) : (
+                <EmptyState />
+              )
             ) : (
               <>
                 <div
@@ -3564,7 +3868,7 @@ function ArtistRow({ artist, isNew, onClick }) {
           `}
         >
           {isGold
-            ? "★ GOLD VERIFIED SPOTLIGHT"
+            ? "★ GOLD VERIFIED • HALL OF FAME"
             : isPro
               ? "✦ SILVER PRO LISTING"
               : a.claimed
@@ -4187,59 +4491,58 @@ function ArtistModal({ artist, onClose }) {
               plan={a.plan}
             />
             {isGold && a.profileLinks.length > 0 && (
-  <div className="mt-4 border-t border-white/10 pt-4">
-    <div className="flex flex-col gap-3">
-      
-      <div>
-        <p
-          className={`text-[7px] font-mono font-black tracking-[0.18em] ${theme.text}`}
-        >
-          CONNECT WITH ARTIST
-        </p>
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <p
+                      className={`text-[7px] font-mono font-black tracking-[0.18em] ${theme.text}`}
+                    >
+                      CONNECT WITH ARTIST
+                    </p>
 
-        <p className="mt-1 text-[9px] text-gray-500">
-          Follow or visit this artist on their social platforms.
-        </p>
-      </div>
+                    <p className="mt-1 text-[9px] text-gray-500">
+                      Follow or visit this artist on their social platforms.
+                    </p>
+                  </div>
 
-      <div className="flex w-full flex-row flex-nowrap items-center gap-3">
-        {a.profileLinks.map((link, index) => {
-          let label = `Link ${index + 1}`;
+                  <div className="flex w-full flex-row flex-nowrap items-center gap-3">
+                    {a.profileLinks.map((link, index) => {
+                      let label = `Link ${index + 1}`;
 
-          try {
-            const url = new URL(link);
-            const host = url.hostname.toLowerCase();
+                      try {
+                        const url = new URL(link);
+                        const host = url.hostname.toLowerCase();
 
-            if (host.includes("instagram.com")) {
-              label = "Instagram";
-            } else if (
-              host.includes("youtube.com") ||
-              host.includes("youtu.be")
-            ) {
-              label = "YouTube";
-            } else if (host.includes("facebook.com")) {
-              label = "Facebook";
-            } else if (
-              host.includes("twitter.com") ||
-              host.includes("x.com")
-            ) {
-              label = "X / Twitter";
-            } else if (host.includes("tiktok.com")) {
-              label = "TikTok";
-            } else {
-              label = "Website";
-            }
-          } catch {
-            label = `Link ${index + 1}`;
-          }
+                        if (host.includes("instagram.com")) {
+                          label = "Instagram";
+                        } else if (
+                          host.includes("youtube.com") ||
+                          host.includes("youtu.be")
+                        ) {
+                          label = "YouTube";
+                        } else if (host.includes("facebook.com")) {
+                          label = "Facebook";
+                        } else if (
+                          host.includes("twitter.com") ||
+                          host.includes("x.com")
+                        ) {
+                          label = "X / Twitter";
+                        } else if (host.includes("tiktok.com")) {
+                          label = "TikTok";
+                        } else {
+                          label = "Website";
+                        }
+                      } catch {
+                        label = `Link ${index + 1}`;
+                      }
 
-          return (
-            <a
-              key={`${link}-${index}`}
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="
+                      return (
+                        <a
+                          key={`${link}-${index}`}
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="
                 inline-flex
                 shrink-0
                 items-center
@@ -4259,16 +4562,15 @@ function ArtistModal({ artist, onClose }) {
                 hover:border-[#f5c451]/60
                 hover:bg-[#f5c451]/[0.12]
               "
-            >
-              {label} ↗
-            </a>
-          );
-        })}
-      </div>
-
-    </div>
-  </div>
-)}
+                        >
+                          {label} ↗
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 border-t border-white/10 pt-4 lg:grid-cols-[0.9fr_1.1fr]">

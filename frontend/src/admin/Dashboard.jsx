@@ -40,10 +40,12 @@ const apiFetch = async (path, options = {}) => {
 
   const timeout = window.setTimeout(() => {
     controller.abort();
-  }, 15000);
+  }, 120000);
 
   try {
     return await fetch(`${API_URL}${path}`, {
+      credentials: "include",
+      cache: "no-store",
       ...options,
       signal: controller.signal,
     });
@@ -349,8 +351,8 @@ function Dashboard() {
 
   // Directory membership filter:
   // basic = FREE / no paid plan
-  // pro = SILVER ₹1,999
-  // verified = GOLD ₹2,999
+  // pro = SILVER ₹2,999
+  // verified = GOLD ₹5,999
   const [membershipFilter, setMembershipFilter] = useState("basic-claimed");
 
   const [loading, setLoading] = useState(true);
@@ -499,10 +501,15 @@ function Dashboard() {
   // ===================================================
 
   const fetchMemberships = useCallback(async () => {
+    /*
+      IMPORTANT:
+      Dashboard membership counts come from TattooStudio directory records.
+      Pending membership request cards use a separate endpoint elsewhere.
+    */
     setMembershipError("");
 
     try {
-      const PAGE_SIZE = 1000;
+      const PAGE_SIZE = 100;
       const allArtists = [];
 
       let page = 1;
@@ -566,7 +573,8 @@ function Dashboard() {
       console.error("Membership fetch error:", error);
       setDirectoryArtists([]);
       setMembershipError(
-        error.message || "Could not load Free, Silver and Gold artists.",
+        error.message ||
+          "Could not load Free, Silver and Gold directory artists.",
       );
     }
   }, []);
@@ -617,14 +625,25 @@ function Dashboard() {
     setDashboardError("");
 
     try {
-      await Promise.all([
+      const results = await Promise.allSettled([
         fetchUsers(),
         fetchClientCount(),
         fetchMemberships(),
         fetchStallBookings(),
       ]);
+
+      const failed = results.filter((result) => result.status === "rejected");
+
+      if (failed.length > 0) {
+        console.warn(
+          `⚠️ ${failed.length} dashboard request(s) failed.`,
+          failed,
+        );
+      }
     } catch (error) {
-      setDashboardError(error.message || "Could not load dashboard.");
+      console.error("Dashboard refresh error:", error);
+
+      setDashboardError(error.message || "Could not load some dashboard data.");
     } finally {
       setLoading(false);
     }
@@ -844,6 +863,7 @@ function Dashboard() {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   required
                   value={loginPassword}
                   onChange={(event) => setLoginPassword(event.target.value)}
@@ -884,19 +904,12 @@ function Dashboard() {
   // LOADING
   // ===================================================
 
-  if (loading) {
-    return (
-      <div className="w-full min-h-screen bg-[#08080a] text-white flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-9 h-9 rounded-full border-2 border-white/10 border-t-[#a855f7] animate-spin mx-auto" />
-
-          <p className="text-xs font-mono text-gray-500 uppercase tracking-widest">
-            Loading Dashboard...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // ===================================================
+  // NON-BLOCKING DASHBOARD LOADING
+  // ===================================================
+  // Do NOT return a full-screen loader here.
+  // The dashboard renders immediately and each API section
+  // fills in as soon as its own request finishes.
 
   // ===================================================
   // MEDIA COUNT
@@ -930,21 +943,21 @@ function Dashboard() {
     membershipFilter === "verified"
       ? {
           title: "Gold Verified",
-          price: "₹2,999",
+          price: "₹5,999",
           members: goldMembers,
           tone: "gold",
           icon: <Trophy size={18} />,
-          description: "Artists who have taken the ₹2,999 Gold Verified plan.",
+          description: "Artists who have taken the ₹5,999 Gold Verified plan.",
         }
       : membershipFilter === "pro"
         ? {
             title: "Silver Pro",
-            price: "₹1,999",
+            price: "₹2,999",
             members: silverMembers,
             tone: "silver",
             icon: <Award size={18} />,
             description:
-              "Artists who have taken only the ₹1,999 Silver Pro plan.",
+              "Artists who have taken only the ₹2,999 Silver Pro plan.",
           }
         : membershipFilter === "basic-unclaimed"
           ? {
@@ -1007,9 +1020,10 @@ function Dashboard() {
               <button
                 type="button"
                 onClick={refreshDashboard}
-                className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-mono uppercase tracking-wider"
+                disabled={loading}
+                className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-mono uppercase tracking-wider"
               >
-                Refresh
+                {loading ? "Refreshing..." : "Refresh"}
               </button>
 
               <button
@@ -1063,13 +1077,13 @@ function Dashboard() {
             />
 
             <DashboardStat
-              label="Silver Pro ₹1,999"
+              label="Silver Pro ₹2,999"
               value={silverMembers.length}
               tone="silver"
             />
 
             <DashboardStat
-              label="Gold Verified ₹2,999"
+              label="Gold Verified ₹5,999"
               value={goldMembers.length}
               tone="gold"
             />
@@ -1230,8 +1244,8 @@ function Dashboard() {
 
                 <p className="text-xs sm:text-sm text-gray-600 mt-2">
                   Free Claimed = owner verified profile • Free Unclaimed =
-                  imported profile not claimed yet • Silver = ₹1,999 • Gold =
-                  ₹2,999
+                  imported profile not claimed yet • Silver = ₹2,999 • Gold =
+                  ₹5,999
                 </p>
               </div>
 
@@ -1273,7 +1287,7 @@ function Dashboard() {
                 active={membershipFilter === "pro"}
                 onClick={() => setMembershipFilter("pro")}
                 title="SILVER PRO"
-                subtitle="₹1,999 Plan"
+                subtitle="₹2,999 Plan"
                 count={silverMembers.length}
                 tone="silver"
               />
@@ -1282,7 +1296,7 @@ function Dashboard() {
                 active={membershipFilter === "verified"}
                 onClick={() => setMembershipFilter("verified")}
                 title="GOLD VERIFIED"
-                subtitle="₹2,999 Plan"
+                subtitle="₹5,999 Plan"
                 count={goldMembers.length}
                 tone="gold"
               />

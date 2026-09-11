@@ -103,6 +103,7 @@ const tattooStudioSchema = new mongoose.Schema(
       default: "",
       trim: true,
       lowercase: true,
+      index: true,
     },
 
     /* =====================================================
@@ -152,10 +153,10 @@ const tattooStudioSchema = new mongoose.Schema(
    Only GOLD displays these links publicly.
 ===================================================== */
 
-profileLinks: {
-  type: [String],
-  default: [],
-},
+    profileLinks: {
+      type: [String],
+      default: [],
+    },
 
     bio: {
       type: String,
@@ -562,13 +563,13 @@ tattooStudioSchema.pre(
     }
 
     if (Array.isArray(this.profileLinks)) {
-  this.profileLinks = this.profileLinks
-    .map((link) => String(link || "").trim())
-    .filter(Boolean)
-    .slice(0, 3);
-} else {
-  this.profileLinks = [];
-}
+      this.profileLinks = this.profileLinks
+        .map((link) => String(link || "").trim())
+        .filter(Boolean)
+        .slice(0, 3);
+    } else {
+      this.profileLinks = [];
+    }
     /* =============================================
        PREMIUM FLAGS
     ============================================= */
@@ -596,13 +597,13 @@ tattooStudioSchema.pre(
     }
 
     if (setData.profileLinks !== undefined) {
-  setData.profileLinks = Array.isArray(setData.profileLinks)
-    ? setData.profileLinks
-        .map((link) => String(link || "").trim())
-        .filter(Boolean)
-        .slice(0, 3)
-    : [];
-}
+      setData.profileLinks = Array.isArray(setData.profileLinks)
+        ? setData.profileLinks
+            .map((link) => String(link || "").trim())
+            .filter(Boolean)
+            .slice(0, 3)
+        : [];
+    }
 
     /* =============================================
        PLAN
@@ -664,6 +665,96 @@ tattooStudioSchema.pre(
     this.setUpdate(update);
   },
 );
+
+/* =========================================================
+   PERFORMANCE INDEXES
+
+   These indexes are for the actual admin/directory queries:
+
+   - FREE / SILVER / GOLD tabs
+   - claimed / unclaimed
+   - payment status
+   - newest members
+   - prefix search
+   - dashboard counts
+
+   IMPORTANT:
+   MongoDB will build these indexes automatically after deploy.
+========================================================= */
+
+/* Fast plan tabs + newest first */
+tattooStudioSchema.index({
+  plan: 1,
+  updatedAt: -1,
+  name: 1,
+});
+
+/* Fast paid Silver / Gold query */
+tattooStudioSchema.index({
+  plan: 1,
+  paymentStatus: 1,
+  updatedAt: -1,
+});
+
+/* Fast FREE claimed query */
+tattooStudioSchema.index({
+  plan: 1,
+  claimed: 1,
+  updatedAt: -1,
+});
+
+/* Claim compatibility flags used by old/new records */
+tattooStudioSchema.index({
+  plan: 1,
+  phoneVerified: 1,
+});
+
+tattooStudioSchema.index({
+  plan: 1,
+  ownerVerified: 1,
+});
+
+tattooStudioSchema.index({
+  plan: 1,
+  updatedByOwner: 1,
+});
+
+/* Fast state + plan directory filtering */
+tattooStudioSchema.index({
+  state: 1,
+  plan: 1,
+  updatedAt: -1,
+});
+
+/* Fast city + plan filtering */
+tattooStudioSchema.index({
+  city: 1,
+  plan: 1,
+  updatedAt: -1,
+});
+
+/* Matches the directory sort used by tattooStudioRoutes.js */
+tattooStudioSchema.index({
+  verified: -1,
+  spotlight: -1,
+  plan: -1,
+  updatedAt: -1,
+  name: 1,
+});
+
+/* Membership expiry worker */
+tattooStudioSchema.index({
+  planExpiresAt: 1,
+  plan: 1,
+});
+
+/* Prefix-search fields.
+   name / artistName / professionalName / phone / studio / studioName
+   already have single-field indexes above in the schema.
+   email gets an index as well. */
+tattooStudioSchema.index({
+  email: 1,
+});
 
 /* =========================================================
    MODEL

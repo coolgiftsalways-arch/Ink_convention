@@ -21,6 +21,52 @@ let filterCacheTime = 0;
 const FILTER_CACHE_TTL = 10 * 60 * 1000;
 
 /* =========================================================
+   LIGHTWEIGHT DIRECTORY COUNT CACHE
+
+   Prevents countDocuments() from running again and again
+   for the same filter during normal browsing.
+========================================================= */
+
+const directoryCountCache = new Map();
+const DIRECTORY_COUNT_CACHE_MS = 60 * 1000;
+
+function getCountCacheKey(filter) {
+  try {
+    return JSON.stringify(filter);
+  } catch (error) {
+    return "";
+  }
+}
+
+async function getCachedDirectoryCount(filter) {
+  const key = getCountCacheKey(filter);
+  const cached = key ? directoryCountCache.get(key) : null;
+
+  if (
+    cached &&
+    Date.now() - Number(cached.savedAt || 0) < DIRECTORY_COUNT_CACHE_MS
+  ) {
+    return Number(cached.total || 0);
+  }
+
+  const total = await TattooStudio.countDocuments(filter);
+
+  if (key) {
+    directoryCountCache.set(key, {
+      total,
+      savedAt: Date.now(),
+    });
+
+    if (directoryCountCache.size > 100) {
+      const firstKey = directoryCountCache.keys().next().value;
+      directoryCountCache.delete(firstKey);
+    }
+  }
+
+  return total;
+}
+
+/* =========================================================
    START MEMBERSHIP EXPIRY WORKER
 ========================================================= */
 
@@ -279,6 +325,7 @@ router.get(
         minRating,
         search,
         paidOnly,
+        claimed,
       } = req.query;
 
       const filter = {};
@@ -327,12 +374,12 @@ router.get(
       ============================================= */
 
       if (
-  city &&
-  String(city).trim() &&
-  String(city).trim().toUpperCase() !== "ALL"
-) {
-  filter.city = String(city).trim();
-}
+        city &&
+        String(city).trim() &&
+        String(city).trim().toUpperCase() !== "ALL"
+      ) {
+        filter.city = String(city).trim();
+      }
 
       /* =============================================
          STATE FILTER
@@ -414,6 +461,44 @@ router.get(
       }
 
       /* =============================================
+         FREE CLAIM STATUS FILTER
+
+         ?claimed=true  -> owner has claimed/verified profile
+         ?claimed=false -> imported/unclaimed profile
+
+         This exposes only claim state. Private Free-plan fields
+         still pass through serializePublicArtist().
+      ============================================= */
+
+      if (claimed !== undefined && String(claimed).trim() !== "") {
+        const claimedValue = String(claimed).trim().toLowerCase();
+
+        if (claimedValue === "true") {
+          filter.$and = [
+            ...(Array.isArray(filter.$and) ? filter.$and : []),
+            {
+              $or: [
+                { claimed: true },
+                { phoneVerified: true },
+                { ownerVerified: true },
+                { updatedByOwner: true },
+              ],
+            },
+          ];
+        }
+
+        if (claimedValue === "false") {
+          filter.$and = [
+            ...(Array.isArray(filter.$and) ? filter.$and : []),
+            { claimed: { $ne: true } },
+            { phoneVerified: { $ne: true } },
+            { ownerVerified: { $ne: true } },
+            { updatedByOwner: { $ne: true } },
+          ];
+        }
+      }
+
+      /* =============================================
          VERIFIED FILTER
       ============================================= */
 
@@ -450,58 +535,55 @@ router.get(
       ============================================= */
 
       if (search && String(search).trim()) {
-        const regex = new RegExp(escapeRegex(String(search).trim()), "i");
+        const rawSearch = String(search).trim();
+
+        // Require at least 3 characters before searching.
+        if (rawSearch.length < 3) {
+          return res.status(200).json({
+            success: true,
+            data: [],
+            artists: [],
+            users: [],
+            total: 0,
+            pagination: {
+              page: 1,
+              limit,
+              total: 0,
+              totalPages: 1,
+              hasNextPage: false,
+              hasPreviousPage: false,
+            },
+          });
+        }
+
+        // PREFIX search:
+        // "Ahm" -> Ahmed, Ahmad, Ahmer, Ahmed Ali...
+        const prefixRegex = new RegExp(`^${escapeRegex(rawSearch)}`, "i");
+
+        const digits = rawSearch.replace(/\D/g, "");
 
         filter.$or = [
-          {
-            name: regex,
-          },
+          { name: prefixRegex },
+          { professionalName: prefixRegex },
+          { artistName: prefixRegex },
+          { studio: prefixRegex },
+          { studioName: prefixRegex },
+          { email: prefixRegex },
 
-          {
-            professionalName: regex,
-          },
-
-          {
-            artistName: regex,
-          },
-
-          {
-            studio: regex,
-          },
-
-          {
-            studioName: regex,
-          },
-
-          {
-            email: regex,
-          },
-
-          {
-            phone:
-              String(search).replace(/\D/g, "").trim().length >= 4
-                ? new RegExp(
-                    String(search).replace(/\D/g, "").split("").join("\\D*"),
+          // Phone prefix search. It tolerates spaces/dashes between digits.
+          ...(digits.length >= 3
+            ? [
+                {
+                  phone: new RegExp(
+                    `^(?:\\+?91\\D*)?${digits
+                      .split("")
+                      .map((digit) => escapeRegex(digit))
+                      .join("\\D*")}`,
                     "i",
-                  )
-                : regex,
-          },
-
-          {
-            city: regex,
-          },
-
-          {
-            state: regex,
-          },
-
-          {
-            category: regex,
-          },
-
-          {
-            tattooStyles: regex,
-          },
+                  ),
+                },
+              ]
+            : []),
         ];
       }
 
@@ -517,101 +599,107 @@ router.get(
          FREE
       ============================================= */
 
-     const hasFilters = Object.keys(filter).length > 0;
+      const hasFilters = Object.keys(filter).length > 0;
 
-const hasCityFilter =
-  city &&
-  String(city).trim() &&
-  String(city).trim().toUpperCase() !== "ALL";
+      const hasCityFilter =
+        city &&
+        String(city).trim() &&
+        String(city).trim().toUpperCase() !== "ALL";
 
-/* =====================================================
+      /* =====================================================
    ARTIST QUERY
 ===================================================== */
 
-let artistQuery = TattooStudio.find(filter)
-  .select({
-    _id: 1,
+      let artistQuery = TattooStudio.find(filter).select({
+        _id: 1,
 
-    name: 1,
-    artistName: 1,
-    professionalName: 1,
+        name: 1,
+        artistName: 1,
+        professionalName: 1,
 
-    studio: 1,
-    studioName: 1,
+        studio: 1,
+        studioName: 1,
 
-    city: 1,
-    state: 1,
-    category: 1,
-    tattooStyles: 1,
+        city: 1,
+        state: 1,
+        category: 1,
+        tattooStyles: 1,
 
-    plan: 1,
-    paymentStatus: 1,
+        plan: 1,
+        paymentStatus: 1,
 
-    verified: 1,
-    spotlight: 1,
-    hallOfFameEligible: 1,
+        verified: 1,
+        spotlight: 1,
+        hallOfFameEligible: 1,
 
-    rating: 1,
-    experience: 1,
+        rating: 1,
+        experience: 1,
 
-    phone: 1,
-    email: 1,
+        phone: 1,
+        email: 1,
 
-    instagram: 1,
-    website: 1,
+        instagram: 1,
+        website: 1,
 
+        updatedAt: 1,
+      });
 
-    updatedAt: 1,
-  });
+      if (hasCityFilter) {
+        artistQuery = artistQuery.collation({
+          locale: "en",
+          strength: 2,
+        });
+      }
 
-if (hasCityFilter) {
-  artistQuery = artistQuery.collation({
-    locale: "en",
-    strength: 2,
-  });
-}
-
-artistQuery = artistQuery
-  .sort({
-    plan: -1,
-    updatedAt: -1,
-    name: 1,
-  })
-  .skip(skip)
-  .limit(limit)
-  .lean();
-/* =====================================================
+      artistQuery = artistQuery
+        .sort({
+          plan: -1,
+          updatedAt: -1,
+          name: 1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      /* =====================================================
    COUNT QUERY
 ===================================================== */
 
-let countQuery;
+      let countQuery;
 
-if (hasFilters) {
-  countQuery = TattooStudio.countDocuments(filter);
+      if (hasFilters) {
+        countQuery = TattooStudio.countDocuments(filter);
 
-  if (hasCityFilter) {
-    countQuery = countQuery.collation({
-      locale: "en",
-      strength: 2,
-    });
-  }
-} else {
-  countQuery = TattooStudio.estimatedDocumentCount();
-}
+        if (hasCityFilter) {
+          countQuery = countQuery.collation({
+            locale: "en",
+            strength: 2,
+          });
+        }
+      } else {
+        countQuery = TattooStudio.estimatedDocumentCount();
+      }
 
-/* =====================================================
+      /* =====================================================
    RUN BOTH TOGETHER
 ===================================================== */
 
-const [studios, total] = await Promise.all([
-  artistQuery,
-  countQuery,
-]);
+      const [studios, total] = await Promise.all([artistQuery, countQuery]);
       /* =============================================
          PUBLIC PRIVACY SERIALIZER
       ============================================= */
 
-      const publicStudios = studios.map(serializePublicArtist);
+      const publicStudios = studios.map((studio) => ({
+        ...serializePublicArtist(studio),
+        // Safe admin/public metadata used only to separate Free Claimed
+        // from Free Unclaimed. No private Free-plan fields are exposed.
+        claimed: Boolean(
+          studio.claimed ||
+          studio.phoneVerified ||
+          studio.ownerVerified ||
+          studio.updatedByOwner,
+        ),
+        claimedAt: studio.claimedAt || null,
+      }));
 
       const totalPages = Math.ceil(total / limit) || 1;
 
@@ -622,11 +710,7 @@ const [studios, total] = await Promise.all([
       return res.status(200).json({
         success: true,
 
-        
-
         artists: publicStudios,
-
-        
 
         total,
 
@@ -723,8 +807,6 @@ router.get(
          EXPIRE MEMBERSHIP FIRST
       ============================================= */
 
-      await expireMemberships();
-
       /* =============================================
          FIND REAL MONGODB PROFILE
       ============================================= */
@@ -767,6 +849,14 @@ router.get(
 );
 
 /* =========================================================
+   FILTER RESPONSE CACHE
+========================================================= */
+
+let directoryFiltersCache = null;
+let directoryFiltersCacheAt = 0;
+const DIRECTORY_FILTERS_CACHE_MS = 24 * 60 * 60 * 1000;
+
+/* =========================================================
    FILTER OPTIONS
 
    GET
@@ -779,17 +869,11 @@ router.get(
   async (req, res) => {
     try {
       if (
-  filterCache &&
-  Date.now() - filterCacheTime < FILTER_CACHE_TTL
-) {
-  return res.status(200).json({
-    success: true,
-    filters: filterCache,
-  });
-}
-      /* =============================================
-         GET REAL VALUES FROM MONGODB
-      ============================================= */
+        directoryFiltersCache &&
+        Date.now() - directoryFiltersCacheAt < DIRECTORY_FILTERS_CACHE_MS
+      ) {
+        return res.status(200).json(directoryFiltersCache);
+      }
 
       /* =============================================
          GET REAL VALUES FROM MONGODB
@@ -845,26 +929,46 @@ router.get(
           )
           .sort((a, b) => a.localeCompare(b));
 
-          filterCache = {
-  states: cleanSort(states),
-  cities: cleanSort(cities),
-  categories: cleanSort(categories),
-  tattooStyles: cleanSort(tattooStylesRaw),
-  plans: ["basic", "pro", "verified"],
-  ratings: [5, 4.5, 4, 3.5, 3],
-  verified: [true, false],
-};
+      filterCache = {
+        states: cleanSort(states),
+        cities: cleanSort(cities),
+        categories: cleanSort(categories),
+        tattooStyles: cleanSort(tattooStylesRaw),
+        plans: ["basic", "pro", "verified"],
+        ratings: [5, 4.5, 4, 3.5, 3],
+        verified: [true, false],
+      };
 
-filterCacheTime = Date.now();
+      filterCacheTime = Date.now();
 
       /* =============================================
          RESPONSE
       ============================================= */
 
-      return res.status(200).json({
-  success: true,
-  filters: filterCache,
-});
+      const filtersResponse = {
+        success: true,
+
+        filters: {
+          states: cleanSort(states),
+
+          cities: cleanSort(cities),
+
+          categories: cleanSort(categories),
+
+          tattooStyles: cleanSort(tattooStylesRaw),
+
+          plans: ["basic", "pro", "verified"],
+
+          ratings: [5, 4.5, 4, 3.5, 3],
+
+          verified: [true, false],
+        },
+      };
+
+      directoryFiltersCache = filtersResponse;
+      directoryFiltersCacheAt = Date.now();
+
+      return res.status(200).json(filtersResponse);
     } catch (error) {
       console.error("❌ Tattoo directory filters error:", error);
 
@@ -891,23 +995,27 @@ router.get(
 
   async (req, res) => {
     try {
-     
+      const claimedOwnerFilter = {
+        plan: "basic",
+        $or: [
+          { claimed: true },
+          { phoneVerified: true },
+          { ownerVerified: true },
+          { updatedByOwner: true },
+        ],
+      };
 
-      const [total, gold, silver, basic, paidGold, paidSilver] =
+      const [total, gold, silver, basic, freeClaimed, paidGold, paidSilver] =
         await Promise.all([
           TattooStudio.countDocuments(),
 
-          TattooStudio.countDocuments({
-            plan: "verified",
-          }),
+          TattooStudio.countDocuments({ plan: "verified" }),
 
-          TattooStudio.countDocuments({
-            plan: "pro",
-          }),
+          TattooStudio.countDocuments({ plan: "pro" }),
 
-          TattooStudio.countDocuments({
-            plan: "basic",
-          }),
+          TattooStudio.countDocuments({ plan: "basic" }),
+
+          TattooStudio.countDocuments(claimedOwnerFilter),
 
           TattooStudio.countDocuments({
             plan: "verified",
@@ -919,6 +1027,8 @@ router.get(
             paymentStatus: "paid",
           }),
         ]);
+
+      const freeUnclaimed = Math.max(basic - freeClaimed, 0);
 
       return res.status(200).json({
         success: true,
@@ -944,6 +1054,14 @@ router.get(
           free: basic,
 
           basic,
+
+          freeClaimed,
+
+          claimedFree: freeClaimed,
+
+          freeUnclaimed,
+
+          unclaimedFree: freeUnclaimed,
 
           paidFeatured: paidGold + paidSilver,
         },

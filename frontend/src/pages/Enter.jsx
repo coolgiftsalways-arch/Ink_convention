@@ -73,6 +73,53 @@ const DIRECTORY_KEY = "inkConventionDirectoryArtists";
 
 const CURRENT_USER_KEY = "inkConventionCurrentUserId";
 
+const VERIFIED_PROFILE_CACHE_KEY = "inkConventionVerifiedProfileSessionV1";
+
+function readVerifiedProfileCache() {
+  try {
+    const raw = sessionStorage.getItem(VERIFIED_PROFILE_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    const expiresAt = Number(parsed?.sessionExpiresAt || 0);
+
+    if (!parsed?.profile || !expiresAt || Date.now() >= expiresAt) {
+      sessionStorage.removeItem(VERIFIED_PROFILE_CACHE_KEY);
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeVerifiedProfileCache(profile, sessionExpiresAt) {
+  try {
+    const expiresAt = Number(sessionExpiresAt || 0);
+    if (!profile || !expiresAt) return;
+
+    sessionStorage.setItem(
+      VERIFIED_PROFILE_CACHE_KEY,
+      JSON.stringify({
+        profile,
+        sessionExpiresAt: expiresAt,
+        savedAt: Date.now(),
+      }),
+    );
+  } catch (error) {
+    console.warn("Verified profile cache skipped:", error);
+  }
+}
+
+function clearVerifiedProfileCache() {
+  try {
+    sessionStorage.removeItem(VERIFIED_PROFILE_CACHE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 /* =========================================================
    PLANS
 
@@ -136,14 +183,18 @@ const PLANS = [
 
     name: "GOLD / VERIFIED",
 
-    price: "₹5,999",
+    originalPrice: "₹7,999",
 
-    amount: 5999,
+    price: "₹4,999",
+
+    amount: 4999,
+
+    offerText: "LIMITED OFFER · SAVE ₹3,000",
 
     billing: "1 YEAR",
 
     description:
-      "Send a Gold membership request. No online payment is taken here — our team will contact you within 24 hours.",
+      "Gold Verified membership special offer: regular price ₹7,999, now ₹4,999 for 1 year. Send your request and our team will contact you within 24 hours to confirm the membership and payment details.",
 
     benefits: [
       "Everything in your public artist profile is visible",
@@ -487,6 +538,28 @@ export default function Enter() {
       })
     : null;
 
+  const cachedVerifiedSession = useMemo(() => readVerifiedProfileCache(), []);
+
+  const cachedVerifiedProfile = useMemo(() => {
+    const cachedProfile = cachedVerifiedSession?.profile || null;
+
+    if (!cachedProfile) {
+      return null;
+    }
+
+    const cachedId = String(
+      cachedProfile._id || cachedProfile.id || cachedProfile.profileId || "",
+    );
+
+    const requestedId = String(initialArtist?.id || "");
+
+    if (manageProfileRequested && requestedId && cachedId !== requestedId) {
+      return null;
+    }
+
+    return cachedProfile;
+  }, [cachedVerifiedSession, initialArtist?.id, manageProfileRequested]);
+
   /* =======================================================
      SCREEN
 
@@ -497,11 +570,19 @@ export default function Enter() {
   ======================================================= */
 
   const [screen, setScreen] = useState(
-    initialArtist && manageProfileRequested ? "verify" : "find",
+    cachedVerifiedProfile
+      ? "edit"
+      : initialArtist && manageProfileRequested
+        ? "verify"
+        : "find",
   );
 
   const [selectedArtist, setSelectedArtist] = useState(
-    initialArtist && manageProfileRequested ? initialArtist : null,
+    cachedVerifiedProfile
+      ? normalizeArtist(cachedVerifiedProfile)
+      : initialArtist && manageProfileRequested
+        ? initialArtist
+        : null,
   );
 
   /* =======================================================
@@ -534,19 +615,32 @@ export default function Enter() {
      PROFILE
   ======================================================= */
 
-  const [currentProfile, setCurrentProfile] = useState(null);
+  const [currentProfile, setCurrentProfile] = useState(
+    cachedVerifiedProfile || null,
+  );
 
-  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [formData, setFormData] = useState(() =>
+    makeForm(cachedVerifiedProfile || {}),
+  );
 
-  const [profileImage, setProfileImage] = useState("");
+  const [profileImage, setProfileImage] = useState(
+    cachedVerifiedProfile?.profileImage || cachedVerifiedProfile?.image || "",
+  );
 
-  const [portfolioImages, setPortfolioImages] = useState([]);
+  const [portfolioImages, setPortfolioImages] = useState(
+    Array.isArray(cachedVerifiedProfile?.portfolioImages)
+      ? cachedVerifiedProfile.portfolioImages.slice(0, MAX_PORTFOLIO_IMAGES)
+      : [],
+  );
 
   const [saving, setSaving] = useState(false);
+  const [savingPlanId, setSavingPlanId] = useState("");
 
   const [sessionChecking, setSessionChecking] = useState(true);
 
-  const [sessionExpiresAt, setSessionExpiresAt] = useState(null);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState(
+    cachedVerifiedSession?.sessionExpiresAt || null,
+  );
 
   /* =======================================================
      CHANGE PHONE
@@ -615,7 +709,12 @@ export default function Enter() {
     setMaskedPhone(profile?.maskedPhone || profile?.phoneMasked || "");
 
     if (sessionExp) {
-      setSessionExpiresAt(Number(sessionExp) || null);
+      const nextExpiry = Number(sessionExp) || null;
+      setSessionExpiresAt(nextExpiry);
+
+      if (nextExpiry) {
+        writeVerifiedProfileCache(profile, nextExpiry);
+      }
     }
   };
 
@@ -724,6 +823,8 @@ export default function Enter() {
         if (cancelled) {
           return;
         }
+
+        clearVerifiedProfileCache();
 
         setCurrentProfile(null);
 
@@ -944,8 +1045,8 @@ export default function Enter() {
      SILVER -> GOLD POLICY
 
      Existing Silver members may move to Gold,
-     but Gold is always charged at the full ₹5,999 price.
-     There is no upgrade discount or balance deduction.
+     but Gold is currently charged at the ₹4,999 offer price.
+     Regular price is ₹7,999. There is no extra Silver-to-Gold discount or balance deduction.
    ======================================================= */
 
   /* =======================================================
@@ -1503,48 +1604,49 @@ export default function Enter() {
     clearMessages();
 
     try {
-      const data = await apiRequest(
-        "/api/claim/update",
+      const updateBody = {
+        profileId: selectedArtist.id,
 
-        {
-          method: "POST",
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        studio: formData.studio.trim(),
+        experience: formData.experience.trim(),
+        instagram: formData.instagram.trim(),
+        website: formData.website.trim(),
+        tattooStyles: formData.tattooStyles,
+        bio: formData.bio.trim(),
 
-          body: {
-            profileId: selectedArtist.id,
+        profileLinks: Array.isArray(formData.profileLinks)
+          ? formData.profileLinks
+              .map((link) => String(link || "").trim())
+              .filter(Boolean)
+              .slice(0, 3)
+          : [],
+      };
 
-            name: formData.name.trim(),
+      const oldProfileImage =
+        currentProfile?.profileImage || currentProfile?.image || "";
 
-            email: formData.email.trim(),
+      const oldPortfolioImages = Array.isArray(currentProfile?.portfolioImages)
+        ? currentProfile.portfolioImages.slice(0, MAX_PORTFOLIO_IMAGES)
+        : [];
 
-            city: formData.city.trim(),
+      if (profileImage !== oldProfileImage) {
+        updateBody.profileImage = profileImage;
+      }
 
-            state: formData.state.trim(),
+      if (
+        JSON.stringify(portfolioImages) !== JSON.stringify(oldPortfolioImages)
+      ) {
+        updateBody.portfolioImages = portfolioImages;
+      }
 
-            studio: formData.studio.trim(),
-
-            experience: formData.experience.trim(),
-
-            instagram: formData.instagram.trim(),
-
-            website: formData.website.trim(),
-
-            tattooStyles: formData.tattooStyles,
-
-            bio: formData.bio.trim(),
-
-profileLinks: Array.isArray(formData.profileLinks)
-  ? formData.profileLinks
-      .map((link) => String(link || "").trim())
-      .filter(Boolean)
-      .slice(0, 3)
-  : [],
-
-profileImage,
-
-portfolioImages,
-          },
-        },
-      );
+      const data = await apiRequest("/api/claim/update?compact=1", {
+        method: "POST",
+        body: updateBody,
+      });
 
       const updatedProfile = data.profile ||
         data.artist || {
@@ -1611,6 +1713,10 @@ portfolioImages,
 
       updateDirectory(finalProfile);
 
+      if (sessionExpiresAt) {
+        writeVerifiedProfileCache(finalProfile, sessionExpiresAt);
+      }
+
       const savedPlan = normalizePlan(finalProfile.plan);
 
       /*
@@ -1663,6 +1769,7 @@ portfolioImages,
       console.error("❌ PROFILE UPDATE ERROR:", saveError);
 
       if (saveError.status === 401 || saveError.status === 403) {
+        clearVerifiedProfileCache();
         setSessionExpiresAt(null);
 
         setCurrentProfile(null);
@@ -1683,6 +1790,7 @@ portfolioImages,
       setError(saveError.message || "Unable to update profile.");
     } finally {
       setSaving(false);
+      setSavingPlanId("");
     }
   };
 
@@ -1812,6 +1920,7 @@ portfolioImages,
     }
 
     setSaving(true);
+    setSavingPlanId("basic");
 
     clearMessages();
 
@@ -1867,6 +1976,7 @@ portfolioImages,
       setError(freeError.message || "Unable to activate Free plan.");
     } finally {
       setSaving(false);
+      setSavingPlanId("");
     }
   };
 
@@ -1910,6 +2020,7 @@ portfolioImages,
 
     try {
       setSaving(true);
+      setSavingPlanId(selectedPlan.id);
       clearMessages();
 
       const data = await apiRequest("/api/membership-requests", {
@@ -1980,6 +2091,7 @@ portfolioImages,
       );
     } finally {
       setSaving(false);
+      setSavingPlanId("");
     }
   };
 
@@ -1999,6 +2111,8 @@ portfolioImages,
     } catch (logoutError) {
       console.error("❌ Logout request failed:", logoutError);
     } finally {
+      clearVerifiedProfileCache();
+
       localStorage.removeItem(CURRENT_USER_KEY);
 
       localStorage.removeItem("inkConventionLoggedUser");
@@ -2041,46 +2155,8 @@ portfolioImages,
      SESSION CHECK SCREEN
   ======================================================= */
 
-  if (sessionChecking) {
-    return (
-      <PageShell>
-        <div
-          className="
-            min-h-[45vh]
-            flex
-            items-center
-            justify-center
-          "
-        >
-          <div
-            className="
-              text-center
-            "
-          >
-            <ShieldCheck
-              size={28}
-              className="
-                mx-auto
-                text-purple-400
-              "
-            />
-
-            <p
-              className="
-                mt-4
-                text-[10px]
-                font-mono
-                tracking-[0.18em]
-                text-gray-500
-              "
-            >
-              CHECKING VERIFIED SESSION...
-            </p>
-          </div>
-        </div>
-      </PageShell>
-    );
-  }
+  // Session verification now runs in the background.
+  // The page remains visible instead of blocking on "CHECKING VERIFIED SESSION...".
 
   /* =======================================================
      FIND SCREEN
@@ -2472,7 +2548,7 @@ portfolioImages,
                   transition
                 "
               >
-                {otpLoading ? "SENDING..." : "SEND OTP"}
+                "SEND OTP"
               </button>
             ) : (
               <form
@@ -2549,7 +2625,7 @@ portfolioImages,
                     transition
                   "
                 >
-                  {otpLoading ? "VERIFYING..." : "VERIFY OTP & OPEN PROFILE"}
+                  "VERIFY OTP & OPEN PROFILE"
                 </button>
 
                 <button
@@ -2620,7 +2696,7 @@ portfolioImages,
                   leading-[0.86]
                 "
               >
-                UPDATE YOUR
+                EDIT YOUR
                 <br />
                 <span
                   className="
@@ -3283,8 +3359,8 @@ portfolioImages,
     PUBLICLY VISIBLE ONLY FOR GOLD
 ===================================== */}
 
-<div
-  className="
+              <div
+                className="
     rounded-2xl
     border
     border-white/10
@@ -3292,60 +3368,61 @@ portfolioImages,
     p-5
     space-y-4
   "
->
-  <div>
-    <p className="text-[9px] font-mono tracking-[0.14em] text-purple-400">
-      PROFILE LINKS
-    </p>
+              >
+                <div>
+                  <p className="text-[9px] font-mono tracking-[0.14em] text-purple-400">
+                    PROFILE LINKS
+                  </p>
 
-    <h3 className="mt-2 text-lg font-black uppercase">
-      Add Your Links
-    </h3>
+                  <h3 className="mt-2 text-lg font-black uppercase">
+                    Add Your Links
+                  </h3>
 
-    <p className="mt-2 text-xs text-gray-500 leading-relaxed">
-      Add up to 3 links. Your links stay saved with your profile.
-      They are publicly visible only with an active Gold membership.
-    </p>
-  </div>
+                  <p className="mt-2 text-xs text-gray-500 leading-relaxed">
+                    Add up to 3 links. Your links stay saved with your profile.
+                    They are publicly visible only with an active Gold
+                    membership.
+                  </p>
+                </div>
 
-  {[0, 1, 2].map((index) => (
-    <InputField
-      key={index}
-      label={`LINK ${index + 1}`}
-      type="url"
-      value={formData.profileLinks?.[index] || ""}
-      onChange={(event) => {
-        const value = event.target.value;
+                {[0, 1, 2].map((index) => (
+                  <InputField
+                    key={index}
+                    label={`LINK ${index + 1}`}
+                    type="url"
+                    value={formData.profileLinks?.[index] || ""}
+                    onChange={(event) => {
+                      const value = event.target.value;
 
-        setFormData((previous) => {
-          const links = Array.isArray(previous.profileLinks)
-            ? [...previous.profileLinks]
-            : ["", "", ""];
+                      setFormData((previous) => {
+                        const links = Array.isArray(previous.profileLinks)
+                          ? [...previous.profileLinks]
+                          : ["", "", ""];
 
-          links[index] = value;
+                        links[index] = value;
 
-          return {
-            ...previous,
-            profileLinks: links,
-          };
-        });
+                        return {
+                          ...previous,
+                          profileLinks: links,
+                        };
+                      });
 
-        clearMessages();
-      }}
-      placeholder={
-        index === 0
-          ? "https://instagram.com/..."
-          : index === 1
-            ? "https://youtube.com/..."
-            : "https://yourwebsite.com"
-      }
-      required={false}
-    />
-  ))}
+                      clearMessages();
+                    }}
+                    placeholder={
+                      index === 0
+                        ? "https://instagram.com/..."
+                        : index === 1
+                          ? "https://youtube.com/..."
+                          : "https://yourwebsite.com"
+                    }
+                    required={false}
+                  />
+                ))}
 
-  {currentPlan !== "verified" && (
-    <div
-      className="
+                {currentPlan !== "verified" && (
+                  <div
+                    className="
         rounded-xl
         border
         border-yellow-400/20
@@ -3353,20 +3430,20 @@ portfolioImages,
         px-4
         py-3
       "
-    >
-      <p className="text-[10px] text-yellow-400 leading-relaxed">
-        Your links are saved privately. Upgrade to Gold to display them
-        publicly on your artist profile.
-      </p>
-    </div>
-  )}
+                  >
+                    <p className="text-[10px] text-yellow-400 leading-relaxed">
+                      Your links are saved privately. Upgrade to Gold to display
+                      them publicly on your artist profile.
+                    </p>
+                  </div>
+                )}
 
-  {currentPlan === "verified" && (
-    <p className="text-[10px] text-green-400">
-      ✓ Your links are visible on your public Gold profile.
-    </p>
-  )}
-</div>
+                {currentPlan === "verified" && (
+                  <p className="text-[10px] text-green-400">
+                    ✓ Your links are visible on your public Gold profile.
+                  </p>
+                )}
+              </div>
 
               {/* =====================================
                   PORTFOLIO
@@ -3547,7 +3624,7 @@ portfolioImages,
                       hover:bg-white
                     "
                   >
-                    <span>{saving ? "SAVING..." : "DONE & VIEW PROFILE"}</span>
+                    <span>DONE & VIEW PROFILE</span>
                     <ArrowRight
                       size={15}
                       className="transition-transform group-hover:translate-x-1"
@@ -3579,7 +3656,7 @@ portfolioImages,
                       hover:bg-[#ffe58d]
                     "
                   >
-                    <span>{saving ? "SAVING..." : "SAVE & GO GOLD"}</span>
+                    <span>SAVE & GO GOLD</span>
                     <ArrowRight
                       size={15}
                       className="transition-transform group-hover:translate-x-1"
@@ -3610,11 +3687,9 @@ portfolioImages,
                   "
                 >
                   <span>
-                    {saving
-                      ? "SAVING..."
-                      : currentPlan === "verified"
-                        ? "DONE & VIEW PROFILE"
-                        : "UPDATE PROFILE"}
+                    {currentPlan === "verified"
+                      ? "DONE & VIEW PROFILE"
+                      : "UPDATE PROFILE"}
                   </span>
 
                   <ArrowRight
@@ -3683,9 +3758,9 @@ portfolioImages,
               leading-relaxed
             "
           >
-            All your information is saved. Now choose what visitors can see.
-            Free keeps most details private, Silver unlocks key details, and
-            Gold unlocks everything.
+            All your information is saved. Choose Free to keep the essential
+            public listing, or choose Gold to unlock your complete artist
+            profile and premium visibility.
           </p>
         </div>
 
@@ -3879,7 +3954,9 @@ portfolioImages,
                     mx-auto
                   `
                   : `
-                    lg:grid-cols-3
+                    max-w-5xl
+                    mx-auto
+                    lg:grid-cols-2
                   `
               }
 
@@ -3900,12 +3977,15 @@ portfolioImages,
                 return plan.id === "verified";
               }
 
-              return true;
+              // New / Free artists see only FREE + GOLD.
+              // SILVER remains supported in backend/current memberships,
+              // but its plan card is intentionally hidden here.
+              return plan.id === "basic" || plan.id === "verified";
             }).map((plan) => (
               <PlanCard
                 key={plan.id}
                 plan={plan}
-                saving={saving}
+                saving={saving && savingPlanId === plan.id}
                 onClick={() =>
                   plan.id === "basic"
                     ? chooseFreePlan()
@@ -4190,13 +4270,13 @@ function PlanCard({
         group
         relative
         flex
-        min-h-[470px]
+        min-h-[390px]
         flex-col
         overflow-hidden
-        rounded-[24px]
+        rounded-[22px]
         border-2
-        p-5
-        sm:p-6
+        p-4
+        sm:p-5
         transition-all
         duration-500
         hover:-translate-y-1
@@ -4240,10 +4320,10 @@ function PlanCard({
         className={`
           relative
           z-10
-          mt-4
-          pr-24
-          text-3xl
-          sm:text-4xl
+          mt-3
+          pr-20
+          text-2xl
+          sm:text-3xl
           font-black
           uppercase
           leading-[0.92]
@@ -4258,46 +4338,95 @@ function PlanCard({
         className="
           relative
           z-10
-          mt-5
-          flex
-          items-end
-          gap-2
+          mt-3
         "
       >
-        <p
-          className={`
-            text-3xl
-            sm:text-4xl
-            font-black
+        {plan.originalPrice && (
+          <div
+            className="
+              mb-1.5
+              flex
+              flex-wrap
+              items-center
+              gap-2
+            "
+          >
+            <span
+              className="
+                text-sm
+                sm:text-base
+                font-bold
+                text-gray-500
+                line-through
+                decoration-2
+              "
+            >
+              {plan.originalPrice}
+            </span>
 
-            ${theme.price}
-          `}
-        >
-          {plan.price}
-        </p>
+            {plan.offerText && (
+              <span
+                className="
+                  rounded-full
+                  border
+                  border-[#f5c451]/40
+                  bg-[#f5c451]/10
+                  px-2.5
+                  py-1
+                  text-[7px]
+                  font-black
+                  tracking-widest
+                  text-[#ffe59a]
+                "
+              >
+                {plan.offerText}
+              </span>
+            )}
+          </div>
+        )}
 
-        <span
+        <div
           className="
-            pb-1
-            text-[7px]
-            font-mono
-            text-gray-500
+            flex
+            items-end
+            gap-2
           "
         >
-          {plan.billing}
-        </span>
+          <p
+            className={`
+              text-2xl
+              sm:text-3xl
+              font-black
+
+              ${theme.price}
+            `}
+          >
+            {plan.price}
+          </p>
+
+          <span
+            className="
+              pb-1
+              text-[7px]
+              font-mono
+              text-gray-500
+            "
+          >
+            {plan.billing}
+          </span>
+        </div>
       </div>
 
       <p
         className="
           relative
           z-10
-          mt-4
+          mt-3
           border-b
           border-white/10
-          pb-4
-          text-[11px]
-          sm:text-xs
+          pb-3
+          text-[10px]
+          sm:text-[11px]
           leading-relaxed
           text-gray-500
         "
@@ -4306,13 +4435,17 @@ function PlanCard({
       </p>
 
       <div
-        className="
+        className={`
           relative
           z-10
-          mt-4
+          mt-3
           flex-1
-          space-y-2.5
-        "
+          grid
+          grid-cols-1
+          gap-x-4
+          gap-y-1.5
+          ${isVerified ? "sm:grid-cols-2" : ""}
+        `}
       >
         {plan.benefits.map((benefit) => (
           <div
@@ -4320,17 +4453,17 @@ function PlanCard({
             className="
                 flex
                 items-start
-                gap-2.5
-                text-[11px]
-                sm:text-xs
+                gap-2
+                text-[10px]
+                sm:text-[11px]
               "
           >
             <span
               className="
                   mt-[1px]
                   flex
-                  h-5
-                  w-5
+                  h-4
+                  w-4
                   shrink-0
                   items-center
                   justify-center
@@ -4362,7 +4495,7 @@ function PlanCard({
         className={`
           relative
           z-10
-          mt-5
+          mt-4
           flex
           w-full
           items-center
@@ -4370,7 +4503,7 @@ function PlanCard({
           rounded-xl
           border
           px-4
-          py-3.5
+          py-3
           text-[9px]
           font-black
           tracking-widest

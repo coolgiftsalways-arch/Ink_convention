@@ -259,8 +259,6 @@ function Navbar() {
                     <span className="text-[#a855f7]">01</span>
                   </NavLink>
 
-                  
-
                   <NavLink
                     to="/competition"
                     onClick={() => setExpoOpen(false)}
@@ -285,8 +283,6 @@ function Navbar() {
                     <span>Competition</span>
                     <span className="text-[#a855f7]">03</span>
                   </NavLink>
-
-                 
                 </div>
               )}
             </div>
@@ -532,30 +528,6 @@ function Navbar() {
                   </NavLink>
 
                   <NavLink
-                    to="/stall-booking"
-                    onClick={closeMenu}
-                    className="
-                      flex
-                      items-center
-                      justify-between
-                      rounded-lg
-                      px-3
-                      py-2.5
-                      text-sm
-                      font-mono
-                      uppercase
-                      tracking-wider
-                      text-gray-400
-                      hover:text-white
-                      hover:bg-white/[0.05]
-                      transition
-                    "
-                  >
-                    <span>Book Your Stall</span>
-                    <span className="text-[#a855f7] text-[10px]">02</span>
-                  </NavLink>
-
-                  <NavLink
                     to="/competition"
                     onClick={closeMenu}
                     className="
@@ -576,31 +548,7 @@ function Navbar() {
                     "
                   >
                     <span>Competition</span>
-                    <span className="text-[#a855f7] text-[10px]">03</span>
-                  </NavLink>
-
-                  <NavLink
-                    to="/book-artist"
-                    onClick={closeMenu}
-                    className="
-                      flex
-                      items-center
-                      justify-between
-                      rounded-lg
-                      px-3
-                      py-2.5
-                      text-sm
-                      font-mono
-                      uppercase
-                      tracking-wider
-                      text-gray-400
-                      hover:text-white
-                      hover:bg-white/[0.05]
-                      transition
-                    "
-                  >
-                    <span>Book Artist</span>
-                    <span className="text-[#a855f7] text-[10px]">04</span>
+                    <span className="text-[#a855f7] text-[10px]">02</span>
                   </NavLink>
                 </div>
               )}

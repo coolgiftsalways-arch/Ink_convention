@@ -13,6 +13,9 @@ const API_URL = (
   import.meta.env.VITE_API_URL || "https://api.inkconvention.com"
 ).replace(/\/$/, "");
 
+const HALL_PAGE_SIZE = 20;
+const HALL_AUTO_ROTATE_MS = 4000;
+
 /* =========================================================
    NORMALIZE PLAN
 ========================================================= */
@@ -158,65 +161,93 @@ export default function HallOfFame() {
 
   const [error, setError] = useState("");
 
+  const [page, setPage] = useState(0);
+
   /* =======================================================
      LOAD GOLD VERIFIED ARTISTS
   ======================================================= */
 
   useEffect(() => {
-  let cancelled = false;
+    let cancelled = false;
 
-  const loadHallOfFame = async () => {
-    setLoading(true);
-    setError("");
+    const loadHallOfFame = async () => {
+      setLoading(true);
+      setError("");
 
-    try {
-      const data = await apiRequest(
-        "/api/admin/tattoo-studios/hall-of-fame"
-      );
+      try {
+        const data = await apiRequest("/api/admin/tattoo-studios/hall-of-fame");
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      const hallOfFameArtists = getArtistsArray(data)
-        .map((artist) => normalizeArtist(artist))
-        .filter(
-          (artist) =>
-            artist.plan === "verified" &&
-            artist.hallOfFameEligible
-        );
+        const hallOfFameArtists = getArtistsArray(data)
+          .map((artist) => normalizeArtist(artist))
+          .filter(
+            (artist) => artist.plan === "verified" && artist.hallOfFameEligible,
+          );
 
-      setArtists(hallOfFameArtists);
-    } catch (loadError) {
-      console.error("Hall Of Fame loading error:", loadError);
+        setArtists(hallOfFameArtists);
+        setPage(0);
+      } catch (loadError) {
+        console.error("Hall Of Fame loading error:", loadError);
 
-      if (!cancelled) {
-        setArtists([]);
-        setError(
-          loadError.message || "Unable to load Hall of Fame."
-        );
+        if (!cancelled) {
+          setArtists([]);
+          setError(loadError.message || "Unable to load Hall of Fame.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    } finally {
-      if (!cancelled) {
-        setLoading(false);
-      }
+    };
+
+    void loadHallOfFame();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const [selectedArtist, setSelectedArtist] = useState(null);
+
+  /* =======================================================
+     STABLE 20-CARD AUTO PAGINATION
+
+     Example:
+     22 Gold artists
+     Page 1 = 20
+     Page 2 = 2
+     Page 1 = same original 20 again
+  ======================================================= */
+
+  const totalPages = Math.max(1, Math.ceil(artists.length / HALL_PAGE_SIZE));
+
+  const safePage = Math.min(page, totalPages - 1);
+
+  const visibleArtists = artists.slice(
+    safePage * HALL_PAGE_SIZE,
+    safePage * HALL_PAGE_SIZE + HALL_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    if (totalPages <= 1 || selectedArtist) {
+      return undefined;
     }
-  };
 
-  void loadHallOfFame();
+    const timer = window.setInterval(() => {
+      setPage((currentPage) => (currentPage + 1) % totalPages);
+    }, HALL_AUTO_ROTATE_MS);
 
-  return () => {
-    cancelled = true;
-  };
-}, []);
+    return () => window.clearInterval(timer);
+  }, [totalPages, selectedArtist]);
 
   /* =======================================================
      OPEN ARTIST
   ======================================================= */
 
-const [selectedArtist, setSelectedArtist] = useState(null);
-
-const handleArtistClick = (artist) => {
-  setSelectedArtist(artist);
-};
+  const handleArtistClick = (artist) => {
+    setSelectedArtist(artist);
+  };
 
   return (
     <main
@@ -668,6 +699,12 @@ const handleArtistClick = (artist) => {
               >
                 {artists.length} PROFILE
                 {artists.length === 1 ? "" : "S"}
+                {totalPages > 1 && (
+                  <>
+                    {" "}
+                    • PAGE {safePage + 1}/{totalPages} • AUTO 4S
+                  </>
+                )}
               </span>
             </div>
 
@@ -684,30 +721,79 @@ const handleArtistClick = (artist) => {
                   items-stretch
                 "
             >
-              {artists.map((artist, index) => (
+              {visibleArtists.map((artist, index) => (
                 <VerifiedArtistCard
                   key={artist.id || `${artist.name}-${index}`}
                   artist={artist}
-                  index={index}
+                  index={safePage * HALL_PAGE_SIZE + index}
                   onClick={() => handleArtistClick(artist)}
                 />
               ))}
             </div>
+
+            {totalPages > 1 && (
+              <div className="mt-7 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((currentPage) =>
+                      currentPage <= 0 ? totalPages - 1 : currentPage - 1,
+                    )
+                  }
+                  className="
+                    rounded-full
+                    border border-white/10
+                    bg-white/[0.03]
+                    px-5 py-2.5
+                    text-[8px] font-black tracking-[0.12em]
+                    text-gray-400
+                    hover:border-yellow-300/30
+                    hover:text-yellow-300
+                    transition
+                  "
+                >
+                  PREVIOUS
+                </button>
+
+                <span className="text-[8px] font-mono tracking-[0.12em] text-gray-600">
+                  {safePage + 1} / {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((currentPage) => (currentPage + 1) % totalPages)
+                  }
+                  className="
+                    rounded-full
+                    border border-yellow-300/20
+                    bg-yellow-400/[0.05]
+                    px-5 py-2.5
+                    text-[8px] font-black tracking-[0.12em]
+                    text-yellow-300
+                    hover:bg-yellow-400/[0.10]
+                    transition
+                  "
+                >
+                  NEXT
+                </button>
+              </div>
+            )}
           </section>
         )}
       </div>
       {selectedArtist && (
-  <div
-    className="
+        <div
+          className="
       fixed inset-0 z-[9999]
       bg-black/80 backdrop-blur-sm
       flex items-center justify-center
       p-4
     "
-    onClick={() => setSelectedArtist(null)}
-  >
-    <div
-      className="
+          onClick={() => setSelectedArtist(null)}
+        >
+          <div
+            className="
         relative
         w-full max-w-3xl
         max-h-[90vh]
@@ -717,12 +803,12 @@ const handleArtistClick = (artist) => {
         bg-[#0b0b0f]
         p-6 sm:p-8
       "
-      onClick={(e) => e.stopPropagation()}
-    >
-      <button
-        type="button"
-        onClick={() => setSelectedArtist(null)}
-        className="
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedArtist(null)}
+              className="
           absolute
           top-4 right-4
           w-10 h-10
@@ -732,85 +818,77 @@ const handleArtistClick = (artist) => {
           flex items-center justify-center
           hover:bg-white/20
         "
-      >
-        ✕
-      </button>
+            >
+              ✕
+            </button>
 
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="md:w-[280px] shrink-0">
-          <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-[#111]">
-            {selectedArtist.profileImage ? (
-              <img
-                src={selectedArtist.profileImage}
-                alt={selectedArtist.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Users size={50} className="text-yellow-400/30" />
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="md:w-[280px] shrink-0">
+                <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-[#111]">
+                  {selectedArtist.profileImage ? (
+                    <img
+                      src={selectedArtist.profileImage}
+                      alt={selectedArtist.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Users size={50} className="text-yellow-400/30" />
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+
+              <div className="flex-1">
+                <p className="text-[9px] font-black tracking-[0.15em] text-yellow-400">
+                  GOLD VERIFIED ARTIST
+                </p>
+
+                <h2 className="mt-3 text-4xl sm:text-5xl font-black uppercase">
+                  {selectedArtist.name}
+                </h2>
+
+                {selectedArtist.studio && (
+                  <p className="mt-3 text-gray-400">{selectedArtist.studio}</p>
+                )}
+
+                <div className="mt-6 space-y-3">
+                  {(selectedArtist.city || selectedArtist.state) && (
+                    <ProfileInfo
+                      label="LOCATION"
+                      value={[selectedArtist.city, selectedArtist.state]
+                        .filter(Boolean)
+                        .join(", ")}
+                    />
+                  )}
+
+                  {selectedArtist.experience && (
+                    <ProfileInfo
+                      label="EXPERIENCE"
+                      value={selectedArtist.experience}
+                    />
+                  )}
+
+                  {selectedArtist.instagram && (
+                    <ProfileInfo
+                      label="INSTAGRAM"
+                      value={selectedArtist.instagram}
+                    />
+                  )}
+
+                  {selectedArtist.email && (
+                    <ProfileInfo label="EMAIL" value={selectedArtist.email} />
+                  )}
+
+                  {selectedArtist.phone && (
+                    <ProfileInfo label="PHONE" value={selectedArtist.phone} />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="flex-1">
-          <p className="text-[9px] font-black tracking-[0.15em] text-yellow-400">
-            GOLD VERIFIED ARTIST
-          </p>
-
-          <h2 className="mt-3 text-4xl sm:text-5xl font-black uppercase">
-            {selectedArtist.name}
-          </h2>
-
-          {selectedArtist.studio && (
-            <p className="mt-3 text-gray-400">
-              {selectedArtist.studio}
-            </p>
-          )}
-
-          <div className="mt-6 space-y-3">
-            {(selectedArtist.city || selectedArtist.state) && (
-              <ProfileInfo
-                label="LOCATION"
-                value={[selectedArtist.city, selectedArtist.state]
-                  .filter(Boolean)
-                  .join(", ")}
-              />
-            )}
-
-            {selectedArtist.experience && (
-              <ProfileInfo
-                label="EXPERIENCE"
-                value={selectedArtist.experience}
-              />
-            )}
-
-            {selectedArtist.instagram && (
-              <ProfileInfo
-                label="INSTAGRAM"
-                value={selectedArtist.instagram}
-              />
-            )}
-
-            {selectedArtist.email && (
-              <ProfileInfo
-                label="EMAIL"
-                value={selectedArtist.email}
-              />
-            )}
-
-            {selectedArtist.phone && (
-              <ProfileInfo
-                label="PHONE"
-                value={selectedArtist.phone}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </main>
   );
 }

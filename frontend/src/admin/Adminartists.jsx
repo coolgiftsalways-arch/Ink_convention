@@ -40,7 +40,7 @@ const apiFetch = async (path, options = {}) => {
 
   const timeout = window.setTimeout(() => {
     controller.abort();
-  }, 60000);
+  }, 120000);
 
   try {
     return await fetch(`${API_URL}${path}`, {
@@ -241,6 +241,8 @@ const normalizeDirectoryArtist = (source = {}) => ({
   instagram: source.instagram || "",
   bio: source.bio || "",
   website: source.website || source.websiteUrl || "",
+  profileLinks: Array.isArray(source.profileLinks) ? source.profileLinks : [],
+  claimedAt: source.claimedAt || null,
   tattooStyles: Array.isArray(source.tattooStyles) ? source.tattooStyles : [],
   portfolioImages: Array.isArray(source.portfolioImages)
     ? source.portfolioImages
@@ -582,7 +584,26 @@ function AdminArtists() {
 
   const [directoryArtists, setDirectoryArtists] = useState([]);
 
+  // Fast server-side counts. These come from /stats and do NOT wait
+  // for all 18k+ directory artists to be downloaded.
+  const [directoryStats, setDirectoryStats] = useState({
+    total: 0,
+    basic: 0,
+    silver: 0,
+    gold: 0,
+    paidSilver: 0,
+    paidGold: 0,
+    freeClaimed: 0,
+    freeUnclaimed: 0,
+  });
+
   const [membershipError, setMembershipError] = useState("");
+
+  // Free artists are intentionally NOT downloaded on page load.
+  // They are loaded only when needed.
+  const [freeDirectoryArtists, setFreeDirectoryArtists] = useState([]);
+  const [freeDirectoryLoaded, setFreeDirectoryLoaded] = useState(false);
+  const [freeDirectoryLoading, setFreeDirectoryLoading] = useState(false);
 
   // Directory membership filter:
   // basic-claimed   = FREE profile claimed by owner
@@ -619,7 +640,7 @@ function AdminArtists() {
   // Live countdown shown on active Silver / Gold memberships.
   const [membershipClock, setMembershipClock] = useState(0);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [selectedUser, setSelectedUser] = useState(null);
 
@@ -769,6 +790,51 @@ function AdminArtists() {
   }, []);
 
   // ===================================================
+  // FETCH FAST DIRECTORY STATS
+  // Uses MongoDB countDocuments on the backend.
+  // Gold/Silver counters update immediately without loading
+  // all directory records first.
+  // ===================================================
+
+  const fetchDirectoryStats = useCallback(async () => {
+    try {
+      const response = await apiFetch("/api/admin/tattoo-studios/stats");
+      const data = await getJson(response);
+
+      if (!response.ok || data.success === false) {
+        throw new Error(
+          data.message || data.error || "Failed to load directory statistics.",
+        );
+      }
+
+      const stats = data?.stats || {};
+
+      setDirectoryStats({
+        total: Number(stats.total || 0),
+        basic: Number(stats.basic ?? stats.free ?? 0),
+        silver: Number(stats.silver ?? stats.pro ?? 0),
+        gold: Number(stats.gold ?? stats.verified ?? 0),
+        paidSilver: Number(stats.paidSilver || 0),
+        paidGold: Number(stats.paidGold || 0),
+        freeClaimed: Number(stats.freeClaimed ?? stats.claimedFree ?? 0),
+        freeUnclaimed: Number(
+          stats.freeUnclaimed ??
+            stats.unclaimedFree ??
+            Math.max(
+              Number(stats.basic ?? stats.free ?? 0) -
+                Number(stats.freeClaimed ?? stats.claimedFree ?? 0),
+              0,
+            ),
+        ),
+      });
+
+      console.log("✅ DIRECTORY STATS:", stats);
+    } catch (error) {
+      console.error("Directory stats fetch error:", error);
+    }
+  }, []);
+
+  // ===================================================
   // FETCH SILVER / GOLD DIRECTORY MEMBERS
   // ===================================================
 
@@ -776,55 +842,32 @@ function AdminArtists() {
     setMembershipError("");
 
     try {
-      const PAGE_SIZE = 1000;
-      const allArtists = [];
+      // IMPORTANT PERFORMANCE FIX:
+      // Do NOT download all 18k+ directory artists.
+      // This admin page only needs the active Silver / Gold members
+      // for membership cards. Free artists are loaded on demand
+      // through search/filter API calls.
+      const response = await apiFetch(
+        "/api/admin/tattoo-studios?paidOnly=true&page=1&limit=1000",
+      );
 
-      let page = 1;
-      let totalPages = 1;
+      const data = await getJson(response);
 
-      do {
-        const response = await apiFetch(
-          `/api/admin/tattoo-studios?page=${page}&limit=${PAGE_SIZE}`,
+      if (!response.ok || data.success === false) {
+        throw new Error(
+          data.message ||
+            data.error ||
+            "Failed to load Silver / Gold directory members.",
         );
+      }
 
-        const data = await getJson(response);
-
-        if (!response.ok) {
-          throw new Error(
-            data.message ||
-              data.error ||
-              "Failed to load directory memberships.",
-          );
-        }
-
-        const pageArtists = getDirectoryArtistsArray(data);
-
-        allArtists.push(...pageArtists);
-
-        totalPages = Math.max(1, Number(data?.pagination?.totalPages || 1));
-
-        console.log(
-          `✅ ADMIN ARTISTS DIRECTORY PAGE ${page}/${totalPages}: ${pageArtists.length}`,
-        );
-
-        page += 1;
-      } while (page <= totalPages);
-
-      const members = allArtists
+      const rows = getDirectoryArtistsArray(data)
         .map((artist) => normalizeDirectoryArtist(artist))
-        .filter((artist) => {
-          // FREE / BASIC is always included.
-          if (artist.plan === "basic") {
-            return true;
-          }
-
-          // SILVER / GOLD only when membership is active/valid.
-          if (artist.plan === "pro" || artist.plan === "verified") {
-            return hasValidPaidStatus(artist);
-          }
-
-          return false;
-        })
+        .filter(
+          (artist) =>
+            (artist.plan === "pro" || artist.plan === "verified") &&
+            hasValidPaidStatus(artist),
+        )
         .sort((first, second) => {
           const firstTime = new Date(first.updatedAt || 0).getTime();
           const secondTime = new Date(second.updatedAt || 0).getTime();
@@ -832,29 +875,105 @@ function AdminArtists() {
           return secondTime - firstTime;
         });
 
-      setDirectoryArtists(members);
+      setDirectoryArtists(rows);
 
-      console.log("✅ TOTAL DIRECTORY ARTISTS LOADED:", members.length);
+      console.log("✅ PAID SILVER/GOLD MEMBERS LOADED:", rows.length);
     } catch (error) {
       console.error("Membership fetch error:", error);
 
-      setDirectoryArtists([]);
-
       if (error?.name === "AbortError") {
         setMembershipError(
-          "The server is taking too long to load artist data. Please refresh and try again.",
+          "Silver / Gold members took too long to load. Please refresh and try again.",
         );
       } else if (error instanceof TypeError) {
         setMembershipError(
-          "Cannot connect to the artist directory API. Check that the backend is online and CORS is configured correctly.",
+          "Cannot connect to the artist directory API. Check that the backend is online.",
         );
       } else {
         setMembershipError(
-          error.message || "Could not load Free, Silver and Gold artists.",
+          error.message || "Could not load Silver / Gold directory members.",
         );
       }
     }
   }, []);
+
+  const fetchFreeDirectoryPage = useCallback(
+    async (force = false) => {
+      if (freeDirectoryLoading || (freeDirectoryLoaded && !force)) {
+        return;
+      }
+
+      setFreeDirectoryLoading(true);
+      setMembershipError("");
+
+      try {
+        // IMPORTANT:
+        // Load claimed Free artists separately so a newly claimed artist is not
+        // lost somewhere inside 18k+ imported Free profiles.
+        // Unclaimed profiles stay limited to a small preview for performance.
+        const [claimedResponse, unclaimedResponse] = await Promise.all([
+          apiFetch(
+            "/api/admin/tattoo-studios?plan=basic&claimed=true&page=1&limit=1000",
+          ),
+          apiFetch(
+            "/api/admin/tattoo-studios?plan=basic&claimed=false&page=1&limit=100",
+          ),
+        ]);
+
+        const [claimedData, unclaimedData] = await Promise.all([
+          getJson(claimedResponse),
+          getJson(unclaimedResponse),
+        ]);
+
+        if (!claimedResponse.ok || claimedData.success === false) {
+          throw new Error(
+            claimedData.message ||
+              claimedData.error ||
+              "Failed to load Free Claimed artists.",
+          );
+        }
+
+        if (!unclaimedResponse.ok || unclaimedData.success === false) {
+          throw new Error(
+            unclaimedData.message ||
+              unclaimedData.error ||
+              "Failed to load Free Unclaimed artists.",
+          );
+        }
+
+        const claimedRows = getDirectoryArtistsArray(claimedData)
+          .map((artist) => normalizeDirectoryArtist(artist))
+          .map((artist) => ({ ...artist, claimed: true }));
+
+        const unclaimedRows = getDirectoryArtistsArray(unclaimedData)
+          .map((artist) => normalizeDirectoryArtist(artist))
+          .map((artist) => ({ ...artist, claimed: false }));
+
+        const uniqueRows = Array.from(
+          new Map(
+            [...claimedRows, ...unclaimedRows].map((artist) => [
+              String(artist.id),
+              artist,
+            ]),
+          ).values(),
+        );
+
+        setFreeDirectoryArtists(uniqueRows);
+        setFreeDirectoryLoaded(true);
+
+        console.log(
+          "✅ FREE ARTISTS LOADED:",
+          `claimed=${claimedRows.length}, unclaimed-preview=${unclaimedRows.length}`,
+        );
+      } catch (error) {
+        console.error("Free artist fetch error:", error);
+        setMembershipError(error.message || "Could not load Free artists.");
+      } finally {
+        setFreeDirectoryLoading(false);
+      }
+    },
+    [freeDirectoryLoaded, freeDirectoryLoading],
+  );
 
   // ===================================================
   // SEARCH DIRECTORY BY NAME / EMAIL / PHONE
@@ -1051,7 +1170,30 @@ function AdminArtists() {
           );
         }
 
-        await Promise.all([fetchMembershipRequests(), fetchMemberships()]);
+        // Do NOT reload the complete 18k+ artist directory here.
+        // Update the changed artist locally, then refresh only the small
+        // request list + fast stats endpoint.
+        if (data?.artist) {
+          const updatedArtist = normalizeDirectoryArtist(data.artist);
+
+          setDirectoryArtists((previous) => {
+            const exists = previous.some(
+              (item) => String(item.id) === String(updatedArtist.id),
+            );
+
+            if (exists) {
+              return previous.map((item) =>
+                String(item.id) === String(updatedArtist.id)
+                  ? { ...item, ...updatedArtist }
+                  : item,
+              );
+            }
+
+            return [updatedArtist, ...previous];
+          });
+        }
+
+        await Promise.all([fetchMembershipRequests(), fetchDirectoryStats()]);
       } catch (error) {
         console.error("Membership request action error:", error);
         setMembershipRequestError(
@@ -1061,7 +1203,7 @@ function AdminArtists() {
         setMembershipRequestBusyId("");
       }
     },
-    [fetchMembershipRequests, fetchMemberships],
+    [fetchMembershipRequests, fetchDirectoryStats],
   );
 
   // ===================================================
@@ -1199,7 +1341,72 @@ function AdminArtists() {
           );
         }
 
-        await Promise.all([fetchMemberships(), fetchMembershipRequests()]);
+        const updatedArtist = data?.artist
+          ? normalizeDirectoryArtist(data.artist)
+          : {
+              ...artist,
+              plan: targetPlan,
+              paymentStatus: targetPlan === "basic" ? "unpaid" : "paid",
+            };
+
+        // Update this artist immediately in the UI.
+        setDirectoryArtists((previous) => {
+          // directoryArtists stores paid Silver/Gold only.
+          if (updatedArtist.plan === "basic") {
+            return previous.filter(
+              (item) => String(item.id) !== String(updatedArtist.id),
+            );
+          }
+
+          const exists = previous.some(
+            (item) => String(item.id) === String(updatedArtist.id),
+          );
+
+          if (exists) {
+            return previous.map((item) =>
+              String(item.id) === String(updatedArtist.id)
+                ? { ...item, ...updatedArtist }
+                : item,
+            );
+          }
+
+          return [updatedArtist, ...previous];
+        });
+
+        setFreeDirectoryArtists((previous) => {
+          if (updatedArtist.plan !== "basic") {
+            return previous.filter(
+              (item) => String(item.id) !== String(updatedArtist.id),
+            );
+          }
+
+          const exists = previous.some(
+            (item) => String(item.id) === String(updatedArtist.id),
+          );
+
+          if (exists) {
+            return previous.map((item) =>
+              String(item.id) === String(updatedArtist.id)
+                ? { ...item, ...updatedArtist }
+                : item,
+            );
+          }
+
+          return [updatedArtist, ...previous];
+        });
+
+        // If a pending membership request existed for this artist,
+        // the backend completes it. Remove it immediately from the queue.
+        setMembershipRequests((previous) =>
+          previous.filter(
+            (request) =>
+              String(request.profileId || "") !== String(artist.id || ""),
+          ),
+        );
+
+        // Only refresh lightweight endpoints.
+        // This makes Free / Silver / Gold changes feel immediate.
+        await Promise.all([fetchDirectoryStats(), fetchMembershipRequests()]);
       } catch (error) {
         console.error("Direct membership activation error:", error);
         setMembershipError(
@@ -1209,7 +1416,7 @@ function AdminArtists() {
         setDirectPlanBusyArtistId("");
       }
     },
-    [fetchMembershipRequests, fetchMemberships],
+    [fetchMembershipRequests, fetchDirectoryStats],
   );
 
   // ===================================================
@@ -1247,28 +1454,49 @@ function AdminArtists() {
     setDashboardError("");
 
     try {
-      await Promise.all([
+      // FAST data only. These requests should finish quickly.
+      const results = await Promise.allSettled([
         fetchUsers(),
         fetchClientCount(),
-        fetchMemberships(),
+        fetchDirectoryStats(),
         fetchMembershipRequests(),
       ]);
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        setDashboardError(
-          "The server is taking too long to load dashboard data. Please refresh and try again.",
+
+      const failed = results.filter((result) => result.status === "rejected");
+
+      if (failed.length > 0) {
+        console.warn(
+          `⚠️ ${failed.length} admin artist request(s) failed.`,
+          failed,
         );
-      } else if (error instanceof TypeError) {
-        setDashboardError(
-          "Cannot connect to the backend API. Check that the server is online and CORS is configured correctly.",
-        );
-      } else {
-        setDashboardError(error.message || "Could not load dashboard.");
       }
+
+      // Load only active Silver / Gold members.
+      // This is a small request and does not scan/download all 18k+ artists.
+      void fetchMemberships();
+      void fetchFreeDirectoryPage(true);
+    } catch (error) {
+      console.error("Admin artists refresh error:", error);
+
+      setDashboardError(
+        error.message || "Could not load some artist dashboard data.",
+      );
+
+      // Still allow paid Silver / Gold members to attempt loading.
+      void fetchMemberships();
     } finally {
+      // Refresh button becomes available as soon as the fast dashboard
+      // data has returned. It does not wait for 18k+ artist records.
       setLoading(false);
     }
-  }, [fetchUsers, fetchClientCount, fetchMemberships, fetchMembershipRequests]);
+  }, [
+    fetchUsers,
+    fetchClientCount,
+    fetchDirectoryStats,
+    fetchMembershipRequests,
+    fetchMemberships,
+    fetchFreeDirectoryPage,
+  ]);
 
   // ===================================================
   // INITIAL LOAD
@@ -1296,7 +1524,9 @@ function AdminArtists() {
 
     const query = directorySearchQuery.trim();
 
-    if (!query) {
+    // Search only after at least 3 characters.
+    // Example: "Ahm" -> Ahmed, Ahmad, Ahmer...
+    if (query.length < 3) {
       const clearTimer = window.setTimeout(() => {
         setDirectorySearchResults([]);
         setDirectorySearchError("");
@@ -1310,7 +1540,7 @@ function AdminArtists() {
 
     const timer = window.setTimeout(() => {
       void searchDirectory(query);
-    }, 300);
+    }, 250);
 
     return () => {
       window.clearTimeout(timer);
@@ -1515,6 +1745,7 @@ function AdminArtists() {
 
               <input
                 type="email"
+                autoComplete="username"
                 required
                 value={loginEmail}
                 onChange={(event) => setLoginEmail(event.target.value)}
@@ -1532,6 +1763,7 @@ function AdminArtists() {
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   required
                   value={loginPassword}
                   onChange={(event) => setLoginPassword(event.target.value)}
@@ -1569,22 +1801,11 @@ function AdminArtists() {
   }
 
   // ===================================================
-  // LOADING
+  // NON-BLOCKING LOADING
   // ===================================================
-
-  if (loading) {
-    return (
-      <div className="w-full min-h-screen bg-[#08080a] text-white flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-9 h-9 rounded-full border-2 border-white/10 border-t-[#a855f7] animate-spin mx-auto" />
-
-          <p className="text-xs font-mono text-gray-500 uppercase tracking-widest">
-            Loading Dashboard...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Do not return a full-screen loading page here.
+  // The Admin Artists page renders immediately while APIs load
+  // and each section updates as soon as its own data arrives.
 
   // ===================================================
   // MEDIA COUNT
@@ -1598,19 +1819,31 @@ function AdminArtists() {
     0,
   );
 
-  const freeClaimedMembers = directoryArtists.filter(
+  const paidDirectoryArtists = directoryArtists;
+
+  const combinedDirectoryArtists = [
+    ...paidDirectoryArtists,
+    ...freeDirectoryArtists.filter(
+      (freeArtist) =>
+        !paidDirectoryArtists.some(
+          (paidArtist) => String(paidArtist.id) === String(freeArtist.id),
+        ),
+    ),
+  ];
+
+  const freeClaimedMembers = freeDirectoryArtists.filter(
     (artist) => artist.plan === "basic" && artist.claimed,
   );
 
-  const freeUnclaimedMembers = directoryArtists.filter(
+  const freeUnclaimedMembers = freeDirectoryArtists.filter(
     (artist) => artist.plan === "basic" && !artist.claimed,
   );
 
-  const silverMembers = directoryArtists.filter(
+  const silverMembers = paidDirectoryArtists.filter(
     (artist) => artist.plan === "pro",
   );
 
-  const goldMembers = directoryArtists.filter(
+  const goldMembers = paidDirectoryArtists.filter(
     (artist) => artist.plan === "verified",
   );
 
@@ -1622,7 +1855,7 @@ function AdminArtists() {
     "ALL",
     ...Array.from(
       new Set(
-        directoryArtists
+        combinedDirectoryArtists
           .map((artist) =>
             String(artist.state || "")
               .trim()
@@ -1635,8 +1868,8 @@ function AdminArtists() {
 
   const stateFilteredDirectoryArtists =
     directoryStateFilter === "ALL"
-      ? directoryArtists
-      : directoryArtists.filter(
+      ? combinedDirectoryArtists
+      : combinedDirectoryArtists.filter(
           (artist) =>
             String(artist.state || "")
               .trim()
@@ -1801,14 +2034,18 @@ function AdminArtists() {
   };
 
   const planFilteredDirectoryArtists = filterMembersByState(
-    directoryArtists,
+    combinedDirectoryArtists,
   ).filter((artist) => {
     if (membershipFilter === "all") {
       return true;
     }
 
-    if (membershipFilter === "free") {
-      return artist.plan === "basic";
+    if (membershipFilter === "free-claimed") {
+      return artist.plan === "basic" && artist.claimed;
+    }
+
+    if (membershipFilter === "free-unclaimed") {
+      return artist.plan === "basic" && !artist.claimed;
     }
 
     if (membershipFilter === "pro") {
@@ -1853,25 +2090,35 @@ function AdminArtists() {
             description:
               "Silver artists matching the selected state and status filters.",
           }
-        : membershipFilter === "free"
+        : membershipFilter === "free-claimed"
           ? {
-              title: "Free Artists",
+              title: "Free Claimed",
               price: "₹0",
               members: visibleDirectoryMembers,
-              tone: "basic",
+              tone: "claimed",
               icon: <BadgeCheck size={18} />,
               description:
-                "All Free artists matching the selected state and status filters.",
+                "Free profiles whose owners completed the OTP claim flow.",
             }
-          : {
-              title: "All Directory Artists",
-              price: "",
-              members: visibleDirectoryMembers,
-              tone: "all",
-              icon: <LayoutDashboard size={18} />,
-              description:
-                "Free, Silver and Gold artists matching the selected filters.",
-            };
+          : membershipFilter === "free-unclaimed"
+            ? {
+                title: "Free Unclaimed",
+                price: "₹0",
+                members: visibleDirectoryMembers,
+                tone: "unclaimed",
+                icon: <CircleDashed size={18} />,
+                description:
+                  "Imported Free profiles that have not been claimed by their owners yet.",
+              }
+            : {
+                title: "All Directory Artists",
+                price: "",
+                members: visibleDirectoryMembers,
+                tone: "all",
+                icon: <LayoutDashboard size={18} />,
+                description:
+                  "Free, Silver and Gold artists matching the selected filters.",
+              };
 
   const directoryStatusCounts = {
     ALL: planFilteredDirectoryArtists.length,
@@ -1932,9 +2179,10 @@ function AdminArtists() {
               <button
                 type="button"
                 onClick={refreshDashboard}
-                className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-mono uppercase tracking-wider"
+                disabled={loading}
+                className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-mono uppercase tracking-wider"
               >
-                Refresh
+                {loading ? "Updating..." : "Refresh"}
               </button>
 
               <button
@@ -1971,25 +2219,41 @@ function AdminArtists() {
 
             <DashboardStat
               label="Free Claimed"
-              value={filterMembersByState(freeClaimedMembers).length}
+              value={
+                directoryStateFilter === "ALL"
+                  ? directoryStats.freeClaimed
+                  : filterMembersByState(freeClaimedMembers).length
+              }
               tone="claimed"
             />
 
             <DashboardStat
               label="Free Unclaimed"
-              value={filterMembersByState(freeUnclaimedMembers).length}
+              value={
+                directoryStateFilter === "ALL"
+                  ? directoryStats.freeUnclaimed
+                  : filterMembersByState(freeUnclaimedMembers).length
+              }
               tone="unclaimed"
             />
 
             <DashboardStat
               label="Silver Pro ₹2,999"
-              value={filterMembersByState(silverMembers).length}
+              value={
+                directoryStateFilter === "ALL"
+                  ? directoryStats.paidSilver
+                  : filterMembersByState(silverMembers).length
+              }
               tone="silver"
             />
 
             <DashboardStat
               label="Gold Verified ₹5,999"
-              value={filterMembersByState(goldMembers).length}
+              value={
+                directoryStateFilter === "ALL"
+                  ? directoryStats.paidGold
+                  : filterMembersByState(goldMembers).length
+              }
               tone="gold"
             />
 
@@ -2459,7 +2723,7 @@ function AdminArtists() {
                             className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-red-400 transition hover:border-red-500/50 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             <Trash2 size={12} />
-                            {busy ? "Working..." : "Delete"}
+                            {busy ? "Saving..." : "Delete"}
                           </button>
 
                           {isCompleted && (
@@ -2603,125 +2867,56 @@ function AdminArtists() {
             )}
 
             {/* ==========================================
-                SEARCH BY NAME / EMAIL / PHONE
-            ========================================== */}
-
-            <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4 sm:p-5">
-              <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-                <div className="relative flex-1">
-                  <Search
-                    size={17}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
-                  />
-
-                  <input
-                    type="text"
-                    value={directorySearchQuery}
-                    onChange={(event) =>
-                      setDirectorySearchQuery(event.target.value)
-                    }
-                    placeholder="Search artist by name, email or phone number..."
-                    className="w-full rounded-xl border border-white/10 bg-black/35 py-3.5 pl-11 pr-4 text-sm text-white outline-none transition focus:border-[#a855f7]/50"
-                  />
-                </div>
-
-                {directorySearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDirectorySearchQuery("");
-                      setDirectorySearchResults([]);
-                      setDirectorySearchError("");
-                    }}
-                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:bg-white/10"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-
-              <p className="mt-2 text-[10px] font-mono uppercase tracking-wider text-gray-700">
-                Searches the real directory database by artist name, studio,
-                email and mobile number.
-              </p>
-            </div>
-
-            {directorySearchQuery.trim() && (
-              <div className="rounded-3xl border border-[#a855f7]/20 bg-[#a855f7]/[0.025] p-5 sm:p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                  <div>
-                    <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#a855f7]">
-                      Search Results
-                    </p>
-
-                    <h3 className="mt-1 text-xl font-black">
-                      “{directorySearchQuery.trim()}”
-                    </h3>
-                  </div>
-
-                  <span className="text-xs font-mono text-gray-500">
-                    {directorySearchLoading
-                      ? "SEARCHING..."
-                      : `${directorySearchResults.length} FOUND`}
-                  </span>
-                </div>
-
-                {directorySearchError ? (
-                  <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
-                    {directorySearchError}
-                  </div>
-                ) : directorySearchLoading ? (
-                  <div className="py-10 text-center text-xs font-mono uppercase tracking-widest text-gray-600">
-                    Searching artists...
-                  </div>
-                ) : directorySearchResults.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <Search size={26} className="mx-auto text-gray-700" />
-                    <p className="mt-3 text-sm font-bold text-gray-400">
-                      No matching artist found
-                    </p>
-                    <p className="mt-1 text-xs text-gray-600">
-                      Try another name, email or mobile number.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-[560px] overflow-y-auto pr-1">
-                    {directorySearchResults.map((artist, index) => (
-                      <MembershipMemberRow
-                        key={artist.id || `${artist.name}-${index}`}
-                        artist={artist}
-                        tone={getArtistTone(artist)}
-                        onAdminPlanChange={handleDirectPlanActivation}
-                        busy={directPlanBusyArtistId === artist.id}
-                        nowMs={membershipClock}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ==========================================
                 PLAN FILTERS
             ========================================== */}
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
               <MembershipFilterButton
                 active={membershipFilter === "all"}
-                onClick={() => setMembershipFilter("all")}
+                onClick={() => {
+                  setMembershipFilter("all");
+                  void fetchFreeDirectoryPage();
+                }}
                 title="ALL"
                 subtitle="Free + Silver + Gold"
-                count={stateFilteredDirectoryArtists.length}
+                count={
+                  directoryStateFilter === "ALL"
+                    ? directoryStats.total
+                    : stateFilteredDirectoryArtists.length
+                }
                 tone="all"
               />
 
               <MembershipFilterButton
-                active={membershipFilter === "free"}
-                onClick={() => setMembershipFilter("free")}
-                title="FREE"
-                subtitle="All Free artists"
-                count={stateFreeArtists.length}
-                tone="basic"
+                active={membershipFilter === "free-claimed"}
+                onClick={() => {
+                  setMembershipFilter("free-claimed");
+                  void fetchFreeDirectoryPage();
+                }}
+                title="FREE CLAIMED"
+                subtitle="Owner OTP verified"
+                count={
+                  directoryStateFilter === "ALL"
+                    ? directoryStats.freeClaimed
+                    : filterMembersByState(freeClaimedMembers).length
+                }
+                tone="claimed"
+              />
+
+              <MembershipFilterButton
+                active={membershipFilter === "free-unclaimed"}
+                onClick={() => {
+                  setMembershipFilter("free-unclaimed");
+                  void fetchFreeDirectoryPage();
+                }}
+                title="FREE UNCLAIMED"
+                subtitle="Not claimed yet"
+                count={
+                  directoryStateFilter === "ALL"
+                    ? directoryStats.freeUnclaimed
+                    : filterMembersByState(freeUnclaimedMembers).length
+                }
+                tone="unclaimed"
               />
 
               <MembershipFilterButton
@@ -2744,22 +2939,24 @@ function AdminArtists() {
             </div>
 
             {/* ==========================================
-                STATUS FILTER - STALL DASHBOARD STYLE
+                ARTIST STATUS FILTER + SEARCH
             ========================================== */}
 
-            <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                  <p className="text-[9px] font-mono font-black uppercase tracking-[0.16em] text-gray-500">
-                    Artist Status Filter
-                  </p>
+            <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4 sm:p-5">
+              <div className="flex flex-col gap-4">
+                {/* HEADER + STATUS DROPDOWN */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[9px] font-mono font-black uppercase tracking-[0.16em] text-gray-500">
+                      Artist Status Filter
+                    </p>
 
-                  <p className="mt-1 text-[10px] text-gray-600">
-                    Choose a status to show matching artist cards.
-                  </p>
-                </div>
+                    <p className="mt-1 text-[10px] text-gray-600">
+                      Search by artist name, Gmail/email or mobile number and
+                      combine it with the selected status.
+                    </p>
+                  </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <select
                     value={directoryStatusFilter}
                     onChange={(event) =>
@@ -2787,23 +2984,219 @@ function AdminArtists() {
                     <option value="ALL">
                       ALL STATUS ({directoryStatusCounts.ALL})
                     </option>
+
                     <option value="NEW">
                       NEW ({directoryStatusCounts.NEW})
                     </option>
+
                     <option value="CONTACTED">
                       CONTACTED ({directoryStatusCounts.CONTACTED})
                     </option>
+
                     <option value="CONFIRMED">
                       CONFIRMED ({directoryStatusCounts.CONFIRMED})
                     </option>
+
                     <option value="PAID">
                       PAID ({directoryStatusCounts.PAID})
                     </option>
+
                     <option value="CANCELLED">
                       CANCELLED ({directoryStatusCounts.CANCELLED})
                     </option>
                   </select>
                 </div>
+
+                {/* SEARCH */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search
+                      size={17}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
+                    />
+
+                    <input
+                      type="text"
+                      value={directorySearchQuery}
+                      onChange={(event) =>
+                        setDirectorySearchQuery(event.target.value)
+                      }
+                      placeholder="Type at least 3 characters — e.g. Ahm..."
+                      className="
+                        w-full
+                        rounded-xl
+                        border
+                        border-white/10
+                        bg-black/40
+                        py-3.5
+                        pl-11
+                        pr-28
+                        text-sm
+                        text-white
+                        placeholder:text-gray-700
+                        outline-none
+                        transition
+                        focus:border-[#a855f7]/60
+                      "
+                    />
+
+                    {directorySearchLoading && (
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-mono font-black uppercase tracking-wider text-[#a855f7]">
+                        Searching...
+                      </span>
+                    )}
+                  </div>
+
+                  {directorySearchQuery.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDirectorySearchQuery("");
+                        setDirectorySearchResults([]);
+                        setDirectorySearchError("");
+                      }}
+                      className="
+                        rounded-xl
+                        border
+                        border-white/10
+                        bg-white/5
+                        px-5
+                        py-3
+                        text-[10px]
+                        font-black
+                        uppercase
+                        tracking-widest
+                        text-gray-400
+                        transition
+                        hover:border-red-400/30
+                        hover:bg-red-500/10
+                        hover:text-red-300
+                      "
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <p className="text-[9px] font-mono uppercase tracking-wider text-gray-700">
+                    Type 3+ characters • Prefix search by name, Gmail/email or
+                    mobile number
+                  </p>
+
+                  {directorySearchQuery.trim() && (
+                    <p className="text-[9px] font-mono uppercase tracking-wider text-[#a855f7]">
+                      {directorySearchLoading
+                        ? "Searching..."
+                        : `${
+                            directorySearchResults.filter((artist) => {
+                              if (directoryStatusFilter === "ALL") {
+                                return true;
+                              }
+
+                              return (
+                                getDirectoryArtistStatus(artist) ===
+                                directoryStatusFilter
+                              );
+                            }).length
+                          } Result${
+                            directorySearchResults.filter((artist) => {
+                              if (directoryStatusFilter === "ALL") {
+                                return true;
+                              }
+
+                              return (
+                                getDirectoryArtistStatus(artist) ===
+                                directoryStatusFilter
+                              );
+                            }).length === 1
+                              ? ""
+                              : "s"
+                          } Found`}
+                    </p>
+                  )}
+                </div>
+
+                {directorySearchError && (
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400">
+                    {directorySearchError}
+                  </div>
+                )}
+
+                {directorySearchQuery.trim().length > 0 &&
+                  directorySearchQuery.trim().length < 3 && (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3 text-[10px] font-mono uppercase tracking-wider text-gray-500">
+                      Type {3 - directorySearchQuery.trim().length} more
+                      character
+                      {3 - directorySearchQuery.trim().length === 1
+                        ? ""
+                        : "s"}{" "}
+                      to search
+                    </div>
+                  )}
+
+                {/* SEARCH RESULTS INSIDE STATUS FILTER */}
+                {directorySearchQuery.trim().length >= 3 &&
+                  !directorySearchLoading &&
+                  !directorySearchError && (
+                    <div className="border-t border-white/10 pt-4">
+                      {directorySearchResults.filter((artist) => {
+                        if (directoryStatusFilter === "ALL") {
+                          return true;
+                        }
+
+                        return (
+                          getDirectoryArtistStatus(artist) ===
+                          directoryStatusFilter
+                        );
+                      }).length === 0 ? (
+                        <div className="py-8 text-center">
+                          <Search size={24} className="mx-auto text-gray-700" />
+
+                          <p className="mt-3 text-xs font-bold text-gray-500">
+                            No matching artist found
+                          </p>
+
+                          <p className="mt-1 text-[10px] text-gray-700">
+                            Try another name, Gmail/email, mobile number or
+                            status.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-[520px] overflow-y-auto pr-1">
+                          {directorySearchResults
+                            .filter((artist) => {
+                              if (directoryStatusFilter === "ALL") {
+                                return true;
+                              }
+
+                              return (
+                                getDirectoryArtistStatus(artist) ===
+                                directoryStatusFilter
+                              );
+                            })
+                            .map((artist, index) => (
+                              <MembershipMemberRow
+                                key={artist.id || `${artist.name}-${index}`}
+                                artist={artist}
+                                tone={getArtistTone(artist)}
+                                onAdminPlanChange={handleDirectPlanActivation}
+                                busy={directPlanBusyArtistId === artist.id}
+                                nowMs={membershipClock}
+                                status={getDirectoryArtistStatus(artist)}
+                                membershipRequest={
+                                  latestMembershipRequestByProfile?.[
+                                    String(artist.id || "")
+                                  ] || null
+                                }
+                                onStatusChange={handleArtistStatusChange}
+                                onOpenArtist={setSelectedDirectoryArtist}
+                              />
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
               </div>
             </div>
 
@@ -3782,6 +4175,16 @@ function DirectoryArtistDetailsModal({
               value={artist?.instagram || "N/A"}
             />
             <MembershipInfo label="Website" value={artist?.website || "N/A"} />
+            <MembershipInfo
+              label="Claim Status"
+              value={
+                artist?.claimed ? "FREE CLAIMED / OWNER VERIFIED" : "UNCLAIMED"
+              }
+            />
+            <MembershipInfo
+              label="Claimed At"
+              value={formatMembershipDateTime(artist?.claimedAt)}
+            />
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
@@ -3801,6 +4204,16 @@ function DirectoryArtistDetailsModal({
               <DetailsField
                 label="Bio / About"
                 value={artist?.bio || "N/A"}
+                fullWidth
+              />
+              <DetailsField
+                label="Profile Links"
+                value={
+                  Array.isArray(artist?.profileLinks) &&
+                  artist.profileLinks.length
+                    ? artist.profileLinks.join(" | ")
+                    : "N/A"
+                }
                 fullWidth
               />
               <DetailsField
@@ -3934,7 +4347,7 @@ function DirectoryArtistDetailsModal({
                     onClick={() => void onAdminPlanChange(artist, "basic")}
                     className="rounded-lg border border-purple-400/25 bg-purple-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-purple-300 disabled:opacity-40"
                   >
-                    {busy ? "Working..." : "Make Free"}
+                    {busy ? "Saving..." : "Make Free"}
                   </button>
                 )}
 
@@ -3945,7 +4358,7 @@ function DirectoryArtistDetailsModal({
                     onClick={() => void onAdminPlanChange(artist, "pro")}
                     className="rounded-lg border border-slate-300/20 bg-slate-300/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-100 disabled:opacity-40"
                   >
-                    {busy ? "Working..." : "Make Silver"}
+                    {busy ? "Saving..." : "Make Silver"}
                   </button>
                 )}
 
@@ -3956,7 +4369,7 @@ function DirectoryArtistDetailsModal({
                     onClick={() => void onAdminPlanChange(artist, "verified")}
                     className="rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-amber-300 disabled:opacity-40"
                   >
-                    {busy ? "Working..." : "Make Gold"}
+                    {busy ? "Saving..." : "Make Gold"}
                   </button>
                 )}
               </div>

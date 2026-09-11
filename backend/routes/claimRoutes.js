@@ -14,6 +14,16 @@ const TATTOO_CATEGORIES = require("../constants/tattooCategories");
 
 const router = express.Router();
 
+function compactOwnerProfile(source = {}) {
+  const profile =
+    typeof source?.toObject === "function" ? source.toObject() : { ...source };
+
+  delete profile.profileImage;
+  delete profile.portfolioImages;
+
+  return profile;
+}
+
 /* =========================================================
    CLAIM SESSION
 
@@ -780,7 +790,9 @@ router.post(
         });
       }
 
-      const studio = await TattooStudio.findById(profileId).lean();
+      const studio = await TattooStudio.findById(profileId)
+        .select("_id phone")
+        .lean();
 
       if (!studio) {
         return res.status(404).json({
@@ -1112,32 +1124,32 @@ router.post(
   async (req, res) => {
     try {
       const {
-  profileId,
+        profileId,
 
-  name,
+        name,
 
-  email,
+        email,
 
-  city,
+        city,
 
-  state,
+        state,
 
-  studio,
+        studio,
 
-  experience,
+        experience,
 
-  instagram,
+        instagram,
 
-  tattooStyles,
+        tattooStyles,
 
-  bio,
+        bio,
 
-  profileLinks,
+        profileLinks,
 
-  profileImage,
+        profileImage,
 
-  portfolioImages,
-} = req.body || {};
+        portfolioImages,
+      } = req.body || {};
 
       /* =============================================
          SECURITY
@@ -1254,19 +1266,19 @@ router.post(
    SAVED FOR FREE / SILVER / GOLD
 ============================================= */
 
-if (profileLinks !== undefined) {
-  if (!Array.isArray(profileLinks)) {
-    return res.status(400).json({
-      success: false,
-      message: "profileLinks must be an array.",
-    });
-  }
+      if (profileLinks !== undefined) {
+        if (!Array.isArray(profileLinks)) {
+          return res.status(400).json({
+            success: false,
+            message: "profileLinks must be an array.",
+          });
+        }
 
-  artist.profileLinks = profileLinks
-    .map((link) => String(link || "").trim())
-    .filter(Boolean)
-    .slice(0, 3);
-}
+        artist.profileLinks = profileLinks
+          .map((link) => String(link || "").trim())
+          .filter(Boolean)
+          .slice(0, 3);
+      }
 
       /* =============================================
          PROFILE IMAGE
@@ -1349,14 +1361,19 @@ if (profileLinks !== undefined) {
 
       await artist.save();
 
+      const responseProfile =
+        String(req.query?.compact || "") === "1"
+          ? compactOwnerProfile(artist)
+          : artist.toObject();
+
       return res.status(200).json({
         success: true,
 
         message: "Profile updated successfully.",
 
-        profile: artist.toObject(),
+        profile: responseProfile,
 
-        artist: artist.toObject(),
+        artist: responseProfile,
 
         maskedPhone: maskPhone(artist.phone),
 
