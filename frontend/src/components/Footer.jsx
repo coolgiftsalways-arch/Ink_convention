@@ -6,8 +6,10 @@ function Footer() {
   return (
     <footer className="w-full bg-[#08080a] text-white border-t border-white/10 py-12 md:py-16 select-none">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+
         {/* Main Footer Layout */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+
           {/* Column 1: Brand & Tagline */}
           <div className="space-y-4">
             <Link
@@ -41,6 +43,7 @@ function Footer() {
             </h4>
 
             <ul className="flex flex-col space-y-2.5 text-xs sm:text-sm font-medium">
+
               <li>
                 <Link
                   to="/"
@@ -85,11 +88,13 @@ function Footer() {
                   Hall Of Fame
                 </Link>
               </li>
+
             </ul>
           </div>
 
           {/* Column 4: Alerts & Social Icons */}
           <div className="space-y-4">
+
             <h4 className="text-xs font-mono font-bold text-white uppercase tracking-widest relative pb-2 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-8 after:h-0.5 after:bg-[#a855f7]">
               INKCONVENTION ALERTS
             </h4>
@@ -100,6 +105,7 @@ function Footer() {
 
             {/* Social Icons */}
             <div className="flex items-center space-x-3 pt-2">
+
               {/* WhatsApp */}
               <a
                 href="https://wa.me/message/U536VCYKIRWMA1"
@@ -140,19 +146,51 @@ function Footer() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <rect width="20" height="16" x="2" y="4" rx="2" />
+                  <rect
+                    width="20"
+                    height="16"
+                    x="2"
+                    y="4"
+                    rx="2"
+                  />
 
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                 </svg>
               </a>
+
             </div>
           </div>
         </div>
 
-        {/* Bottom Copyright */}
-        <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 font-mono">
-          <p>© {new Date().getFullYear()} EXPO 2026. All rights reserved.</p>
+        {/* Bottom Footer */}
+        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-5 text-xs text-gray-500 font-mono">
+
+          {/* Copyright */}
+          <p className="text-center md:text-left">
+            © {new Date().getFullYear()} INKCONVENTION. All rights reserved.
+          </p>
+
+          {/* Legal Links */}
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+
+            <Link
+              to="/privacy-policy"
+              className="hover:text-white transition-colors duration-300"
+            >
+              Privacy Policy
+            </Link>
+
+            <Link
+              to="/data-deletion"
+              className="hover:text-white transition-colors duration-300"
+            >
+              Data Deletion
+            </Link>
+
+          </div>
+
         </div>
+
       </div>
     </footer>
   );

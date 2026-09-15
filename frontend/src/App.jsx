@@ -47,6 +47,9 @@ import AdminStalls from "./admin/AdminStalls";
 import AdminArtists from "./admin/Adminartists";
 import AdminLogin from "./admin/Login";
 import ArtistBookings from "./admin/ArtistBookings";
+import WhatsAppCampaigns from "./admin/WhatsAppCampaigns";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import DataDeletion from "./pages/DataDeletion";
 
 /*
   DO NOT import AdminSidebar here.
@@ -290,6 +293,10 @@ function Layout() {
               </PageTransition>
             }
           />
+          <Route
+  path="/admin/whatsapp-campaigns"
+  element={<WhatsAppCampaigns />}
+/>
 
           <Route
             path="/Upload"
@@ -339,6 +346,8 @@ function Layout() {
               </PageTransition>
             }
           />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+<Route path="/data-deletion" element={<DataDeletion />} />
 
           {/* =================================================
               ADMIN ROOT
