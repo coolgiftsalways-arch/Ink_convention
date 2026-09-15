@@ -47,7 +47,7 @@ import AdminStalls from "./admin/AdminStalls";
 import AdminArtists from "./admin/Adminartists";
 import AdminLogin from "./admin/Login";
 import ArtistBookings from "./admin/ArtistBookings";
-import WhatsAppCampaigns from "./admin/WhatsAppCampaigns";
+// import WhatsAppCampaigns from "./admin/WhatsAppCampaigns";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import DataDeletion from "./pages/DataDeletion";
 
@@ -293,10 +293,10 @@ function Layout() {
               </PageTransition>
             }
           />
-          <Route
+          {/* <Route
   path="/admin/whatsapp-campaigns"
   element={<WhatsAppCampaigns />}
-/>
+/> */}
 
           <Route
             path="/Upload"
