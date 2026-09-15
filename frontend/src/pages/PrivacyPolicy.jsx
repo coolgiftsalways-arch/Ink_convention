@@ -49,15 +49,9 @@ function PrivacyPolicy() {
         <div className="legal-hero-bottom">
           <p>
             This Privacy Policy explains how Ink Convention collects, uses,
-            stores, shares and protects information across our website,
-            WhatsApp communications and services connected with Meta
-            Platforms.
+            stores, shares and protects information across our website, WhatsApp
+            communications and services connected with Meta Platforms.
           </p>
-
-          <div className="legal-updated">
-            <small>LAST UPDATED</small>
-            <strong>15 SEPTEMBER 2026</strong>
-          </div>
         </div>
       </section>
 
@@ -123,9 +117,8 @@ function PrivacyPolicy() {
           >
             <p>
               Ink Convention may use the WhatsApp Business Platform and other
-              services provided by Meta Platforms to communicate with
-              customers, tattoo artists, studios, exhibitors, sponsors and
-              other users.
+              services provided by Meta Platforms to communicate with customers,
+              tattoo artists, studios, exhibitors, sponsors and other users.
             </p>
 
             <p>Depending on your interaction with us, we may process:</p>
@@ -146,8 +139,8 @@ function PrivacyPolicy() {
             </ul>
 
             <p>
-              We do not ask users to provide their Facebook, Instagram,
-              WhatsApp or Meta passwords.
+              We do not ask users to provide their Facebook, Instagram, WhatsApp
+              or Meta passwords.
             </p>
           </Section>
 
@@ -213,8 +206,7 @@ function PrivacyPolicy() {
               <span>OPT-OUT</span>
 
               <h3>
-                Reply <strong>STOP</strong> or{" "}
-                <strong>UNSUBSCRIBE</strong>
+                Reply <strong>STOP</strong> or <strong>UNSUBSCRIBE</strong>
               </h3>
 
               <p>
@@ -244,21 +236,21 @@ function PrivacyPolicy() {
 
             <p>
               Relevant information may be shared with the artist, studio or
-              business selected by the user for the purpose of responding to
-              the enquiry.
+              business selected by the user for the purpose of responding to the
+              enquiry.
             </p>
 
             <p>
-              Where a masked lead or masked contact feature is available,
-              direct contact information may initially be limited or hidden.
+              Where a masked lead or masked contact feature is available, direct
+              contact information may initially be limited or hidden.
             </p>
           </Section>
 
           <Section number="07" title="Meta Platform Data">
             <p>
               Information received through Meta APIs, WhatsApp Business APIs,
-              Meta Business services, webhooks or similar Meta Platform
-              features may be treated as Meta Platform Data.
+              Meta Business services, webhooks or similar Meta Platform features
+              may be treated as Meta Platform Data.
             </p>
 
             <p>Ink Convention:</p>
@@ -268,15 +260,19 @@ function PrivacyPolicy() {
                 Uses Meta Platform Data only for disclosed and legitimate
                 purposes
               </li>
+
               <li>Does not sell Meta Platform Data</li>
+
               <li>
                 Does not rent Meta Platform Data for third-party independent
                 marketing
               </li>
+
               <li>
                 Limits disclosure to service providers or parties necessary to
                 provide requested services
               </li>
+
               <li>
                 Deletes information received in error where reasonably
                 practicable
@@ -411,10 +407,9 @@ function PrivacyPolicy() {
             </p>
 
             <p>
-              Meta Platform Data and WhatsApp-related information may be
-              deleted or de-identified when no longer required for the purpose
-              for which it was collected, subject to applicable legal
-              requirements.
+              Meta Platform Data and WhatsApp-related information may be deleted
+              or de-identified when no longer required for the purpose for which
+              it was collected, subject to applicable legal requirements.
             </p>
           </Section>
 
@@ -443,9 +438,8 @@ function PrivacyPolicy() {
 
           <Section number="16" title="Your Rights & Choices">
             <p>
-              Subject to applicable law, users may request access,
-              modification, correction or deletion of eligible personal
-              information.
+              Subject to applicable law, users may request access, modification,
+              correction or deletion of eligible personal information.
             </p>
 
             <ul>
@@ -461,8 +455,8 @@ function PrivacyPolicy() {
 
           <Section number="17" title="Data Security">
             <p>
-              Ink Convention uses reasonable administrative, organisational
-              and technical safeguards designed to protect information.
+              Ink Convention uses reasonable administrative, organisational and
+              technical safeguards designed to protect information.
             </p>
 
             <ul>
@@ -475,16 +469,14 @@ function PrivacyPolicy() {
               <li>Monitoring and backup measures</li>
             </ul>
 
-            <p>
-              No online system can be guaranteed to be completely secure.
-            </p>
+            <p>No online system can be guaranteed to be completely secure.</p>
           </Section>
 
           <Section number="18" title="Children">
             <p>
               Where applicable law requires parental or guardian consent for a
-              child's personal information, appropriate consent must be
-              obtained before processing such information.
+              child's personal information, appropriate consent must be obtained
+              before processing such information.
             </p>
           </Section>
 
@@ -521,8 +513,8 @@ function PrivacyPolicy() {
             </p>
 
             <p>
-              The latest version will remain available on InkConvention.com
-              and the Last Updated date will be changed when appropriate.
+              The latest version will remain available on InkConvention.com and
+              the Last Updated date will be changed when appropriate.
             </p>
           </Section>
 
@@ -540,6 +532,7 @@ function PrivacyPolicy() {
               <div className="legal-contact-grid">
                 <div>
                   <span>Website</span>
+
                   <a
                     href="https://inkconvention.com/"
                     target="_blank"
@@ -551,6 +544,7 @@ function PrivacyPolicy() {
 
                 <div>
                   <span>Email</span>
+
                   <a href="mailto:YOUR-EMAIL@inkconvention.com">
                     ink.convention.expo@gmail.com
                   </a>
@@ -558,7 +552,8 @@ function PrivacyPolicy() {
 
                 <div>
                   <span>Phone</span>
-                  <a href="tel:+91XXXXXXXXXX">+91  70392 35169</a>
+
+                  <a href="tel:+91XXXXXXXXXX">+91 70392 35169</a>
                 </div>
 
                 {/* <div>
@@ -574,7 +569,9 @@ function PrivacyPolicy() {
 
             <div>
               <Link to="/privacy-policy">Privacy Policy</Link>
+
               <Link to="/data-deletion">Data Deletion</Link>
+
               <Link to="/">Home</Link>
             </div>
           </footer>
