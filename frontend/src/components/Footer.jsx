@@ -188,10 +188,10 @@ function Footer() {
             </Link>
 
             <Link
-    to="/data-deletion"
+    to="/terms"
     className="hover:text-white transition-colors duration-300"
   >
-    Data Deletion
+    terms
   </Link>
 
           </div>
