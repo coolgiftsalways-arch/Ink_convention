@@ -20,6 +20,7 @@ import Footer from "./components/Footer";
 import PageTransition from "./components/PageTransition";
 import ScrollToTop from "./components/ScrollToTop";
 import Payment from "./components/Payment";
+import CustomCursor from "./components/CustomCursor";
 
 /* =========================================================
    PUBLIC PAGES
@@ -38,6 +39,10 @@ import BookArtist from "./pages/BookArtist";
 import ClientLogin from "./pages/ClientLogin";
 import Sponsors from "./pages/Sponsors";
 
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import DataDeletion from "./pages/DataDeletion";
+import Terms from "./pages/Terms";
+
 /* =========================================================
    ADMIN PAGES
 ========================================================= */
@@ -48,19 +53,8 @@ import AdminStalls from "./admin/AdminStalls";
 import AdminArtists from "./admin/Adminartists";
 import AdminLogin from "./admin/Login";
 import ArtistBookings from "./admin/ArtistBookings";
+
 // import WhatsAppCampaigns from "./admin/WhatsAppCampaigns";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import DataDeletion from "./pages/DataDeletion";
-import Terms from "./pages/Terms";
-
-/*
-  DO NOT import AdminSidebar here.
-
-  AdminSidebar is already used inside your admin pages.
-
-  src/admin/AdminSidebar.jsx
-  is a component, not a separate page.
-*/
 
 /* =========================================================
    STYLES
@@ -78,14 +72,7 @@ function Layout() {
   const location = useLocation();
 
   /* =======================================================
-     HIDE WEBSITE NAVBAR + FOOTER
-     ON EVERY ADMIN PAGE
-
-     /admin/dashboard
-     /admin/clients
-     /admin/stalls
-     /admin/artists
-     /admin/login
+     HIDE PUBLIC WEBSITE UI ON ADMIN PAGES
   ======================================================= */
 
   const isAdminPage =
@@ -93,438 +80,426 @@ function Layout() {
     location.pathname.startsWith("/admin");
 
   return (
-    <div
-      className="
-        min-h-screen
-        bg-[#08080a]
-        text-white
-        flex
-        flex-col
-        justify-between
-        selection:bg-[#a855f7]
-        selection:text-white
-      "
-    >
+    <>
       {/* ===================================================
-          PUBLIC NAVBAR
+          AWWWARDS CUSTOM CURSOR
+
+          Only show on public website.
+          Admin dashboard keeps normal cursor.
       =================================================== */}
 
-      {!isAdminPage && <Navbar />}
-
-      {/* ===================================================
-          ROUTES
-      =================================================== */}
-
-      <div className="flex-grow w-full">
-        <Routes location={location} key={location.pathname}>
-          {/* =================================================
-              HOME
-          ================================================= */}
-
-          <Route
-            path="/"
-            element={
-              <PageTransition>
-                <Home />
-              </PageTransition>
-            }
-          />
-          <Route path="/terms" element={<Terms />} />
-
-          {/* =================================================
-              ABOUT
-          ================================================= */}
-
-          <Route
-            path="/about"
-            element={
-              <PageTransition>
-                <About />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              GALLERY
-          ================================================= */}
-
-          <Route
-            path="/gallery"
-            element={
-              <PageTransition>
-                <Gallery />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              SERVICES
-          ================================================= */}
-
-          <Route
-            path="/services"
-            element={
-              <PageTransition>
-                <Gallery />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              HALL OF FAME
-
-              ₹2,999 VERIFIED ARTISTS
-          ================================================= */}
-
-          <Route
-            path="/hall-of-fame"
-            element={
-              <PageTransition>
-                <HallOfFame />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              ARTISTS DIRECTORY
-
-              BASIC
-              ₹1,999 SILVER
-              ₹2,999 GOLD
-          ================================================= */}
-
-          <Route
-            path="/artists"
-            element={
-              <PageTransition>
-                <Artists />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              ARTIST CLAIM / UPDATE
-          ================================================= */}
-
-          <Route
-            path="/Enter"
-            element={
-              <PageTransition>
-                <Enter />
-              </PageTransition>
-            }
-          />
-
-          <Route
-            path="/enter"
-            element={
-              <PageTransition>
-                <Enter />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              TOP
-          ================================================= */}
-
-          <Route
-            path="/top"
-            element={
-              <PageTransition>
-                <TOP />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              UPCOMING EVENTS
-          ================================================= */}
-
-          <Route
-            path="/upcoming"
-            element={
-              <PageTransition>
-                <Upcoming />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              STALL BOOKING / CONTACT
-          ================================================= */}
-
-          <Route
-            path="/stall-booking"
-            element={
-              <PageTransition>
-                <ClientLogin />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              CONTACT
-          ================================================= */}
-
-          <Route
-            path="/contact"
-            element={
-              <PageTransition>
-                <About />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              COMPETITION
-
-              FILE:
-              src/pages/Upload.jsx
-
-              MAIN URL:
-              /competition
-
-              OLD /upload URLS KEPT FOR SUPPORT
-          ================================================= */}
-
-          <Route
-            path="/competition"
-            element={
-              <PageTransition>
-                <Upload />
-              </PageTransition>
-            }
-          />
-          {/* <Route
-  path="/admin/whatsapp-campaigns"
-  element={<WhatsAppCampaigns />}
-/> */}
-
-          <Route
-            path="/Upload"
-            element={
-              <PageTransition>
-                <Upload />
-              </PageTransition>
-            }
-          />
-
-          <Route
-            path="/upload"
-            element={
-              <PageTransition>
-                <Upload />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              PAYMENT
-          ================================================= */}
-
-          <Route
-            path="/payment"
-            element={
-              <PageTransition>
-                <Payment />
-              </PageTransition>
-            }
-          />
-          {/* =================================================
-              BOOK ARTIST
-
-              FILE:
-              src/pages/BookArtist.jsx
-
-              URL:
-              /book-artist
-          ================================================= */}
-
-          <Route
-            path="/book-artist"
-            element={
-              <PageTransition>
-                <BookArtist />
-              </PageTransition>
-            }
-          />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-<Route path="/data-deletion" element={<DataDeletion />} />
-
-          {/* =================================================
-              SPONSORS
-
-              FILE:
-              src/pages/Sponsors.jsx
-
-              URL:
-              /sponsors
-          ================================================= */}
-
-          <Route
-            path="/sponsors"
-            element={
-              <PageTransition>
-                <Sponsors />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              ADMIN ROOT
-
-              /admin
-                    ↓
-              /admin/dashboard
-          ================================================= */}
-
-          <Route
-            path="/admin"
-            element={<Navigate to="/admin/dashboard" replace />}
-          />
-
-          {/* =================================================
-              ADMIN LOGIN
-
-              FILE:
-              src/admin/Login.jsx
-
-              URL:
-              /admin/login
-          ================================================= */}
-
-          <Route path="/admin/login" element={<AdminLogin />} />
-
-          {/* =================================================
-              OLD LOGIN REDIRECT SUPPORT
-
-              Your Admin Login.jsx currently navigates to:
-              /dashboard
-
-              So this redirects it to:
-              /admin/dashboard
-          ================================================= */}
-
-          <Route
-            path="/dashboard"
-            element={<Navigate to="/admin/dashboard" replace />}
-          />
-
-          {/* =================================================
-              ADMIN COMPETITION DASHBOARD
-
-              FILE:
-              src/admin/Dashboard.jsx
-
-              URL:
-              /admin/dashboard
-          ================================================= */}
-
-          <Route
-            path="/admin/dashboard"
-            element={
-              <PageTransition>
-                <Dashboard />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              ADMIN CLIENTS
-
-              FILE:
-              src/admin/Clients.jsx
-
-              URL:
-              /admin/clients
-          ================================================= */}
-
-          <Route
-            path="/admin/clients"
-            element={
-              <PageTransition>
-                <Clients />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              ADMIN STALL BOOKINGS
-
-              FILE:
-              src/admin/AdminStalls.jsx
-
-              URL:
-              /admin/stalls
-          ================================================= */}
-
-          <Route
-            path="/admin/stalls"
-            element={
-              <PageTransition>
-                <AdminStalls />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              ADMIN ARTISTS
-
-              FILE:
-              src/admin/Adminartists.jsx
-
-              Shows:
-              BASIC artists
-              ₹1,999 SILVER / PRO
-              ₹2,999 GOLD / VERIFIED
-
-              URL:
-              /admin/artists
-          ================================================= */}
-
-          <Route
-            path="/admin/artists"
-            element={
-              <PageTransition>
-                <AdminArtists />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              ADMIN ARTIST BOOKINGS
-
-              FILE:
-              src/admin/ArtistBookings.jsx
-
-              URL:
-              /admin/artist-bookings
-          ================================================= */}
-
-          <Route
-            path="/admin/artist-bookings"
-            element={
-              <PageTransition>
-                <ArtistBookings />
-              </PageTransition>
-            }
-          />
-
-          {/* =================================================
-              404
-          ================================================= */}
-
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+      {!isAdminPage && <CustomCursor />}
+
+      <div
+        className="
+          min-h-screen
+          bg-[#08080a]
+          text-white
+          flex
+          flex-col
+          justify-between
+          selection:bg-[#a855f7]
+          selection:text-white
+        "
+      >
+        {/* ===================================================
+            PUBLIC NAVBAR
+        =================================================== */}
+
+        {!isAdminPage && <Navbar />}
+
+        {/* ===================================================
+            ROUTES
+        =================================================== */}
+
+        <div className="flex-grow w-full">
+          <Routes location={location} key={location.pathname}>
+            {/* =================================================
+                HOME
+            ================================================= */}
+
+            <Route
+              path="/"
+              element={
+                <PageTransition>
+                  <Home />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                TERMS
+            ================================================= */}
+
+            <Route
+              path="/terms"
+              element={
+                <PageTransition>
+                  <Terms />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ABOUT
+            ================================================= */}
+
+            <Route
+              path="/about"
+              element={
+                <PageTransition>
+                  <About />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                GALLERY
+            ================================================= */}
+
+            <Route
+              path="/gallery"
+              element={
+                <PageTransition>
+                  <Gallery />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                SERVICES
+            ================================================= */}
+
+            <Route
+              path="/services"
+              element={
+                <PageTransition>
+                  <Gallery />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                HALL OF FAME
+            ================================================= */}
+
+            <Route
+              path="/hall-of-fame"
+              element={
+                <PageTransition>
+                  <HallOfFame />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ARTISTS
+            ================================================= */}
+
+            <Route
+              path="/artists"
+              element={
+                <PageTransition>
+                  <Artists />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ARTIST CLAIM / UPDATE
+            ================================================= */}
+
+            <Route
+              path="/Enter"
+              element={
+                <PageTransition>
+                  <Enter />
+                </PageTransition>
+              }
+            />
+
+            <Route
+              path="/enter"
+              element={
+                <PageTransition>
+                  <Enter />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                TOP
+            ================================================= */}
+
+            <Route
+              path="/top"
+              element={
+                <PageTransition>
+                  <TOP />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                UPCOMING EVENTS
+            ================================================= */}
+
+            <Route
+              path="/upcoming"
+              element={
+                <PageTransition>
+                  <Upcoming />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                STALL BOOKING
+            ================================================= */}
+
+            <Route
+              path="/stall-booking"
+              element={
+                <PageTransition>
+                  <ClientLogin />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                CONTACT
+            ================================================= */}
+
+            <Route
+              path="/contact"
+              element={
+                <PageTransition>
+                  <About />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                COMPETITION
+            ================================================= */}
+
+            <Route
+              path="/competition"
+              element={
+                <PageTransition>
+                  <Upload />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                OLD UPLOAD ROUTES
+            ================================================= */}
+
+            <Route
+              path="/Upload"
+              element={
+                <PageTransition>
+                  <Upload />
+                </PageTransition>
+              }
+            />
+
+            <Route
+              path="/upload"
+              element={
+                <PageTransition>
+                  <Upload />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                PAYMENT
+            ================================================= */}
+
+            <Route
+              path="/payment"
+              element={
+                <PageTransition>
+                  <Payment />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                BOOK ARTIST
+            ================================================= */}
+
+            <Route
+              path="/book-artist"
+              element={
+                <PageTransition>
+                  <BookArtist />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                PRIVACY POLICY
+            ================================================= */}
+
+            <Route
+              path="/privacy-policy"
+              element={
+                <PageTransition>
+                  <PrivacyPolicy />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                DATA DELETION
+            ================================================= */}
+
+            <Route
+              path="/data-deletion"
+              element={
+                <PageTransition>
+                  <DataDeletion />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                SPONSORS
+            ================================================= */}
+
+            <Route
+              path="/sponsors"
+              element={
+                <PageTransition>
+                  <Sponsors />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN ROOT
+
+                /admin
+                  ↓
+                /admin/dashboard
+            ================================================= */}
+
+            <Route
+              path="/admin"
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
+
+            {/* =================================================
+                ADMIN LOGIN
+            ================================================= */}
+
+            <Route path="/admin/login" element={<AdminLogin />} />
+
+            {/* =================================================
+                OLD DASHBOARD URL
+            ================================================= */}
+
+            <Route
+              path="/dashboard"
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
+
+            {/* =================================================
+                ADMIN DASHBOARD
+            ================================================= */}
+
+            <Route
+              path="/admin/dashboard"
+              element={
+                <PageTransition>
+                  <Dashboard />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN CLIENTS
+            ================================================= */}
+
+            <Route
+              path="/admin/clients"
+              element={
+                <PageTransition>
+                  <Clients />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN STALLS
+            ================================================= */}
+
+            <Route
+              path="/admin/stalls"
+              element={
+                <PageTransition>
+                  <AdminStalls />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN ARTISTS
+            ================================================= */}
+
+            <Route
+              path="/admin/artists"
+              element={
+                <PageTransition>
+                  <AdminArtists />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN ARTIST BOOKINGS
+            ================================================= */}
+
+            <Route
+              path="/admin/artist-bookings"
+              element={
+                <PageTransition>
+                  <ArtistBookings />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                WHATSAPP ADMIN
+
+                Keep disabled until page is ready.
+            ================================================= */}
+
+            {/*
+            <Route
+              path="/admin/whatsapp-campaigns"
+              element={<WhatsAppCampaigns />}
+            />
+            */}
+
+            {/* =================================================
+                404
+            ================================================= */}
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+
+        {/* ===================================================
+            PUBLIC FOOTER
+        =================================================== */}
+
+        {!isAdminPage && <Footer />}
       </div>
-
-      {/* ===================================================
-          PUBLIC FOOTER
-      =================================================== */}
-
-      {!isAdminPage && <Footer />}
-    </div>
+    </>
   );
 }
 
