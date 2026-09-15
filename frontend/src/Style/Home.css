@@ -1,6 +1,16 @@
+/* =========================================================
+   INK CONVENTION — FINAL CINEMATIC HERO
+   This CSS styles ONLY the Home hero.
+   Your Navbar remains separate and untouched.
+========================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap");
 
 
-/* Custom Awwwards Style Enhancements */
+/* =========================================================
+   GLOBAL HELPERS
+========================================================= */
+
 .select-none {
      user-select: none;
 }
@@ -13,11 +23,1826 @@ h4,
      text-rendering: optimizeLegibility;
 }
 
-/* Full Screen Hero Layout Fix */
-.hero-fullscreen {
-     height: 100vh;
-     min-height: 650px;
+
+/* =========================================================
+   HERO WRAPPER
+   5rem = your existing navbar height.
+========================================================= */
+
+.inkHero {
+     --hero-navbar-safe: 88px;
+
+     position: relative;
+
+     width: 100%;
+     height: calc(100svh - 5rem);
+     min-height: 720px;
+
+     overflow: hidden;
+
+     background: #020203;
+
+     isolation: isolate;
+}
+
+
+/* =========================================================
+   TATTOO WALL / EXPO BOOTH BACKGROUND
+========================================================= */
+
+.inkHero__wall {
+     position: absolute;
+
+     inset: 0;
+
+     z-index: 1;
+
+     opacity: 0.50;
+
+     overflow: hidden;
+
+     pointer-events: none;
+
+     -webkit-mask-image:
+          linear-gradient(to bottom,
+               rgba(0, 0, 0, 0.18) 0%,
+               rgba(0, 0, 0, 0.48) 22%,
+               black 50%,
+               black 100%);
+
+     mask-image:
+          linear-gradient(to bottom,
+               rgba(0, 0, 0, 0.18) 0%,
+               rgba(0, 0, 0, 0.48) 22%,
+               black 50%,
+               black 100%);
+}
+
+
+.inkHero__wall img {
+     width: 100%;
+     height: 100%;
+
+     object-fit: cover;
+     object-position: center 54%;
+
+     transform: scale(1.04);
+
+     filter:
+          brightness(0.48) contrast(1.16) saturate(0.94);
+}
+
+
+/* =========================================================
+   EXPO CROWD / STAGE — MAKE THIS MUCH MORE VISIBLE
+========================================================= */
+
+.inkHero__expo {
+     position: absolute;
+
+     left: -1%;
+     right: -1%;
+     bottom: -1%;
+
+     height: 57%;
+
+     z-index: 4;
+
+     overflow: hidden;
+
+     pointer-events: none;
+
+     -webkit-mask-image:
+          linear-gradient(to bottom,
+               transparent 0%,
+               rgba(0, 0, 0, 0.24) 8%,
+               rgba(0, 0, 0, 0.72) 22%,
+               black 40%,
+               black 100%);
+
+     mask-image:
+          linear-gradient(to bottom,
+               transparent 0%,
+               rgba(0, 0, 0, 0.24) 8%,
+               rgba(0, 0, 0, 0.72) 22%,
+               black 40%,
+               black 100%);
+}
+
+
+.inkHero__expo img {
+     width: 102%;
+     height: 105%;
+
+     object-fit: cover;
+     object-position: center 44%;
+
+     transform:
+          translateX(-1%) scale(1.04);
+
+     transform-origin: center bottom;
+
+     filter:
+          brightness(0.76) contrast(1.14) saturate(1.16);
+}
+
+
+/* =========================================================
+   PURPLE / BLACK GRUNGE
+========================================================= */
+
+.inkHero__grunge {
+     position: absolute;
+
+     left: -7%;
+     top: -9%;
+
+     width: 78%;
+     height: 88%;
+
+     z-index: 5;
+
+     opacity: 0.16;
+
+     pointer-events: none;
+
+     mix-blend-mode: screen;
+}
+
+
+.inkHero__grunge img {
+     width: 100%;
+     height: 100%;
+
+     object-fit: cover;
+
+     filter:
+          brightness(0.75) saturate(0.88);
+}
+
+
+/* =========================================================
+   PURPLE AMBIENT GLOW
+========================================================= */
+
+.inkHero__purpleGlow {
+     position: absolute;
+
+     z-index: 2;
+
+     left: 34%;
+     top: -31%;
+
+     width: 900px;
+     height: 900px;
+
+     border-radius: 50%;
+
+     pointer-events: none;
+
+     background:
+          radial-gradient(circle,
+               rgba(174, 71, 255, 0.23) 0%,
+               rgba(126, 34, 206, 0.10) 34%,
+               transparent 69%);
+
+     filter: blur(44px);
+}
+
+
+/* strong lower-purple stage glow, like the reference */
+
+.inkHero__stageGlow {
+     position: absolute;
+
+     z-index: 6;
+
+     left: 23%;
+     right: 16%;
+     bottom: -14%;
+
+     height: 56%;
+
+     pointer-events: none;
+
+     background:
+          radial-gradient(ellipse at center,
+               rgba(171, 43, 255, 0.24) 0%,
+               rgba(108, 25, 180, 0.12) 32%,
+               transparent 72%);
+
+     filter: blur(26px);
+}
+
+
+/* =========================================================
+   DARK CINEMATIC OVERLAY
+   Lighter than before so expo/tattoo artist stay visible.
+========================================================= */
+
+.inkHero__darkOverlay {
+     position: absolute;
+
+     inset: 0;
+
+     z-index: 10;
+
+     pointer-events: none;
+
+     background:
+
+          linear-gradient(90deg,
+               rgba(1, 1, 2, 0.94) 0%,
+               rgba(2, 2, 4, 0.80) 20%,
+               rgba(5, 2, 9, 0.39) 39%,
+               rgba(3, 2, 6, 0.06) 58%,
+               rgba(2, 2, 4, 0.05) 75%,
+               rgba(1, 1, 2, 0.42) 100%),
+
+          linear-gradient(180deg,
+               rgba(0, 0, 0, 0.22) 0%,
+               transparent 34%,
+               rgba(0, 0, 0, 0.04) 60%,
+               rgba(0, 0, 0, 0.25) 100%);
+}
+
+
+/* =========================================================
+   FILM GRAIN
+========================================================= */
+
+.inkHero__noise {
+     position: absolute;
+
+     inset: 0;
+
+     z-index: 40;
+
+     opacity: 0.03;
+
+     pointer-events: none;
+
+     background-image:
+          repeating-radial-gradient(circle at 0 0,
+               rgba(255, 255, 255, 0.50) 0,
+               transparent 1px,
+               transparent 3px);
+
+     background-size: 5px 5px;
+
+     mix-blend-mode: soft-light;
+}
+
+
+/* =========================================================
+   TATTOO ARTIST — BRIGHTER / BIGGER / CLEARER
+========================================================= */
+
+.inkHero__tattooArtist {
+     position: absolute;
+
+     z-index: 11;
+
+     right: -5.5%;
+     top: calc(var(--hero-navbar-safe) + 18px);
+
+     width: 52%;
+     height: 71%;
+
+     opacity: 0.86;
+
+     overflow: hidden;
+
+     pointer-events: none;
+
+     -webkit-mask-image:
+          linear-gradient(to left,
+               black 0%,
+               black 61%,
+               rgba(0, 0, 0, 0.80) 75%,
+               transparent 100%);
+
+     mask-image:
+          linear-gradient(to left,
+               black 0%,
+               black 61%,
+               rgba(0, 0, 0, 0.80) 75%,
+               transparent 100%);
+}
+
+
+.inkHero__tattooArtist img {
+     width: 100%;
+     height: 100%;
+
+     object-fit: cover;
+     object-position: 56% center;
+
+     filter:
+          brightness(0.68) contrast(1.15) saturate(1.02);
+}
+
+
+/* =========================================================
+   MAIN GIRL — BIGGER + LOWER + MORE CENTERED
+========================================================= */
+
+.inkHero__girl {
+     position: absolute;
+
+     z-index: 16;
+
+     left: 35.2%;
+     top: calc(var(--hero-navbar-safe) + 12px);
+
+     width: clamp(690px, 49vw, 940px);
+
+     pointer-events: none;
+
+     will-change: transform;
+
+     -webkit-mask-image:
+          linear-gradient(to bottom,
+               black 0%,
+               black 74%,
+               rgba(0, 0, 0, 0.93) 83%,
+               rgba(0, 0, 0, 0.54) 92%,
+               transparent 100%);
+
+     mask-image:
+          linear-gradient(to bottom,
+               black 0%,
+               black 74%,
+               rgba(0, 0, 0, 0.93) 83%,
+               rgba(0, 0, 0, 0.54) 92%,
+               transparent 100%);
+}
+
+
+.inkHero__girl img {
+     display: block;
+
+     width: 100%;
+     height: auto;
+
+     object-fit: contain;
+
+     filter:
+          brightness(0.98) contrast(1.08) saturate(1.01) drop-shadow(-30px 40px 74px rgba(0, 0, 0, 0.66)) drop-shadow(24px 0 54px rgba(168, 85, 247, 0.18));
+}
+
+
+/* =========================================================
+   LEFT CONTENT
+========================================================= */
+
+.inkHero__content {
+     position: absolute;
+
+     z-index: 25;
+
+     left: 4.55%;
+     top: calc(var(--hero-navbar-safe) + 72px);
+
+     width: min(650px, 38.5vw);
+
      display: flex;
      flex-direction: column;
-     justify-content: space-between;
+     align-items: flex-start;
 }
+
+
+/* =========================================================
+   REAL ART / REAL ARTISTS / ONE COMMUNITY
+========================================================= */
+
+.inkHero__eyebrow {
+     display: flex;
+     flex-direction: column;
+
+     gap: 7px;
+
+     margin-bottom: 23px;
+
+     color: rgba(255, 255, 255, 0.79);
+
+     font-family: "Montserrat", sans-serif;
+
+     font-size: 10px;
+     font-weight: 600;
+
+     line-height: 1.5;
+
+     letter-spacing: 0.23em;
+
+     text-transform: uppercase;
+}
+
+
+.inkHero__eyebrow i {
+     display: block;
+
+     width: 44px;
+     height: 2px;
+
+     margin-top: 8px;
+
+     background: #a855f7;
+
+     box-shadow:
+          0 0 12px rgba(168, 85, 247, 0.70);
+}
+
+
+/* =========================================================
+   EXACT BRUSH TITLE PNG — SMALLER THAN PREVIOUS VERSION
+========================================================= */
+
+.inkHero__titleImage {
+     display: block;
+
+     width: min(570px, 36vw);
+     max-width: 100%;
+     height: auto;
+
+     object-fit: contain;
+     object-position: left center;
+
+     pointer-events: none;
+
+     filter:
+          drop-shadow(0 12px 29px rgba(0, 0, 0, 0.62)) drop-shadow(0 0 16px rgba(168, 85, 247, 0.08));
+}
+
+
+/* =========================================================
+   CATEGORY LINE
+========================================================= */
+
+.inkHero__categories {
+     display: flex;
+
+     align-items: center;
+
+     gap: clamp(17px, 1.75vw, 29px);
+
+     margin-top: 7px;
+
+     color: rgba(255, 255, 255, 0.75);
+
+     font-family: "Montserrat", sans-serif;
+
+     font-size: 9.5px;
+     font-weight: 500;
+
+     letter-spacing: 0.24em;
+
+     text-transform: uppercase;
+
+     white-space: nowrap;
+}
+
+
+.inkHero__categories b {
+     color: #a855f7;
+
+     font-size: 17px;
+     font-weight: 500;
+}
+
+
+/* =========================================================
+   TWO BUTTONS
+========================================================= */
+
+.inkHero__buttons {
+     display: flex;
+     flex-direction: column;
+     align-items: flex-start;
+     gap: 12px;
+     width: min(360px, 100%);
+
+     /* More breathing room below the category row */
+     margin-top: 48px;
+}
+
+
+.inkHero__button {
+     width: 100%;
+     min-width: 218px;
+     height: 55px;
+
+     padding: 0 26px;
+
+     display: inline-flex;
+
+     align-items: center;
+     justify-content: space-between;
+
+     gap: 19px;
+
+     color: #fff;
+
+     text-decoration: none;
+
+     font-family: "Montserrat", sans-serif;
+
+     font-size: 9.5px;
+     font-weight: 800;
+
+     letter-spacing: 0.14em;
+
+     text-transform: uppercase;
+
+     backdrop-filter: blur(8px);
+
+     position: relative;
+     overflow: hidden;
+     isolation: isolate;
+
+     transition:
+          transform 0.3s ease,
+          background 0.3s ease,
+          border-color 0.3s ease,
+          box-shadow 0.3s ease;
+}
+
+/* Continuous moving light across both desktop hero buttons */
+.inkHero__button::before {
+     content: "";
+     position: absolute;
+     z-index: -1;
+     top: -45%;
+     left: -45%;
+     width: 34%;
+     height: 190%;
+     pointer-events: none;
+     transform: skewX(-24deg);
+     background: linear-gradient(90deg,
+               transparent,
+               rgba(255, 255, 255, 0.05),
+               rgba(255, 255, 255, 0.34),
+               rgba(255, 255, 255, 0.05),
+               transparent);
+     filter: blur(1px);
+     animation: inkButtonShine 2.7s linear infinite;
+}
+
+.inkHero__button svg {
+     animation: inkArrowMove 1.05s ease-in-out infinite;
+}
+
+.inkHero__button--purple {
+     border:
+          1px solid rgba(168, 85, 247, 0.98);
+
+     background:
+          rgba(168, 85, 247, 0.085);
+
+     animation: inkPurplePulse 1.8s ease-in-out infinite;
+}
+
+
+.inkHero__button--purple:hover {
+     transform: translateY(-4px);
+
+     background: #a855f7;
+
+     box-shadow:
+          0 16px 45px rgba(168, 85, 247, 0.26);
+}
+
+
+.inkHero__button--dark {
+     border:
+          1px solid rgba(255, 255, 255, 0.31);
+
+     background:
+          rgba(0, 0, 0, 0.32);
+
+     animation: inkDarkPulse 2.2s ease-in-out infinite;
+}
+
+
+.inkHero__button--dark:hover {
+     transform: translateY(-4px);
+
+     border-color:
+          rgba(168, 85, 247, 0.88);
+
+     background:
+          rgba(168, 85, 247, 0.085);
+}
+
+
+/* =========================================================
+   MORE THAN INK PNG
+========================================================= */
+
+.inkHero__moreInk {
+     position: absolute;
+
+     z-index: 25;
+
+     right: 4.1%;
+     top: calc(var(--hero-navbar-safe) + 48px);
+
+     width: clamp(125px, 9vw, 170px);
+     height: auto;
+
+     object-fit: contain;
+
+     pointer-events: none;
+
+     transform: rotate(-4deg);
+
+     filter:
+          brightness(1.03) drop-shadow(0 0 18px rgba(168, 85, 247, 0.20));
+}
+
+
+/* =========================================================
+   SCROLL DOWN
+========================================================= */
+
+.inkHero__scroll {
+     position: absolute;
+
+     z-index: 25;
+
+     left: 3.15%;
+     bottom: 6.4%;
+
+     display: flex;
+     flex-direction: column;
+
+     align-items: center;
+
+     gap: 18px;
+}
+
+
+.inkHero__scroll>span {
+     writing-mode: vertical-rl;
+
+     transform: rotate(180deg);
+
+     color: rgba(255, 255, 255, 0.73);
+
+     font-family: "Montserrat", sans-serif;
+
+     font-size: 8.5px;
+     font-weight: 600;
+
+     letter-spacing: 0.27em;
+}
+
+
+.inkHero__scrollLine {
+     position: relative;
+
+     width: 1px;
+     height: 72px;
+
+     background:
+          rgba(255, 255, 255, 0.31);
+}
+
+
+.inkHero__scrollLine i {
+     position: absolute;
+
+     left: 50%;
+     bottom: 0;
+
+     width: 13px;
+     height: 13px;
+
+     border: 1px solid #fff;
+
+     border-radius: 50%;
+
+     background: #030305;
+
+     transform:
+          translate(-50%, 50%);
+}
+
+
+/* =========================================================
+   1440–1600 LAPTOP
+========================================================= */
+
+@media (max-width: 1600px) {
+
+     .inkHero__content {
+          left: 4.3%;
+          top: calc(var(--hero-navbar-safe) + 58px);
+
+          width: 40%;
+     }
+
+
+     .inkHero__titleImage {
+          width: 37.5vw;
+     }
+
+
+     .inkHero__girl {
+          left: 37%;
+          top: calc(var(--hero-navbar-safe) + 14px);
+
+          width: 49.5vw;
+     }
+
+
+     .inkHero__tattooArtist {
+          right: -7%;
+          top: calc(var(--hero-navbar-safe) + 20px);
+
+          width: 55%;
+     }
+
+
+     .inkHero__expo {
+          height: 56%;
+     }
+
+
+     .inkHero__moreInk {
+          right: 3.3%;
+          top: calc(var(--hero-navbar-safe) + 46px);
+
+          width: 140px;
+     }
+}
+
+
+/* =========================================================
+   1280–1366 LAPTOP
+========================================================= */
+
+@media (max-width: 1366px) {
+
+     .inkHero {
+          min-height: 660px;
+     }
+
+
+     .inkHero__content {
+          left: 3.9%;
+          top: calc(var(--hero-navbar-safe) + 48px);
+
+          width: 43%;
+     }
+
+
+     .inkHero__eyebrow {
+          margin-bottom: 18px;
+
+          font-size: 8.4px;
+     }
+
+
+     .inkHero__titleImage {
+          width: 40.5vw;
+     }
+
+
+     .inkHero__categories {
+          gap: 15px;
+
+          margin-top: 4px;
+
+          font-size: 7.9px;
+     }
+
+
+     .inkHero__buttons {
+          margin-top: 25px;
+     }
+
+
+     .inkHero__button {
+          min-width: 188px;
+          height: 49px;
+
+          padding: 0 18px;
+
+          gap: 14px;
+
+          font-size: 8.1px;
+     }
+
+
+     .inkHero__girl {
+          left: 39%;
+          top: calc(var(--hero-navbar-safe) + 12px);
+
+          width: 53vw;
+     }
+
+
+     .inkHero__tattooArtist {
+          right: -10%;
+          top: calc(var(--hero-navbar-safe) + 20px);
+
+          width: 58%;
+     }
+
+
+     .inkHero__expo {
+          height: 55%;
+     }
+
+
+     .inkHero__moreInk {
+          right: 2.6%;
+          top: calc(var(--hero-navbar-safe) + 40px);
+
+          width: 118px;
+     }
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1050px) {
+
+     .inkHero {
+          --hero-navbar-safe: 76px;
+          min-height: 780px;
+     }
+
+
+     .inkHero__content {
+          left: 32px;
+          top: calc(var(--hero-navbar-safe) + 38px);
+
+          width: 61%;
+     }
+
+
+     .inkHero__titleImage {
+          width: 56vw;
+     }
+
+
+     .inkHero__girl {
+          left: 37%;
+          top: calc(var(--hero-navbar-safe) + 105px);
+
+          width: 73vw;
+
+          opacity: 0.82;
+     }
+
+
+     .inkHero__tattooArtist {
+          right: -22%;
+
+          width: 72%;
+
+          opacity: 0.40;
+     }
+
+
+     .inkHero__moreInk {
+          display: none;
+     }
+
+
+     .inkHero__expo {
+          height: 48%;
+     }
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+     .inkHero {
+          --hero-navbar-safe: 64px;
+
+          height: auto;
+
+          min-height: 900px;
+     }
+
+
+     .inkHero__content {
+          left: 20px;
+          top: calc(var(--hero-navbar-safe) + 26px);
+
+          width:
+               calc(100% - 40px);
+     }
+
+
+     .inkHero__eyebrow {
+          margin-bottom: 20px;
+
+          font-size: 8px;
+     }
+
+
+     .inkHero__titleImage {
+          width: min(92vw, 590px);
+     }
+
+
+     .inkHero__categories {
+          flex-wrap: wrap;
+
+          gap: 8px 14px;
+
+          margin-top: 3px;
+
+          font-size: 7.5px;
+
+          white-space: normal;
+     }
+
+
+     .inkHero__buttons {
+          width: 100%;
+
+          flex-direction: column;
+
+          align-items: stretch;
+
+          margin-top: 24px;
+     }
+
+
+     .inkHero__button {
+          width: 100%;
+
+          min-width: 0;
+     }
+
+
+     .inkHero__girl {
+          left: 10%;
+          top: 305px;
+
+          width: 114vw;
+
+          opacity: 0.56;
+     }
+
+
+     .inkHero__tattooArtist {
+          display: none;
+     }
+
+
+     .inkHero__expo {
+          bottom: 0;
+
+          height: 46%;
+     }
+
+
+     .inkHero__wall {
+          opacity: 0.28;
+     }
+
+
+     .inkHero__grunge {
+          left: -25%;
+
+          width: 135%;
+
+          opacity: 0.12;
+     }
+
+
+     .inkHero__scroll {
+          display: none;
+     }
+}
+
+/* =========================================================
+   NEW MOBILE HERO
+   This is intentionally separate from the desktop hero.
+
+   WHY:
+   The previous mobile layout used very large fixed pixel
+   coordinates (1455px, 1535px, 1745px etc.). On a real phone
+   those values represent CSS pixels, not screenshot pixels,
+   so the hero became multiple screens tall with large gaps.
+
+   This version uses one dedicated mobile composition whose
+   proportions track the actual viewport.
+========================================================= */
+
+.inkMobileHero {
+     display: none;
+}
+
+@media (max-width: 768px) {
+
+     /* Desktop hero is completely removed on phone. */
+     .inkHero--desktop {
+          display: none !important;
+     }
+
+     .inkMobileHero {
+          --mobile-nav-clearance: 86px;
+
+          position: relative;
+
+          display: flex;
+          flex-direction: column;
+
+          width: 100%;
+
+          /*
+      A real mobile browser viewport is usually around
+      700–900 CSS px tall. Keep this close to one screen.
+    */
+          min-height: max(900px, calc(100dvh - 64px));
+
+          overflow: hidden;
+
+          padding:
+               var(--mobile-nav-clearance) 18px 24px;
+
+          background: #020203;
+
+          isolation: isolate;
+     }
+
+
+     /* =======================================================
+     FULL BACKGROUND
+  ======================================================= */
+
+     .inkMobileHero__wall {
+          position: absolute;
+          inset: 0;
+
+          z-index: 1;
+
+          overflow: hidden;
+
+          opacity: 0.42;
+
+          pointer-events: none;
+     }
+
+     .inkMobileHero__wall img {
+          width: 100%;
+          height: 100%;
+
+          object-fit: cover;
+          object-position: center center;
+
+          filter:
+               brightness(0.42) contrast(1.15) saturate(0.96);
+     }
+
+
+     .inkMobileHero__grunge {
+          position: absolute;
+
+          z-index: 2;
+
+          left: -35%;
+          top: -8%;
+
+          width: 165%;
+          height: 72%;
+
+          opacity: 0.13;
+
+          pointer-events: none;
+
+          mix-blend-mode: screen;
+     }
+
+     .inkMobileHero__grunge img {
+          width: 100%;
+          height: 100%;
+
+          object-fit: cover;
+          object-position: center top;
+     }
+
+
+     .inkMobileHero__glow {
+          position: absolute;
+
+          z-index: 3;
+
+          left: -30%;
+          top: 3%;
+
+          width: 160%;
+          height: 68%;
+
+          pointer-events: none;
+
+          background:
+               radial-gradient(ellipse at 60% 44%,
+                    rgba(171, 45, 255, 0.30) 0%,
+                    rgba(95, 23, 151, 0.13) 39%,
+                    transparent 72%);
+
+          filter: blur(24px);
+     }
+
+
+     .inkMobileHero__overlay {
+          position: absolute;
+          inset: 0;
+
+          z-index: 10;
+
+          pointer-events: none;
+
+          background:
+               linear-gradient(180deg,
+                    rgba(0, 0, 0, 0.24) 0%,
+                    rgba(0, 0, 0, 0.02) 23%,
+                    rgba(0, 0, 0, 0.03) 57%,
+                    rgba(0, 0, 0, 0.16) 70%,
+                    rgba(0, 0, 0, 0.84) 91%,
+                    #020203 100%);
+     }
+
+
+     /* =======================================================
+     TITLE — FIRST THING AFTER NAVBAR
+  ======================================================= */
+
+     .inkMobileHero__title {
+          position: relative;
+
+          z-index: 30;
+
+          display: block;
+
+          width: 92%;
+          max-width: 520px;
+          height: auto;
+
+          margin:
+               4px auto -2px;
+
+          object-fit: contain;
+
+          filter:
+               drop-shadow(0 10px 24px rgba(0, 0, 0, 0.68)) drop-shadow(0 0 15px rgba(168, 85, 247, 0.10));
+
+          animation:
+               inkMobileTitleIn 0.85s cubic-bezier(.2, .8, .2, 1) both;
+     }
+
+
+     /* =======================================================
+     MAIN VISUAL — GIRL + ARTIST + EXPO
+  ======================================================= */
+
+     .inkMobileHero__scene {
+          position: relative;
+
+          z-index: 15;
+
+          width:
+               calc(100% + 36px);
+
+          height:
+               clamp(430px,
+                    125vw,
+                    565px);
+
+          margin-left: -18px;
+          margin-right: -18px;
+
+          overflow: hidden;
+     }
+
+
+     /* Tattoo artist behind the girl */
+     .inkMobileHero__tattooArtist {
+          position: absolute;
+
+          z-index: 12;
+
+          top: 5%;
+          right: -36%;
+
+          width: 125%;
+          height: 67%;
+
+          opacity: 0.52;
+
+          overflow: hidden;
+
+          pointer-events: none;
+
+          -webkit-mask-image:
+               linear-gradient(to left,
+                    black 0%,
+                    black 48%,
+                    rgba(0, 0, 0, 0.65) 70%,
+                    transparent 100%);
+
+          mask-image:
+               linear-gradient(to left,
+                    black 0%,
+                    black 48%,
+                    rgba(0, 0, 0, 0.65) 70%,
+                    transparent 100%);
+     }
+
+     .inkMobileHero__tattooArtist img {
+          width: 100%;
+          height: 100%;
+
+          object-fit: cover;
+          object-position: 55% center;
+
+          filter:
+               brightness(0.58) contrast(1.15) saturate(0.98);
+     }
+
+
+     /* Main girl */
+     .inkMobileHero__girl {
+          position: absolute;
+
+          z-index: 18;
+
+          top: 2%;
+          left: 50%;
+
+          width:
+               min(116vw,
+                    535px);
+
+          pointer-events: none;
+
+          transform:
+               translateX(-50%);
+
+          -webkit-mask-image:
+               linear-gradient(to bottom,
+                    black 0%,
+                    black 76%,
+                    rgba(0, 0, 0, 0.90) 84%,
+                    rgba(0, 0, 0, 0.50) 93%,
+                    transparent 100%);
+
+          mask-image:
+               linear-gradient(to bottom,
+                    black 0%,
+                    black 76%,
+                    rgba(0, 0, 0, 0.90) 84%,
+                    rgba(0, 0, 0, 0.50) 93%,
+                    transparent 100%);
+
+          animation:
+               inkMobileGirlIn 1s 0.08s cubic-bezier(.2, .8, .2, 1) both;
+     }
+
+     .inkMobileHero__girl img {
+          display: block;
+
+          width: 100%;
+          height: auto;
+
+          filter:
+               brightness(0.98) contrast(1.08) saturate(1.00) drop-shadow(0 24px 48px rgba(0, 0, 0, 0.70)) drop-shadow(16px 0 40px rgba(168, 85, 247, 0.17));
+     }
+
+
+     /* More Than Ink */
+     .inkMobileHero__moreInk {
+          position: absolute;
+
+          z-index: 27;
+
+          top: 40%;
+          right: 1%;
+
+          width:
+               clamp(92px,
+                    27vw,
+                    122px);
+
+          height: auto;
+
+          object-fit: contain;
+
+          transform:
+               rotate(-4deg);
+
+          filter:
+               brightness(1.04) drop-shadow(0 0 16px rgba(168, 85, 247, 0.22));
+     }
+
+
+     /* Expo crowd at bottom of scene */
+     .inkMobileHero__expo {
+          position: absolute;
+
+          z-index: 22;
+
+          left: -3%;
+          right: -3%;
+          bottom: -1%;
+
+          width: 106%;
+          height: 45%;
+
+          overflow: hidden;
+
+          pointer-events: none;
+
+          -webkit-mask-image:
+               linear-gradient(to bottom,
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.74) 13%,
+                    black 29%,
+                    black 100%);
+
+          mask-image:
+               linear-gradient(to bottom,
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.74) 13%,
+                    black 29%,
+                    black 100%);
+     }
+
+     .inkMobileHero__expo img {
+          width: 100%;
+          height: 100%;
+
+          object-fit: cover;
+          object-position: center 44%;
+
+          transform:
+               scale(1.03);
+
+          filter:
+               brightness(0.75) contrast(1.13) saturate(1.18);
+     }
+
+
+     /* =======================================================
+     CATEGORIES — IN NORMAL FLOW
+  ======================================================= */
+
+     .inkMobileHero__categories {
+          position: relative;
+
+          z-index: 30;
+
+          display: flex;
+
+          width: 100%;
+
+          align-items: center;
+          justify-content: space-between;
+
+          gap: 5px;
+
+          margin:
+               2px auto 17px;
+
+          color:
+               rgba(255,
+                    255,
+                    255,
+                    0.80);
+
+          font-family:
+               "Montserrat",
+               sans-serif;
+
+          font-size:
+               clamp(7.2px,
+                    2.15vw,
+                    9px);
+
+          font-weight: 600;
+
+          letter-spacing: 0.15em;
+
+          text-transform: uppercase;
+
+          white-space: nowrap;
+     }
+
+     .inkMobileHero__categories b {
+          color: #a855f7;
+
+          font-size: 18px;
+          font-weight: 500;
+     }
+
+
+     /* =======================================================
+     BUTTONS — NORMAL FLOW, BELOW THE IMAGE
+  ======================================================= */
+
+     .inkMobileHero__buttons {
+          position: relative;
+
+          z-index: 31;
+
+          display: flex;
+          flex-direction: column;
+
+          width: 100%;
+
+          gap: 11px;
+
+          margin: 0;
+     }
+
+
+     .inkMobileHero__button {
+          display: flex;
+
+          width: 100%;
+          height: 61px;
+
+          align-items: center;
+          justify-content: center;
+
+          gap: 23px;
+
+          padding:
+               0 22px;
+
+          color: #fff;
+
+          text-decoration: none;
+
+          font-family:
+               "Montserrat",
+               sans-serif;
+
+          font-size:
+               clamp(8.6px,
+                    2.5vw,
+                    10px);
+
+          font-weight: 800;
+
+          letter-spacing: 0.14em;
+
+          text-transform: uppercase;
+
+          backdrop-filter: blur(10px);
+
+          position: relative;
+          overflow: hidden;
+          isolation: isolate;
+     }
+
+     .inkMobileHero__button::before {
+          content: "";
+          position: absolute;
+          z-index: -1;
+          top: -45%;
+          left: -45%;
+          width: 34%;
+          height: 190%;
+          pointer-events: none;
+          transform: skewX(-24deg);
+          background: linear-gradient(90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.04),
+                    rgba(255, 255, 255, 0.30),
+                    rgba(255, 255, 255, 0.04),
+                    transparent);
+          animation: inkButtonShine 2.7s linear infinite;
+     }
+
+     .inkMobileHero__button svg {
+          animation: inkArrowMove 1.05s ease-in-out infinite;
+     }
+
+
+     .inkMobileHero__button--purple {
+          border:
+               1px solid rgba(168,
+                    85,
+                    247,
+                    1);
+
+          background:
+               linear-gradient(90deg,
+                    rgba(168, 85, 247, 0.13),
+                    rgba(19, 8, 30, 0.70));
+
+          box-shadow:
+               inset 0 0 28px rgba(168, 85, 247, 0.04);
+
+          animation: inkPurplePulse 1.8s ease-in-out infinite;
+     }
+
+
+     .inkMobileHero__button--dark {
+          border:
+               1px solid rgba(255,
+                    255,
+                    255,
+                    0.30);
+
+          background:
+               rgba(0,
+                    0,
+                    0,
+                    0.60);
+
+          animation: inkDarkPulse 2.2s ease-in-out infinite;
+     }
+
+
+     /* =======================================================
+     SCROLL — BOTTOM CENTER
+  ======================================================= */
+
+     .inkMobileHero__scroll {
+          position: relative;
+
+          z-index: 31;
+
+          display: flex;
+          flex-direction: column;
+
+          align-items: center;
+
+          gap: 9px;
+
+          margin:
+               17px auto 0;
+     }
+
+
+     .inkMobileHero__mouse {
+          position: relative;
+
+          width: 30px;
+          height: 48px;
+
+          border:
+               1px solid rgba(255,
+                    255,
+                    255,
+                    0.64);
+
+          border-radius: 20px;
+
+          background:
+               rgba(0,
+                    0,
+                    0,
+                    0.32);
+     }
+
+
+     .inkMobileHero__mouse i {
+          position: absolute;
+
+          top: 11px;
+          left: 50%;
+
+          width: 6px;
+          height: 6px;
+
+          border-radius: 50%;
+
+          background: #fff;
+
+          transform:
+               translateX(-50%);
+
+          box-shadow:
+               0 0 10px rgba(255,
+                    255,
+                    255,
+                    0.30);
+     }
+
+
+     .inkMobileHero__scroll span {
+          color:
+               rgba(255,
+                    255,
+                    255,
+                    0.66);
+
+          font-family:
+               "Montserrat",
+               sans-serif;
+
+          font-size: 8px;
+          font-weight: 600;
+
+          letter-spacing: 0.24em;
+
+          white-space: nowrap;
+     }
+
+
+     /* =======================================================
+     ANIMATION
+  ======================================================= */
+
+     @keyframes inkMobileTitleIn {
+          from {
+               opacity: 0;
+               transform:
+                    translateY(16px) scale(0.97);
+          }
+
+          to {
+               opacity: 1;
+               transform:
+                    translateY(0) scale(1);
+          }
+     }
+
+
+     @keyframes inkMobileGirlIn {
+          from {
+               opacity: 0;
+               transform:
+                    translateX(-46%) translateY(18px) scale(1.04);
+          }
+
+          to {
+               opacity: 1;
+               transform:
+                    translateX(-50%) translateY(0) scale(1);
+          }
+     }
+}
+
+
+/* =========================================================
+   SMALL PHONE TUNING
+========================================================= */
+
+@media (max-width: 390px) {
+
+     .inkMobileHero {
+          --mobile-nav-clearance: 82px;
+
+          padding:
+               var(--mobile-nav-clearance) 14px 20px;
+     }
+
+
+     .inkMobileHero__title {
+          width: 94%;
+
+          margin-bottom: 0;
+     }
+
+
+     .inkMobileHero__scene {
+          width:
+               calc(100% + 28px);
+
+          height:
+               clamp(420px,
+                    127vw,
+                    500px);
+
+          margin-left: -14px;
+          margin-right: -14px;
+     }
+
+
+     .inkMobileHero__girl {
+          width: 122vw;
+     }
+
+
+     .inkMobileHero__moreInk {
+          right: 0;
+
+          width: 96px;
+     }
+
+
+     .inkMobileHero__categories {
+          font-size: 7px;
+
+          letter-spacing: 0.12em;
+     }
+
+
+     .inkMobileHero__button {
+          height: 58px;
+
+          gap: 18px;
+     }
+}
+
+
+@media (max-width: 360px) {
+
+     .inkMobileHero {
+          --mobile-nav-clearance: 78px;
+     }
+
+     .inkMobileHero__title {
+          width: 95%;
+     }
+
+     .inkMobileHero__scene {
+          height: clamp(410px, 128vw, 480px);
+     }
+
+     .inkMobileHero__girl {
+          top: 3%;
+          width: 124vw;
+     }
+
+     .inkMobileHero__moreInk {
+          top: 41%;
+          width: 90px;
+     }
+}
+
+/* =========================================================
+   NEVER-STOP HERO BUTTON ANIMATIONS
+========================================================= */
+@keyframes inkButtonShine {
+     0% {
+          left: -45%;
+     }
+
+     100% {
+          left: 125%;
+     }
+}
+
+@keyframes inkPurplePulse {
+
+     0%,
+     100% {
+          box-shadow:
+               0 0 0 rgba(168, 85, 247, 0),
+               inset 0 0 22px rgba(168, 85, 247, 0.04);
+     }
+
+     50% {
+          box-shadow:
+               0 0 24px rgba(168, 85, 247, 0.36),
+               0 0 54px rgba(168, 85, 247, 0.10),
+               inset 0 0 30px rgba(168, 85, 247, 0.10);
+     }
+}
+
+@keyframes inkDarkPulse {
+
+     0%,
+     100% {
+          border-color: rgba(255, 255, 255, 0.30);
+          box-shadow: 0 0 0 rgba(168, 85, 247, 0);
+     }
+
+     50% {
+          border-color: rgba(168, 85, 247, 0.70);
+          box-shadow: 0 0 20px rgba(168, 85, 247, 0.16);
+     }
+}
+
+@keyframes inkArrowMove {
+
+     0%,
+     100% {
+          transform: translateX(0);
+     }
+
+     50% {
+          transform: translateX(6px);
+     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+     .inkHero__button,
+     .inkHero__button::before,
+     .inkHero__button svg,
+     .inkMobileHero__button,
+     .inkMobileHero__button::before,
+     .inkMobileHero__button svg {
+          animation: none !important;
+     }
+}    

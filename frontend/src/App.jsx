@@ -36,6 +36,7 @@ import TOP from "./pages/TOP";
 import Upcoming from "./pages/Upcomeing";
 import BookArtist from "./pages/BookArtist";
 import ClientLogin from "./pages/ClientLogin";
+import Sponsors from "./pages/Sponsors";
 
 /* =========================================================
    ADMIN PAGES
@@ -350,6 +351,25 @@ function Layout() {
           />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 <Route path="/data-deletion" element={<DataDeletion />} />
+
+          {/* =================================================
+              SPONSORS
+
+              FILE:
+              src/pages/Sponsors.jsx
+
+              URL:
+              /sponsors
+          ================================================= */}
+
+          <Route
+            path="/sponsors"
+            element={
+              <PageTransition>
+                <Sponsors />
+              </PageTransition>
+            }
+          />
 
           {/* =================================================
               ADMIN ROOT

@@ -18,6 +18,13 @@ import { Link } from "react-router-dom";
 import "../Style/Home.css";
 
 import HOME from "../assets/tattoo-cards-bg.png";
+import HERO_GIRL from "../assets/hero-girl.png";
+import HERO_TATTOO from "../assets/hero-tattoo.png";
+import HERO_EXPO from "../assets/hero-expo.png";
+import HERO_GRUNGE from "../assets/hero-grunge.png";
+import HERO_WALL from "../assets/hero-tattoo-wall.png";
+import HERO_TITLE from "../assets/hero-title.png";
+import HERO_MORE_THAN_INK from "../assets/hero-more-than-ink.png";
 
 /* =========================================================
    HOME
@@ -33,33 +40,79 @@ function Home() {
   ========================================================= */
 
   useEffect(() => {
-    if (!contentRef.current) {
-      return;
-    }
-
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        contentRef.current.children,
-        {
-          opacity: 0,
-          y: 40,
-          skewY: 2,
-        },
-        {
-          opacity: 1,
-          y: 0,
-          skewY: 0,
-          duration: 1,
-          stagger: 0.15,
-          ease: "power4.out",
-          delay: 0.2,
-        },
-      );
+      const tl = gsap.timeline({
+        defaults: { ease: "power4.out" },
+      });
+
+      tl.fromTo(
+        ".inkHero__expo",
+        { opacity: 0, y: 90, scale: 1.08 },
+        { opacity: 1, y: 0, scale: 1, duration: 1.55 },
+      )
+        .fromTo(
+          ".inkHero__wall",
+          { opacity: 0, scale: 1.08 },
+          { opacity: 0.5, scale: 1, duration: 1.25 },
+          "-=1.2",
+        )
+        .fromTo(
+          ".inkHero__tattooArtist",
+          { opacity: 0, x: 145, scale: 1.05 },
+          { opacity: 0.86, x: 0, scale: 1, duration: 1.35 },
+          "-=1.05",
+        )
+        .fromTo(
+          ".inkHero__girl",
+          { opacity: 0, x: 90, scale: 1.06 },
+          { opacity: 1, x: 0, scale: 1, duration: 1.45 },
+          "-=1.18",
+        )
+        .fromTo(
+          ".inkHero__grunge",
+          { opacity: 0 },
+          { opacity: 0.16, duration: 0.85 },
+          "-=0.8",
+        )
+        .fromTo(
+          ".inkHero__eyebrow > *",
+          { opacity: 0, y: 14 },
+          { opacity: 1, y: 0, stagger: 0.07, duration: 0.48 },
+          "-=0.5",
+        )
+        .fromTo(
+          ".inkHero__titleImage",
+          { opacity: 0, x: -65, scale: 0.965 },
+          { opacity: 1, x: 0, scale: 1, duration: 0.95 },
+          "-=0.3",
+        )
+        .fromTo(
+          ".inkHero__categories > *",
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, stagger: 0.055, duration: 0.42 },
+          "-=0.4",
+        )
+        .fromTo(
+          ".inkHero__button",
+          { opacity: 0, y: 18 },
+          { opacity: 1, y: 0, stagger: 0.1, duration: 0.55 },
+          "-=0.2",
+        )
+        .fromTo(
+          ".inkHero__moreInk",
+          { opacity: 0, x: 28, rotate: -4 },
+          { opacity: 1, x: 0, rotate: -4, duration: 0.72 },
+          "-=0.55",
+        )
+        .fromTo(
+          ".inkHero__scroll",
+          { opacity: 0 },
+          { opacity: 1, duration: 0.5 },
+          "-=0.28",
+        );
     });
 
-    return () => {
-      ctx.revert();
-    };
+    return () => ctx.revert();
   }, []);
 
   /* =========================================================
@@ -82,530 +135,180 @@ function Home() {
       "
     >
       {/* =====================================================
-          1. HERO SECTION
+          1. HERO SECTION — REFERENCE-MATCHED / NO NAVBAR
       ===================================================== */}
 
-      <div
-        className="
-          relative
-          w-full
-          min-h-[calc(100vh-5rem)]
-          flex
-          flex-col
-          justify-between
-          overflow-hidden
-          border-b
-          border-white/10
-        "
-      >
-        {/* BACKGROUND */}
+      <section className="inkHero inkHero--desktop">
+        {/* IMAGE 5 — TATTOO WALL / EXPO BOOTHS */}
+        <div className="inkHero__wall" aria-hidden="true">
+          <img src={HERO_WALL} alt="" />
+        </div>
 
-        <div
-          className="
-            absolute
-            inset-0
-            w-full
-            h-full
-            overflow-hidden
-            pointer-events-none
-            z-0
-          "
-        >
-          <div
-            className="
-              absolute
-              inset-0
-              bg-gradient-to-t
-              md:bg-gradient-to-r
-              from-[#08080a]
-              via-[#08080a]/90
-              to-transparent
-              z-10
-              w-full
-              lg:w-[75%]
-            "
-          />
+        {/* IMAGE 3 — EXPO CROWD / STAGE */}
+        <div className="inkHero__expo" aria-hidden="true">
+          <img src={HERO_EXPO} alt="" />
+        </div>
 
-          <div
-            className="
-              absolute
-              inset-0
-              bg-gradient-to-t
-              from-[#08080a]
-              via-transparent
-              to-transparent
-              z-10
-            "
-          />
+        {/* IMAGE 4 — PURPLE / BLACK GRUNGE */}
+        <div className="inkHero__grunge" aria-hidden="true">
+          <img src={HERO_GRUNGE} alt="" />
+        </div>
+
+        {/* CINEMATIC COLOR / DEPTH */}
+        <div className="inkHero__purpleGlow" aria-hidden="true" />
+        <div className="inkHero__stageGlow" aria-hidden="true" />
+        <div className="inkHero__darkOverlay" aria-hidden="true" />
+        <div className="inkHero__noise" aria-hidden="true" />
+
+        {/* IMAGE 2 — TATTOO ARTIST BEHIND MAIN GIRL */}
+        <div className="inkHero__tattooArtist" aria-hidden="true">
+          <img src={HERO_TATTOO} alt="" />
+        </div>
+
+        {/* IMAGE 1 — MAIN GIRL */}
+        <div className="inkHero__girl">
+          <img src={HERO_GIRL} alt="Tattoo artist" />
+        </div>
+
+        {/* LEFT CONTENT */}
+        <div ref={contentRef} className="inkHero__content">
+          <div className="inkHero__eyebrow">
+            <span>REAL ART</span>
+            <span>REAL ARTISTS</span>
+            <span>ONE COMMUNITY</span>
+            <i />
+          </div>
 
           <img
-            src="https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?auto=format&fit=crop&q=80&w=2000"
-            alt="Tattoo Artist Working"
-            className="
-              w-full
-              h-full
-              object-cover
-              object-center
-              md:object-right
-              scale-105
-            "
+            src={HERO_TITLE}
+            alt="INKCONVENTION"
+            className="inkHero__titleImage"
           />
-        </div>
 
-        {/* =================================================
-            HERO CONTENT
-        ================================================= */}
+          <div className="inkHero__categories">
+            <span>TATTOO</span>
+            <b>/</b>
+            <span>ART</span>
+            <b>/</b>
+            <span>CULTURE</span>
+            <b>/</b>
+            <span>MUSIC</span>
+          </div>
 
-        <div
-          className="
-            relative
-            z-20
-            max-w-7xl
-            mx-auto
-            w-full
-            px-6
-            sm:px-10
-            lg:px-12
-            pt-32
-            pb-16
-            flex
-            flex-col
-            justify-center
-            flex-grow
-          "
-        >
-          <div
-            ref={contentRef}
-            className="
-              max-w-4xl
-              space-y-8
-              flex
-              flex-col
-              items-start
-              text-left
-            "
-          >
-            {/* LABEL */}
-
-            <div className="overflow-hidden">
-              <h4
-                className="
-                  text-[#a855f7]
-                  font-mono
-                  text-xs
-                  sm:text-sm
-                  tracking-[0.25em]
-                  uppercase
-                  font-semibold
-                  flex
-                  items-center
-                  gap-3
-                "
-              >
-                <span
-                  className="
-                    w-8
-                    h-[1px]
-                    bg-[#a855f7]
-                  "
-                />
-                INK CONVENTION 2026
-              </h4>
-            </div>
-
-            {/* TITLE */}
-
-            <div className="overflow-hidden">
-              <h1
-                className="
-                  text-4xl
-                  sm:text-6xl
-                  md:text-7xl
-                  font-black
-                  tracking-tighter
-                  leading-[1.05]
-                  text-white
-                "
-              >
-                INDIA&apos;S TATTOO
-                <br />
-                ARTIST NETWORK
-              </h1>
-            </div>
-
-            {/* DESCRIPTION */}
-
-            <div className="overflow-hidden">
-              <p
-                className="
-                  text-gray-400
-                  text-base
-                  sm:text-lg
-                  font-light
-                  max-w-xl
-                  leading-relaxed
-                "
-              >
-                Discover tattoo artists and studios, join the directory, book
-                regional expo stalls and enter the Ink Convention competition
-                across India.
-              </p>
-            </div>
-
-            {/* FEATURES */}
-
-            <div className="overflow-hidden">
-              <p
-                className="
-                  text-xs
-                  sm:text-sm
-                  font-mono
-                  tracking-widest
-                  text-gray-300
-                  border-l-2
-                  border-[#a855f7]
-                  pl-4
-                  py-1
-                "
-              >
-                ARTIST DIRECTORY • REGIONAL EXPO TOUR • COMPETITION • VERIFIED
-                PROFILES
-              </p>
-            </div>
-
-            {/* =================================================
-                3 MAIN HERO BUTTONS
-            ================================================= */}
-
-            <div
-              className="
-                flex
-                flex-col
-                sm:flex-row
-                flex-wrap
-                items-stretch
-                sm:items-center
-                gap-3
-                pt-4
-                w-full
-                sm:w-auto
-              "
+          <div className="inkHero__buttons">
+            <Link
+              to="/artists"
+              className="inkHero__button inkHero__button--purple"
             >
-              {/*
-                  STALL BOOKING BUTTON REMOVED FOR NOW.
-                  Future route can be restored here when stall booking goes live.
-              */}
+              <span>FIND YOUR ARTISTS</span>
+              <ArrowRight size={16} strokeWidth={1.8} />
+            </Link>
 
-              {/* =============================================
-                  2. BOOK ARTISTS
-              ============================================= */}
-
-              <Link
-                to="/artists"
-                className="
-                  group
-                  relative
-                  overflow-hidden
-
-                  bg-[#a855f7]
-                  hover:bg-[#9333ea]
-
-                  text-white
-
-                  px-7
-                  py-4
-
-                  rounded-xl
-
-                  font-black
-                  text-[10px]
-                  sm:text-xs
-                  font-mono
-                  uppercase
-                  tracking-[0.12em]
-
-                  flex
-                  items-center
-                  justify-center
-                  gap-3
-
-                  transition-all
-                  duration-300
-
-                  hover:-translate-y-1
-
-                  shadow-lg
-                  shadow-purple-900/40
-                "
-              >
-                {/* SHINE */}
-
-                <span
-                  className="
-                    absolute
-                    inset-0
-
-                    bg-gradient-to-r
-                    from-transparent
-                    via-white/10
-                    to-transparent
-
-                    -translate-x-full
-                    group-hover:translate-x-full
-
-                    transition-transform
-                    duration-700
-
-                    pointer-events-none
-                  "
-                />
-
-                <span
-                  className="
-                    relative
-                    z-10
-                    whitespace-nowrap
-                  "
-                >
-                  BOOK ARTISTS
-                </span>
-
-                <ArrowRight
-                  size={14}
-                  className="
-                    relative
-                    z-10
-                    transition-transform
-                    duration-300
-                    group-hover:translate-x-1
-                  "
-                />
-              </Link>
-
-              {/* =============================================
-                  3. JOIN DIRECTORY FREE
-              ============================================= */}
-
-              <Link
-                to="/Enter"
-                className="
-                  group
-                  relative
-                  overflow-hidden
-
-                  bg-transparent
-
-                  border
-                  border-[#a855f7]/60
-
-                  hover:border-[#a855f7]
-                  hover:bg-[#a855f7]/10
-
-                  text-white
-
-                  px-7
-                  py-4
-
-                  rounded-xl
-
-                  font-black
-                  text-[10px]
-                  sm:text-xs
-                  font-mono
-                  uppercase
-                  tracking-[0.12em]
-
-                  flex
-                  items-center
-                  justify-center
-                  gap-3
-
-                  transition-all
-                  duration-300
-
-                  hover:-translate-y-1
-
-                  shadow-[0_0_25px_rgba(168,85,247,0.10)]
-                "
-              >
-                <span
-                  className="
-                    w-2
-                    h-2
-
-                    rounded-full
-
-                    bg-[#a855f7]
-
-                    animate-pulse
-
-                    shadow-[0_0_12px_rgba(168,85,247,0.9)]
-                  "
-                />
-
-                <span
-                  className="
-                    relative
-                    z-10
-                    whitespace-nowrap
-                  "
-                >
-                  JOIN DIRECTORY FREE
-                </span>
-
-                <ArrowRight
-                  size={14}
-                  className="
-                    relative
-                    z-10
-                    transition-transform
-                    duration-300
-                    group-hover:translate-x-1
-                  "
-                />
-              </Link>
-            </div>
+            <Link to="/Enter" className="inkHero__button inkHero__button--dark">
+              <span>JOIN DIRECTORY FREE</span>
+              <ArrowRight size={16} strokeWidth={1.8} />
+            </Link>
           </div>
         </div>
 
-        {/* =================================================
-            STATISTICS
-        ================================================= */}
+        <img
+          src={HERO_MORE_THAN_INK}
+          alt="More Than Ink"
+          className="inkHero__moreInk"
+        />
 
-        <div
-          className="
-            relative
-            z-20
-            w-full
-            bg-[#050507]/80
-            backdrop-blur-md
-            border-t
-            border-white/5
-            py-8
-          "
-        >
-          <div
-            className="
-              max-w-7xl
-              mx-auto
-              px-6
-              sm:px-10
-              lg:px-12
-              grid
-              grid-cols-2
-              md:grid-cols-4
-              gap-8
-            "
+        <div className="inkHero__scroll" aria-hidden="true">
+          <span>SCROLL DOWN</span>
+          <div className="inkHero__scrollLine">
+            <i />
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          MOBILE HERO — SEPARATE COMPOSITION
+          The navbar stays outside Home.jsx.
+      ===================================================== */}
+
+      <section className="inkMobileHero">
+        {/* BACKGROUND / WALL */}
+        <div className="inkMobileHero__wall" aria-hidden="true">
+          <img src={HERO_WALL} alt="" />
+        </div>
+
+        {/* GRUNGE */}
+        <div className="inkMobileHero__grunge" aria-hidden="true">
+          <img src={HERO_GRUNGE} alt="" />
+        </div>
+
+        <div className="inkMobileHero__glow" aria-hidden="true" />
+        <div className="inkMobileHero__overlay" aria-hidden="true" />
+
+        {/* BRUSH TITLE FIRST */}
+        <img
+          src={HERO_TITLE}
+          alt="INKCONVENTION"
+          className="inkMobileHero__title"
+        />
+
+        {/* MAIN VISUAL SCENE */}
+        <div className="inkMobileHero__scene">
+          <div className="inkMobileHero__tattooArtist" aria-hidden="true">
+            <img src={HERO_TATTOO} alt="" />
+          </div>
+
+          <div className="inkMobileHero__girl">
+            <img src={HERO_GIRL} alt="Tattoo artist" />
+          </div>
+
+          <img
+            src={HERO_MORE_THAN_INK}
+            alt="More Than Ink"
+            className="inkMobileHero__moreInk"
+          />
+
+          <div className="inkMobileHero__expo" aria-hidden="true">
+            <img src={HERO_EXPO} alt="" />
+          </div>
+        </div>
+
+        {/* CATEGORIES BELOW THE IMAGE COMPOSITION */}
+        <div className="inkMobileHero__categories">
+          <span>TATTOO</span>
+          <b>/</b>
+          <span>ART</span>
+          <b>/</b>
+          <span>CULTURE</span>
+          <b>/</b>
+          <span>MUSIC</span>
+        </div>
+
+        {/* BUTTONS AT THE BOTTOM — NEVER OVER THE GIRL */}
+        <div className="inkMobileHero__buttons">
+          <Link
+            to="/artists"
+            className="inkMobileHero__button inkMobileHero__button--purple"
           >
-            <div className="space-y-1">
-              <h3
-                className="
-                  text-2xl
-                  font-black
-                  tracking-tight
-                  text-white
-                "
-              >
-                6
-              </h3>
+            <span>FIND YOUR ARTISTS</span>
+            <ArrowRight size={18} strokeWidth={1.8} />
+          </Link>
 
-              <p
-                className="
-                  text-[10px]
-                  sm:text-xs
-                  font-mono
-                  text-[#a855f7]
-                  tracking-wider
-                  uppercase
-                "
-              >
-                REGIONAL EXPO HUBS
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <h3
-                className="
-                  text-2xl
-                  font-black
-                  tracking-tight
-                  text-white
-                "
-              >
-                50–80
-              </h3>
-
-              <p
-                className="
-                  text-[10px]
-                  sm:text-xs
-                  font-mono
-                  text-[#a855f7]
-                  tracking-wider
-                  uppercase
-                "
-              >
-                STALLS / EVENT
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <h3
-                className="
-                  text-2xl
-                  font-black
-                  tracking-tight
-                  text-white
-                  flex
-                  items-center
-                  gap-2
-                "
-              >
-                <Medal size={24} className="text-white" />7
-              </h3>
-
-              <p
-                className="
-                  text-[10px]
-                  sm:text-xs
-                  font-mono
-                  text-[#a855f7]
-                  tracking-wider
-                  uppercase
-                "
-              >
-                COMPETITION CATEGORIES
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <h3
-                className="
-                  text-2xl
-                  font-black
-                  tracking-tight
-                  text-white
-                "
-              >
-                MORE
-              </h3>
-
-              <p
-                className="
-                  text-[10px]
-                  sm:text-xs
-                  font-mono
-                  text-[#a855f7]
-                  tracking-wider
-                  uppercase
-                "
-              >
-                FEATURES COMING SOON
-              </p>
-            </div>
-          </div>
+          <Link
+            to="/Enter"
+            className="inkMobileHero__button inkMobileHero__button--dark"
+          >
+            <span>JOIN DIRECTORY FREE</span>
+            <ArrowRight size={18} strokeWidth={1.8} />
+          </Link>
         </div>
-      </div>
+
+        <div className="inkMobileHero__scroll" aria-hidden="true">
+          <div className="inkMobileHero__mouse">
+            <i />
+          </div>
+          <span>SCROLL DOWN</span>
+        </div>
+      </section>
 
       {/* =====================================================
           2. VISION
@@ -1834,24 +1537,6 @@ function Home() {
               Results will be published after the judging phase concludes.
             </p>
           </div>
-
-          <div className="pt-6">
-            <Link
-              to="/hall-of-fame"
-              className="
-                text-xs
-                font-mono
-                tracking-widest
-                text-gray-400
-                hover:text-white
-                uppercase
-                underline
-                decoration-white/20
-              "
-            >
-              VIEW HALL OF FAME
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -2027,24 +1712,6 @@ function Home() {
                 )}
               </div>
             ))}
-          </div>
-
-          <div className="text-center">
-            <Link
-              to="/faq"
-              className="
-                text-xs
-                font-mono
-                tracking-widest
-                text-[#a855f7]
-                hover:text-white
-                uppercase
-                underline
-                decoration-white/20
-              "
-            >
-              VIEW ALL FAQ
-            </Link>
           </div>
         </div>
       </section>

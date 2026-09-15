@@ -129,15 +129,57 @@ function Navbar() {
     );
   }, [isOpen]);
 
+  /* =========================================================
+     CLOSE DESKTOP EXPO WHEN CLICKING OUTSIDE
+  ========================================================= */
+
+  useEffect(() => {
+    const handleWindowClick = (event) => {
+      if (!event.target.closest("[data-expo-dropdown]")) {
+        setExpoOpen(false);
+      }
+    };
+
+    window.addEventListener("click", handleWindowClick);
+
+    return () => {
+      window.removeEventListener("click", handleWindowClick);
+    };
+  }, []);
+
   return (
     <nav
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${
-        scrolled
-          ? "bg-[#000000]/90 backdrop-blur-md border-b border-white/10 text-white shadow-2xl py-3"
-          : "bg-transparent border-b border-transparent text-white py-5"
-      }`}
+      className={`
+        fixed
+        top-0
+        left-0
+        w-full
+        z-50
+        transition-all
+        duration-500
+
+        ${
+          scrolled
+            ? `
+                bg-[#000000]/90
+                backdrop-blur-md
+                border-b
+                border-white/10
+                text-white
+                shadow-2xl
+                py-3
+              `
+            : `
+                bg-transparent
+                border-b
+                border-transparent
+                text-white
+                py-5
+              `
+        }
+      `}
     >
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+      <div className="max-w-[1500px] mx-auto px-5 sm:px-8 lg:px-10 xl:px-12">
         <div className="flex items-center justify-between h-10">
           {/* =================================================
               LOGO
@@ -147,7 +189,16 @@ function Navbar() {
             <Link
               to="/"
               onClick={closeMenu}
-              className="text-lg font-black tracking-tighter uppercase text-white hover:opacity-70 transition"
+              className="
+                text-lg
+                font-black
+                tracking-tighter
+                uppercase
+                text-white
+                hover:opacity-70
+                transition
+                whitespace-nowrap
+              "
             >
               INKCONVENTION
               <span className="text-[#a855f7]">.</span>
@@ -158,7 +209,22 @@ function Navbar() {
               DESKTOP NAVIGATION
           ================================================= */}
 
-          <div className="hidden md:flex items-center space-x-8 font-medium text-xs uppercase tracking-widest">
+          <div
+            className="
+              hidden
+              md:flex
+              items-center
+              gap-4
+              lg:gap-5
+              xl:gap-7
+              font-medium
+              text-[9px]
+              lg:text-[10px]
+              xl:text-xs
+              uppercase
+              tracking-widest
+            "
+          >
             {/* HOME */}
 
             <NavLink to="/" end className={desktopNavClass}>
@@ -171,12 +237,17 @@ function Navbar() {
               About
             </NavLink>
 
-            {/* EXPO 2026 DROPDOWN */}
+            {/* =================================================
+                EXPO 2026
+            ================================================= */}
 
-            <div className="relative">
+            <div className="relative" data-expo-dropdown>
               <button
                 type="button"
-                onClick={() => setExpoOpen((prev) => !prev)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setExpoOpen((prev) => !prev);
+                }}
                 className={`
                   relative
                   py-2
@@ -197,7 +268,12 @@ function Navbar() {
                   after:bg-[#a855f7]
                   after:transition-all
                   after:duration-300
-                  ${expoOpen ? "text-white after:w-full" : "after:w-0 hover:after:w-full"}
+
+                  ${
+                    expoOpen
+                      ? "text-white after:w-full"
+                      : "after:w-0 hover:after:w-full"
+                  }
                 `}
                 aria-expanded={expoOpen}
                 aria-haspopup="menu"
@@ -209,10 +285,13 @@ function Navbar() {
                   className={`
                     transition-transform
                     duration-300
+
                     ${expoOpen ? "rotate-180" : ""}
                   `}
                 />
               </button>
+
+              {/* EXPO DROPDOWN */}
 
               {expoOpen && (
                 <div
@@ -233,7 +312,10 @@ function Navbar() {
                     z-[70]
                   "
                   role="menu"
+                  onClick={(event) => event.stopPropagation()}
                 >
+                  {/* UPCOMING EXPO = 01 */}
+
                   <NavLink
                     to="/upcoming"
                     onClick={() => setExpoOpen(false)}
@@ -256,8 +338,11 @@ function Navbar() {
                     "
                   >
                     <span>Upcoming Expo</span>
+
                     <span className="text-[#a855f7]">01</span>
                   </NavLink>
+
+                  {/* COMPETITION = 02 */}
 
                   <NavLink
                     to="/competition"
@@ -281,7 +366,8 @@ function Navbar() {
                     "
                   >
                     <span>Competition</span>
-                    <span className="text-[#a855f7]">03</span>
+
+                    <span className="text-[#a855f7]">02</span>
                   </NavLink>
                 </div>
               )}
@@ -304,13 +390,21 @@ function Navbar() {
             <NavLink to="/hall-of-fame" className={desktopNavClass}>
               Hall Of Fame
             </NavLink>
+
+            {/* =================================================
+                SPONSORS
+            ================================================= */}
+
+            <NavLink to="/sponsors" className={desktopNavClass}>
+              Sponsors
+            </NavLink>
           </div>
 
           {/* =================================================
               DESKTOP SOCIAL ICONS
           ================================================= */}
 
-          <div className="hidden md:flex items-center space-x-3 pt-2">
+          <div className="hidden md:flex items-center gap-2 lg:gap-3">
             {/* WHATSAPP */}
 
             <a
@@ -431,7 +525,8 @@ function Navbar() {
             absolute
             inset-x-0
             top-full
-            bg-[#000000]
+            bg-[#000000]/98
+            backdrop-blur-xl
             border-b
             border-white/10
             px-6
@@ -446,9 +541,9 @@ function Navbar() {
             overflow-y-auto
           "
         >
-          {/* ===============================================
+          {/* =================================================
               MOBILE LINKS
-          =============================================== */}
+          ================================================= */}
 
           <div className="flex flex-col space-y-3 text-xl font-bold tracking-tight">
             {/* HOME */}
@@ -467,7 +562,9 @@ function Navbar() {
               <span className="text-xs font-mono text-gray-500">02</span>
             </NavLink>
 
-            {/* EXPO 2026 MOBILE DROPDOWN */}
+            {/* =================================================
+                EXPO 2026 MOBILE
+            ================================================= */}
 
             <div className="border-b border-white/5 pb-2">
               <button
@@ -493,6 +590,7 @@ function Navbar() {
                     className={`
                       transition-transform
                       duration-300
+
                       ${mobileExpoOpen ? "rotate-180 text-[#a855f7]" : ""}
                     `}
                   />
@@ -501,8 +599,21 @@ function Navbar() {
                 <span className="text-xs font-mono text-gray-500">03</span>
               </button>
 
+              {/* MOBILE EXPO DROPDOWN */}
+
               {mobileExpoOpen && (
-                <div className="mt-2 ml-3 pl-4 border-l border-[#a855f7]/30 space-y-1">
+                <div
+                  className="
+                    mt-2
+                    ml-3
+                    pl-4
+                    border-l
+                    border-[#a855f7]/30
+                    space-y-1
+                  "
+                >
+                  {/* UPCOMING = 01 */}
+
                   <NavLink
                     to="/upcoming"
                     onClick={closeMenu}
@@ -524,8 +635,11 @@ function Navbar() {
                     "
                   >
                     <span>Upcoming Expo</span>
+
                     <span className="text-[#a855f7] text-[10px]">01</span>
                   </NavLink>
+
+                  {/* COMPETITION = 02 */}
 
                   <NavLink
                     to="/competition"
@@ -548,6 +662,7 @@ function Navbar() {
                     "
                   >
                     <span>Competition</span>
+
                     <span className="text-[#a855f7] text-[10px]">02</span>
                   </NavLink>
                 </div>
@@ -589,18 +704,50 @@ function Navbar() {
 
               <span className="text-xs font-mono text-gray-500">06</span>
             </NavLink>
+
+            {/* =================================================
+                SPONSORS
+            ================================================= */}
+
+            <NavLink
+              to="/sponsors"
+              onClick={closeMenu}
+              className={mobileNavClass}
+            >
+              <span>Sponsors</span>
+
+              <span className="text-xs font-mono text-gray-500">07</span>
+            </NavLink>
           </div>
 
-          {/* ===============================================
+          {/* =================================================
               MOBILE SOCIALS
-          =============================================== */}
+          ================================================= */}
 
-          <div className="pt-4 border-t border-white/10 flex items-center justify-between mt-2">
-            <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">
+          <div
+            className="
+              pt-4
+              border-t
+              border-white/10
+              flex
+              items-center
+              justify-between
+              mt-2
+            "
+          >
+            <span
+              className="
+                text-xs
+                font-mono
+                text-gray-400
+                uppercase
+                tracking-widest
+              "
+            >
               Connect
             </span>
 
-            <div className="flex items-center space-x-3 pt-2">
+            <div className="flex items-center space-x-3">
               {/* WHATSAPP */}
 
               <a

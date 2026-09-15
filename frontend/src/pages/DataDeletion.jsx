@@ -1,587 +1,511 @@
-import React from "react";
 import { Link } from "react-router-dom";
-import "../Style/LegalPages.css";
+import "../Style/DataDeletion.css";
 
-const Section = ({ number, title, children }) => {
+const Step = ({ number, title, children }) => {
   return (
-    <section className="legal-section">
-      <div className="legal-section-heading">
-        <span>{number}</span>
-        <h2>{title}</h2>
+    <div className="dd-step">
+      <span className="dd-step-number">{number}</span>
+
+      <div className="dd-step-content">
+        <h3>{title}</h3>
+        <p>{children}</p>
       </div>
 
-      <div className="legal-section-content">{children}</div>
-    </section>
+      <span className="dd-step-arrow">↘</span>
+    </div>
   );
 };
 
-function PrivacyPolicy() {
+export default function DataDeletion() {
   return (
-    <main className="legal-page">
-      <div className="legal-noise" />
+    <main className="dd-page">
+      {/* BACKGROUND EFFECTS */}
+      <div className="dd-noise" />
+      <div className="dd-glow dd-glow-one" />
+      <div className="dd-glow dd-glow-two" />
 
-      <div className="legal-glow legal-glow-one" />
-      <div className="legal-glow legal-glow-two" />
+      {/* =====================================
+          NAVBAR
+      ====================================== */}
 
-      <header className="legal-navbar">
-        <Link to="/" className="legal-logo">
-          INK<span>CONVENTION</span>
-        </Link>
+  
 
-        <Link to="/" className="legal-home-link">
-          Back to website
-          <span>↗</span>
-        </Link>
-      </header>
+      {/* =====================================
+          HERO
+      ====================================== */}
 
-      <section className="legal-hero">
-        <div className="legal-hero-tag">
-          <span></span>
-          LEGAL / PRIVACY
+      <section className="dd-hero">
+        <div className="dd-hero-bg-text">DELETE</div>
+
+        <div className="dd-tag">
+          <span />
+          LEGAL / DATA
         </div>
 
         <h1>
-          Privacy
-          <br />
-          <span>Policy.</span>
+          DATA
+          <span>DELETION.</span>
         </h1>
 
-        <div className="legal-hero-bottom">
+        <div className="dd-hero-bottom">
           <p>
-            This Privacy Policy explains how Ink Convention collects, uses,
-            stores, shares and protects information across our website,
-            WhatsApp communications and services connected with Meta
-            Platforms.
+            You have the right to request deletion of eligible personal
+            information associated with your use of Ink Convention, including
+            certain information received through Meta, WhatsApp and services
+            connected with our platform.
           </p>
 
-          <div className="legal-updated">
-            <small>LAST UPDATED</small>
-            <strong>15 SEPTEMBER 2026</strong>
+          <a href="#request" className="dd-main-button">
+            REQUEST DELETION
+            <span>↓</span>
+          </a>
+        </div>
+
+        <div className="dd-side-words">
+          <span>DATA</span>
+          <span>CONTROL</span>
+          <span>PRIVACY</span>
+          <span>DELETE</span>
+        </div>
+      </section>
+
+      {/* =====================================
+          INTRO
+      ====================================== */}
+
+      <section className="dd-intro">
+        <span className="dd-intro-number">01</span>
+
+        <div className="dd-intro-title">
+          <small>YOUR DATA / YOUR CONTROL</small>
+
+          <h2>
+            SIMPLE.
+            <br />
+            <strong>TRANSPARENT.</strong>
+          </h2>
+        </div>
+
+        <div className="dd-intro-copy">
+          <p>
+            Ink Convention respects your privacy and provides a straightforward
+            process for requesting deletion of eligible personal information.
+          </p>
+
+          <p>
+            This may include information associated with your account,
+            enquiries, artist profile, bookings, memberships, WhatsApp
+            communications or other supported services.
+          </p>
+        </div>
+      </section>
+
+      {/* =====================================
+          QUICK INFO CARDS
+      ====================================== */}
+
+      <section className="dd-quick">
+        <a href="#data">
+          <span>01</span>
+
+          <div>
+            <small>YOUR DATA</small>
+            <strong>What can be deleted</strong>
+          </div>
+
+          <b>↘</b>
+        </a>
+
+        <a href="#process">
+          <span>02</span>
+
+          <div>
+            <small>PROCESS</small>
+            <strong>How deletion works</strong>
+          </div>
+
+          <b>↘</b>
+        </a>
+
+        <a href="#request">
+          <span>03</span>
+
+          <div>
+            <small>REQUEST</small>
+            <strong>Contact our team</strong>
+          </div>
+
+          <b>↘</b>
+        </a>
+
+        <Link to="/privacy-policy">
+          <span>04</span>
+
+          <div>
+            <small>LEGAL</small>
+            <strong>Privacy Policy</strong>
+          </div>
+
+          <b>↗</b>
+        </Link>
+      </section>
+
+      {/* =====================================
+          WHAT CAN BE DELETED
+      ====================================== */}
+
+      <section className="dd-grid-section" id="data">
+        <aside className="dd-section-heading">
+          <span>02 / DATA</span>
+
+          <h2>
+            WHAT CAN
+            <br />
+            <strong>BE DELETED?</strong>
+          </h2>
+
+          <p>
+            Eligible personal information may be removed or de-identified
+            following a verified request.
+          </p>
+
+          <div className="dd-heading-line" />
+        </aside>
+
+        <div className="dd-data-grid">
+          <article>
+            <span>01</span>
+
+            <h3>Account Data</h3>
+
+            <p>
+              Eligible account information and personal information associated
+              with your Ink Convention account.
+            </p>
+          </article>
+
+          <article>
+            <span>02</span>
+
+            <h3>Contact Data</h3>
+
+            <p>
+              Phone numbers, email addresses and eligible contact information
+              voluntarily submitted to Ink Convention.
+            </p>
+          </article>
+
+          <article>
+            <span>03</span>
+
+            <h3>WhatsApp Data</h3>
+
+            <p>
+              Eligible WhatsApp-related information processed through supported
+              Meta and WhatsApp integrations.
+            </p>
+          </article>
+
+          <article>
+            <span>04</span>
+
+            <h3>Artist Profile</h3>
+
+            <p>
+              Eligible artist profile information, portfolio data, professional
+              information and related account records.
+            </p>
+          </article>
+
+          <article>
+            <span>05</span>
+
+            <h3>Enquiries</h3>
+
+            <p>
+              Eligible information submitted when sending tattoo, booking,
+              customer or business enquiries.
+            </p>
+          </article>
+
+          <article>
+            <span>06</span>
+
+            <h3>Communication Data</h3>
+
+            <p>
+              Eligible communication records associated with your interaction
+              with Ink Convention.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      {/* =====================================
+          PROCESS
+      ====================================== */}
+
+      <section className="dd-process" id="process">
+        <aside className="dd-process-left">
+          <span>03 / PROCESS</span>
+
+          <h2>
+            HOW TO
+            <br />
+            <strong>DELETE.</strong>
+          </h2>
+
+          <p>Follow these simple steps to submit a deletion request.</p>
+
+          <div className="dd-heading-line" />
+        </aside>
+
+        <div className="dd-steps">
+          <Step number="01" title="Send Your Request">
+            Email Ink Convention using the contact address below and clearly
+            state that you want eligible personal information associated with
+            you to be deleted.
+          </Step>
+
+          <Step number="02" title="Provide Identification">
+            Include enough information for us to identify your account or
+            records, such as your registered name, phone number, email address
+            or other relevant account details.
+          </Step>
+
+          <Step number="03" title="Verification">
+            We may ask you to verify that you are the person associated with the
+            information before processing your deletion request.
+          </Step>
+
+          <Step number="04" title="Review">
+            Ink Convention will review the request and determine which
+            information is eligible for deletion under applicable requirements.
+          </Step>
+
+          <Step number="05" title="Deletion">
+            Once verified and approved, eligible information will be deleted or
+            de-identified where reasonably practicable and legally permitted.
+          </Step>
+
+          <Step number="06" title="Confirmation">
+            Where appropriate, we may confirm that the deletion request has been
+            processed or provide information about any data that must legally be
+            retained.
+          </Step>
+        </div>
+      </section>
+
+      {/* =====================================
+          META / WHATSAPP
+      ====================================== */}
+
+      <section className="dd-meta">
+        <div className="dd-meta-label">
+          <span>04 / META</span>
+        </div>
+
+        <div className="dd-meta-main">
+          <small>META & WHATSAPP DATA</small>
+
+          <h2>
+            PLATFORM DATA
+            <br />
+            <strong>MATTERS TOO.</strong>
+          </h2>
+
+          <p>
+            If Ink Convention has received eligible information through Meta
+            APIs, WhatsApp Business services or related platform integrations,
+            users may request deletion of that information where applicable.
+          </p>
+        </div>
+
+        <div className="dd-meta-note">
+          <span>IMPORTANT</span>
+
+          <p>
+            Some information processed independently by Meta, WhatsApp or
+            another third-party provider may need to be managed directly through
+            that provider&apos;s own account, privacy or deletion tools.
+          </p>
+        </div>
+      </section>
+
+      {/* =====================================
+          REQUEST
+      ====================================== */}
+
+      <section className="dd-request" id="request">
+        <div className="dd-request-bg">REQUEST</div>
+
+        <div className="dd-request-copy">
+          <span>05 / REQUEST</span>
+
+          <h2>
+            READY TO
+            <br />
+            <strong>DELETE YOUR DATA?</strong>
+          </h2>
+
+          <p>
+            Send your request from the email address or phone number associated
+            with your Ink Convention activity where possible.
+          </p>
+        </div>
+
+        <div className="dd-request-card">
+          <small>DATA DELETION REQUEST</small>
+
+          <h3>Contact Ink Convention</h3>
+
+          <a href="mailto:ink.convention.expo@gmail.com">
+            <div>
+              <small>EMAIL</small>
+
+              <strong>ink.convention.expo@gmail.com</strong>
+            </div>
+
+            <span>↗</span>
+          </a>
+
+          <a href="tel:+917039235169">
+            <div>
+              <small>PHONE</small>
+
+              <strong>+91 70392 35169</strong>
+            </div>
+
+            <span>↗</span>
+          </a>
+
+          <a href="https://inkconvention.com/" target="_blank" rel="noreferrer">
+            <div>
+              <small>WEBSITE</small>
+
+              <strong>inkconvention.com</strong>
+            </div>
+
+            <span>↗</span>
+          </a>
+        </div>
+      </section>
+
+      {/* =====================================
+          WHAT TO INCLUDE
+      ====================================== */}
+
+      <section className="dd-include">
+        <aside>
+          <span>06 / REQUEST DETAILS</span>
+
+          <h2>
+            WHAT SHOULD
+            <br />
+            <strong>YOU INCLUDE?</strong>
+          </h2>
+        </aside>
+
+        <div className="dd-include-grid">
+          <div>
+            <span>01</span>
+            <p>Your full name</p>
+          </div>
+
+          <div>
+            <span>02</span>
+            <p>Your registered email address</p>
+          </div>
+
+          <div>
+            <span>03</span>
+            <p>Your mobile or WhatsApp number</p>
+          </div>
+
+          <div>
+            <span>04</span>
+            <p>Artist or studio name where applicable</p>
+          </div>
+
+          <div>
+            <span>05</span>
+            <p>Information you want deleted</p>
+          </div>
+
+          <div>
+            <span>06</span>
+            <p>Any useful account or request reference</p>
           </div>
         </div>
       </section>
 
-      <div className="legal-layout">
-        <aside className="legal-sidebar">
-          <p>INK CONVENTION</p>
+      {/* =====================================
+          RETENTION
+      ====================================== */}
 
-          <div className="legal-sidebar-line" />
+      <section className="dd-retention">
+        <span>07 / IMPORTANT</span>
 
-          <span>Privacy Policy</span>
+        <div>
+          <h2>
+            SOME DATA MAY NEED
+            <br />
+            <strong>TO BE RETAINED.</strong>
+          </h2>
+
+          <p>
+            Certain information may need to be retained where required for legal
+            compliance, financial records, fraud prevention, security, dispute
+            resolution or other legitimate purposes.
+          </p>
+        </div>
+      </section>
+
+      {/* =====================================
+          LINKS
+      ====================================== */}
+
+      <section className="dd-bottom-links">
+        <Link to="/privacy-policy">
+          <div>
+            <small>READ NEXT</small>
+
+            <strong>Privacy Policy</strong>
+          </div>
+
+          <span>↗</span>
+        </Link>
+
+        <Link to="/">
+          <div>
+            <small>RETURN</small>
+
+            <strong>Ink Convention</strong>
+          </div>
+
+          <span>↗</span>
+        </Link>
+      </section>
+
+      {/* =====================================
+          FOOTER
+      ====================================== */}
+
+      <footer className="dd-footer">
+        <Link to="/" className="dd-footer-logo">
+          INK<span>CONVENTION.</span>
+        </Link>
+
+        <p>© {new Date().getFullYear()} Ink Convention</p>
+
+        <div>
+          <Link to="/privacy-policy">Privacy</Link>
 
           <Link to="/data-deletion">Data Deletion</Link>
 
-          <a href="#contact">Contact</a>
-        </aside>
-
-        <article className="legal-content">
-          <div className="legal-intro">
-            <p>
-              Ink Convention ("Ink Convention", "we", "our" or "us") respects
-              your privacy and is committed to protecting your personal
-              information.
-            </p>
-
-            <p>
-              This Privacy Policy applies when you use{" "}
-              <strong>https://inkconvention.com</strong>, register as an artist,
-              book a stall, purchase a membership, submit an enquiry,
-              communicate with us through WhatsApp, or interact with services
-              integrated with Meta Platforms.
-            </p>
-          </div>
-
-          <Section number="01" title="Information We Collect">
-            <p>
-              Depending on how you interact with Ink Convention, we may collect
-              personal information that you voluntarily provide to us.
-            </p>
-
-            <ul>
-              <li>Full name</li>
-              <li>Mobile and WhatsApp number</li>
-              <li>Email address</li>
-              <li>City, state and address</li>
-              <li>Artist or studio name</li>
-              <li>Business information</li>
-              <li>Instagram or social media profile</li>
-              <li>Profile photographs</li>
-              <li>Artist portfolio images</li>
-              <li>Tattoo interests and requirements</li>
-              <li>Event registration information</li>
-              <li>Stall booking information</li>
-              <li>Membership information</li>
-              <li>Messages and enquiries</li>
-              <li>Payment and transaction information</li>
-              <li>Communication preferences and consent records</li>
-            </ul>
-          </Section>
-
-          <Section
-            number="02"
-            title="Information Received Through Meta & WhatsApp"
-          >
-            <p>
-              Ink Convention may use the WhatsApp Business Platform and other
-              services provided by Meta Platforms to communicate with
-              customers, tattoo artists, studios, exhibitors, sponsors and
-              other users.
-            </p>
-
-            <p>Depending on your interaction with us, we may process:</p>
-
-            <ul>
-              <li>Your WhatsApp phone number</li>
-              <li>Your WhatsApp user/account identifier</li>
-              <li>Your WhatsApp profile name, where available</li>
-              <li>Messages sent to Ink Convention</li>
-              <li>Images, videos, documents or audio voluntarily submitted</li>
-              <li>Message identifiers</li>
-              <li>Message timestamps</li>
-              <li>Delivery and read status, where available</li>
-              <li>Replies and interactions</li>
-              <li>Opt-in and opt-out preferences</li>
-              <li>Customer service information</li>
-              <li>Lead or enquiry information</li>
-            </ul>
-
-            <p>
-              We do not ask users to provide their Facebook, Instagram,
-              WhatsApp or Meta passwords.
-            </p>
-          </Section>
-
-          <Section number="03" title="How We Use WhatsApp Information">
-            <p>WhatsApp information may be used to:</p>
-
-            <ul>
-              <li>Respond to enquiries</li>
-              <li>Provide customer support</li>
-              <li>Connect customers with tattoo artists or studios</li>
-              <li>Confirm registrations and bookings</li>
-              <li>Provide stall booking updates</li>
-              <li>Provide membership updates</li>
-              <li>Send transaction-related messages</li>
-              <li>Send requested event reminders</li>
-              <li>Send OTP or verification messages where applicable</li>
-              <li>Maintain communication history</li>
-              <li>Prevent fraud or misuse</li>
-              <li>Protect our services</li>
-              <li>Comply with legal requirements</li>
-            </ul>
-
-            <p>
-              Where appropriate consent has been obtained, we may also send
-              event announcements, promotional messages, membership offers and
-              other marketing communications.
-            </p>
-          </Section>
-
-          <Section number="04" title="WhatsApp Consent & Opt-In">
-            <p>
-              Ink Convention does not intend to send unsolicited WhatsApp
-              marketing messages.
-            </p>
-
-            <p>
-              Where required, users provide permission before we send
-              promotional communications through WhatsApp.
-            </p>
-
-            <p>Consent may be provided through:</p>
-
-            <ul>
-              <li>Website checkboxes</li>
-              <li>Registration forms</li>
-              <li>Contact or lead forms</li>
-              <li>Booking forms</li>
-              <li>WhatsApp conversations</li>
-              <li>QR codes</li>
-              <li>Artist registrations</li>
-              <li>Membership registrations</li>
-              <li>Other clear consent mechanisms</li>
-            </ul>
-          </Section>
-
-          <Section number="05" title="Opting Out of WhatsApp Messages">
-            <p>
-              Users may stop receiving promotional WhatsApp communications at
-              any time.
-            </p>
-
-            <div className="legal-highlight-box">
-              <span>OPT-OUT</span>
-
-              <h3>
-                Reply <strong>STOP</strong> or{" "}
-                <strong>UNSUBSCRIBE</strong>
-              </h3>
-
-              <p>
-                You may also contact Ink Convention and ask us to stop
-                promotional messages.
-              </p>
-            </div>
-
-            <p>
-              We may still send necessary transactional, account, security,
-              support or legally required communications.
-            </p>
-          </Section>
-
-          <Section number="06" title="Customer Enquiries & Leads">
-            <p>
-              Ink Convention may help customers connect with tattoo artists,
-              studios, exhibitors, sponsors or businesses listed on our
-              platform.
-            </p>
-
-            <p>
-              When submitting an enquiry, users may provide their name, phone
-              number, email address, city, preferred artist, tattoo
-              requirements, booking preferences and message.
-            </p>
-
-            <p>
-              Relevant information may be shared with the artist, studio or
-              business selected by the user for the purpose of responding to
-              the enquiry.
-            </p>
-
-            <p>
-              Where a masked lead or masked contact feature is available,
-              direct contact information may initially be limited or hidden.
-            </p>
-          </Section>
-
-          <Section number="07" title="Meta Platform Data">
-            <p>
-              Information received through Meta APIs, WhatsApp Business APIs,
-              Meta Business services, webhooks or similar Meta Platform
-              features may be treated as Meta Platform Data.
-            </p>
-
-            <p>Ink Convention:</p>
-
-            <ul>
-              <li>
-                Uses Meta Platform Data only for disclosed and legitimate
-                purposes
-              </li>
-              <li>Does not sell Meta Platform Data</li>
-              <li>
-                Does not rent Meta Platform Data for third-party independent
-                marketing
-              </li>
-              <li>
-                Limits disclosure to service providers or parties necessary to
-                provide requested services
-              </li>
-              <li>
-                Deletes information received in error where reasonably
-                practicable
-              </li>
-            </ul>
-          </Section>
-
-          <Section number="08" title="Service Providers">
-            <p>
-              We may use trusted service providers to help operate Ink
-              Convention.
-            </p>
-
-            <ul>
-              <li>Meta Platforms and WhatsApp</li>
-              <li>Hosting and cloud providers</li>
-              <li>Database providers</li>
-              <li>Payment gateways</li>
-              <li>OTP providers</li>
-              <li>Email and SMS services</li>
-              <li>CRM providers</li>
-              <li>Communication automation services</li>
-              <li>Analytics services</li>
-              <li>Security and fraud-prevention services</li>
-            </ul>
-
-            <p>
-              Service providers may process information only as reasonably
-              necessary to provide their services to Ink Convention.
-            </p>
-          </Section>
-
-          <Section number="09" title="Payments">
-            <p>
-              Payments for memberships, stall bookings, registrations or other
-              services may be processed by authorised payment providers.
-            </p>
-
-            <p>We may receive:</p>
-
-            <ul>
-              <li>Transaction ID</li>
-              <li>Payment amount</li>
-              <li>Payment date</li>
-              <li>Payment status</li>
-              <li>Payment method</li>
-              <li>Order or booking reference</li>
-            </ul>
-
-            <p>
-              Ink Convention does not ask users to provide UPI PINs, banking
-              passwords, card PINs or similar private banking authentication
-              credentials.
-            </p>
-          </Section>
-
-          <Section number="10" title="Artist Profiles & Public Information">
-            <p>
-              Tattoo artists may voluntarily create profiles containing
-              information such as artist name, studio name, profile photo,
-              portfolio, tattoo styles, city, social media profiles and
-              professional descriptions.
-            </p>
-
-            <p>
-              Information intentionally submitted for a public profile may be
-              visible to visitors of InkConvention.com.
-            </p>
-          </Section>
-
-          <Section number="11" title="Automatically Collected Information">
-            <p>
-              When you visit InkConvention.com, we may automatically receive
-              technical information such as:
-            </p>
-
-            <ul>
-              <li>IP address</li>
-              <li>Device and browser type</li>
-              <li>Operating system</li>
-              <li>Pages visited</li>
-              <li>Referring website</li>
-              <li>Date and time</li>
-              <li>Session information</li>
-              <li>Diagnostic information</li>
-              <li>Approximate location derived from technical data</li>
-            </ul>
-          </Section>
-
-          <Section number="12" title="Cookies & Analytics">
-            <p>
-              InkConvention.com may use cookies and similar technologies to
-              maintain sessions, remember preferences, understand traffic,
-              improve the website, detect abuse and measure campaign
-              performance.
-            </p>
-
-            <p>
-              Where legally required, consent will be requested before
-              non-essential cookies are used.
-            </p>
-          </Section>
-
-          <Section number="13" title="How We Share Information">
-            <p>Information may be shared with:</p>
-
-            <ul>
-              <li>Meta and WhatsApp</li>
-              <li>Technology and service providers</li>
-              <li>Payment processors</li>
-              <li>Messaging providers</li>
-              <li>Artists or businesses selected by users</li>
-              <li>Authorities where legally required</li>
-            </ul>
-
-            <div className="legal-important">
-              <span>IMPORTANT</span>
-
-              <p>
-                Ink Convention does not sell or rent personal information to
-                third parties for their independent marketing purposes.
-              </p>
-            </div>
-          </Section>
-
-          <Section number="14" title="Data Retention">
-            <p>
-              We retain personal information only for as long as reasonably
-              necessary to provide services, complete transactions, respond to
-              enquiries, maintain legally required records, prevent fraud and
-              resolve disputes.
-            </p>
-
-            <p>
-              Meta Platform Data and WhatsApp-related information may be
-              deleted or de-identified when no longer required for the purpose
-              for which it was collected, subject to applicable legal
-              requirements.
-            </p>
-          </Section>
-
-          <Section number="15" title="User Data Deletion">
-            <p>
-              Users may request deletion of personal information held by Ink
-              Convention, including eligible information received through Meta
-              or WhatsApp.
-            </p>
-
-            <Link to="/data-deletion" className="legal-big-link">
-              <div>
-                <small>USER DATA REQUEST</small>
-                <strong>Open Data Deletion Instructions</strong>
-              </div>
-
-              <span>↗</span>
-            </Link>
-
-            <p>
-              Some information may need to be retained for legal compliance,
-              financial records, fraud prevention, security or dispute
-              resolution.
-            </p>
-          </Section>
-
-          <Section number="16" title="Your Rights & Choices">
-            <p>
-              Subject to applicable law, users may request access,
-              modification, correction or deletion of eligible personal
-              information.
-            </p>
-
-            <ul>
-              <li>Request access to personal data</li>
-              <li>Correct inaccurate information</li>
-              <li>Update incomplete information</li>
-              <li>Request deletion</li>
-              <li>Withdraw consent where applicable</li>
-              <li>Change communication preferences</li>
-              <li>Stop promotional communications</li>
-            </ul>
-          </Section>
-
-          <Section number="17" title="Data Security">
-            <p>
-              Ink Convention uses reasonable administrative, organisational
-              and technical safeguards designed to protect information.
-            </p>
-
-            <ul>
-              <li>HTTPS encryption</li>
-              <li>Restricted administrative access</li>
-              <li>Password hashing</li>
-              <li>Authentication controls</li>
-              <li>Database access controls</li>
-              <li>Secure hosting</li>
-              <li>Monitoring and backup measures</li>
-            </ul>
-
-            <p>
-              No online system can be guaranteed to be completely secure.
-            </p>
-          </Section>
-
-          <Section number="18" title="Children">
-            <p>
-              Where applicable law requires parental or guardian consent for a
-              child's personal information, appropriate consent must be
-              obtained before processing such information.
-            </p>
-          </Section>
-
-          <Section number="19" title="International Processing">
-            <p>
-              Some technology and communication providers, including Meta and
-              WhatsApp, may use infrastructure located outside India.
-            </p>
-
-            <p>
-              Where applicable, information will be handled in accordance with
-              relevant legal requirements.
-            </p>
-          </Section>
-
-          <Section number="20" title="Third-Party Services">
-            <p>
-              InkConvention.com may contain links or integrations involving
-              WhatsApp, Facebook, Instagram, payment providers, sponsors,
-              artists and other third-party websites.
-            </p>
-
-            <p>
-              Independent third-party services are governed by their own terms
-              and privacy policies.
-            </p>
-          </Section>
-
-          <Section number="21" title="Changes to This Privacy Policy">
-            <p>
-              We may update this Privacy Policy when our services, Meta or
-              WhatsApp integrations, legal requirements or service providers
-              change.
-            </p>
-
-            <p>
-              The latest version will remain available on InkConvention.com
-              and the Last Updated date will be changed when appropriate.
-            </p>
-          </Section>
-
-          <section className="legal-section" id="contact">
-            <div className="legal-section-heading">
-              <span>22</span>
-              <h2>Contact Ink Convention</h2>
-            </div>
-
-            <div className="legal-contact-card">
-              <small>PRIVACY / DATA REQUESTS</small>
-
-              <h3>Ink Convention</h3>
-
-              <div className="legal-contact-grid">
-                <div>
-                  <span>Website</span>
-                  <a
-                    href="https://inkconvention.com/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    inkconvention.com
-                  </a>
-                </div>
-
-                <div>
-                  <span>Email</span>
-                  <a href="mailto:YOUR-EMAIL@inkconvention.com">
-                    ink.convention.expo@gmail.com
-                  </a>
-                </div>
-
-                <div>
-                  <span>Phone</span>
-                  <a href="tel:+91XXXXXXXXXX"> 70392 35169</a>
-                </div>
-
-                {/* <div>
-                  <span>Business Address</span>
-                  <p>YOUR REGISTERED BUSINESS ADDRESS</p>
-                </div> */}
-              </div>
-            </div>
-          </section>
-
-          <footer className="legal-footer">
-            <p>© {new Date().getFullYear()} Ink Convention</p>
-
-            <div>
-              <Link to="/privacy-policy">Privacy Policy</Link>
-              <Link to="/data-deletion">Data Deletion</Link>
-              <Link to="/">Home</Link>
-            </div>
-          </footer>
-        </article>
-      </div>
+          <Link to="/">Home</Link>
+        </div>
+      </footer>
     </main>
   );
 }
-
-export default PrivacyPolicy;
