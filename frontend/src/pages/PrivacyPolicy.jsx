@@ -69,15 +69,9 @@ function PrivacyPolicy() {
           </h1>
 
           <p>
-<<<<<<< Updated upstream
             This Privacy Policy explains how Ink Convention collects, uses,
             stores, shares and protects information across our website, WhatsApp
             communications and services connected with Meta Platforms.
-          </p>
-=======
-            How Ink Convention collects, uses, stores, shares and protects
-            information across our website, WhatsApp communication and services
-            connected with Meta Platforms.
           </p>
 
           <div className="privacy-hero-links">
@@ -91,7 +85,6 @@ function PrivacyPolicy() {
               <span>↗</span>
             </Link>
           </div>
->>>>>>> Stashed changes
         </div>
 
         <div className="privacy-side-text">
@@ -154,22 +147,10 @@ function PrivacyPolicy() {
         <a href="#whatsapp">
           <span>02</span>
 
-<<<<<<< Updated upstream
-          <Section
-            number="02"
-            title="Information Received Through Meta & WhatsApp"
-          >
-            <p>
-              Ink Convention may use the WhatsApp Business Platform and other
-              services provided by Meta Platforms to communicate with customers,
-              tattoo artists, studios, exhibitors, sponsors and other users.
-            </p>
-=======
           <div>
             <small>MESSAGING</small>
             <strong>WhatsApp & Meta</strong>
           </div>
->>>>>>> Stashed changes
 
           <b>↘</b>
         </a>
@@ -177,18 +158,10 @@ function PrivacyPolicy() {
         <a href="#rights">
           <span>03</span>
 
-<<<<<<< Updated upstream
-            <p>
-              We do not ask users to provide their Facebook, Instagram, WhatsApp
-              or Meta passwords.
-            </p>
-          </Section>
-=======
           <div>
             <small>CONTROL</small>
             <strong>Your rights</strong>
           </div>
->>>>>>> Stashed changes
 
           <b>↘</b>
         </a>
@@ -381,18 +354,12 @@ function PrivacyPolicy() {
             <div className="privacy-stop">
               <small>OPT-OUT</small>
 
-<<<<<<< Updated upstream
-              <h3>
-                Reply <strong>STOP</strong> or <strong>UNSUBSCRIBE</strong>
-              </h3>
-=======
               <h4>
                 Reply
                 <strong> STOP </strong>
                 or
                 <strong> UNSUBSCRIBE</strong>
               </h4>
->>>>>>> Stashed changes
 
               <p>
                 You may also contact Ink Convention and ask us to stop
@@ -637,32 +604,6 @@ function PrivacyPolicy() {
 
           <Accordion number="16" title="Your Rights & Choices">
             <p>
-<<<<<<< Updated upstream
-              Users may request deletion of personal information held by Ink
-              Convention, including eligible information received through Meta
-              or WhatsApp.
-            </p>
-
-            <Link to="/data-deletion" className="legal-big-link">
-              <div>
-                <small>USER DATA REQUEST</small>
-                <strong>Open Data Deletion Instructions</strong>
-              </div>
-
-              <span>↗</span>
-            </Link>
-
-            <p>
-              Some information may need to be retained for legal compliance,
-              financial records, fraud prevention, security or dispute
-              resolution.
-            </p>
-          </Section>
-
-          <Section number="16" title="Your Rights & Choices">
-            <p>
-=======
->>>>>>> Stashed changes
               Subject to applicable law, users may request access, modification,
               correction or deletion of eligible personal information.
             </p>
@@ -707,11 +648,7 @@ function PrivacyPolicy() {
             </ul>
 
             <p>No online system can be guaranteed to be completely secure.</p>
-<<<<<<< Updated upstream
-          </Section>
-=======
           </Accordion>
->>>>>>> Stashed changes
 
           <Accordion number="18" title="Children">
             <p>
@@ -754,12 +691,8 @@ function PrivacyPolicy() {
             </p>
 
             <p>
-<<<<<<< Updated upstream
-              The latest version will remain available on InkConvention.com and
+              The latest version will remain available on InkConvention.com, and
               the Last Updated date will be changed when appropriate.
-=======
-              The latest version will remain available on InkConvention.com.
->>>>>>> Stashed changes
             </p>
           </Accordion>
         </div>
@@ -779,34 +712,6 @@ function PrivacyPolicy() {
             <strong>TALK TO US.</strong>
           </h2>
 
-<<<<<<< Updated upstream
-              <div className="legal-contact-grid">
-                <div>
-                  <span>Website</span>
-
-                  <a
-                    href="https://inkconvention.com/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    inkconvention.com
-                  </a>
-                </div>
-
-                <div>
-                  <span>Email</span>
-
-                  <a href="mailto:YOUR-EMAIL@inkconvention.com">
-                    ink.convention.expo@gmail.com
-                  </a>
-                </div>
-
-                <div>
-                  <span>Phone</span>
-
-                  <a href="tel:+91XXXXXXXXXX">+91 70392 35169</a>
-                </div>
-=======
           <p>
             For privacy, WhatsApp or personal-data questions, contact the Ink
             Convention team.
@@ -818,7 +723,6 @@ function PrivacyPolicy() {
             <small>WEBSITE</small>
 
             <strong>inkconvention.com</strong>
->>>>>>> Stashed changes
 
             <span>↗</span>
           </a>
@@ -826,18 +730,6 @@ function PrivacyPolicy() {
           <a href="mailto:ink.convention.expo@gmail.com">
             <small>EMAIL</small>
 
-<<<<<<< Updated upstream
-            <div>
-              <Link to="/privacy-policy">Privacy Policy</Link>
-
-              <Link to="/data-deletion">Data Deletion</Link>
-
-              <Link to="/">Home</Link>
-            </div>
-          </footer>
-        </article>
-      </div>
-=======
             <strong>ink.convention.expo@gmail.com</strong>
 
             <span>↗</span>
@@ -872,7 +764,6 @@ function PrivacyPolicy() {
           <Link to="/">Home</Link>
         </div>
       </footer>
->>>>>>> Stashed changes
     </main>
   );
 }
