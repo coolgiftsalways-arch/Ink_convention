@@ -50,6 +50,7 @@ import ArtistBookings from "./admin/ArtistBookings";
 // import WhatsAppCampaigns from "./admin/WhatsAppCampaigns";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import DataDeletion from "./pages/DataDeletion";
+import Terms from "./pages/Terms";
 
 /*
   DO NOT import AdminSidebar here.
@@ -127,6 +128,7 @@ function Layout() {
               </PageTransition>
             }
           />
+          <Route path="/terms" element={<Terms />} />
 
           {/* =================================================
               ABOUT

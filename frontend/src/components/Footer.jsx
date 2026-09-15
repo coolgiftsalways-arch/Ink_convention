@@ -187,6 +187,13 @@ function Footer() {
               Data Deletion
             </Link>
 
+            <Link
+    to="/data-deletion"
+    className="hover:text-white transition-colors duration-300"
+  >
+    Data Deletion
+  </Link>
+
           </div>
 
         </div>
