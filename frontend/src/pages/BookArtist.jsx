@@ -16,6 +16,9 @@ import {
   IndianRupee,
   CheckCircle2,
   ImagePlus,
+  Check,
+  X,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function BookArtist() {
@@ -28,7 +31,9 @@ export default function BookArtist() {
       city: String(location.state?.city || "").trim(),
       state: String(location.state?.state || "").trim(),
       profileImage: String(location.state?.profileImage || "").trim(),
-      plan: String(location.state?.plan || "").trim().toLowerCase(),
+      plan: String(location.state?.plan || "")
+        .trim()
+        .toLowerCase(),
     }),
     [location.state],
   );
@@ -45,7 +50,6 @@ export default function BookArtist() {
     tattooSize: "",
     budget: "",
     referenceLink: "",
-    additionalMessage: "",
   });
 
   const [loading, setLoading] = React.useState(false);
@@ -53,6 +57,8 @@ export default function BookArtist() {
   const [error, setError] = React.useState("");
   const [bookingId, setBookingId] = React.useState("");
   const [notificationSent, setNotificationSent] = React.useState(false);
+  const [showConsentPopup, setShowConsentPopup] = React.useState(false);
+  const [consentAccepted, setConsentAccepted] = React.useState(false);
 
   const API_URL = (
     import.meta.env.VITE_API_URL || "http://localhost:5000"
@@ -105,6 +111,11 @@ export default function BookArtist() {
         throw new Error("Please tell the artist about your tattoo idea.");
       }
 
+      if (!consentAccepted) {
+        setShowConsentPopup(true);
+        return;
+      }
+
       const bookingResponse = await fetch(`${API_URL}/api/artist-bookings`, {
         method: "POST",
         headers: {
@@ -131,9 +142,6 @@ export default function BookArtist() {
             form.budget.trim() ? `Budget: ${form.budget.trim()}` : "",
             form.referenceLink.trim()
               ? `Reference: ${form.referenceLink.trim()}`
-              : "",
-            form.additionalMessage.trim()
-              ? `Additional message: ${form.additionalMessage.trim()}`
               : "",
           ]
             .filter(Boolean)
@@ -179,6 +187,8 @@ export default function BookArtist() {
     setSubmitted(false);
     setBookingId("");
     setNotificationSent(false);
+    setConsentAccepted(false);
+    setShowConsentPopup(false);
     setError("");
 
     setForm({
@@ -193,7 +203,6 @@ export default function BookArtist() {
       tattooSize: "",
       budget: "",
       referenceLink: "",
-      additionalMessage: "",
     });
 
     window.scrollTo({
@@ -282,8 +291,8 @@ export default function BookArtist() {
             <h2 className="text-lg font-black uppercase">No artist selected</h2>
 
             <p className="mt-2 text-sm text-gray-500">
-              Please open the Artists page and click BOOK ARTIST on the artist you
-              want.
+              Please open the Artists page and click BOOK ARTIST on the artist
+              you want.
             </p>
 
             <Link
@@ -461,10 +470,7 @@ export default function BookArtist() {
                 />
               </FormField>
 
-              <FormField
-                icon={<MapPin size={15} />}
-                label="BODY PLACEMENT"
-              >
+              <FormField icon={<MapPin size={15} />} label="BODY PLACEMENT">
                 <input
                   type="text"
                   name="bodyPlacement"
@@ -557,61 +563,106 @@ export default function BookArtist() {
               />
             </div>
 
-            <div className="mt-5">
-              <label
-                className="
-                  block
-                  mb-2
-                  text-[8px]
-                  font-black
-                  tracking-[0.15em]
-                  text-gray-500
-                "
+            {/* INFORMATION SHARING CONSENT */}
+            <div className="mt-6">
+              <button
+                type="button"
+                aria-pressed={consentAccepted}
+                onClick={() => {
+                  if (consentAccepted) {
+                    setConsentAccepted(false);
+                  } else {
+                    setShowConsentPopup(true);
+                  }
+                }}
+                className={`
+                  group
+                  w-full
+                  flex
+                  items-center
+                  gap-4
+                  rounded-2xl
+                  border
+                  px-5
+                  py-5
+                  text-left
+                  transition-all
+                  duration-300
+
+                  ${
+                    consentAccepted
+                      ? `
+                          border-purple-500/50
+                          bg-purple-500/[0.08]
+                          shadow-[0_0_24px_rgba(168,85,247,0.10)]
+                        `
+                      : `
+                          border-white/10
+                          bg-white/[0.02]
+                          hover:border-purple-500/30
+                          hover:bg-purple-500/[0.04]
+                        `
+                  }
+                `}
               >
-                ADDITIONAL MESSAGE
-              </label>
+                <span
+                  className={`
+                    flex
+                    h-6
+                    w-6
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-md
+                    border
+                    transition-all
+                    duration-300
 
-              <textarea
-                name="additionalMessage"
-                value={form.additionalMessage}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Anything else you want the artist to know..."
-                className={textareaClass}
-              />
-            </div>
+                    ${
+                      consentAccepted
+                        ? "border-purple-500 bg-purple-600 text-white"
+                        : "border-white/20 bg-black/30 text-transparent"
+                    }
+                  `}
+                >
+                  <Check size={15} strokeWidth={3} />
+                </span>
 
-            <div
-              className="
-                mt-6
-                rounded-xl
-                border
-                border-purple-500/20
-                bg-purple-500/[0.05]
-                px-4
-                py-4
-              "
-            >
-              <div className="flex items-start gap-3">
-                <Sparkles
-                  size={15}
-                  className="mt-0.5 shrink-0 text-purple-400"
-                />
-
-                <div>
-                  <p className="text-[8px] font-black tracking-widest text-purple-300">
-                    DIRECT REQUEST
-                  </p>
-
-                  <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                    This request is for{" "}
-                    <span className="font-bold text-white">
-                      {selectedArtist.name}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-white">
+                    Share my information with{" "}
+                    <span className="text-purple-400">
+                      {selectedArtist.name || "this artist"}
                     </span>
-                    . We will not match or suggest another artist.
-                  </p>
-                </div>
-              </div>
+                  </span>
+
+                  <span className="mt-1 block text-xs leading-relaxed text-gray-500">
+                    Your name, phone number, email and tattoo booking details
+                    will be shared directly with the selected artist.
+                  </span>
+                </span>
+
+                <ArrowRight
+                  size={17}
+                  className={`
+                    shrink-0
+                    transition-all
+                    duration-300
+                    ${
+                      consentAccepted
+                        ? "rotate-90 text-purple-400"
+                        : "text-gray-600 group-hover:text-purple-400"
+                    }
+                  `}
+                />
+              </button>
+
+              {!consentAccepted && (
+                <p className="mt-2 px-1 text-[10px] leading-relaxed text-gray-600">
+                  Please review and accept this before sending your booking
+                  request.
+                </p>
+              )}
             </div>
 
             <div className="mt-8 flex justify-end">
@@ -684,6 +735,97 @@ export default function BookArtist() {
           </form>
         ) : null}
       </div>
+
+      {showConsentPopup && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowConsentPopup(false);
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-[28px] border border-purple-500/30 bg-[#0d0d11] p-7 shadow-[0_0_60px_rgba(168,85,247,0.16)] sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400">
+                <ShieldCheck size={22} />
+              </div>
+
+              <button
+                type="button"
+                aria-label="Close confirmation"
+                onClick={() => setShowConsentPopup(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-gray-500 transition hover:bg-white/5 hover:text-white"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <p className="mt-6 text-[8px] font-black tracking-[0.18em] text-purple-400">
+              CONFIRM INFORMATION SHARING
+            </p>
+
+            <h3 className="mt-2 text-2xl font-black uppercase leading-tight sm:text-3xl">
+              Share your details with{" "}
+              <span className="text-purple-400">
+                {selectedArtist.name || "this artist"}?
+              </span>
+            </h3>
+
+            <p className="mt-4 text-sm leading-relaxed text-gray-500">
+              By selecting YES, your information will be shared directly with{" "}
+              <span className="font-bold text-white">
+                {selectedArtist.name || "the selected artist"}
+              </span>{" "}
+              so they can contact you about your tattoo booking request.
+            </p>
+
+            <div className="mt-6 rounded-xl border border-white/10 bg-black/30 p-4">
+              <div className="space-y-3 text-xs text-gray-400">
+                <div className="flex items-center gap-3">
+                  <Check size={14} className="text-purple-400" />
+                  Name
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check size={14} className="text-purple-400" />
+                  Phone number
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check size={14} className="text-purple-400" />
+                  Email address
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check size={14} className="text-purple-400" />
+                  Tattoo booking information
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setShowConsentPopup(false)}
+                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4 text-[9px] font-black tracking-widest text-gray-400 transition hover:bg-white/[0.07] hover:text-white"
+              >
+                NO, GO BACK
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setConsentAccepted(true);
+                  setShowConsentPopup(false);
+                  setError("");
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-4 text-[9px] font-black tracking-widest text-white transition hover:bg-purple-500"
+              >
+                YES, I AGREE
+                <Check size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -798,7 +940,8 @@ function SelectedArtistCard({ artist, planLabel }) {
             <MapPin size={12} />
 
             <span className="truncate">
-              {[artist.city, artist.state].filter(Boolean).join(", ") || "India"}
+              {[artist.city, artist.state].filter(Boolean).join(", ") ||
+                "India"}
             </span>
           </div>
         </div>
@@ -807,12 +950,7 @@ function SelectedArtistCard({ artist, planLabel }) {
   );
 }
 
-function SuccessState({
-  artist,
-  bookingId,
-  notificationSent,
-  onBookAnother,
-}) {
+function SuccessState({ artist, bookingId, notificationSent, onBookAnother }) {
   return (
     <section
       className="
@@ -850,19 +988,17 @@ function SuccessState({
 
       <h2 className="mt-3 text-2xl sm:text-4xl font-black uppercase">
         Request sent to{" "}
-        <span className="text-purple-400">
-          {artist.name || "the artist"}
-        </span>
+        <span className="text-purple-400">{artist.name || "the artist"}</span>
       </h2>
 
       <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-gray-500">
-  Your booking request has been submitted successfully. A message has been
-  sent to{" "}
-  <span className="font-bold text-white">
-    {artist.name || "the artist"}
-  </span>
-  .
-</p>
+        Your booking request has been submitted successfully. A message has been
+        sent to{" "}
+        <span className="font-bold text-white">
+          {artist.name || "the artist"}
+        </span>
+        .
+      </p>
 
       {bookingId && (
         <div
@@ -938,11 +1074,7 @@ function SuccessState({
 function getPlanLabel(plan) {
   const value = String(plan || "").toLowerCase();
 
-  if (
-    value === "verified" ||
-    value === "gold" ||
-    value === "spotlight"
-  ) {
+  if (value === "verified" || value === "gold" || value === "spotlight") {
     return "★ GOLD";
   }
 
