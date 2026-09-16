@@ -212,8 +212,6 @@ function About() {
               <Link
                 to="/competition"
                 className="inline-flex items-center gap-4 text-[10px] font-mono tracking-[0.2em] uppercase"
-                data-cursor
-                data-cursor-text="ENTER"
               >
                 <span className="w-12 h-12 rounded-full border border-[#a855f7] flex items-center justify-center text-[#a855f7]">
                   <ArrowUpRight size={17} />
@@ -225,12 +223,8 @@ function About() {
 
           {/* RIGHT IMAGE */}
 
-          <div
-            className="order-1 lg:order-2 relative group overflow-hidden border border-white/10 shadow-2xl bg-[#0b0b0f] min-h-[420px] lg:min-h-full"
-            data-cursor
-            data-cursor-text="ABOUT"
-          >
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#a855f7]/30 via-transparent to-transparent z-10 pointer-events-none" />
+          <div className="about-hero-image order-1 lg:order-2 relative group overflow-hidden border border-white/10 shadow-2xl bg-[#0b0b0f] min-h-[420px] lg:min-h-full">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10 z-10 pointer-events-none" />
 
             <img
               src={heroImage}
@@ -338,11 +332,7 @@ function About() {
 
             {/* IMAGE 2 */}
 
-            <div
-              className="relative mt-10 h-[380px] overflow-hidden border border-white/10"
-              data-cursor
-              data-cursor-text="ART"
-            >
+            <div className="relative mt-10 h-[380px] overflow-hidden border border-white/10">
               <img
                 src={missionImage}
                 alt="Tattoo artist working close-up"
@@ -375,11 +365,7 @@ function About() {
 
             {/* IMAGE 3 */}
 
-            <div
-              className="relative h-[280px] overflow-hidden border border-white/10"
-              data-cursor
-              data-cursor-text="TOOLS"
-            >
+            <div className="relative h-[280px] overflow-hidden border border-white/10">
               <img
                 src={toolsImage}
                 alt="Tattoo machine and equipment"
@@ -441,11 +427,7 @@ function About() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-16 items-center">
           {/* IMAGE 4 */}
 
-          <div
-            className="relative min-h-[600px] overflow-hidden border border-white/10"
-            data-cursor
-            data-cursor-text="JOURNEY"
-          >
+          <div className="relative min-h-[600px] overflow-hidden border border-white/10">
             <img
               src={artistImage}
               alt="Tattoo artist backstage"
@@ -595,8 +577,6 @@ function About() {
             structured environment in which technical ability, creativity,
             execution and artistic decisions can be evaluated.
           </p>
-
-         
         </div>
       </section>
 
@@ -663,8 +643,6 @@ function About() {
               <Link
                 to="/rules"
                 className="text-xs font-mono tracking-widest text-[#a855f7] hover:text-white uppercase"
-                data-cursor
-                data-cursor-text="RULES"
               >
                 VIEW COMPETITION RULES ↗
               </Link>

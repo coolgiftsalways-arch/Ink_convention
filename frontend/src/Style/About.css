@@ -1390,3 +1390,49 @@
                auto !important;
      }
 }
+
+/* =========================================================
+   CLEAN HERO IMAGE + NORMAL CURSOR
+   Removes the decorative purple orbit and special hover cursor
+========================================================= */
+.about-container {
+     cursor: default;
+}
+
+.about-container a,
+.about-container button {
+     cursor: pointer;
+}
+
+.about-container>section:nth-of-type(1) .about-hero-image {
+     transform: none !important;
+     overflow: hidden !important;
+     border-color: rgba(255, 255, 255, 0.10) !important;
+     box-shadow: 0 32px 90px rgba(0, 0, 0, 0.52) !important;
+}
+
+.about-container>section:nth-of-type(1) .about-hero-image:hover {
+     transform: none !important;
+}
+
+.about-container>section:nth-of-type(1) .about-hero-image::after {
+     content: none !important;
+     display: none !important;
+     animation: none !important;
+}
+
+.about-container>section:nth-of-type(1) .about-hero-image img {
+     filter: grayscale(0.72) contrast(1.08) brightness(0.78) !important;
+     transform: scale(1.01) !important;
+}
+
+.about-container>section:nth-of-type(1) .about-hero-image:hover img {
+     filter: grayscale(0.45) contrast(1.08) brightness(0.84) !important;
+     transform: scale(1.035) !important;
+}
+
+@media (max-width: 1024px) {
+     .about-container>section:nth-of-type(1) .about-hero-image {
+          transform: none !important;
+     }
+}
