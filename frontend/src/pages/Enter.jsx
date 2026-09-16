@@ -2071,7 +2071,7 @@ export default function Enter() {
 
         planName: request.requestedPlanName || selectedPlan.name,
 
-        amount: Number(request.requestedAmount) || requestedAmount,
+        amount: requestedAmount,
         pricingType: request.pricingType || "standard-membership",
       });
 
