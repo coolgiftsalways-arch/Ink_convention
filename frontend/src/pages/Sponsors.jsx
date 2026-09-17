@@ -644,46 +644,6 @@ export default function Sponsors() {
               Support the artists. Empower the community. Build meaningful
               visibility inside India&apos;s tattoo culture.
             </p>
-
-            <a
-              href="/contact"
-              className="
-                group
-                mt-8
-                inline-flex
-                w-fit
-                items-center
-                gap-4
-                rounded-full
-                border
-                border-purple-500/50
-                bg-purple-500/10
-                px-7
-                py-4
-                text-[9px]
-                font-black
-                uppercase
-                tracking-[0.2em]
-                text-purple-300
-                transition-all
-                duration-300
-
-                hover:bg-purple-600
-                hover:text-white
-                hover:shadow-[0_0_35px_rgba(168,85,247,0.25)]
-              "
-            >
-              Get In Touch
-              <ArrowUpRight
-                size={15}
-                className="
-                  transition-transform
-                  duration-300
-                  group-hover:translate-x-1
-                  group-hover:-translate-y-1
-                "
-              />
-            </a>
           </div>
         </div>
       </section>

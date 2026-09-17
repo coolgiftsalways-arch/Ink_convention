@@ -6,6 +6,6 @@
     "build": "npm --prefix frontend run build"
   },
   "dependencies": {
-    "react-simple-maps": "^3.0.0"
+    "react-simple-maps": "^5.0.5"
   }
 }
