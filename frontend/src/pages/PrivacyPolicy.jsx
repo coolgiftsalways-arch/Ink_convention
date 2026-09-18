@@ -27,20 +27,7 @@ function PrivacyPolicy() {
           TOP BAR
       ========================================== */}
 
-      <header className="privacy-topbar">
-        <Link to="/" className="privacy-logo">
-          INK<span>CONVENTION</span>
-        </Link>
-
-        <div className="privacy-nav-actions">
-          <Link to="/data-deletion">DATA DELETION</Link>
-
-          <Link to="/" className="privacy-back-btn">
-            BACK TO WEBSITE
-            <span>↗</span>
-          </Link>
-        </div>
-      </header>
+  
 
       {/* =========================================
           HERO
@@ -487,7 +474,90 @@ function PrivacyPolicy() {
             </p>
           </Accordion>
 
-          <Accordion number="10" title="Artist Profiles & Public Information">
+          <Accordion
+            number="10"
+            title="Stall Booking, Event Postponement & Refund Policy"
+          >
+            <p>
+              Stall bookings are made for participation in an Ink Convention
+              event and are subject to event schedules, venue availability,
+              permissions, safety requirements and operational conditions.
+            </p>
+
+            <p>
+              Ink Convention may postpone, reschedule, relocate or modify an
+              event when circumstances arise that are outside our reasonable
+              control.
+            </p>
+
+            <p>Such circumstances may include, without limitation:</p>
+
+            <ul>
+              <li>Severe weather, heavy rainfall or flooding</li>
+              <li>Fire, natural disasters or other emergencies</li>
+              <li>BMC or other municipal authority directions</li>
+              <li>Government, police or public authority orders</li>
+              <li>Venue-related issues or loss of venue availability</li>
+              <li>Safety, security or public-health concerns</li>
+              <li>Strikes, transport disruption or technical emergencies</li>
+              <li>
+                Any other force-majeure or circumstances beyond our control
+              </li>
+            </ul>
+
+            <div className="privacy-important">
+              <small>IMPORTANT</small>
+
+              <p>
+                If an event is postponed or rescheduled, a confirmed stall
+                booking will normally remain valid and will be transferred to
+                the rescheduled event date. The exhibitor will not normally be
+                required to pay the same stall booking amount again solely
+                because the event date has changed.
+              </p>
+            </div>
+
+            <p>
+              The rescheduled event may take place in the same month or on a
+              later date or month depending on venue availability, permissions,
+              safety conditions and operational requirements.
+            </p>
+
+            <p>
+              Payments will not normally be refunded solely because an event has
+              been postponed, rescheduled or moved to another suitable date,
+              subject to applicable law.
+            </p>
+
+            <p>
+              If reasonably necessary, Ink Convention may also change the venue
+              within the same city or to another suitable venue and will
+              communicate updated details to confirmed exhibitors.
+            </p>
+
+            <p>
+              If Ink Convention permanently cancels an event and does not
+              provide a replacement or rescheduled event, any applicable refund,
+              credit or adjustment will be communicated to affected stall
+              holders in accordance with the booking terms and applicable law.
+            </p>
+
+            <p>
+              Ink Convention will not normally be responsible for independent
+              third-party expenses such as travel, accommodation, transport,
+              staffing, merchandise preparation or other personal or business
+              costs arising from a postponement, rescheduling, relocation or
+              cancellation, except where required by applicable law.
+            </p>
+
+            <p>
+              By completing a stall booking, the exhibitor acknowledges that
+              event dates and venues may be subject to change and agrees to the
+              applicable stall booking terms.
+            </p>
+          </Accordion>
+
+          <Accordion number="11" title="Artist Profiles & Public Information">
             <p>
               Tattoo artists may voluntarily create profiles containing
               information such as artist name, studio name, profile photo,
@@ -501,7 +571,7 @@ function PrivacyPolicy() {
             </p>
           </Accordion>
 
-          <Accordion number="11" title="Automatically Collected Information">
+          <Accordion number="12" title="Automatically Collected Information">
             <p>
               When you visit InkConvention.com, we may automatically receive
               technical information such as:
@@ -521,7 +591,7 @@ function PrivacyPolicy() {
             </ul>
           </Accordion>
 
-          <Accordion number="12" title="Cookies & Analytics">
+          <Accordion number="13" title="Cookies & Analytics">
             <p>
               InkConvention.com may use cookies and similar technologies to
               maintain sessions, remember preferences, understand traffic,
@@ -535,7 +605,7 @@ function PrivacyPolicy() {
             </p>
           </Accordion>
 
-          <Accordion number="13" title="How We Share Information">
+          <Accordion number="14" title="How We Share Information">
             <p>Information may be shared with:</p>
 
             <ul>
@@ -561,7 +631,7 @@ function PrivacyPolicy() {
             </div>
           </Accordion>
 
-          <Accordion number="14" title="Data Retention">
+          <Accordion number="15" title="Data Retention">
             <p>
               We retain personal information only for as long as reasonably
               necessary to provide services, complete transactions, respond to
@@ -577,7 +647,7 @@ function PrivacyPolicy() {
           </Accordion>
 
           <div id="rights">
-            <Accordion number="15" title="User Data Deletion">
+            <Accordion number="16" title="User Data Deletion">
               <p>
                 Users may request deletion of personal information held by Ink
                 Convention, including eligible information received through Meta
@@ -602,7 +672,7 @@ function PrivacyPolicy() {
             </Accordion>
           </div>
 
-          <Accordion number="16" title="Your Rights & Choices">
+          <Accordion number="17" title="Your Rights & Choices">
             <p>
               Subject to applicable law, users may request access, modification,
               correction or deletion of eligible personal information.
@@ -625,7 +695,7 @@ function PrivacyPolicy() {
             </ul>
           </Accordion>
 
-          <Accordion number="17" title="Data Security">
+          <Accordion number="18" title="Data Security">
             <p>
               Ink Convention uses reasonable administrative, organisational and
               technical safeguards designed to protect information.
@@ -650,7 +720,7 @@ function PrivacyPolicy() {
             <p>No online system can be guaranteed to be completely secure.</p>
           </Accordion>
 
-          <Accordion number="18" title="Children">
+          <Accordion number="19" title="Children">
             <p>
               Where applicable law requires parental or guardian consent for a
               child's personal information, appropriate consent must be obtained
@@ -658,7 +728,7 @@ function PrivacyPolicy() {
             </p>
           </Accordion>
 
-          <Accordion number="19" title="International Processing">
+          <Accordion number="20" title="International Processing">
             <p>
               Some technology and communication providers, including Meta and
               WhatsApp, may use infrastructure located outside India.
@@ -670,7 +740,7 @@ function PrivacyPolicy() {
             </p>
           </Accordion>
 
-          <Accordion number="20" title="Third-Party Services">
+          <Accordion number="21" title="Third-Party Services">
             <p>
               InkConvention.com may contain links or integrations involving
               WhatsApp, Facebook, Instagram, payment providers, sponsors,
@@ -683,7 +753,7 @@ function PrivacyPolicy() {
             </p>
           </Accordion>
 
-          <Accordion number="21" title="Changes to This Privacy Policy">
+          <Accordion number="22" title="Changes to This Privacy Policy">
             <p>
               We may update this Privacy Policy when our services, Meta or
               WhatsApp integrations, legal requirements or service providers

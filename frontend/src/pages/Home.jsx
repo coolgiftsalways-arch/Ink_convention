@@ -204,6 +204,14 @@ function Home() {
               <ArrowRight size={16} strokeWidth={1.8} />
             </Link>
 
+            <Link
+              to="/stall-booking"
+              className="inkHero__button inkHero__button--stall"
+            >
+              <span>BOOK YOUR STALL NOW</span>
+              <ArrowRight size={16} strokeWidth={1.8} />
+            </Link>
+
             <Link to="/Enter" className="inkHero__button inkHero__button--dark">
               <span>JOIN DIRECTORY FREE</span>
               <ArrowRight size={16} strokeWidth={1.8} />
@@ -251,7 +259,7 @@ function Home() {
           className="inkMobileHero__title"
         />
 
-        {/* MAIN VISUAL SCENE */}
+        {/* MAIN VISUAL SCENE — mobile woman right + tattoo copy left */}
         <div className="inkMobileHero__scene">
           <div className="inkMobileHero__tattooArtist" aria-hidden="true">
             <img src={HERO_TATTOO} alt="" />
@@ -261,11 +269,38 @@ function Home() {
             <img src={HERO_GIRL} alt="Tattoo artist" />
           </div>
 
-          <img
-            src={HERO_MORE_THAN_INK}
-            alt="More Than Ink"
-            className="inkMobileHero__moreInk"
-          />
+          {/* MOBILE ONLY — tattoo-focused copy on the left */}
+          <div className="inkMobileHero__sideText">
+            <span className="inkMobileHero__sideKicker">
+              INDIA'S TATTOO CULTURE
+            </span>
+
+            <h2 className="inkMobileHero__sideHeading">
+              REAL ART.
+              <br />
+              REAL ARTISTS.
+              <br />
+              <em>ONE COMMUNITY.</em>
+            </h2>
+
+            <div className="inkMobileHero__sideDivider" aria-hidden="true" />
+
+            {/* MOBILE ONLY — upcoming event text link (not a button) */}
+            <Link
+              to="/upcoming"
+              className="inkMobileHero__eventLink"
+              aria-label="View upcoming Ink Convention event in Rajasthan"
+            >
+              <span className="inkMobileHero__eventLabel">UPCOMING EVENT</span>
+
+              <strong className="inkMobileHero__eventState">RAJASTHAN</strong>
+
+              <span className="inkMobileHero__eventDetails">
+                FIND ALL DETAILS • CLICK HERE
+                <ArrowRight size={13} strokeWidth={2} />
+              </span>
+            </Link>
+          </div>
 
           <div className="inkMobileHero__expo" aria-hidden="true">
             <img src={HERO_EXPO} alt="" />
@@ -290,6 +325,14 @@ function Home() {
             className="inkMobileHero__button inkMobileHero__button--purple"
           >
             <span>FIND YOUR ARTISTS</span>
+            <ArrowRight size={18} strokeWidth={1.8} />
+          </Link>
+
+          <Link
+            to="/stall-booking"
+            className="inkMobileHero__button inkMobileHero__button--stall"
+          >
+            <span>BOOK YOUR STALL NOW</span>
             <ArrowRight size={18} strokeWidth={1.8} />
           </Link>
 

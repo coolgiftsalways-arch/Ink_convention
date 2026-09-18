@@ -342,43 +342,6 @@ export default function Sponsors() {
                 />
               </button>
 
-              <a
-                href="/contact"
-                className="
-                  group
-                  inline-flex
-                  items-center
-                  justify-center
-                  gap-3
-                  rounded-full
-                  border
-                  border-white/15
-                  bg-black/20
-                  px-7
-                  py-4
-                  text-[9px]
-                  font-black
-                  uppercase
-                  tracking-[0.2em]
-                  backdrop-blur-xl
-                  transition-all
-                  duration-300
-
-                  hover:border-purple-500/60
-                  hover:bg-purple-500/10
-                "
-              >
-                Become A Sponsor
-                <ArrowUpRight
-                  size={14}
-                  className="
-                    transition-transform
-                    duration-300
-                    group-hover:translate-x-1
-                    group-hover:-translate-y-1
-                  "
-                />
-              </a>
             </div>
           </div>
 

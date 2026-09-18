@@ -11,6 +11,7 @@ import {
   Phone,
   Sparkles,
   Store,
+  Gift,
   User,
   Users,
 } from "lucide-react";
@@ -31,12 +32,13 @@ const STALL_PACKAGES = {
   3: {
     packageId: "3-days",
     packageName: "3 Days Stall",
-    packagePrice: 12499,
+    packagePrice: 12999,
     description: "Full three-day convention access",
   },
 };
 
-const ADVANCE_AMOUNT = 1499;
+const ADVANCE_AMOUNT = 1999;
+const GOLD_MEMBERSHIP_DISCOUNT = 999;
 
 const CONTACT_PHONE = "7039235169";
 const CONTACT_EMAIL = "info@inkconvention.com";
@@ -67,11 +69,7 @@ export default function StallBooking() {
   const [profileLoading, setProfileLoading] = useState(true);
 
   const makeBookingForm = (profile = {}, duration = "1") => ({
-    brandName:
-      profile.studio ||
-      profile.studioName ||
-      profile.brandName ||
-      "",
+    brandName: profile.studio || profile.studioName || profile.brandName || "",
 
     fullName:
       profile.name ||
@@ -173,7 +171,7 @@ export default function StallBooking() {
       cancelled = true;
     };
   }, [API_URL]);
-    /* =========================================================
+  /* =========================================================
      RETURN TO VERIFIED PROFILE AFTER SUCCESS
   ========================================================= */
 
@@ -284,9 +282,7 @@ export default function StallBooking() {
           state: String(verifiedProfile?.state || "").trim(),
           instagram: String(verifiedProfile?.instagram || "").trim(),
           currentPlan: String(
-            verifiedProfile?.plan ||
-              verifiedProfile?.membershipPlan ||
-              "",
+            verifiedProfile?.plan || verifiedProfile?.membershipPlan || "",
           ).trim(),
 
           // STALL OPTION
@@ -372,6 +368,9 @@ export default function StallBooking() {
       `Stall Option: ${selectedPackage.packageName} (₹${selectedPackage.packagePrice.toLocaleString(
         "en-IN",
       )})`,
+      `Offer: ₹${GOLD_MEMBERSHIP_DISCOUNT.toLocaleString(
+        "en-IN",
+      )} OFF Gold Membership after confirmed stall booking`,
       "",
       "Please help me with expo availability, stall details and the ₹1,499 advance process.",
     ];
@@ -558,6 +557,130 @@ export default function StallBooking() {
               your stall request first and our team will contact you to confirm
               availability, booking details and the ₹1,499 advance.
             </p>
+
+            {/* =================================================
+                LIMITED STALL + GOLD MEMBERSHIP OFFER
+            ================================================= */}
+
+            <div
+              className="
+                mx-auto
+                mt-7
+                max-w-3xl
+                rounded-2xl
+                border
+                border-[#a855f7]/45
+                bg-gradient-to-r
+                from-[#a855f7]/10
+                via-[#a855f7]/[0.06]
+                to-transparent
+                p-4
+                sm:p-5
+                text-left
+                shadow-[0_0_35px_rgba(168,85,247,0.08)]
+              "
+            >
+              <div
+                className="
+                  flex
+                  flex-col
+                  sm:flex-row
+                  sm:items-center
+                  sm:justify-between
+                  gap-4
+                "
+              >
+                <div className="flex items-start gap-3 min-w-0">
+                  <div
+                    className="
+                      shrink-0
+                      w-11
+                      h-11
+                      rounded-xl
+                      bg-[#a855f7]
+                      text-white
+                      flex
+                      items-center
+                      justify-center
+                      shadow-[0_0_28px_rgba(168,85,247,0.28)]
+                    "
+                  >
+                    <Gift size={20} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p
+                      className="
+                        text-[8px]
+                        sm:text-[9px]
+                        font-black
+                        font-mono
+                        uppercase
+                        tracking-[0.18em]
+                        text-[#c084fc]
+                      "
+                    >
+                      Exclusive Stall Booking Offer
+                    </p>
+
+                    <h3
+                      className="
+                        mt-1
+                        text-lg
+                        sm:text-xl
+                        font-black
+                        uppercase
+                        tracking-tight
+                        text-white
+                      "
+                    >
+                      Book Your Stall & Get ₹
+                      {GOLD_MEMBERSHIP_DISCOUNT.toLocaleString("en-IN")} OFF
+                      Gold Membership
+                    </h3>
+
+                    <p
+                      className="
+                        mt-1.5
+                        text-[11px]
+                        sm:text-xs
+                        leading-relaxed
+                        text-gray-500
+                      "
+                    >
+                      Once your stall booking is confirmed, you become eligible
+                      for an exclusive ₹
+                      {GOLD_MEMBERSHIP_DISCOUNT.toLocaleString("en-IN")}{" "}
+                      discount on your Gold Membership upgrade.
+                    </p>
+                  </div>
+                </div>
+
+                <span
+                  className="
+                    shrink-0
+                    self-start
+                    sm:self-center
+                    rounded-full
+                    border
+                    border-[#a855f7]/40
+                    bg-[#a855f7]/10
+                    px-3
+                    py-2
+                    text-[8px]
+                    sm:text-[9px]
+                    font-black
+                    font-mono
+                    uppercase
+                    tracking-[0.14em]
+                    text-[#c084fc]
+                    whitespace-nowrap
+                  "
+                >
+                  Save ₹{GOLD_MEMBERSHIP_DISCOUNT.toLocaleString("en-IN")}
+                </span>
+              </div>
+            </div>
 
             {/* EYE-GUIDING ARROW */}
 
@@ -787,7 +910,7 @@ export default function StallBooking() {
                   Our team will contact you within 24 hours
                 </h3>
                 <div
-  className="
+                  className="
     mx-auto
     mt-5
     max-w-md
@@ -799,16 +922,16 @@ export default function StallBooking() {
     py-3
     text-center
   "
->
-  <p className="text-[8px] font-mono font-black uppercase tracking-[0.16em] text-purple-400">
-    Returning to your profile
-  </p>
+                >
+                  <p className="text-[8px] font-mono font-black uppercase tracking-[0.16em] text-purple-400">
+                    Returning to your profile
+                  </p>
 
-  <p className="mt-2 text-sm font-bold text-white">
-    Redirecting in {redirectSeconds} second
-    {redirectSeconds === 1 ? "" : "s"}...
-  </p>
-</div>
+                  <p className="mt-2 text-sm font-bold text-white">
+                    Redirecting in {redirectSeconds} second
+                    {redirectSeconds === 1 ? "" : "s"}...
+                  </p>
+                </div>
 
                 <p
                   className="
@@ -830,7 +953,10 @@ export default function StallBooking() {
                   </span>{" "}
                   has been submitted successfully. Our team will contact you
                   within 24 hours to confirm expo availability, stall details
-                  and the ₹1,499 advance.
+                  and the ₹1,499 advance. Once your stall booking is confirmed,
+                  you will also be eligible for ₹
+                  {GOLD_MEMBERSHIP_DISCOUNT.toLocaleString("en-IN")} OFF your
+                  Gold Membership upgrade.
                 </p>
 
                 {bookingId && (
@@ -1299,6 +1425,51 @@ export default function StallBooking() {
               >
                 Select the duration that fits your exhibition plans.
               </p>
+
+              <div
+                className="
+                  mt-4
+                  rounded-xl
+                  border
+                  border-[#a855f7]/30
+                  bg-[#a855f7]/[0.07]
+                  px-4
+                  py-3
+                "
+              >
+                <div className="flex items-start gap-3">
+                  <Gift size={16} className="mt-0.5 shrink-0 text-[#c084fc]" />
+
+                  <div>
+                    <p
+                      className="
+                        text-[8px]
+                        font-mono
+                        font-black
+                        uppercase
+                        tracking-[0.15em]
+                        text-[#c084fc]
+                      "
+                    >
+                      Stall + Gold Offer
+                    </p>
+
+                    <p
+                      className="
+                        mt-1
+                        text-xs
+                        font-bold
+                        leading-relaxed
+                        text-white
+                      "
+                    >
+                      Confirm your stall booking and unlock ₹
+                      {GOLD_MEMBERSHIP_DISCOUNT.toLocaleString("en-IN")} OFF
+                      your Gold Membership upgrade.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-3">

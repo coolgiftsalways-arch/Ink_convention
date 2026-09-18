@@ -1,8 +1,191 @@
-/* ========================================
-   AWWWARDS CUSTOM CURSOR
-======================================== */
+/* =========================================================
+   CUSTOM CURSOR
+========================================================= */
 
-@media (pointer: fine) {
+.custom-cursor-ring {
+     position: fixed;
+
+     top: 0;
+     left: 0;
+
+     width: 54px;
+     height: 54px;
+
+     border: 1px solid #a855f7;
+
+     border-radius: 50%;
+
+     pointer-events: none;
+
+     z-index: 999999;
+
+     opacity: 0;
+
+     display: flex;
+     align-items: center;
+     justify-content: center;
+
+     color: white;
+
+     transition:
+          width 0.25s ease,
+          height 0.25s ease,
+          background-color 0.25s ease,
+          border-color 0.25s ease,
+          opacity 0.2s ease;
+
+     will-change: transform;
+}
+
+/* SHOW AFTER MOUSE MOVES */
+
+.custom-cursor-ring.is-visible {
+     opacity: 1;
+}
+
+
+/* =========================================================
+   CENTER DOT
+========================================================= */
+
+.custom-cursor-dot {
+     position: fixed;
+
+     top: 0;
+     left: 0;
+
+     width: 7px;
+     height: 7px;
+
+     border-radius: 50%;
+
+     background: #c084fc;
+
+     box-shadow:
+          0 0 8px rgba(192, 132, 252, 0.9),
+          0 0 18px rgba(168, 85, 247, 0.6);
+
+     pointer-events: none;
+
+     z-index: 1000000;
+
+     opacity: 0;
+
+     transition:
+          width 0.2s ease,
+          height 0.2s ease,
+          opacity 0.2s ease,
+          background-color 0.2s ease;
+
+     will-change: transform;
+}
+
+.custom-cursor-dot.is-visible {
+     opacity: 1;
+}
+
+
+/* =========================================================
+   HOVER
+========================================================= */
+
+.custom-cursor-ring.is-hovering {
+     width: 66px;
+     height: 66px;
+
+     border-color: #c084fc;
+
+     background:
+          rgba(168, 85, 247, 0.08);
+
+     box-shadow:
+          0 0 25px rgba(168, 85, 247, 0.15);
+}
+
+.custom-cursor-dot.is-hovering {
+     width: 5px;
+     height: 5px;
+
+     background: white;
+}
+
+
+/* =========================================================
+   CLICK
+========================================================= */
+
+.custom-cursor-ring.is-clicking {
+     width: 42px;
+     height: 42px;
+
+     background:
+          rgba(168, 85, 247, 0.18);
+}
+
+.custom-cursor-dot.is-clicking {
+     width: 10px;
+     height: 10px;
+}
+
+
+/* =========================================================
+   ARROW
+========================================================= */
+
+.cursor-arrow {
+     font-size: 15px;
+
+     color: #ffffff;
+
+     line-height: 1;
+
+     transform:
+          translateY(-1px) rotate(0deg);
+}
+
+
+/* =========================================================
+   CUSTOM TEXT
+========================================================= */
+
+.custom-cursor-ring.has-text {
+     width: 82px;
+     height: 82px;
+
+     padding: 8px;
+
+     background:
+          rgba(168, 85, 247, 0.14);
+
+     backdrop-filter: blur(8px);
+
+     border-color: #c084fc;
+}
+
+.cursor-text {
+     max-width: 62px;
+
+     text-align: center;
+
+     font-size: 8px;
+
+     font-weight: 800;
+
+     letter-spacing: 0.08em;
+
+     text-transform: uppercase;
+
+     line-height: 1.2;
+
+     color: #ffffff;
+}
+
+
+/* =========================================================
+   HIDE NORMAL CURSOR ON DESKTOP
+========================================================= */
+
+@media (hover: hover) and (pointer: fine) {
 
      html,
      body,
@@ -11,275 +194,17 @@
      input,
      textarea,
      select,
-     [data-cursor] {
+     [role="button"] {
           cursor: none !important;
      }
 }
 
-/* ========================================
-   OUTER RING
-======================================== */
 
-.custom-cursor-ring {
-     position: fixed;
+/* =========================================================
+   MOBILE / TOUCH
+========================================================= */
 
-     left: 0;
-     top: 0;
-
-     width: 42px;
-     height: 42px;
-
-     z-index: 999999;
-
-     display: flex;
-     align-items: center;
-     justify-content: center;
-
-     pointer-events: none;
-
-     border:
-          1px solid rgba(192, 132, 252, 0.8);
-
-     border-radius: 50%;
-
-     background:
-          rgba(168, 85, 247, 0.025);
-
-     backdrop-filter:
-          blur(2px);
-
-     box-shadow:
-          0 0 12px rgba(168, 85, 247, 0.18),
-          inset 0 0 12px rgba(168, 85, 247, 0.035);
-
-     will-change: transform;
-
-     transition:
-          width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-          height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-          background 0.35s ease,
-          border-color 0.35s ease,
-          box-shadow 0.35s ease,
-          opacity 0.2s ease;
-}
-
-/* little decorative line */
-
-.custom-cursor-ring::before {
-     content: "";
-
-     position: absolute;
-
-     width: 8px;
-     height: 1px;
-
-     right: -5px;
-
-     background:
-          #c084fc;
-
-     opacity: 0;
-
-     transition:
-          opacity 0.3s ease,
-          transform 0.3s ease;
-}
-
-/* ========================================
-   CENTER DOT
-======================================== */
-
-.custom-cursor-dot {
-     position: fixed;
-
-     left: 0;
-     top: 0;
-
-     width: 6px;
-     height: 6px;
-
-     z-index: 1000000;
-
-     pointer-events: none;
-
-     border-radius: 50%;
-
-     background:
-          #c084fc;
-
-     box-shadow:
-          0 0 8px #a855f7,
-          0 0 18px rgba(168, 85, 247, 0.65),
-          0 0 35px rgba(168, 85, 247, 0.3);
-
-     will-change: transform;
-
-     transition:
-          width 0.25s ease,
-          height 0.25s ease,
-          opacity 0.25s ease,
-          background 0.25s ease;
-}
-
-/* ========================================
-   HOVER
-======================================== */
-
-.custom-cursor-ring.is-hovering {
-     width: 72px;
-     height: 72px;
-
-     border-color:
-          rgba(192, 132, 252, 0.95);
-
-     background:
-          rgba(168, 85, 247, 0.075);
-
-     box-shadow:
-          0 0 20px rgba(168, 85, 247, 0.22),
-          0 0 55px rgba(168, 85, 247, 0.12),
-          inset 0 0 25px rgba(168, 85, 247, 0.06);
-}
-
-.custom-cursor-ring.is-hovering::before {
-     opacity: 1;
-
-     transform:
-          translateX(4px);
-}
-
-.custom-cursor-dot.is-hovering {
-     width: 4px;
-     height: 4px;
-
-     opacity: 0.7;
-}
-
-/* ========================================
-   CLICK
-======================================== */
-
-.custom-cursor-ring.is-clicking {
-     width: 58px;
-     height: 58px;
-
-     background:
-          rgba(168, 85, 247, 0.16);
-
-     border-color:
-          #c084fc;
-
-     box-shadow:
-          0 0 30px rgba(168, 85, 247, 0.4);
-}
-
-.custom-cursor-dot.is-clicking {
-     width: 10px;
-     height: 10px;
-
-     background: #fff;
-}
-
-/* ========================================
-   ARROW
-======================================== */
-
-.cursor-arrow {
-     color: #fff;
-
-     font-family:
-          Arial,
-          sans-serif;
-
-     font-size: 16px;
-
-     line-height: 1;
-
-     opacity: 0;
-
-     transform:
-          translate(-3px, 3px);
-
-     animation:
-          cursorArrowIn 0.35s forwards;
-}
-
-@keyframes cursorArrowIn {
-     to {
-          opacity: 1;
-
-          transform:
-               translate(0, 0);
-     }
-}
-
-/* ========================================
-   CUSTOM TEXT
-======================================== */
-
-.custom-cursor-ring.has-text {
-     width: 90px;
-     height: 90px;
-
-     background:
-          rgba(8, 8, 10, 0.72);
-
-     border-color:
-          rgba(192, 132, 252, 0.8);
-
-     backdrop-filter:
-          blur(12px);
-
-     box-shadow:
-          0 0 35px rgba(168, 85, 247, 0.2);
-}
-
-.cursor-text {
-     max-width: 65px;
-
-     color: white;
-
-     text-align: center;
-
-     font-size: 8px;
-
-     font-weight: 700;
-
-     line-height: 1.2;
-
-     letter-spacing: 1.4px;
-
-     text-transform: uppercase;
-}
-
-/* ========================================
-   SUBTLE PULSE
-======================================== */
-
-.custom-cursor-ring:not(.is-hovering) {
-     animation:
-          cursorPulse 2.5s ease-in-out infinite;
-}
-
-@keyframes cursorPulse {
-
-     0%,
-     100% {
-          box-shadow:
-               0 0 10px rgba(168, 85, 247, 0.12);
-     }
-
-     50% {
-          box-shadow:
-               0 0 23px rgba(168, 85, 247, 0.3);
-     }
-}
-
-/* ========================================
-   HIDE ON MOBILE / TOUCH
-======================================== */
-
-@media (pointer: coarse) {
+@media (hover: none) and (pointer: coarse) {
 
      .custom-cursor-ring,
      .custom-cursor-dot {
@@ -292,30 +217,7 @@
      button,
      input,
      textarea,
-     select,
-     [data-cursor] {
+     select {
           cursor: auto !important;
-     }
-}
-
-@media (max-width: 768px) {
-
-     .custom-cursor-ring,
-     .custom-cursor-dot {
-          display: none;
-     }
-}
-
-/* ========================================
-   ACCESSIBILITY
-======================================== */
-
-@media (prefers-reduced-motion: reduce) {
-     .custom-cursor-ring {
-          animation: none;
-
-          transition:
-               width 0.1s,
-               height 0.1s;
      }
 }

@@ -18,30 +18,53 @@ export default function CustomCursor() {
   const [hovering, setHovering] = useState(false);
   const [clicking, setClicking] = useState(false);
   const [cursorText, setCursorText] = useState("");
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // don't use custom cursor on touch/mobile
-    const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+    /*
+      IMPORTANT FIX:
+      Do NOT use:
+      "ontouchstart" in window
 
-    if (isTouch) return;
+      Some laptops support touch + mouse together.
+      We only disable the custom cursor when the device
+      actually uses a coarse pointer and has no hover.
+    */
+    const mobilePointer = window.matchMedia(
+      "(hover: none) and (pointer: coarse)",
+    ).matches;
+
+    if (mobilePointer) {
+      return;
+    }
 
     let animationFrame;
 
-    const moveCursor = (e) => {
-      mouse.current.x = e.clientX;
-      mouse.current.y = e.clientY;
+    /* =====================================================
+       MOVE CURSOR
+    ===================================================== */
+
+    const moveCursor = (event) => {
+      mouse.current.x = event.clientX;
+      mouse.current.y = event.clientY;
+
+      setVisible(true);
 
       if (dotRef.current) {
         dotRef.current.style.transform = `
           translate3d(
-            ${e.clientX}px,
-            ${e.clientY}px,
+            ${event.clientX}px,
+            ${event.clientY}px,
             0
           )
           translate(-50%, -50%)
         `;
       }
     };
+
+    /* =====================================================
+       SMOOTH OUTER RING
+    ===================================================== */
 
     const animateRing = () => {
       ring.current.x += (mouse.current.x - ring.current.x) * 0.14;
@@ -62,9 +85,21 @@ export default function CustomCursor() {
       animationFrame = requestAnimationFrame(animateRing);
     };
 
-    const handleMouseOver = (e) => {
-      const target = e.target.closest(
-        "a, button, [data-cursor], input, textarea, select",
+    /* =====================================================
+       INTERACTIVE ELEMENT HOVER
+    ===================================================== */
+
+    const handlePointerOver = (event) => {
+      const target = event.target.closest(
+        `
+          a,
+          button,
+          [data-cursor],
+          input,
+          textarea,
+          select,
+          [role="button"]
+        `,
       );
 
       if (!target) return;
@@ -73,52 +108,98 @@ export default function CustomCursor() {
 
       const text = target.getAttribute("data-cursor-text");
 
-      if (text) {
-        setCursorText(text);
-      }
+      setCursorText(text || "");
     };
 
-    const handleMouseOut = (e) => {
-      const target = e.target.closest(
-        "a, button, [data-cursor], input, textarea, select",
+    const handlePointerOut = (event) => {
+      const target = event.target.closest(
+        `
+          a,
+          button,
+          [data-cursor],
+          input,
+          textarea,
+          select,
+          [role="button"]
+        `,
       );
 
       if (!target) return;
+
+      /*
+        Prevent hover from resetting when moving
+        between children inside the same button/link.
+      */
+      if (event.relatedTarget && target.contains(event.relatedTarget)) {
+        return;
+      }
 
       setHovering(false);
       setCursorText("");
     };
 
-    const handleMouseDown = () => {
+    /* =====================================================
+       CLICK
+    ===================================================== */
+
+    const handlePointerDown = () => {
       setClicking(true);
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       setClicking(false);
     };
 
-    window.addEventListener("mousemove", moveCursor);
+    /* =====================================================
+       WINDOW LEAVE / ENTER
+    ===================================================== */
 
-    document.addEventListener("mouseover", handleMouseOver);
+    const handleLeave = () => {
+      setVisible(false);
+    };
 
-    document.addEventListener("mouseout", handleMouseOut);
+    const handleEnter = () => {
+      setVisible(true);
+    };
 
-    window.addEventListener("mousedown", handleMouseDown);
+    /* =====================================================
+       EVENTS
+    ===================================================== */
 
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("pointermove", moveCursor);
+
+    document.addEventListener("pointerover", handlePointerOver);
+
+    document.addEventListener("pointerout", handlePointerOut);
+
+    window.addEventListener("pointerdown", handlePointerDown);
+
+    window.addEventListener("pointerup", handlePointerUp);
+
+    document.addEventListener("mouseleave", handleLeave);
+
+    document.addEventListener("mouseenter", handleEnter);
 
     animationFrame = requestAnimationFrame(animateRing);
 
+    /* =====================================================
+       CLEANUP
+    ===================================================== */
+
     return () => {
-      window.removeEventListener("mousemove", moveCursor);
+      window.removeEventListener("pointermove", moveCursor);
 
-      document.removeEventListener("mouseover", handleMouseOver);
+      document.removeEventListener("pointerover", handlePointerOver);
 
-      document.removeEventListener("mouseout", handleMouseOut);
+      document.removeEventListener("pointerout", handlePointerOut);
 
-      window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("pointerdown", handlePointerDown);
 
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("pointerup", handlePointerUp);
+
+      document.removeEventListener("mouseleave", handleLeave);
+
+      document.removeEventListener("mouseenter", handleEnter);
 
       cancelAnimationFrame(animationFrame);
     };
@@ -126,10 +207,12 @@ export default function CustomCursor() {
 
   return (
     <>
+      {/* OUTER RING */}
       <div
         ref={ringRef}
         className={`
           custom-cursor-ring
+          ${visible ? "is-visible" : ""}
           ${hovering ? "is-hovering" : ""}
           ${clicking ? "is-clicking" : ""}
           ${cursorText ? "has-text" : ""}
@@ -140,10 +223,12 @@ export default function CustomCursor() {
         {!cursorText && hovering && <span className="cursor-arrow">↗</span>}
       </div>
 
+      {/* DOT */}
       <div
         ref={dotRef}
         className={`
           custom-cursor-dot
+          ${visible ? "is-visible" : ""}
           ${hovering ? "is-hovering" : ""}
           ${clicking ? "is-clicking" : ""}
         `}

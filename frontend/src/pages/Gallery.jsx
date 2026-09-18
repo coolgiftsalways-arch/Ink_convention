@@ -1,10 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Sparkles, X, User, ChevronRight, Play } from "lucide-react";
 
 import { Link } from "react-router-dom";
 
+import gsap from "gsap";
+import ScrollTrigger from "gsap/ScrollTrigger";
+
 import "../Style/Gallery.css";
+
+gsap.registerPlugin(ScrollTrigger);
 
 /* =========================================================
    PHOTOS
@@ -238,9 +243,261 @@ const FILTERS = ["ALL", "PHOTOS", "VIDEOS"];
 ========================================================= */
 
 function Gallery() {
+  const galleryHeroRef = useRef(null);
+
   const [activeFilter, setActiveFilter] = useState("ALL");
 
   const [selectedItem, setSelectedItem] = useState(null);
+
+  /* =========================================================
+     GALLERY HERO — GSAP + MOBILE SCROLL TRIGGER
+
+     DESKTOP / TABLET:
+     - 3 collage images fall immediately when page opens.
+
+     MOBILE:
+     - collage stays hidden while it is below the screen.
+     - when user scrolls down to the collage, the images
+       fall from the top ONE BY ONE.
+     - animation happens only once for that page visit.
+  ========================================================= */
+
+  useEffect(() => {
+    if (!galleryHeroRef.current) return undefined;
+
+    const mm = gsap.matchMedia();
+
+    const ctx = gsap.context(() => {
+      /* =====================================================
+         LEFT HERO — ALWAYS STARTS IMMEDIATELY
+      ===================================================== */
+
+      const heroTl = gsap.timeline({
+        defaults: {
+          ease: "power3.out",
+        },
+      });
+
+      heroTl
+        .fromTo(
+          ".galleryHero__badge",
+          {
+            opacity: 0,
+            y: 10,
+          },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.35,
+          },
+        )
+        .fromTo(
+          ".galleryHero__titleLine",
+          {
+            opacity: 0,
+            y: 34,
+            clipPath: "inset(100% 0 0 0)",
+          },
+          {
+            opacity: 1,
+            y: 0,
+            clipPath: "inset(0% 0 0 0)",
+            duration: 0.55,
+            stagger: 0.08,
+          },
+          "-=0.12",
+        )
+        .fromTo(
+          ".galleryHero__copy",
+          {
+            opacity: 0,
+            y: 10,
+          },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.35,
+            stagger: 0.05,
+          },
+          "-=0.28",
+        )
+        .fromTo(
+          ".galleryHero__stallCta",
+          {
+            opacity: 0,
+            y: 10,
+          },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.4,
+          },
+          "-=0.18",
+        );
+
+      /* =====================================================
+         FUNCTION — FALL 3 IMAGES ONE BY ONE
+      ===================================================== */
+
+      const playGalleryFall = () => {
+        const fallTl = gsap.timeline({
+          defaults: {
+            ease: "power3.out",
+          },
+        });
+
+        fallTl
+          .fromTo(
+            [".gallerySvg__fall1", ".gallerySvg__fall2", ".gallerySvg__fall3"],
+            {
+              opacity: 0,
+              y: -260,
+              scale: 0.94,
+              rotation: (index) => [-5, 4, -3][index % 3],
+              transformOrigin: "50% 50%",
+            },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              rotation: 0,
+              duration: 0.72,
+              stagger: 0.28,
+              ease: "back.out(1.25)",
+              clearProps: "transform",
+            },
+          )
+          .fromTo(
+            ".gallerySvg__line",
+            {
+              strokeDasharray: 900,
+              strokeDashoffset: 900,
+              opacity: 0,
+            },
+            {
+              strokeDashoffset: 0,
+              opacity: 0.85,
+              duration: 0.65,
+              stagger: 0.06,
+              ease: "power2.inOut",
+            },
+            "-=0.35",
+          )
+          .fromTo(
+            ".gallerySvg__label",
+            {
+              opacity: 0,
+              y: 8,
+            },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.3,
+              stagger: 0.05,
+            },
+            "-=0.22",
+          );
+
+        return fallTl;
+      };
+
+      /* =====================================================
+         DESKTOP / TABLET
+         Play immediately when page opens.
+      ===================================================== */
+
+      mm.add("(min-width: 768px)", () => {
+        playGalleryFall();
+      });
+
+      /* =====================================================
+         MOBILE ONLY
+         Wait until user scrolls to the collage.
+      ===================================================== */
+
+      mm.add("(max-width: 767px)", () => {
+        const fallCards = [
+          ".gallerySvg__fall1",
+          ".gallerySvg__fall2",
+          ".gallerySvg__fall3",
+        ];
+
+        /*
+          Start the cards above their final position.
+          User will not see them frozen before reaching this section.
+        */
+        gsap.set(fallCards, {
+          opacity: 0,
+          y: -220,
+          scale: 0.95,
+        });
+
+        gsap.set(".gallerySvg__line", {
+          strokeDasharray: 900,
+          strokeDashoffset: 900,
+          opacity: 0,
+        });
+
+        gsap.set(".gallerySvg__label", {
+          opacity: 0,
+          y: 8,
+        });
+
+        const mobileTrigger = ScrollTrigger.create({
+          trigger: ".gallerySvg__trigger",
+
+          /*
+            Animation starts when the top of the collage reaches
+            around 82% of the phone viewport.
+          */
+          start: "top 82%",
+
+          /*
+            IMPORTANT:
+            only once while this Gallery page is open.
+          */
+          once: true,
+
+          onEnter: () => {
+            playGalleryFall();
+          },
+        });
+
+        return () => {
+          mobileTrigger.kill();
+        };
+      });
+
+      /* =====================================================
+         SMALL PARTICLE MOTION
+         Cards themselves remain still after landing.
+      ===================================================== */
+
+      gsap.to(".gallerySvg__dot", {
+        opacity: 0.25,
+        scale: 0.8,
+        transformOrigin: "50% 50%",
+        duration: 2.2,
+        repeat: -1,
+        yoyo: true,
+        stagger: 0.18,
+        ease: "sine.inOut",
+      });
+    }, galleryHeroRef);
+
+    /*
+      Refresh after DOM/layout is ready.
+      Helpful on phone after navbar / images determine height.
+    */
+    requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
+    });
+
+    return () => {
+      mm.revert();
+      ctx.revert();
+    };
+  }, []);
 
   /* =========================================================
      FILTERING
@@ -280,44 +537,32 @@ function Gallery() {
       "
     >
       {/* =====================================================
-          TOP HERO
-          LEFT = GALLERY
-          RIGHT = 3 BUTTONS
+          TOP HERO — CINEMATIC TATTOO POSTER
       ===================================================== */}
 
       <section
+        ref={galleryHeroRef}
         className="
           relative
-
-          max-w-7xl
-
+          max-w-[1500px]
           mx-auto
-
           px-5
           sm:px-8
           lg:px-12
-
           pb-16
         "
       >
-        {/* PURPLE GLOW */}
-
+        {/* BIG AMBIENT LIGHT */}
         <div
           className="
             absolute
-
-            top-[-100px]
-            right-[-100px]
-
-            w-[500px]
-            h-[500px]
-
-            bg-[#a855f7]/10
-
-            blur-[150px]
-
+            -top-32
+            right-[-8%]
+            w-[720px]
+            h-[720px]
             rounded-full
-
+            bg-[#7e22ce]/10
+            blur-[150px]
             pointer-events-none
           "
         />
@@ -325,614 +570,372 @@ function Gallery() {
         <div
           className="
             relative
-            z-10
-
-            grid
-
-            grid-cols-1
-
-            lg:grid-cols-[minmax(0,1fr)_430px]
-
-            xl:grid-cols-[minmax(0,1fr)_480px]
-
-            gap-12
-            lg:gap-16
-
-            items-start
+            overflow-hidden
+            rounded-[30px]
+            border
+            border-white/[0.06]
+            bg-[#070709]
+            min-h-[650px]
+            lg:min-h-[680px]
+            shadow-[0_40px_140px_rgba(0,0,0,0.42)]
           "
         >
+          {/* subtle grid / texture */}
+          <div
+            className="
+              absolute
+              inset-0
+              opacity-[0.055]
+              pointer-events-none
+              [background-image:linear-gradient(rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px)]
+              [background-size:44px_44px]
+            "
+          />
+
+          <div
+            className="
+              absolute
+              inset-0
+              bg-gradient-to-r
+              from-[#060608]
+              via-[#08080a]/92
+              to-[#12091b]/86
+              pointer-events-none
+            "
+          />
+
           {/* =================================================
-              LEFT HERO
+              LEFT FADED TATTOO COLLAGE
           ================================================= */}
 
           <div
             className="
-              max-w-3xl
-
-              lg:pt-6
+              absolute
+              left-0
+              top-0
+              bottom-0
+              w-[16%]
+              hidden
+              lg:block
+              overflow-hidden
+              pointer-events-none
+              opacity-30
             "
           >
-            {/* BADGE */}
-
-            <div
+            <img
+              src={GAll6}
+              alt=""
               className="
-                inline-flex
-
-                items-center
-
-                gap-2
-
-                px-3.5
-                py-1.5
-
-                rounded-full
-
-                bg-purple-500/10
-
-                border
-                border-purple-500/20
-
-                text-[#a855f7]
-
-                text-[10px]
-                sm:text-xs
-
-                font-mono
-
-                uppercase
-
-                tracking-widest
+                absolute
+                inset-0
+                w-full
+                h-[56%]
+                object-cover
+                grayscale
+                contrast-125
+                brightness-50
+                [mask-image:linear-gradient(to_right,black,transparent)]
               "
-            >
-              <Sparkles size={13} />
-              INK CONVENTION GALLERY
-            </div>
+            />
 
-            {/* TITLE */}
-
-            <h1
+            <img
+              src={GAll20}
+              alt=""
               className="
-                mt-7
-
-                text-[clamp(3.8rem,8vw,7.5rem)]
-
-                font-black
-
-                tracking-[-0.075em]
-
-                text-white
-
-                uppercase
-
-                leading-[0.78]
+                absolute
+                left-0
+                bottom-0
+                w-full
+                h-[52%]
+                object-cover
+                grayscale
+                contrast-125
+                brightness-45
+                [mask-image:linear-gradient(to_right,black,transparent)]
               "
-            >
-              ART.
-              <br />
-              <span
-                className="
-                  text-[#a855f7]
-                "
-              >
-                IN MOTION.
-              </span>
-            </h1>
-
-            {/* DESCRIPTION */}
-
-            <p
-              className="
-                mt-8
-
-                max-w-xl
-
-                text-gray-400
-
-                text-sm
-                sm:text-lg
-
-                font-light
-
-                leading-relaxed
-              "
-            >
-              Explore photos and videos from Ink Convention artists, tattoo work
-              and moments from the community.
-            </p>
-
-            <p
-              className="
-                mt-5
-
-                text-[#a855f7]
-
-                text-[9px]
-
-                font-mono
-
-                tracking-[0.2em]
-
-                uppercase
-              "
-            >
-              PHOTOS • VIDEOS • ARTISTS • INK CONVENTION 2026
-            </p>
+            />
           </div>
 
           {/* =================================================
-              RIGHT SIDE CTA
+              MAIN LAYOUT
           ================================================= */}
 
           <div
             className="
               relative
-
-              w-full
-
-              bg-[#0c0c11]/80
-
-              backdrop-blur-xl
-
-              border
-              border-white/10
-
-              rounded-[26px]
-
-              p-5
-              sm:p-6
-
-              shadow-[0_30px_100px_rgba(0,0,0,0.35)]
+              z-10
+              grid
+              grid-cols-1
+              lg:grid-cols-[minmax(0,1.03fr)_minmax(440px,0.97fr)]
+              min-h-[650px]
+              lg:min-h-[680px]
             "
           >
-            {/* TOP */}
+            {/* =================================================
+                LEFT COPY
+            ================================================= */}
 
             <div
               className="
-                mb-6
-
-                pb-5
-
-                border-b
-                border-white/10
-              "
-            >
-              <p
-                className="
-                  text-[#a855f7]
-
-                  text-[8px]
-
-                  font-mono
-
-                  tracking-[0.22em]
-
-                  uppercase
-                "
-              >
-                INK CONVENTION 2026
-              </p>
-
-              <h2
-                className="
-                  mt-3
-
-                  text-2xl
-                  sm:text-3xl
-
-                  font-black
-
-                  tracking-[-0.04em]
-
-                  uppercase
-
-                  leading-[0.95]
-                "
-              >
-                BE PART OF THE
-                <br />
-                CONVENTION.
-              </h2>
-
-              <p
-                className="
-                  mt-4
-
-                  text-xs
-
-                  text-gray-500
-
-                  leading-relaxed
-                "
-              >
-                Choose how you want to participate.
-              </p>
-            </div>
-
-            {/*
-                BOOK STALL CTA REMOVED FOR NOW.
-                You can restore this section later when stall booking goes live.
-            */}
-
-            {/* =================================================
-                BUTTON 2
-                BOOK ARTISTS
-            ================================================= */}
-
-            <Link
-              to="/artists"
-              className="
-                group
-
                 relative
-
-                overflow-hidden
-
-                mt-4
-
-                w-full
-
-                min-h-[78px]
-
-                bg-[#a855f7]
-
-                hover:bg-[#9333ea]
-
-                text-white
-
-                rounded-2xl
-
-                px-5
-                py-4
-
                 flex
-
-                items-center
-
-                justify-between
-
-                gap-4
-
-                transition-all
-
-                duration-300
-
-                hover:-translate-y-1
-
-                shadow-[0_15px_45px_rgba(168,85,247,0.22)]
+                flex-col
+                justify-center
+                px-6
+                sm:px-10
+                lg:pl-16
+                lg:pr-4
+                py-12
+                lg:py-14
               "
             >
-              {/* SHINE */}
-
-              <span
-                className="
-                  absolute
-
-                  inset-y-0
-
-                  left-[-50%]
-
-                  w-[30%]
-
-                  bg-gradient-to-r
-
-                  from-transparent
-
-                  via-white/20
-
-                  to-transparent
-
-                  skew-x-[-20deg]
-
-                  group-hover:left-[130%]
-
-                  transition-all
-
-                  duration-700
-
-                  pointer-events-none
-                "
-              />
-
               <div
                 className="
-                  relative
-                  z-10
-
-                  text-left
-                "
-              >
-                <p
-                  className="
-                    text-[7px]
-
-                    font-mono
-
-                    tracking-[0.16em]
-
-                    text-white/60
-
-                    uppercase
-
-                    mb-1
-                  "
-                >
-                  02 / DISCOVER
-                </p>
-
-                <p
-                  className="
-                    text-[11px]
-
-                    font-black
-
-                    font-mono
-
-                    tracking-[0.08em]
-
-                    uppercase
-                  "
-                >
-                  BOOK ARTISTS
-                </p>
-              </div>
-
-              <div
-                className="
-                  relative
-                  z-10
-
-                  w-10
-                  h-10
-
-                  shrink-0
-
-                  bg-white
-
-                  text-[#a855f7]
-
-                  rounded-full
-
-                  flex
-
+                  galleryHero__badge
+                  inline-flex
+                  self-start
                   items-center
-
-                  justify-center
-
-                  transition-transform
-
-                  duration-300
-
-                  group-hover:translate-x-1
-                "
-              >
-                <ChevronRight size={17} />
-              </div>
-            </Link>
-
-            {/* DESCRIPTION */}
-
-            <div
-              className="
-                py-4
-                px-1
-
-                border-b
-                border-white/[0.06]
-              "
-            >
-              <p
-                className="
+                  gap-2
+                  px-3.5
+                  py-1.5
+                  rounded-full
+                  border
+                  border-[#a855f7]/30
+                  bg-[#a855f7]/10
+                  text-[#c084fc]
                   text-[9px]
-
+                  sm:text-[10px]
                   font-mono
-
-                  tracking-widest
-
-                  text-[#a855f7]
-
                   uppercase
+                  tracking-[0.18em]
                 "
               >
-                BOOK ARTISTS
-              </p>
+                <Sparkles size={13} />
+                INK CONVENTION GALLERY
+              </div>
+
+              <h1
+                className="
+                  mt-8
+                  uppercase
+                  font-black
+                  tracking-[-0.07em]
+                  leading-[0.78]
+                  text-white
+                "
+              >
+                <span
+                  className="
+                    galleryHero__titleLine
+                    block
+                    text-[clamp(4.4rem,7.2vw,7.8rem)]
+                  "
+                >
+                  ART.
+                </span>
+
+                <span
+                  className="
+                    galleryHero__titleLine
+                    block
+                    mt-2
+                    text-[clamp(4.0rem,6.8vw,7.1rem)]
+                    text-[#a855f7]
+                    drop-shadow-[0_0_32px_rgba(168,85,247,0.12)]
+                  "
+                >
+                  IN MOTION.
+                </span>
+              </h1>
 
               <p
                 className="
-                  mt-1.5
-
-                  text-[11px]
-
-                  text-gray-500
-
+                  galleryHero__copy
+                  mt-8
+                  max-w-xl
+                  text-sm
+                  sm:text-base
+                  lg:text-[17px]
+                  text-gray-400
+                  font-light
                   leading-relaxed
                 "
               >
-                Discover tattoo artists and book the right artist for your next
-                tattoo.
+                Explore photos and videos from Ink Convention artists, tattoo
+                work and moments from the community.
               </p>
-            </div>
 
-            {/* =================================================
-                BUTTON 3
-                FREE ENTRY
-            ================================================= */}
-
-            <Link
-              to="/Enter"
-              className="
-                group
-
-                relative
-
-                mt-4
-
-                w-full
-
-                min-h-[78px]
-
-                bg-[#111116]
-
-                hover:bg-[#a855f7]/10
-
-                border
-                border-[#a855f7]/60
-
-                hover:border-[#a855f7]
-
-                text-white
-
-                rounded-2xl
-
-                px-5
-                py-4
-
-                flex
-
-                items-center
-
-                justify-between
-
-                gap-4
-
-                transition-all
-
-                duration-300
-
-                hover:-translate-y-1
-              "
-            >
-              <div
+              <p
                 className="
-                  text-left
+                  galleryHero__copy
+                  mt-5
+                  text-[#a855f7]
+                  text-[8px]
+                  sm:text-[9px]
+                  font-mono
+                  tracking-[0.20em]
+                  uppercase
                 "
               >
-                <div
+                PHOTOS • VIDEOS • ARTISTS • INK CONVENTION 2026
+              </p>
+
+              {/* STALL CTA */}
+              <Link
+                to="/stall-booking"
+                className="
+                  galleryHero__stallCta
+                  group
+                  relative
+                  mt-8
+                  w-full
+                  max-w-[760px]
+                  min-h-[74px]
+                  overflow-hidden
+                  rounded-2xl
+                  border
+                  border-[#a855f7]/60
+                  bg-gradient-to-r
+                  from-[#111116]
+                  via-[#15101d]
+                  to-[#241039]
+                  px-5
+                  sm:px-6
+                  flex
+                  items-center
+                  justify-between
+                  gap-4
+                  transition-all
+                  duration-300
+                  hover:-translate-y-1
+                  hover:border-[#c084fc]
+                  shadow-[0_16px_45px_rgba(168,85,247,0.10)]
+                  hover:shadow-[0_20px_60px_rgba(168,85,247,0.20)]
+                "
+              >
+                <span
                   className="
-                    flex
-
-                    items-center
-
-                    gap-2
-
-                    mb-1
+                    absolute
+                    inset-y-0
+                    left-[-50%]
+                    w-[24%]
+                    bg-gradient-to-r
+                    from-transparent
+                    via-white/15
+                    to-transparent
+                    skew-x-[-20deg]
+                    group-hover:left-[130%]
+                    transition-all
+                    duration-700
+                    pointer-events-none
                   "
-                >
+                />
+
+                <div className="relative z-10 flex items-center gap-4 min-w-0">
                   <span
                     className="
-                      w-1.5
-                      h-1.5
-
+                      w-2
+                      h-2
                       rounded-full
-
                       bg-[#a855f7]
-
-                      animate-pulse
-
-                      shadow-[0_0_10px_rgba(168,85,247,1)]
+                      shadow-[0_0_14px_rgba(168,85,247,1)]
+                      shrink-0
                     "
                   />
 
-                  <p
-                    className="
-                      text-[7px]
+                  <div>
+                    <p
+                      className="
+                        text-[7px]
+                        sm:text-[8px]
+                        font-mono
+                        tracking-[0.18em]
+                        text-[#c084fc]
+                        uppercase
+                        mb-1
+                      "
+                    >
+                      01 / EXHIBIT AT INK CONVENTION
+                    </p>
 
-                      font-mono
-
-                      tracking-[0.16em]
-
-                      text-[#a855f7]
-
-                      uppercase
-                    "
-                  >
-                    03 / JOIN
-                  </p>
+                    <p
+                      className="
+                        text-[11px]
+                        sm:text-[13px]
+                        font-black
+                        font-mono
+                        tracking-[0.07em]
+                        uppercase
+                        text-white
+                        whitespace-nowrap
+                      "
+                    >
+                      BOOK YOUR STALL NOW
+                    </p>
+                  </div>
                 </div>
 
-                <p
+                <div
                   className="
-                    text-[11px]
-
-                    font-black
-
-                    font-mono
-
-                    tracking-[0.1em]
-
-                    uppercase
+                    relative
+                    z-10
+                    w-11
+                    h-11
+                    shrink-0
+                    rounded-full
+                    bg-[#a855f7]
+                    text-white
+                    flex
+                    items-center
+                    justify-center
+                    transition-all
+                    duration-300
+                    group-hover:translate-x-1
+                    group-hover:scale-105
+                    shadow-[0_10px_28px_rgba(168,85,247,0.28)]
                   "
                 >
-                  GET A FREE ENTRY
-                </p>
-              </div>
-
-              <div
-                className="
-                  w-10
-                  h-10
-
-                  shrink-0
-
-                  bg-[#a855f7]
-
-                  text-white
-
-                  rounded-full
-
-                  flex
-
-                  items-center
-
-                  justify-center
-
-                  transition-transform
-
-                  duration-300
-
-                  group-hover:translate-x-1
-                "
-              >
-                <ChevronRight size={17} />
-              </div>
-            </Link>
-
-            {/* DESCRIPTION */}
-
-            <div
-              className="
-                pt-4
-                px-1
-              "
-            >
-              <p
-                className="
-                  text-[9px]
-
-                  font-mono
-
-                  tracking-widest
-
-                  text-[#a855f7]
-
-                  uppercase
-                "
-              >
-                FREE ARTIST ENTRY
-              </p>
+                  <ChevronRight size={18} />
+                </div>
+              </Link>
 
               <p
                 className="
-                  mt-1.5
-
-                  text-[11px]
-
+                  galleryHero__copy
+                  mt-3
+                  max-w-[760px]
+                  text-[10px]
+                  sm:text-[11px]
                   text-gray-500
-
                   leading-relaxed
                 "
               >
-                Create your artist profile and start with the free plan.
+                Reserve your space at an upcoming Ink Convention expo and
+                showcase your work to artists, clients and the tattoo community.
               </p>
+            </div>
+
+            {/* =================================================
+                RIGHT — SVG TATTOO ASSEMBLY
+                Snake-like ink lines join and become an ornate clock tattoo.
+            ================================================= */}
+
+            <div
+              className="
+                gallerySvg__trigger
+                relative
+                min-h-[390px]
+                sm:min-h-[450px]
+                lg:min-h-full
+                overflow-hidden
+                border-t
+                lg:border-t-0
+                lg:border-l
+                border-white/[0.05]
+                bg-[#030304]
+              "
+            >
+              <GalleryCollageSvg />
             </div>
           </div>
         </div>
@@ -952,13 +955,14 @@ function Gallery() {
           mb-12
         "
       >
+        {/* FILTER BUTTONS — ALWAYS ONE HORIZONTAL ROW */}
         <div
           className="
-            flex
-            items-center
-            justify-end
+            grid
+            grid-cols-3
             gap-2
-            flex-wrap
+            sm:gap-3
+            w-full
           "
         >
           {FILTERS.map((filter) => {
@@ -970,33 +974,40 @@ function Gallery() {
                 type="button"
                 onClick={() => setActiveFilter(filter)}
                 className={`
-                  min-w-[105px]
-                  lg:min-w-[125px]
-                  px-3
-                  sm:px-6
+                  w-full
+                  min-w-0
+                  px-2
+                  sm:px-5
                   py-3.5
+                  sm:py-4
                   rounded-xl
                   text-[9px]
                   sm:text-xs
                   font-black
                   font-mono
                   uppercase
-                  tracking-[0.12em]
+                  tracking-[0.10em]
+                  sm:tracking-[0.12em]
+                  whitespace-nowrap
                   transition-all
                   duration-300
+
                   ${
                     active
                       ? `
                           bg-[#a855f7]
                           text-white
+                          border
+                          border-[#a855f7]
                           shadow-[0_0_25px_rgba(168,85,247,0.28)]
                         `
                       : `
                           bg-white/[0.04]
                           border
-                          border-white/[0.06]
+                          border-white/[0.08]
                           text-gray-500
                           hover:text-white
+                          hover:border-[#a855f7]/35
                           hover:bg-white/[0.08]
                         `
                   }
@@ -1466,6 +1477,393 @@ function Gallery() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* =========================================================
+   GALLERY COLLAGE SVG
+   Real gallery images inside animated SVG frames.
+   No video file required.
+========================================================= */
+
+function GalleryCollageSvg() {
+  return (
+    <div
+      className="
+        absolute
+        inset-0
+        overflow-hidden
+        bg-[#030304]
+        flex
+        items-center
+        justify-center
+      "
+    >
+      {/* subtle ambient purple */}
+      <div
+        className="
+          absolute
+          right-[8%]
+          top-[14%]
+          w-[68%]
+          aspect-square
+          rounded-full
+          bg-[#a855f7]/10
+          blur-[120px]
+          pointer-events-none
+        "
+      />
+
+      <svg
+        viewBox="0 0 760 680"
+        className="
+          relative
+          z-20
+          w-[92%]
+          h-[92%]
+          max-w-[720px]
+          overflow-visible
+        "
+        aria-label="Animated Ink Convention gallery collage"
+      >
+        <defs>
+          <clipPath id="galleryClipMain">
+            <rect x="235" y="125" width="290" height="380" rx="26" />
+          </clipPath>
+
+          <clipPath id="galleryClipLeft">
+            <rect x="85" y="255" width="190" height="250" rx="20" />
+          </clipPath>
+
+          <clipPath id="galleryClipRight">
+            <rect x="500" y="220" width="175" height="230" rx="20" />
+          </clipPath>
+
+          <linearGradient id="galleryFrameStroke" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
+            <stop offset="38%" stopColor="#c084fc" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#7e22ce" stopOpacity="0.35" />
+          </linearGradient>
+
+          <filter id="galleryGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* =====================================================
+            DECORATIVE DRAWING LINES
+        ===================================================== */}
+
+        <path
+          className="gallerySvg__line"
+          d="M58 154
+             C167 88 270 82 360 117
+             C464 158 548 145 694 76"
+          fill="none"
+          stroke="#a855f7"
+          strokeOpacity="0.38"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+
+        <path
+          className="gallerySvg__line"
+          d="M74 580
+             C196 628 314 619 401 580
+             C500 536 598 538 696 592"
+          fill="none"
+          stroke="url(#galleryFrameStroke)"
+          strokeOpacity="0.50"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+
+        {/* =====================================================
+            LEFT SMALL FRAME
+        ===================================================== */}
+
+        <g
+          className="
+            gallerySvg__frame
+            gallerySvg__sideFrameA
+            gallerySvg__fall1
+          "
+        >
+          <rect
+            x="76"
+            y="246"
+            width="208"
+            height="268"
+            rx="24"
+            fill="#08080b"
+            stroke="#a855f7"
+            strokeOpacity="0.42"
+            strokeWidth="2"
+          />
+
+          <image
+            href={GAll20}
+            x="85"
+            y="255"
+            width="190"
+            height="250"
+            preserveAspectRatio="xMidYMid slice"
+            clipPath="url(#galleryClipLeft)"
+            opacity="0.72"
+          />
+
+          <rect
+            x="85"
+            y="255"
+            width="190"
+            height="250"
+            rx="20"
+            fill="none"
+            stroke="#ffffff"
+            strokeOpacity="0.10"
+          />
+
+          <text
+            x="98"
+            y="493"
+            fill="#c084fc"
+            fontSize="8"
+            fontFamily="monospace"
+            letterSpacing="2"
+          >
+            02 / TATTOO
+          </text>
+        </g>
+
+        {/* =====================================================
+            MAIN FRAME
+        ===================================================== */}
+
+        <g
+          className="
+            gallerySvg__frame
+            gallerySvg__mainFrame
+            gallerySvg__fall2
+          "
+        >
+          <rect
+            x="222"
+            y="111"
+            width="316"
+            height="408"
+            rx="31"
+            fill="#08080b"
+            stroke="url(#galleryFrameStroke)"
+            strokeWidth="2.2"
+            filter="url(#galleryGlow)"
+          />
+
+          <image
+            href={GAll44}
+            x="235"
+            y="125"
+            width="290"
+            height="380"
+            preserveAspectRatio="xMidYMid slice"
+            clipPath="url(#galleryClipMain)"
+            opacity="0.90"
+          />
+
+          <rect
+            x="235"
+            y="125"
+            width="290"
+            height="380"
+            rx="26"
+            fill="none"
+            stroke="#ffffff"
+            strokeOpacity="0.14"
+          />
+
+          {/* subtle dark lower gradient effect */}
+          <rect
+            x="235"
+            y="388"
+            width="290"
+            height="117"
+            rx="0"
+            fill="#050507"
+            fillOpacity="0.28"
+          />
+
+          <text
+            x="252"
+            y="485"
+            fill="#ffffff"
+            fillOpacity="0.88"
+            fontSize="15"
+            fontWeight="700"
+            fontFamily="monospace"
+            letterSpacing="2"
+          >
+            INK IN MOTION
+          </text>
+
+          <text
+            x="252"
+            y="503"
+            fill="#a855f7"
+            fontSize="7"
+            fontFamily="monospace"
+            letterSpacing="3"
+          >
+            INK CONVENTION 2026
+          </text>
+        </g>
+
+        {/* =====================================================
+            RIGHT SMALL FRAME
+        ===================================================== */}
+
+        <g
+          className="
+            gallerySvg__frame
+            gallerySvg__sideFrameB
+            gallerySvg__fall3
+          "
+        >
+          <rect
+            x="490"
+            y="210"
+            width="195"
+            height="250"
+            rx="24"
+            fill="#08080b"
+            stroke="#a855f7"
+            strokeOpacity="0.48"
+            strokeWidth="2"
+          />
+
+          <image
+            href={GAll33}
+            x="500"
+            y="220"
+            width="175"
+            height="230"
+            preserveAspectRatio="xMidYMid slice"
+            clipPath="url(#galleryClipRight)"
+            opacity="0.72"
+          />
+
+          <rect
+            x="500"
+            y="220"
+            width="175"
+            height="230"
+            rx="20"
+            fill="none"
+            stroke="#ffffff"
+            strokeOpacity="0.10"
+          />
+
+          <text
+            x="515"
+            y="438"
+            fill="#c084fc"
+            fontSize="8"
+            fontFamily="monospace"
+            letterSpacing="2"
+          >
+            03 / ARTIST
+          </text>
+        </g>
+
+        {/* =====================================================
+            SMALL GALLERY DETAILS
+        ===================================================== */}
+
+        <g className="gallerySvg__label">
+          <text
+            x="70"
+            y="112"
+            fill="#ffffff"
+            fillOpacity="0.42"
+            fontSize="8"
+            fontFamily="monospace"
+            letterSpacing="4"
+          >
+            CURATED MOMENTS
+          </text>
+
+          <text
+            x="550"
+            y="552"
+            fill="#ffffff"
+            fillOpacity="0.38"
+            fontSize="8"
+            fontFamily="monospace"
+            letterSpacing="3"
+          >
+            ART • PEOPLE • INK
+          </text>
+
+          <text
+            x="338"
+            y="590"
+            textAnchor="middle"
+            fill="#a855f7"
+            fontSize="9"
+            fontFamily="monospace"
+            letterSpacing="5"
+          >
+            GALLERY
+          </text>
+        </g>
+
+        {/* dots / particles */}
+        <g fill="#c084fc" filter="url(#galleryGlow)">
+          <circle className="gallerySvg__dot" cx="114" cy="183" r="3" />
+          <circle className="gallerySvg__dot" cx="174" cy="111" r="2" />
+          <circle className="gallerySvg__dot" cx="609" cy="121" r="3.2" />
+          <circle className="gallerySvg__dot" cx="678" cy="176" r="2.2" />
+          <circle className="gallerySvg__dot" cx="612" cy="524" r="2.8" />
+          <circle className="gallerySvg__dot" cx="160" cy="556" r="2.5" />
+        </g>
+      </svg>
+
+      {/* top-right micro copy */}
+      <div
+        className="
+          absolute
+          z-30
+          top-7
+          right-7
+          text-right
+          pointer-events-none
+        "
+      >
+        <p
+          className="
+            text-[7px]
+            font-mono
+            tracking-[0.30em]
+            text-white/35
+            uppercase
+          "
+        >
+          STORIES IN INK
+        </p>
+
+        <div
+          className="
+            mt-3
+            ml-auto
+            w-10
+            h-px
+            bg-[#a855f7]/60
+          "
+        />
+      </div>
     </div>
   );
 }

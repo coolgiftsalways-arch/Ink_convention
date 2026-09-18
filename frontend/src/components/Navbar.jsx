@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import gsap from "gsap";
 import "../Style/Navbar.css";
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [expoOpen, setExpoOpen] = useState(false);
-  const [mobileExpoOpen, setMobileExpoOpen] = useState(false);
 
+  const location = useLocation();
   const mobileMenuRef = useRef(null);
+
+  const isExpoRoute =
+    location.pathname === "/upcoming" ||
+    location.pathname.startsWith("/upcoming/") ||
+    location.pathname === "/competition" ||
+    location.pathname.startsWith("/competition/");
 
   /* =========================================================
      MENU
@@ -22,8 +27,6 @@ function Navbar() {
 
   const closeMenu = () => {
     setIsOpen(false);
-    setExpoOpen(false);
-    setMobileExpoOpen(false);
   };
 
   /* =========================================================
@@ -129,24 +132,6 @@ function Navbar() {
     );
   }, [isOpen]);
 
-  /* =========================================================
-     CLOSE DESKTOP EXPO WHEN CLICKING OUTSIDE
-  ========================================================= */
-
-  useEffect(() => {
-    const handleWindowClick = (event) => {
-      if (!event.target.closest("[data-expo-dropdown]")) {
-        setExpoOpen(false);
-      }
-    };
-
-    window.addEventListener("click", handleWindowClick);
-
-    return () => {
-      window.removeEventListener("click", handleWindowClick);
-    };
-  }, []);
-
   return (
     <nav
       className={`
@@ -237,141 +222,38 @@ function Navbar() {
               About
             </NavLink>
 
-            {/* =================================================
-                EXPO 2026
-            ================================================= */}
+            {/* EXPO 2026 — DIRECT LINK, NO DROPDOWN */}
 
-            <div className="relative" data-expo-dropdown>
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setExpoOpen((prev) => !prev);
-                }}
-                className={`
-                  relative
-                  py-2
-                  flex
-                  items-center
-                  gap-1.5
-                  text-gray-300
-                  hover:text-white
-                  transition-all
-                  duration-300
+            <NavLink
+              to="/upcoming"
+              className={() => `
+                relative
+                py-2
+                transition-all
+                duration-300
 
-                  after:content-['']
-                  after:absolute
-                  after:left-0
-                  after:-bottom-1
-                  after:h-[2px]
-                  after:rounded-full
-                  after:bg-[#a855f7]
-                  after:transition-all
-                  after:duration-300
+                after:content-['']
+                after:absolute
+                after:left-0
+                after:-bottom-1
+                after:h-[2px]
+                after:rounded-full
+                after:bg-[#a855f7]
+                after:transition-all
+                after:duration-300
 
-                  ${
-                    expoOpen
-                      ? "text-white after:w-full"
-                      : "after:w-0 hover:after:w-full"
-                  }
-                `}
-                aria-expanded={expoOpen}
-                aria-haspopup="menu"
-              >
-                <span>Expo 2026</span>
+                hover:text-white
+                hover:after:w-full
 
-                <ChevronDown
-                  size={14}
-                  className={`
-                    transition-transform
-                    duration-300
-
-                    ${expoOpen ? "rotate-180" : ""}
-                  `}
-                />
-              </button>
-
-              {/* EXPO DROPDOWN */}
-
-              {expoOpen && (
-                <div
-                  className="
-                    absolute
-                    top-[calc(100%+14px)]
-                    left-1/2
-                    -translate-x-1/2
-                    w-64
-                    rounded-2xl
-                    border
-                    border-white/10
-                    bg-[#08080a]/95
-                    backdrop-blur-xl
-                    shadow-2xl
-                    shadow-black/50
-                    p-2
-                    z-[70]
-                  "
-                  role="menu"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {/* UPCOMING EXPO = 01 */}
-
-                  <NavLink
-                    to="/upcoming"
-                    onClick={() => setExpoOpen(false)}
-                    className="
-                      group
-                      flex
-                      items-center
-                      justify-between
-                      rounded-xl
-                      px-4
-                      py-3
-                      text-[11px]
-                      font-mono
-                      uppercase
-                      tracking-wider
-                      text-gray-300
-                      hover:text-white
-                      hover:bg-white/[0.06]
-                      transition
-                    "
-                  >
-                    <span>Upcoming Expo</span>
-
-                    <span className="text-[#a855f7]">01</span>
-                  </NavLink>
-
-                  {/* COMPETITION = 02 */}
-
-                  <NavLink
-                    to="/competition"
-                    onClick={() => setExpoOpen(false)}
-                    className="
-                      group
-                      flex
-                      items-center
-                      justify-between
-                      rounded-xl
-                      px-4
-                      py-3
-                      text-[11px]
-                      font-mono
-                      uppercase
-                      tracking-wider
-                      text-gray-300
-                      hover:text-white
-                      hover:bg-white/[0.06]
-                      transition
-                    "
-                  >
-                    <span>Competition</span>
-
-                    <span className="text-[#a855f7]">02</span>
-                  </NavLink>
-                </div>
-              )}
-            </div>
+                ${
+                  isExpoRoute
+                    ? "text-white after:w-full"
+                    : "text-gray-300 after:w-0"
+                }
+              `}
+            >
+              Expo 2026
+            </NavLink>
 
             {/* GALLERY */}
 
@@ -562,112 +444,39 @@ function Navbar() {
               <span className="text-xs font-mono text-gray-500">02</span>
             </NavLink>
 
-            {/* =================================================
-                EXPO 2026 MOBILE
-            ================================================= */}
+            {/* EXPO 2026 — DIRECT LINK, NO DROPDOWN */}
 
-            <div className="border-b border-white/5 pb-2">
-              <button
-                type="button"
-                onClick={() => setMobileExpoOpen((prev) => !prev)}
-                className="
-                  w-full
-                  relative
-                  py-2
-                  flex
-                  items-center
-                  justify-between
-                  text-white
-                  hover:text-[#a855f7]
-                  transition-all
-                  duration-300
-                "
-              >
-                <span className="flex items-center gap-2">
-                  Expo 2026
-                  <ChevronDown
-                    size={18}
-                    className={`
-                      transition-transform
-                      duration-300
+            <NavLink
+              to="/upcoming"
+              onClick={closeMenu}
+              className={() => `
+                relative
+                py-2
+                transition-all
+                duration-300
+                flex
+                items-center
+                justify-between
 
-                      ${mobileExpoOpen ? "rotate-180 text-[#a855f7]" : ""}
-                    `}
-                  />
-                </span>
+                after:content-['']
+                after:absolute
+                after:left-0
+                after:bottom-0
+                after:h-[2px]
+                after:bg-[#a855f7]
+                after:transition-all
+                after:duration-300
 
-                <span className="text-xs font-mono text-gray-500">03</span>
-              </button>
-
-              {/* MOBILE EXPO DROPDOWN */}
-
-              {mobileExpoOpen && (
-                <div
-                  className="
-                    mt-2
-                    ml-3
-                    pl-4
-                    border-l
-                    border-[#a855f7]/30
-                    space-y-1
-                  "
-                >
-                  {/* UPCOMING = 01 */}
-
-                  <NavLink
-                    to="/upcoming"
-                    onClick={closeMenu}
-                    className="
-                      flex
-                      items-center
-                      justify-between
-                      rounded-lg
-                      px-3
-                      py-2.5
-                      text-sm
-                      font-mono
-                      uppercase
-                      tracking-wider
-                      text-gray-400
-                      hover:text-white
-                      hover:bg-white/[0.05]
-                      transition
-                    "
-                  >
-                    <span>Upcoming Expo</span>
-
-                    <span className="text-[#a855f7] text-[10px]">01</span>
-                  </NavLink>
-
-                  {/* COMPETITION = 02 */}
-
-                  <NavLink
-                    to="/competition"
-                    onClick={closeMenu}
-                    className="
-                      flex
-                      items-center
-                      justify-between
-                      rounded-lg
-                      px-3
-                      py-2.5
-                      text-sm
-                      font-mono
-                      uppercase
-                      tracking-wider
-                      text-gray-400
-                      hover:text-white
-                      hover:bg-white/[0.05]
-                      transition
-                    "
-                  >
-                    <span>Competition</span>
-
-                    <span className="text-[#a855f7] text-[10px]">02</span>
-                  </NavLink>
-                </div>
-              )}
-            </div>
+                ${
+                  isExpoRoute
+                    ? "text-[#a855f7] after:w-full"
+                    : "text-white after:w-0 hover:text-[#a855f7]"
+                }
+              `}
+            >
+              <span>Expo 2026</span>
+              <span className="text-xs font-mono text-gray-500">03</span>
+            </NavLink>
 
             {/* GALLERY */}
 
