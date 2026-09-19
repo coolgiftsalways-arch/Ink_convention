@@ -555,7 +555,7 @@ export default function StallBooking() {
               Secure exhibition space for your tattoo studio, creative setup or
               industry brand at an upcoming Ink Convention regional expo. Submit
               your stall request first and our team will contact you to confirm
-              availability, booking details and the ₹1,499 advance.
+              availability, booking details and the ₹1,999 advance.
             </p>
 
             {/* =================================================

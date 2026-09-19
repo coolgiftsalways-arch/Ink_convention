@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -20,6 +20,13 @@ import {
   ShieldCheck,
   ArrowUpRight,
   Play,
+  Eye,
+  Crown,
+  Handshake,
+  Camera,
+  BarChart3,
+  X,
+  ArrowRight,
 } from "lucide-react";
 
 import "../Style/About.css";
@@ -153,151 +160,579 @@ function About() {
     },
   ];
 
+  const exhibitBenefits = [
+    {
+      number: "01",
+      icon: Eye,
+      title: "VISIBILITY",
+      text: "Put your art in front of thousands of real tattoo lovers.",
+      tone: "purple",
+      modalTitle: "PUT YOUR ART WHERE PEOPLE CAN SEE IT.",
+      modalIntro:
+        "A stall gives your work a real-world stage. Instead of depending only on social-media reach, you can show your portfolio directly to people who already care about tattoo culture.",
+      details: [
+        "Showcase your strongest tattoo work and signature style.",
+        "Meet tattoo enthusiasts and potential clients face-to-face.",
+        "Make your artist or studio name easier to remember.",
+        "Turn Expo attention into profile visits, enquiries and future bookings.",
+      ],
+    },
+    {
+      number: "02",
+      icon: Users,
+      title: "GET CLIENTS",
+      text: "Meet potential clients, get enquiries and build future bookings.",
+      tone: "pink",
+      modalTitle: "TURN VISITORS INTO FUTURE CLIENTS.",
+      modalIntro:
+        "People can see your portfolio, understand your style and speak with you directly. That personal interaction can make it easier for an interested visitor to become a genuine enquiry or future appointment.",
+      details: [
+        "Speak directly with people already interested in tattoos.",
+        "Take enquiries and promote future appointment slots.",
+        "Use booking or Instagram QR codes at your stall.",
+        "Offer Expo-only packages where your event rules allow it.",
+      ],
+    },
+    {
+      number: "03",
+      icon: Crown,
+      title: "BUILD YOUR BRAND",
+      text: "Showcase your studio, style and story as a professional brand.",
+      tone: "orange",
+      modalTitle: "BUILD MORE THAN A PORTFOLIO. BUILD A BRAND.",
+      modalIntro:
+        "Your stall can communicate who you are before you even start a conversation. Present your studio professionally and give visitors a clear reason to remember your work after the Expo.",
+      details: [
+        "Display your studio branding, artist profile and specialisations.",
+        "Show awards, certifications and selected client testimonials.",
+        "Add Instagram, website and booking QR codes.",
+        "Create a stronger professional identity beyond individual posts.",
+      ],
+    },
+    {
+      number: "04",
+      icon: Handshake,
+      title: "NETWORKING",
+      text: "Connect with artists, studios, brands and industry professionals from across India.",
+      tone: "green",
+      modalTitle: "MEET THE PEOPLE SHAPING THE TATTOO INDUSTRY.",
+      modalIntro:
+        "The Expo brings the tattoo ecosystem into one place. A conversation at your stall can lead to a guest spot, collaboration, supplier relationship, brand connection or long-term professional friendship.",
+      details: [
+        "Meet tattoo artists and studio owners from different cities.",
+        "Connect with ink, equipment and aftercare brands.",
+        "Meet photographers, creators and potential collaborators.",
+        "Build relationships that continue after the event.",
+      ],
+    },
+    {
+      number: "05",
+      icon: Trophy,
+      title: "COMPETE",
+      text: "Participate in tattoo competitions, showcase your craft and earn recognition.",
+      tone: "blue",
+      modalTitle: "PUT YOUR SKILLS TO THE TEST.",
+      modalIntro:
+        "Competition gives artists another way to present their craft. Enter eligible categories, have your work evaluated and use strong results as part of your professional portfolio.",
+      details: [
+        "Enter specialist tattoo competition categories.",
+        "Show your work in a structured judging environment.",
+        "Earn trophies, certificates or recognition where applicable.",
+        "Use results and event content to strengthen your portfolio.",
+      ],
+    },
+    {
+      number: "06",
+      icon: Camera,
+      title: "CONTENT",
+      text: "Create photos, Reels and videos that keep working for your brand after the Expo.",
+      tone: "violet",
+      modalTitle: "ONE STALL. DAYS OF CONTENT.",
+      modalIntro:
+        "Your Expo presence can create much more than one post. Capture your setup, artwork, live moments, collaborations and conversations, then reuse that content across your social channels.",
+      details: [
+        "Create Reels, photos and behind-the-scenes videos.",
+        "Capture live demonstrations and artist interactions.",
+        "Collaborate with other artists and content creators.",
+        "Keep using Expo content long after the event ends.",
+      ],
+    },
+    {
+      number: "07",
+      icon: BarChart3,
+      title: "BUSINESS",
+      text: "Launch new work, promote your studio and generate real business opportunities.",
+      tone: "gold",
+      modalTitle: "GROW YOUR STUDIO BEYOND INSTAGRAM.",
+      modalIntro:
+        "Use your stall as a business touchpoint. Introduce new work, generate leads and show visitors what they can book or buy from you, subject to the Expo and venue rules.",
+      details: [
+        "Promote future studio bookings and tattoo packages.",
+        "Launch new flash sheets, styles or collaborations.",
+        "Show artwork, prints or permitted merchandise.",
+        "Create new professional and commercial opportunities.",
+      ],
+    },
+    {
+      number: "08",
+      icon: Heart,
+      title: "BE PART OF IT",
+      text: "Join Rajasthan's tattoo community, meet the industry and help grow the culture.",
+      tone: "rose",
+      modalTitle: "DON'T JUST WATCH THE INDUSTRY GROW — BE PART OF IT.",
+      modalIntro:
+        "An Expo is also about community. Being present puts you inside the conversations, collaborations and creative energy that help the tattoo scene grow.",
+      details: [
+        "Meet artists and tattoo lovers in a shared creative space.",
+        "Take part in the culture instead of only following it online.",
+        "Create memorable real-world connections.",
+        "Represent your city, studio and artistic style at the Expo.",
+      ],
+    },
+  ];
+
+  const [pageIntroReady, setPageIntroReady] = useState(false);
+  const [selectedBenefit, setSelectedBenefit] = useState(null);
+  const [modalPhase, setModalPhase] = useState("closed");
+  const [smokeGeometry, setSmokeGeometry] = useState(null);
+  const [smokeSource, setSmokeSource] = useState({ x: 0, y: 0 });
+
+  const readCursorRef = useRef(null);
+  const modalRef = useRef(null);
+  const closeTimerRef = useRef(null);
+
+  const makeSmokePath = (start, end) => {
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const distance = Math.max(Math.hypot(dx, dy), 1);
+
+    // Perpendicular vector for a gentle S-shaped "genie smoke" curve.
+    const nx = -dy / distance;
+    const ny = dx / distance;
+    const bend = Math.min(90, Math.max(34, distance * 0.14));
+
+    const c1 = {
+      x: start.x + dx * 0.32 + nx * bend,
+      y: start.y + dy * 0.32 + ny * bend,
+    };
+
+    const c2 = {
+      x: start.x + dx * 0.68 - nx * bend,
+      y: start.y + dy * 0.68 - ny * bend,
+    };
+
+    return `M ${start.x} ${start.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${end.x} ${end.y}`;
+  };
+
+  const getModalAnchor = (rect, start) => {
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const dx = start.x - centerX;
+    const dy = start.y - centerY;
+
+    const horizontal = Math.abs(dx) / Math.max(rect.width, 1);
+    const vertical = Math.abs(dy) / Math.max(rect.height, 1);
+
+    if (horizontal > vertical) {
+      return {
+        x: dx < 0 ? rect.left + 10 : rect.right - 10,
+        y: Math.max(rect.top + 70, Math.min(rect.bottom - 70, start.y)),
+      };
+    }
+
+    return {
+      x: Math.max(rect.left + 80, Math.min(rect.right - 80, start.x)),
+      y: dy < 0 ? rect.top + 10 : rect.bottom - 10,
+    };
+  };
+
+  const measureSmoke = () => {
+    const modal = modalRef.current;
+    if (!modal || !selectedBenefit) return;
+
+    const rect = modal.getBoundingClientRect();
+    const end = getModalAnchor(rect, smokeSource);
+
+    setSmokeGeometry({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      path: makeSmokePath(smokeSource, end),
+      startX: smokeSource.x,
+      startY: smokeSource.y,
+      endX: end.x,
+      endY: end.y,
+    });
+  };
+
+  const openBenefit = (item, event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+
+    const source = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    setSmokeGeometry(null);
+    setSmokeSource(source);
+    setSelectedBenefit(item);
+    setModalPhase("opening");
+    hideReadCursor();
+  };
+
+  const closeBenefit = () => {
+    if (!selectedBenefit || modalPhase === "closing") return;
+
+    setModalPhase("closing");
+
+    closeTimerRef.current = window.setTimeout(() => {
+      setSelectedBenefit(null);
+      setSmokeGeometry(null);
+      setModalPhase("closed");
+      closeTimerRef.current = null;
+    }, 520);
+  };
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setPageIntroReady(true);
+    }, 850);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!selectedBenefit) return undefined;
+
+    const measure = () => {
+      const modal = modalRef.current;
+      if (!modal) return;
+
+      const rect = modal.getBoundingClientRect();
+      const end = getModalAnchor(rect, smokeSource);
+
+      setSmokeGeometry({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        path: makeSmokePath(smokeSource, end),
+        startX: smokeSource.x,
+        startY: smokeSource.y,
+        endX: end.x,
+        endY: end.y,
+      });
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+
+    return () => {
+      window.removeEventListener("resize", measure);
+    };
+  }, [selectedBenefit, smokeSource.x, smokeSource.y]);
+
+  useEffect(() => {
+    if (!selectedBenefit || modalPhase !== "opening") return undefined;
+
+    const timer = window.setTimeout(() => {
+      setModalPhase("open");
+    }, 430);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [selectedBenefit, modalPhase]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape" && selectedBenefit) {
+        closeBenefit();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    if (selectedBenefit) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [selectedBenefit, modalPhase]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
+  const moveReadCursor = (event) => {
+    const cursor = readCursorRef.current;
+    if (!cursor) return;
+
+    cursor.style.left = `${event.clientX + 16}px`;
+    cursor.style.top = `${event.clientY + 16}px`;
+    cursor.classList.add("is-visible");
+  };
+
+  const hideReadCursor = () => {
+    readCursorRef.current?.classList.remove("is-visible");
+  };
+
   return (
     <div className="about-container w-full bg-[#08080a] text-white select-none overflow-x-hidden font-sans">
       {/* =====================================================
-          1. HERO
+          1. EXPO HERO
       ====================================================== */}
 
-      <section className="w-full pt-28 pb-16 px-6 sm:px-10 lg:px-12">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-stretch">
-          {/* LEFT */}
+      <section
+        className={`expo-showcase ${pageIntroReady ? "intro-ready" : "intro-start"}`}
+      >
+        {/* IMAGE FIRST IN THE DOM — on mobile it appears first */}
+        <div className="expo-showcase__media">
+          <img
+            src={expoImage}
+            alt="Ink Convention tattoo expo"
+            className="expo-showcase__image"
+          />
 
-          <div className="order-2 lg:order-1 flex flex-col justify-center space-y-7 lg:space-y-8">
-            <div>
-              <h4 className="text-[#a855f7] font-mono text-xs sm:text-sm tracking-[0.3em] uppercase font-semibold flex items-center gap-3">
-                <span className="w-8 h-[1px] bg-[#a855f7]" />
-                ABOUT INK CONVENTION
-              </h4>
+          <div className="expo-showcase__overlay expo-showcase__overlay--left" />
+          <div className="expo-showcase__overlay expo-showcase__overlay--bottom" />
+          <div className="expo-showcase__overlay expo-showcase__overlay--top" />
+
+          <div className="expo-showcase__stamp">
+            <span>INKCONVENTION</span>
+            <small>RAJASTHAN 2026</small>
+          </div>
+        </div>
+
+        <div className="expo-showcase__content">
+          <p className="expo-showcase__kicker">
+            RAJASTHAN&apos;S BIGGEST
+            <br />
+            TATTOO EXPO
+          </p>
+
+          <h1 className="expo-showcase__title">
+            <span>YOUR STALL.</span>
+            <span className="expo-showcase__title-purple">YOUR ART.</span>
+            <span className="expo-showcase__title-small">
+              REAL OPPORTUNITIES.
+            </span>
+          </h1>
+
+          <p className="expo-showcase__intro">
+            Don&apos;t just attend the Expo. Put your art, brand and business in
+            front of thousands of potential clients, fellow artists and industry
+            professionals.
+          </p>
+
+          <div className="expo-showcase__stats">
+            <div className="expo-showcase__stat">
+              <Users size={25} />
+              <div>
+                <strong>10,000+</strong>
+                <span>EXPECTED VISITORS</span>
+              </div>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-white uppercase">
-              REDEFINING HOW TATTOO ARTISTS COMPETE, GET RECOGNISED & GET
-              DISCOVERED
-            </h1>
-
-            <p className="text-gray-400 text-base sm:text-lg font-light leading-relaxed max-w-xl">
-              Ink Convention is a digital-first tattoo competition and
-              artist-ranking platform created to give tattoo artists a
-              professional space to showcase their work, compete across
-              specialist categories, earn recognition and build a lasting
-              reputation beyond social-media likes and follower counts.
-            </p>
-
-            {/* CLAIMS */}
-
-            <div className="pt-5 grid grid-cols-1 sm:grid-cols-2 gap-5 border-t border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-lg bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center text-[#a855f7]">
-                  <Globe size={18} />
-                </div>
-
-                <span className="text-xs font-mono text-gray-300 tracking-wider">
-                  ONLINE-FIRST PLATFORM
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-lg bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center text-[#a855f7]">
-                  <Award size={18} />
-                </div>
-
-                <span className="text-xs font-mono text-gray-300 tracking-wider">
-                  PROFESSIONAL COMPETITION SYSTEM
-                </span>
+            <div className="expo-showcase__stat">
+              <Award size={25} />
+              <div>
+                <strong>500+</strong>
+                <span>TATTOO ARTISTS</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-5 pt-2">
-              <Link
-                to="/competition"
-                className="inline-flex items-center gap-4 text-[10px] font-mono tracking-[0.2em] uppercase"
-              >
-                <span className="w-12 h-12 rounded-full border border-[#a855f7] flex items-center justify-center text-[#a855f7]">
-                  <ArrowUpRight size={17} />
-                </span>
-                Explore Competition
-              </Link>
+            <div className="expo-showcase__stat">
+              <Globe size={25} />
+              <div>
+                <strong>INDIA&apos;S BIGGEST</strong>
+                <span>TATTOO EXPO IN RAJASTHAN</span>
+              </div>
             </div>
           </div>
 
-          {/* RIGHT IMAGE */}
-
-          <div className="about-hero-image order-1 lg:order-2 relative group overflow-hidden border border-white/10 shadow-2xl bg-[#0b0b0f] min-h-[420px] lg:min-h-full">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10 z-10 pointer-events-none" />
-
-            <img
-              src={heroImage}
-              alt="Tattoo artist working inside studio"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-
-            <div className="absolute right-5 top-5 z-20 flex flex-col text-[8px] font-mono tracking-[0.25em] text-white/40 uppercase">
-              <span>ART</span>
-              <span>PEOPLE</span>
-              <span>CULTURE</span>
-              <span>STORIES</span>
-            </div>
+          <div className="expo-showcase__actions">
+            <Link to="/stall-booking" className="expo-showcase__primary">
+              BOOK YOUR STALL
+              <ArrowUpRight size={17} />
+            </Link>
           </div>
         </div>
       </section>
 
       {/* =====================================================
-          2. COMPETE / JUDGE / RANK / RECOGNISE
+          2. WHY EXHIBIT
       ====================================================== */}
 
-      <section className="relative z-20 w-full bg-[#050507] border-y border-white/5 py-12">
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="space-y-3">
-            <Target className="text-[#a855f7]" size={28} />
+      <section
+        className={`why-exhibit ${pageIntroReady ? "intro-ready" : "intro-wait"}`}
+      >
+        <div className="why-exhibit__heading">
+          <p className="why-exhibit__eyebrow">
+            <span />
+            WHY EXHIBIT?
+            <span />
+          </p>
 
-            <h3 className="text-xl font-bold tracking-tight uppercase">
-              COMPETE
-            </h3>
+          <h2>GROW YOUR ART. GROW YOUR BUSINESS.</h2>
 
-            <p className="text-sm font-light text-gray-400">
-              Enter specialist tattoo categories.
-            </p>
-          </div>
+          <p className="why-exhibit__sub">
+            8 powerful reasons to book your stall at Ink Convention.
+          </p>
+        </div>
 
-          <div className="space-y-3">
-            <Scale className="text-[#a855f7]" size={28} />
+        <div className="why-exhibit__grid">
+          {exhibitBenefits.map((item) => {
+            const Icon = item.icon;
 
-            <h3 className="text-xl font-bold tracking-tight uppercase">
-              GET JUDGED
-            </h3>
+            return (
+              <button
+                type="button"
+                key={item.number}
+                className={`why-card why-card--${item.tone}`}
+                onClick={(event) => openBenefit(item, event)}
+                onMouseMove={moveReadCursor}
+                onMouseEnter={moveReadCursor}
+                onMouseLeave={hideReadCursor}
+                aria-label={`Read more about ${item.title}`}
+              >
+                <Icon className="why-card__icon" strokeWidth={2.1} />
 
-            <p className="text-sm font-light text-gray-400">
-              Have your work evaluated using published criteria.
-            </p>
-          </div>
+                <span className="why-card__number">{item.number}</span>
 
-          <div className="space-y-3">
-            <TrendingUp className="text-[#a855f7]" size={28} />
+                <h3>{item.title}</h3>
 
-            <h3 className="text-xl font-bold tracking-tight uppercase">
-              GET RANKED
-            </h3>
+                <p>{item.text}</p>
 
-            <p className="text-sm font-light text-gray-400">
-              Build your Ink Convention standing through eligible competition
-              results.
-            </p>
-          </div>
+                <span className="why-card__mobile-hint">
+                  TAP TO READ MORE <ArrowRight size={12} />
+                </span>
 
-          <div className="space-y-3">
-            <Trophy className="text-[#a855f7]" size={28} />
+                <span className="why-card__line" />
+              </button>
+            );
+          })}
+        </div>
 
-            <h3 className="text-xl font-bold tracking-tight uppercase">
-              GET RECOGNISED
-            </h3>
-
-            <p className="text-sm font-light text-gray-400">
-              Earn awards, recognition and professional exposure.
-            </p>
-          </div>
+        <div ref={readCursorRef} className="why-read-cursor" aria-hidden="true">
+          CLICK TO READ MORE
+          <ArrowRight size={13} />
         </div>
       </section>
+
+      {selectedBenefit && (
+        <div
+          className={`why-modal-backdrop is-${modalPhase}`}
+          role="presentation"
+          onMouseDown={closeBenefit}
+        >
+          {smokeGeometry && (
+            <svg
+              className={`genie-tail genie-tail--${selectedBenefit.tone} is-${modalPhase}`}
+              viewBox={`0 0 ${smokeGeometry.width} ${smokeGeometry.height}`}
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path
+                d={smokeGeometry.path}
+                pathLength="1"
+                className="genie-tail__path genie-tail__path--soft"
+              />
+
+              <path
+                d={smokeGeometry.path}
+                pathLength="1"
+                className="genie-tail__path genie-tail__path--core"
+              />
+
+              <circle
+                cx={smokeGeometry.startX}
+                cy={smokeGeometry.startY}
+                r="12"
+                className="genie-tail__source"
+              />
+
+              <circle
+                cx={smokeGeometry.endX}
+                cy={smokeGeometry.endY}
+                r="8"
+                className="genie-tail__anchor"
+              />
+            </svg>
+          )}
+
+          <div
+            ref={modalRef}
+            className={`why-modal why-modal--${selectedBenefit.tone} is-${modalPhase}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="why-modal-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="why-modal__close"
+              onClick={closeBenefit}
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="why-modal__topline">
+              <span>{selectedBenefit.number}</span>
+              <p>WHY EXHIBIT • {selectedBenefit.title}</p>
+            </div>
+
+            <div className="why-modal__body">
+              <div className="why-modal__headline">
+                {React.createElement(selectedBenefit.icon, {
+                  className: "why-modal__icon",
+                  strokeWidth: 2,
+                })}
+
+                <h2 id="why-modal-title">{selectedBenefit.modalTitle}</h2>
+                <p>{selectedBenefit.modalIntro}</p>
+              </div>
+
+              <div className="why-modal__points">
+                {selectedBenefit.details.map((detail, index) => (
+                  <div className="why-modal__point" key={detail}>
+                    <span>0{index + 1}</span>
+                    <p>{detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="why-modal__footer">
+              <span>INK CONVENTION • RAJASTHAN 2026</span>
+
+              <button
+                type="button"
+                className="why-modal__cancel"
+                onClick={closeBenefit}
+              >
+                CLOSE
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =====================================================
           3. WHY WE EXIST + OUR MISSION

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -22,6 +22,8 @@ import pune from "../assets/pune.png";
 import expoPageBg from "../assets/expo-page-bg.png";
 
 gsap.registerPlugin(ScrollTrigger);
+
+const PUBLIC_SITE_URL = "https://inkconvention.com";
 
 /* =========================================================
    INK CONVENTION — UPCOMING / PAST EVENTS
@@ -52,9 +54,9 @@ const upcomingEvents = [
     city: "JAIPUR",
     state: "Rajasthan",
     eventStatus: "upcoming",
-    date: "DATE TO BE ANNOUNCED",
+    date: "30 / 31 October / 1 November",
     venue: "Venue to be announced",
-    desc: "Ink Convention is coming to Jaipur. Dates, venue, artist registrations and stall booking details will be announced soon.",
+    desc: "Ink Convention is coming to Jaipur on 30 / 31 October / 1 November. Venue, artist registrations and stall booking details will be announced soon.",
     image:
       "https://images.unsplash.com/photo-1636788988342-bc124fcfd953?auto=format&fit=crop&q=88&w=1400",
   },
@@ -63,9 +65,9 @@ const upcomingEvents = [
     city: "UDAIPUR",
     state: "Rajasthan",
     eventStatus: "upcoming",
-    date: "DATE TO BE ANNOUNCED",
+    date: "6 / 7 / 8 November",
     venue: "Venue to be announced",
-    desc: "Ink Convention is coming to Udaipur. Dates, venue, artist registrations and stall booking details will be announced soon.",
+    desc: "Ink Convention is coming to Udaipur on 6 / 7 / 8 November. Venue, artist registrations and stall booking details will be announced soon.",
     image:
       "https://images.unsplash.com/photo-1742924400583-8937604db85a?auto=format&fit=crop&q=88&w=1400",
   },
@@ -74,9 +76,9 @@ const upcomingEvents = [
     city: "KOTA",
     state: "Rajasthan",
     eventStatus: "upcoming",
-    date: "DATE TO BE ANNOUNCED",
+    date: "13 / 14 / 15 November",
     venue: "Venue to be announced",
-    desc: "Ink Convention is coming to Kota. Dates, venue, artist registrations and stall booking details will be announced soon.",
+    desc: "Ink Convention is coming to Kota on 13 / 14 / 15 November. Venue, artist registrations and stall booking details will be announced soon.",
     image:
       "https://images.unsplash.com/photo-1634673203448-367b0c78f4ab?auto=format&fit=crop&q=88&w=1400",
   },
@@ -246,6 +248,24 @@ export default function Upcomeing() {
   const [citySearch, setCitySearch] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
 
+  const eventDetailsRef = useRef(null);
+
+  const handleSelectEvent = (event) => {
+    setSelectedEvent(event);
+    setShareOpen(false);
+
+    // On mobile the details card sits below the city cards.
+    // After selecting a city, move the user directly to that card.
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      window.setTimeout(() => {
+        eventDetailsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 80);
+    }
+  };
+
   const isRealUpcomingEvent = selectedEvent?.eventStatus === "upcoming";
 
   const confirmedUpcomingEvents = upcomingEvents.filter(
@@ -255,6 +275,23 @@ export default function Upcomeing() {
   const plannedUpcomingEvents = upcomingEvents.filter(
     (event) => event.eventStatus !== "upcoming",
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const sharedCityId = params.get("city");
+
+    if (!sharedCityId) return;
+
+    const sharedEvent = upcomingEvents.find(
+      (event) => event.id === sharedCityId,
+    );
+
+    if (sharedEvent) {
+      setSelectedEvent(sharedEvent);
+    }
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -293,8 +330,28 @@ export default function Upcomeing() {
   }, []);
 
   const getShareUrl = () => {
-    if (typeof window === "undefined") return "";
-    return `${window.location.origin}/upcoming`;
+    const path = `/upcoming?city=${selectedEvent.id}`;
+
+    if (typeof window === "undefined") {
+      return `${PUBLIC_SITE_URL}${path}`;
+    }
+
+    const host = window.location.hostname;
+
+    const isLocalDevelopment =
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.") ||
+      host.endsWith(".local");
+
+    // Never send localhost / LAN IP links through WhatsApp.
+    // Those links only work on your own computer/network.
+    const baseUrl = isLocalDevelopment
+      ? PUBLIC_SITE_URL
+      : window.location.origin;
+
+    return `${baseUrl}${path}`;
   };
 
   const getShareText = () => {
@@ -698,10 +755,7 @@ export default function Upcomeing() {
                     <button
                       key={event.id}
                       type="button"
-                      onClick={() => {
-                        setSelectedEvent(event);
-                        setShareOpen(false);
-                      }}
+                      onClick={() => handleSelectEvent(event)}
                       className={`
                         event-card
                         group
@@ -978,10 +1032,7 @@ export default function Upcomeing() {
                       <button
                         key={event.id}
                         type="button"
-                        onClick={() => {
-                          setSelectedEvent(event);
-                          setShareOpen(false);
-                        }}
+                        onClick={() => handleSelectEvent(event)}
                         className={`
                           event-card
                           group
@@ -1126,8 +1177,10 @@ export default function Upcomeing() {
               RIGHT SIDE — NEXT EVENT
           ================================================= */}
           <aside
+            ref={eventDetailsRef}
             className="
               expo-reveal
+              scroll-mt-24
               xl:sticky
               xl:top-28
               rounded-[26px]
