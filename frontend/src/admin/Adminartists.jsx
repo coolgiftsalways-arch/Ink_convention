@@ -18,6 +18,7 @@ import {
   BadgeCheck,
   CircleDashed,
   Search,
+  MessageCircle,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -61,6 +62,9 @@ const PACKAGE_NAMES = {
   pro: "Professional Bundle",
   multi: "Multi-Entry Bundle",
 };
+
+const DEFAULT_META_CAMPAIGN_KEY = "artist_outreach_2026";
+const META_WHATSAPP_BATCH_SIZE = 100;
 
 // =====================================================
 // SAFE JSON
@@ -228,6 +232,20 @@ const normalizeDirectoryArtist = (source = {}) => ({
   studio: source.studio || source.studioName || "",
   email: source.email || source.gmail || "",
   phone: source.phone || "",
+  whatsappContactCount: Number(source.whatsappContactCount || 0),
+  whatsappLastContactedAt: source.whatsappLastContactedAt || null,
+  whatsappOptIn: Boolean(source.whatsappOptIn),
+  whatsappOptInAt: source.whatsappOptInAt || null,
+  whatsappOptOutAt: source.whatsappOptOutAt || null,
+  eligible: Boolean(source.eligible),
+  normalizedPhone: source.normalizedPhone || "",
+  campaignAttempted: Boolean(source.campaignAttempted),
+  campaignStatus: String(source.campaignStatus || "not-sent")
+    .trim()
+    .toLowerCase(),
+  campaignBatchNumber: Number(source.campaignBatchNumber || 0),
+  campaignSentAt: source.campaignSentAt || null,
+  campaignAttemptedAt: source.campaignAttemptedAt || null,
   city: source.city || "",
   state: source.state || "",
   plan: normalizeDirectoryPlan(
@@ -341,6 +359,50 @@ const normalizeCallPhone = (value) =>
   String(value || "")
     .replace(/[^\d+]/g, "")
     .trim();
+
+const normalizeWhatsAppPhone = (value) => {
+  let digits = String(value || "").replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  // Indian local mobile number -> WhatsApp international format.
+  if (digits.length === 10) {
+    digits = `91${digits}`;
+  } else if (digits.length === 11 && digits.startsWith("0")) {
+    digits = `91${digits.slice(1)}`;
+  }
+
+  return digits;
+};
+
+const buildArtistWhatsAppUrl = (artist = {}) => {
+  const whatsappPhone = normalizeWhatsAppPhone(artist.phone);
+
+  if (!whatsappPhone) {
+    return "";
+  }
+
+  const artistId = String(artist.id || artist._id || "").trim();
+  const artistName = artist.name || "Tattoo Artist";
+
+  // Every artist gets their own direct profile URL.
+  // When they tap this from WhatsApp, Artists.jsx reads ?artist=ID
+  // and automatically opens that exact artist profile/card.
+  const artistProfileUrl = artistId
+    ? `https://inkconvention.com/artists?artist=${encodeURIComponent(artistId)}`
+    : "https://inkconvention.com/artists";
+
+  const message = [
+    `Hi ${artistName},`,
+    "This is Ink Convention.",
+    "Your artist profile is listed on Ink Convention.",
+    `View your profile here: ${artistProfileUrl}`,
+  ].join("\n");
+
+  return `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+};
 
 // =====================================================
 // IMAGE COMPONENT
@@ -630,6 +692,50 @@ function AdminArtists() {
   const [membershipRequestError, setMembershipRequestError] = useState("");
   const [membershipRequestBusyId, setMembershipRequestBusyId] = useState("");
   const [directPlanBusyArtistId, setDirectPlanBusyArtistId] = useState("");
+  const [whatsappBusyArtistId, setWhatsappBusyArtistId] = useState("");
+
+  // ===================================================
+  // META WHATSAPP BATCH CAMPAIGN
+  // Automatically sends the next 100 opted-in artists.
+  // Cards/stats load immediately; the security key is required only for send/export actions.
+  // ===================================================
+
+  const [campaignAdminKey, setCampaignAdminKey] = useState(
+    () => sessionStorage.getItem("inkWhatsAppCampaignKey") || "",
+  );
+  const [whatsappCampaignStats, setWhatsappCampaignStats] = useState(null);
+  const [whatsappCampaignLoading, setWhatsappCampaignLoading] = useState(false);
+  const [whatsappCampaignSending, setWhatsappCampaignSending] = useState(false);
+  const [whatsappCampaignError, setWhatsappCampaignError] = useState("");
+  const [whatsappCampaignResult, setWhatsappCampaignResult] = useState(null);
+
+  // Location filters for Meta WhatsApp batches.
+  // Example: MAHARASHTRA -> MUMBAI -> SEND NEXT 100.
+  const [whatsappCampaignState, setWhatsappCampaignState] = useState("ALL");
+  const [whatsappCampaignCity, setWhatsappCampaignCity] = useState("ALL");
+  const [whatsappCampaignFilterOptions, setWhatsappCampaignFilterOptions] =
+    useState({
+      states: [],
+      cities: [],
+    });
+
+  // Artist cards for the selected campaign state/city.
+  // 100 cards are loaded per page so even very large cities stay fast.
+  const [whatsappCampaignArtists, setWhatsappCampaignArtists] = useState([]);
+  const [whatsappCampaignArtistsLoading, setWhatsappCampaignArtistsLoading] =
+    useState(false);
+  const [whatsappCampaignArtistsPage, setWhatsappCampaignArtistsPage] =
+    useState(1);
+  const [whatsappCampaignView, setWhatsappCampaignView] = useState("all");
+  const [
+    whatsappCampaignArtistsPagination,
+    setWhatsappCampaignArtistsPagination,
+  ] = useState({
+    page: 1,
+    limit: 100,
+    total: 0,
+    totalPages: 1,
+  });
 
   // Search the real MongoDB directory by artist name, email or phone.
   const [directorySearchQuery, setDirectorySearchQuery] = useState("");
@@ -848,7 +954,7 @@ function AdminArtists() {
       // for membership cards. Free artists are loaded on demand
       // through search/filter API calls.
       const response = await apiFetch(
-        "/api/admin/tattoo-studios?paidOnly=true&page=1&limit=1000",
+        "/api/admin/tattoo-studios/admin-directory?paidOnly=true&page=1&limit=1000",
       );
 
       const data = await getJson(response);
@@ -913,10 +1019,10 @@ function AdminArtists() {
         // Unclaimed profiles stay limited to a small preview for performance.
         const [claimedResponse, unclaimedResponse] = await Promise.all([
           apiFetch(
-            "/api/admin/tattoo-studios?plan=basic&claimed=true&page=1&limit=1000",
+            "/api/admin/tattoo-studios/admin-directory?plan=basic&claimed=true&page=1&limit=1000",
           ),
           apiFetch(
-            "/api/admin/tattoo-studios?plan=basic&claimed=false&page=1&limit=100",
+            "/api/admin/tattoo-studios/admin-directory?plan=basic&claimed=false&page=1&limit=100",
           ),
         ]);
 
@@ -996,7 +1102,7 @@ function AdminArtists() {
 
     try {
       const response = await apiFetch(
-        `/api/admin/tattoo-studios?search=${encodeURIComponent(query)}&page=1&limit=100`,
+        `/api/admin/tattoo-studios/admin-directory?search=${encodeURIComponent(query)}&page=1&limit=100`,
       );
 
       const data = await getJson(response);
@@ -1418,6 +1524,636 @@ function AdminArtists() {
     },
     [fetchMembershipRequests, fetchDirectoryStats],
   );
+
+  // ===================================================
+  // WHATSAPP ARTIST CONTACT
+  // Opens WhatsApp and permanently increments the MongoDB counter.
+  // ===================================================
+
+  const handleArtistWhatsAppContact = useCallback(async (artist) => {
+    if (!artist?.id) {
+      alert("Artist ID is missing.");
+      return;
+    }
+
+    const whatsappUrl = buildArtistWhatsAppUrl(artist);
+
+    if (!whatsappUrl) {
+      alert("This artist does not have a valid WhatsApp / phone number.");
+      return;
+    }
+
+    // Open immediately so the browser does not block the WhatsApp popup.
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+
+    setWhatsappBusyArtistId(String(artist.id));
+
+    try {
+      const response = await apiFetch(
+        `/api/admin/tattoo-studios/${artist.id}/whatsapp-contact`,
+        {
+          method: "PATCH",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      const data = await getJson(response);
+
+      if (!response.ok || data.success === false) {
+        throw new Error(
+          data.message || "Unable to update WhatsApp contact count.",
+        );
+      }
+
+      const updatedCount = Number(data?.artist?.whatsappContactCount || 0);
+      const updatedAt =
+        data?.artist?.whatsappLastContactedAt || new Date().toISOString();
+      const artistId = String(artist.id);
+
+      const patchArtistList = (previous) =>
+        previous.map((item) =>
+          String(item.id) === artistId
+            ? {
+                ...item,
+                whatsappContactCount: updatedCount,
+                whatsappLastContactedAt: updatedAt,
+              }
+            : item,
+        );
+
+      setDirectoryArtists(patchArtistList);
+      setFreeDirectoryArtists(patchArtistList);
+      setDirectorySearchResults(patchArtistList);
+
+      setSelectedDirectoryArtist((previous) =>
+        previous && String(previous.id) === artistId
+          ? {
+              ...previous,
+              whatsappContactCount: updatedCount,
+              whatsappLastContactedAt: updatedAt,
+            }
+          : previous,
+      );
+    } catch (error) {
+      console.error("WhatsApp contact counter error:", error);
+      alert(
+        error.message ||
+          "WhatsApp opened, but the contact counter could not be saved.",
+      );
+    } finally {
+      setWhatsappBusyArtistId("");
+    }
+  }, []);
+
+  // ===================================================
+  // META WHATSAPP CAMPAIGN HELPERS
+  // ===================================================
+
+  const fetchWhatsAppCampaignFilters = useCallback(
+    async (stateOverride = "ALL") => {
+      const selectedState = stateOverride || "ALL";
+
+      try {
+        const params = new URLSearchParams();
+
+        if (selectedState && selectedState !== "ALL") {
+          params.set("state", selectedState);
+        }
+
+        const response = await apiFetch(
+          `/api/whatsapp-campaigns/filters?${params.toString()}`,
+          {
+            headers: {
+              Accept: "application/json",
+            },
+          },
+        );
+
+        const data = await getJson(response);
+
+        if (!response.ok || data.success === false) {
+          throw new Error(
+            data.message || "Unable to load WhatsApp state / city filters.",
+          );
+        }
+
+        const filters = data?.filters || {};
+
+        setWhatsappCampaignFilterOptions({
+          states: Array.isArray(filters.states) ? filters.states : [],
+          cities: Array.isArray(filters.cities) ? filters.cities : [],
+        });
+
+        return filters;
+      } catch (error) {
+        console.error("WhatsApp campaign filters error:", error);
+
+        setWhatsappCampaignError(
+          error.message || "Unable to load WhatsApp state / city filters.",
+        );
+
+        return null;
+      }
+    },
+    [],
+  );
+
+  const fetchWhatsAppCampaignStats = useCallback(
+    async ({ stateOverride = null, cityOverride = null } = {}) => {
+      const selectedState =
+        stateOverride === null ? whatsappCampaignState : stateOverride;
+
+      const selectedCity =
+        cityOverride === null ? whatsappCampaignCity : cityOverride;
+
+      setWhatsappCampaignLoading(true);
+      setWhatsappCampaignError("");
+
+      try {
+        const params = new URLSearchParams({
+          campaignKey: DEFAULT_META_CAMPAIGN_KEY,
+        });
+
+        if (selectedState && selectedState !== "ALL") {
+          params.set("state", selectedState);
+        }
+
+        if (selectedCity && selectedCity !== "ALL") {
+          params.set("city", selectedCity);
+        }
+
+        const response = await apiFetch(
+          `/api/whatsapp-campaigns/stats?${params.toString()}`,
+          {
+            headers: {
+              Accept: "application/json",
+            },
+          },
+        );
+
+        const data = await getJson(response);
+
+        if (!response.ok || data.success === false) {
+          throw new Error(
+            data.message || "Unable to load WhatsApp campaign stats.",
+          );
+        }
+
+        const stats = data?.stats || null;
+
+        setWhatsappCampaignStats(stats);
+
+        return stats;
+      } catch (error) {
+        console.error("WhatsApp campaign stats error:", error);
+
+        setWhatsappCampaignError(
+          error.message || "Unable to load WhatsApp campaign stats.",
+        );
+
+        return null;
+      } finally {
+        setWhatsappCampaignLoading(false);
+      }
+    },
+    [whatsappCampaignState, whatsappCampaignCity],
+  );
+
+  const fetchWhatsAppCampaignArtists = useCallback(
+    async ({
+      stateOverride = null,
+      cityOverride = null,
+      pageOverride = 1,
+      viewOverride = null,
+    } = {}) => {
+      const securityKey = campaignAdminKey.trim();
+
+      const selectedState =
+        stateOverride === null ? whatsappCampaignState : stateOverride;
+      const selectedCity =
+        cityOverride === null ? whatsappCampaignCity : cityOverride;
+      const selectedView =
+        viewOverride === null ? whatsappCampaignView : viewOverride;
+      const selectedPage = Math.max(Number(pageOverride) || 1, 1);
+
+      setWhatsappCampaignArtistsLoading(true);
+      setWhatsappCampaignError("");
+
+      try {
+        const params = new URLSearchParams({
+          campaignKey: DEFAULT_META_CAMPAIGN_KEY,
+          page: String(selectedPage),
+          limit: "100",
+          view: selectedView,
+        });
+
+        if (selectedState && selectedState !== "ALL") {
+          params.set("state", selectedState);
+        }
+
+        if (selectedCity && selectedCity !== "ALL") {
+          params.set("city", selectedCity);
+        }
+
+        const artistHeaders = {
+          Accept: "application/json",
+        };
+
+        if (securityKey) {
+          artistHeaders["X-WhatsApp-Campaign-Key"] = securityKey;
+        }
+
+        const response = await apiFetch(
+          `/api/whatsapp-campaigns/artists?${params.toString()}`,
+          {
+            headers: artistHeaders,
+          },
+        );
+
+        const data = await getJson(response);
+
+        if (!response.ok || data.success === false) {
+          throw new Error(
+            data.message || "Unable to load artists for this location.",
+          );
+        }
+
+        const rows = getDirectoryArtistsArray(data).map(
+          normalizeDirectoryArtist,
+        );
+        const pagination = data?.pagination || {};
+
+        setWhatsappCampaignArtists(rows);
+        setWhatsappCampaignArtistsPage(Number(pagination.page || selectedPage));
+        setWhatsappCampaignArtistsPagination({
+          page: Number(pagination.page || selectedPage),
+          limit: Number(pagination.limit || 100),
+          total: Number(pagination.total || rows.length),
+          totalPages: Math.max(1, Number(pagination.totalPages || 1)),
+        });
+
+        return data;
+      } catch (error) {
+        console.error("WhatsApp campaign artist cards error:", error);
+
+        setWhatsappCampaignArtists([]);
+        setWhatsappCampaignArtistsPagination({
+          page: 1,
+          limit: 100,
+          total: 0,
+          totalPages: 1,
+        });
+
+        setWhatsappCampaignError(
+          error.message || "Unable to load artists for this location.",
+        );
+
+        return null;
+      } finally {
+        setWhatsappCampaignArtistsLoading(false);
+      }
+    },
+    [
+      campaignAdminKey,
+      whatsappCampaignState,
+      whatsappCampaignCity,
+      whatsappCampaignView,
+    ],
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    void fetchWhatsAppCampaignFilters("ALL");
+  }, [isAuthenticated, fetchWhatsAppCampaignFilters]);
+
+  const handleLoadWhatsAppCampaign = useCallback(async () => {
+    const securityKey = campaignAdminKey.trim();
+
+    if (!securityKey) {
+      setWhatsappCampaignError(
+        "Enter the Campaign Security Key from backend/.env first.",
+      );
+      return;
+    }
+
+    sessionStorage.setItem("inkWhatsAppCampaignKey", securityKey);
+
+    setWhatsappCampaignView("pending");
+    setWhatsappCampaignArtistsPage(1);
+    setWhatsappCampaignError("");
+
+    await Promise.all([
+      fetchWhatsAppCampaignFilters(whatsappCampaignState),
+      fetchWhatsAppCampaignStats(),
+      fetchWhatsAppCampaignArtists({
+        stateOverride: whatsappCampaignState,
+        cityOverride: whatsappCampaignCity,
+        pageOverride: 1,
+        viewOverride: "pending",
+      }),
+    ]);
+  }, [
+    campaignAdminKey,
+    fetchWhatsAppCampaignFilters,
+    fetchWhatsAppCampaignStats,
+    fetchWhatsAppCampaignArtists,
+    whatsappCampaignState,
+    whatsappCampaignCity,
+  ]);
+
+  const handleWhatsAppCampaignStateChange = useCallback(
+    async (event) => {
+      const nextState = event.target.value || "ALL";
+
+      setWhatsappCampaignState(nextState);
+      setWhatsappCampaignCity("ALL");
+      setWhatsappCampaignView("all");
+      setWhatsappCampaignResult(null);
+      setWhatsappCampaignArtistsPage(1);
+
+      await fetchWhatsAppCampaignFilters(nextState);
+
+      await Promise.all([
+        fetchWhatsAppCampaignStats({
+          stateOverride: nextState,
+          cityOverride: "ALL",
+        }),
+        fetchWhatsAppCampaignArtists({
+          stateOverride: nextState,
+          cityOverride: "ALL",
+          pageOverride: 1,
+          viewOverride: "all",
+        }),
+      ]);
+    },
+    [
+      fetchWhatsAppCampaignFilters,
+      fetchWhatsAppCampaignStats,
+      fetchWhatsAppCampaignArtists,
+    ],
+  );
+
+  const handleWhatsAppCampaignCityChange = useCallback(
+    async (event) => {
+      const nextCity = event.target.value || "ALL";
+
+      setWhatsappCampaignCity(nextCity);
+      setWhatsappCampaignView("all");
+      setWhatsappCampaignResult(null);
+      setWhatsappCampaignArtistsPage(1);
+
+      await Promise.all([
+        fetchWhatsAppCampaignStats({
+          stateOverride: whatsappCampaignState,
+          cityOverride: nextCity,
+        }),
+        fetchWhatsAppCampaignArtists({
+          stateOverride: whatsappCampaignState,
+          cityOverride: nextCity,
+          pageOverride: 1,
+          viewOverride: "all",
+        }),
+      ]);
+    },
+    [
+      fetchWhatsAppCampaignStats,
+      fetchWhatsAppCampaignArtists,
+      whatsappCampaignState,
+    ],
+  );
+
+  const handleWhatsAppCampaignViewChange = useCallback(
+    async (nextView) => {
+      setWhatsappCampaignView(nextView);
+      setWhatsappCampaignArtistsPage(1);
+
+      await fetchWhatsAppCampaignArtists({
+        stateOverride: whatsappCampaignState,
+        cityOverride: whatsappCampaignCity,
+        pageOverride: 1,
+        viewOverride: nextView,
+      });
+    },
+    [fetchWhatsAppCampaignArtists, whatsappCampaignState, whatsappCampaignCity],
+  );
+
+  const handleWhatsAppCampaignArtistPage = useCallback(
+    async (nextPage) => {
+      const safePage = Math.min(
+        Math.max(Number(nextPage) || 1, 1),
+        Math.max(1, Number(whatsappCampaignArtistsPagination.totalPages || 1)),
+      );
+
+      await fetchWhatsAppCampaignArtists({
+        stateOverride: whatsappCampaignState,
+        cityOverride: whatsappCampaignCity,
+        pageOverride: safePage,
+        viewOverride: whatsappCampaignView,
+      });
+    },
+    [
+      fetchWhatsAppCampaignArtists,
+      whatsappCampaignState,
+      whatsappCampaignCity,
+      whatsappCampaignView,
+      whatsappCampaignArtistsPagination.totalPages,
+    ],
+  );
+
+  const handleSendNextWhatsAppBatch = useCallback(async () => {
+    let securityKey = campaignAdminKey.trim();
+
+    if (!securityKey) {
+      const enteredKey = window.prompt(
+        "Enter the WhatsApp campaign security key to SEND this batch.\n\nYou only need to enter it once for this browser session.",
+      );
+
+      securityKey = String(enteredKey || "").trim();
+
+      if (!securityKey) {
+        return;
+      }
+
+      setCampaignAdminKey(securityKey);
+      sessionStorage.setItem("inkWhatsAppCampaignKey", securityKey);
+    }
+
+    const pending = Number(
+      whatsappCampaignStats?.pending ?? whatsappCampaignStats?.remaining ?? 0,
+    );
+
+    if (pending <= 0) {
+      setWhatsappCampaignError("No pending eligible artists remain here.");
+      return;
+    }
+
+    const nextBatch = Math.min(META_WHATSAPP_BATCH_SIZE, pending);
+    const remainingAfter = Math.max(0, pending - nextBatch);
+
+    const stateLabel =
+      whatsappCampaignState === "ALL" ? "ALL STATES" : whatsappCampaignState;
+
+    const cityLabel =
+      whatsappCampaignCity === "ALL" ? "ALL CITIES" : whatsappCampaignCity;
+
+    const confirmed = window.confirm(
+      `Send WhatsApp message to the next ${nextBatch} pending artists in ${cityLabel}, ${stateLabel}?\n\n${pending.toLocaleString("en-IN")} pending now.\n${remainingAfter.toLocaleString("en-IN")} will remain after this batch if all ${nextBatch} are attempted.\n\nEvery person receives their own Ink Convention profile link.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setWhatsappCampaignSending(true);
+    setWhatsappCampaignError("");
+    setWhatsappCampaignResult(null);
+
+    try {
+      const response = await apiFetch(
+        "/api/whatsapp-campaigns/send-next-batch",
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-WhatsApp-Campaign-Key": securityKey,
+          },
+          body: JSON.stringify({
+            campaignKey: DEFAULT_META_CAMPAIGN_KEY,
+            batchSize: nextBatch,
+            state: whatsappCampaignState === "ALL" ? "" : whatsappCampaignState,
+            city: whatsappCampaignCity === "ALL" ? "" : whatsappCampaignCity,
+          }),
+        },
+      );
+
+      const data = await getJson(response);
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.message || "Unable to send WhatsApp batch.");
+      }
+
+      setWhatsappCampaignResult(data?.batch || null);
+      setWhatsappCampaignStats(data?.stats || null);
+
+      // Keep Pending selected. Sent artists disappear from Pending automatically.
+      setWhatsappCampaignView("pending");
+      setWhatsappCampaignArtistsPage(1);
+
+      await Promise.all([
+        fetchWhatsAppCampaignArtists({
+          stateOverride: whatsappCampaignState,
+          cityOverride: whatsappCampaignCity,
+          pageOverride: 1,
+          viewOverride: "pending",
+        }),
+        fetchDirectoryStats(),
+        fetchMemberships(),
+        fetchFreeDirectoryPage(true),
+      ]);
+    } catch (error) {
+      console.error("Meta WhatsApp batch error:", error);
+
+      setWhatsappCampaignError(
+        error.message || "Unable to send WhatsApp batch.",
+      );
+    } finally {
+      setWhatsappCampaignSending(false);
+    }
+  }, [
+    campaignAdminKey,
+    whatsappCampaignState,
+    whatsappCampaignCity,
+    whatsappCampaignStats,
+    fetchWhatsAppCampaignArtists,
+    fetchDirectoryStats,
+    fetchMemberships,
+    fetchFreeDirectoryPage,
+  ]);
+
+  const handleDownloadWhatsAppCampaignCsv = useCallback(async () => {
+    let securityKey = campaignAdminKey.trim();
+
+    if (!securityKey) {
+      const enteredKey = window.prompt(
+        "Enter the WhatsApp campaign security key to download the campaign CSV.",
+      );
+
+      securityKey = String(enteredKey || "").trim();
+
+      if (!securityKey) {
+        return;
+      }
+
+      setCampaignAdminKey(securityKey);
+      sessionStorage.setItem("inkWhatsAppCampaignKey", securityKey);
+    }
+
+    setWhatsappCampaignError("");
+
+    try {
+      const params = new URLSearchParams({
+        campaignKey: DEFAULT_META_CAMPAIGN_KEY,
+      });
+
+      if (whatsappCampaignState !== "ALL") {
+        params.set("state", whatsappCampaignState);
+      }
+
+      if (whatsappCampaignCity !== "ALL") {
+        params.set("city", whatsappCampaignCity);
+      }
+
+      const response = await apiFetch(
+        `/api/whatsapp-campaigns/export?${params.toString()}`,
+        {
+          headers: {
+            Accept: "text/csv",
+            "X-WhatsApp-Campaign-Key": securityKey,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const data = await getJson(response);
+
+        throw new Error(
+          data.message || "Unable to download WhatsApp campaign CSV.",
+        );
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      const stateSlug =
+        whatsappCampaignState === "ALL" ? "ALL" : whatsappCampaignState;
+
+      const citySlug =
+        whatsappCampaignCity === "ALL" ? "ALL" : whatsappCampaignCity;
+
+      anchor.href = url;
+      anchor.download = `${DEFAULT_META_CAMPAIGN_KEY}_${stateSlug}_${citySlug}_whatsapp_log.csv`;
+
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("WhatsApp campaign CSV error:", error);
+
+      setWhatsappCampaignError(
+        error.message || "Unable to download WhatsApp campaign CSV.",
+      );
+    }
+  }, [campaignAdminKey, whatsappCampaignState, whatsappCampaignCity]);
 
   // ===================================================
   // ARTIST CARD STATUS
@@ -2741,6 +3477,435 @@ function AdminArtists() {
           </section>
 
           {/* ==========================================
+              META WHATSAPP AUTO CAMPAIGN
+          ========================================== */}
+
+          <section className="rounded-3xl border border-emerald-400/20 bg-emerald-400/[0.025] p-5 sm:p-6">
+            <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-5">
+              <div className="max-w-3xl">
+                <div className="flex items-center gap-2 text-emerald-300">
+                  <MessageCircle size={16} />
+
+                  <p className="text-[10px] font-mono font-black uppercase tracking-[0.18em]">
+                    Meta WhatsApp Campaign
+                  </p>
+                </div>
+
+                <h2 className="mt-2 text-2xl sm:text-3xl font-black">
+                  Select State → Select City → Send Next 100
+                </h2>
+
+                <p className="mt-2 text-xs sm:text-sm leading-relaxed text-gray-600">
+                  Choose only a state and city. You will immediately see that
+                  location&apos;s Total, Sent, Pending and Failed counts.
+                  Pending artists are shown first. After a batch is sent, those
+                  artists automatically disappear from Pending and move to Sent.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-400/20 bg-black/30 px-4 py-3 text-right">
+                <p className="text-[8px] font-mono uppercase tracking-widest text-gray-600">
+                  Campaign
+                </p>
+
+                <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-emerald-300">
+                  {DEFAULT_META_CAMPAIGN_KEY}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.04] px-4 py-3">
+              <p className="text-[9px] font-mono uppercase tracking-wider text-emerald-200/80">
+                Select State and City to view cards immediately. The security
+                key is asked only when you press Send Next 100 or CSV.
+              </p>
+            </div>
+
+            {/* STATE + CITY ONLY */}
+            <div className="mt-4 rounded-2xl border border-white/[0.08] bg-black/25 p-4">
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white">
+                    Choose Target Location
+                  </p>
+
+                  <p className="mt-1 text-[9px] font-mono text-gray-600">
+                    Only main city names are shown. Areas and localities are
+                    grouped under the main city.
+                  </p>
+                </div>
+
+                <div className="rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-1.5 text-[8px] font-black uppercase tracking-wider text-emerald-300">
+                  {whatsappCampaignState === "ALL"
+                    ? "ALL STATES"
+                    : whatsappCampaignState}
+                  {" / "}
+                  {whatsappCampaignCity === "ALL"
+                    ? "ALL CITIES"
+                    : whatsappCampaignCity}
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="mb-2 block text-[8px] font-mono font-black uppercase tracking-widest text-gray-500">
+                    State
+                  </span>
+
+                  <select
+                    value={whatsappCampaignState}
+                    onChange={(event) =>
+                      void handleWhatsAppCampaignStateChange(event)
+                    }
+                    className="w-full rounded-xl border border-white/10 bg-[#0b0b0f] px-4 py-3.5 text-xs font-black uppercase tracking-wider text-white outline-none focus:border-emerald-400/50"
+                  >
+                    <option value="ALL">ALL STATES</option>
+
+                    {whatsappCampaignFilterOptions.states.map((state) => (
+                      <option key={state} value={state}>
+                        {state}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[8px] font-mono font-black uppercase tracking-widest text-gray-500">
+                    City
+                  </span>
+
+                  <select
+                    value={whatsappCampaignCity}
+                    disabled={whatsappCampaignState === "ALL"}
+                    onChange={(event) =>
+                      void handleWhatsAppCampaignCityChange(event)
+                    }
+                    className="w-full rounded-xl border border-white/10 bg-[#0b0b0f] px-4 py-3.5 text-xs font-black uppercase tracking-wider text-white outline-none focus:border-emerald-400/50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <option value="ALL">
+                      {whatsappCampaignState === "ALL"
+                        ? "SELECT STATE FIRST"
+                        : "ALL CITIES"}
+                    </option>
+
+                    {whatsappCampaignFilterOptions.cities.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            {whatsappCampaignError && (
+              <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-[10px] text-red-300">
+                {whatsappCampaignError}
+              </div>
+            )}
+
+            {/* LOCATION SUMMARY */}
+            <div className="mt-5 rounded-2xl border border-emerald-400/15 bg-[#080d0c] p-4 sm:p-5">
+              <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-300">
+                    Selected Location
+                  </p>
+
+                  <h3 className="mt-2 text-xl sm:text-2xl font-black uppercase text-white">
+                    {whatsappCampaignCity !== "ALL"
+                      ? whatsappCampaignCity
+                      : whatsappCampaignState !== "ALL"
+                        ? whatsappCampaignState
+                        : "ALL INDIA"}
+                  </h3>
+
+                  <p className="mt-1 text-[9px] font-mono uppercase tracking-wider text-gray-600">
+                    {whatsappCampaignCity === "ALL"
+                      ? "Choose a city for the cleanest working list."
+                      : `${whatsappCampaignCity}, ${whatsappCampaignState}`}
+                  </p>
+                </div>
+
+                {Number(whatsappCampaignStats?.pending || 0) === 0 &&
+                  Number(whatsappCampaignStats?.eligible || 0) > 0 && (
+                    <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-200">
+                      ✓{" "}
+                      {whatsappCampaignCity !== "ALL"
+                        ? whatsappCampaignCity
+                        : "LOCATION"}{" "}
+                      COMPLETED
+                    </div>
+                  )}
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                <CampaignStatCard
+                  label="Total Artists"
+                  value={whatsappCampaignStats?.totalArtists || 0}
+                />
+
+                <CampaignStatCard
+                  label="Eligible"
+                  value={whatsappCampaignStats?.eligible || 0}
+                />
+
+                <CampaignStatCard
+                  label="Sent"
+                  value={whatsappCampaignStats?.sent || 0}
+                  tone="success"
+                />
+
+                <CampaignStatCard
+                  label="Pending"
+                  value={
+                    whatsappCampaignStats?.pending ??
+                    whatsappCampaignStats?.remaining ??
+                    0
+                  }
+                  tone="highlight"
+                />
+
+                <CampaignStatCard
+                  label="Failed"
+                  value={whatsappCampaignStats?.failed || 0}
+                  tone="danger"
+                />
+
+                <CampaignStatCard
+                  label="Not Eligible"
+                  value={whatsappCampaignStats?.notEligible || 0}
+                />
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-3">
+                <div className="rounded-xl border border-white/[0.08] bg-black/25 p-4">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white">
+                    What happens when you send?
+                  </p>
+
+                  <p className="mt-2 text-[10px] leading-relaxed text-gray-500">
+                    The system takes only the next pending artists from the
+                    selected state/city, up to 100. Every person receives their
+                    own profile link. Artists already attempted in this campaign
+                    are never automatically repeated.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={
+                    whatsappCampaignSending ||
+                    !whatsappCampaignStats?.meta?.configured ||
+                    Number(
+                      whatsappCampaignStats?.pending ??
+                        whatsappCampaignStats?.remaining ??
+                        0,
+                    ) <= 0
+                  }
+                  onClick={() => void handleSendNextWhatsAppBatch()}
+                  className="min-w-[260px] rounded-xl border border-emerald-400/35 bg-emerald-400/10 px-5 py-4 text-[10px] font-black uppercase tracking-widest text-emerald-200 transition hover:border-emerald-300/60 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  {whatsappCampaignSending
+                    ? "Sending..."
+                    : `Send Next ${Math.min(
+                        META_WHATSAPP_BATCH_SIZE,
+                        Number(
+                          whatsappCampaignStats?.pending ??
+                            whatsappCampaignStats?.remaining ??
+                            0,
+                        ),
+                      )}`}
+                </button>
+              </div>
+
+              {whatsappCampaignResult && (
+                <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-[9px] font-mono uppercase tracking-widest text-emerald-300">
+                      Last Batch #{whatsappCampaignResult.batchNumber || 0}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2 text-[8px] font-black uppercase tracking-wider">
+                      <span className="rounded-full border border-white/10 px-2.5 py-1 text-white">
+                        Attempted {whatsappCampaignResult.attempted || 0}
+                      </span>
+
+                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-emerald-300">
+                        Sent {whatsappCampaignResult.sent || 0}
+                      </span>
+
+                      <span className="rounded-full border border-red-400/20 bg-red-400/10 px-2.5 py-1 text-red-300">
+                        Failed {whatsappCampaignResult.failed || 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* PENDING / SENT / ALL TABS */}
+            <div className="mt-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="inline-flex w-full lg:w-auto rounded-xl border border-white/10 bg-black/30 p-1">
+                {[
+                  {
+                    key: "pending",
+                    label: "Pending",
+                    count:
+                      whatsappCampaignStats?.pending ??
+                      whatsappCampaignStats?.remaining ??
+                      0,
+                  },
+                  {
+                    key: "sent",
+                    label: "Sent",
+                    count: whatsappCampaignStats?.sent || 0,
+                  },
+                  {
+                    key: "all",
+                    label: "All",
+                    count: whatsappCampaignStats?.totalArtists || 0,
+                  },
+                ].map((item) => {
+                  const active = whatsappCampaignView === item.key;
+
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() =>
+                        void handleWhatsAppCampaignViewChange(item.key)
+                      }
+                      className={`flex-1 lg:flex-none rounded-lg px-4 py-2.5 text-[9px] font-black uppercase tracking-widest transition ${
+                        active
+                          ? "bg-emerald-400/12 text-emerald-200"
+                          : "text-gray-600 hover:text-white"
+                      }`}
+                    >
+                      {item.label}{" "}
+                      <span className="ml-1 opacity-60">
+                        ({Number(item.count || 0).toLocaleString("en-IN")})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[8px] font-mono uppercase tracking-wider text-gray-600">
+                  Showing{" "}
+                  {Number(
+                    whatsappCampaignArtistsPagination.total || 0,
+                  ).toLocaleString("en-IN")}{" "}
+                  {whatsappCampaignView}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={Number(whatsappCampaignStats?.attempted || 0) <= 0}
+                  onClick={() => void handleDownloadWhatsAppCampaignCsv()}
+                  className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-[8px] font-black uppercase tracking-widest text-gray-400 transition hover:text-white disabled:opacity-30"
+                >
+                  CSV
+                </button>
+              </div>
+            </div>
+
+            {/* ARTIST CARDS */}
+            <div className="mt-4">
+              {whatsappCampaignArtistsLoading ? (
+                <div className="rounded-2xl border border-white/10 bg-black/20 py-16 text-center text-[10px] font-mono uppercase tracking-widest text-gray-600">
+                  Loading artists...
+                </div>
+              ) : whatsappCampaignArtists.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-black/20 py-16 text-center">
+                  <MessageCircle size={30} className="mx-auto text-gray-700" />
+
+                  <p className="mt-3 text-sm font-black text-gray-400">
+                    {whatsappCampaignView === "pending"
+                      ? "No pending artists in this location."
+                      : whatsappCampaignView === "sent"
+                        ? "No sent artists in this location yet."
+                        : "No artists found for this location."}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
+                  {whatsappCampaignArtists.map((artist) => (
+                    <WhatsAppCampaignArtistCard
+                      key={artist.id}
+                      artist={artist}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {whatsappCampaignArtistsPagination.totalPages > 1 && (
+                <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-white/10 pt-4">
+                  <p className="text-[8px] font-mono uppercase tracking-wider text-gray-600">
+                    Page {whatsappCampaignArtistsPagination.page} of{" "}
+                    {whatsappCampaignArtistsPagination.totalPages} •{" "}
+                    {Number(
+                      whatsappCampaignArtistsPagination.total || 0,
+                    ).toLocaleString("en-IN")}{" "}
+                    cards
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={whatsappCampaignArtistsPage <= 1}
+                      onClick={() =>
+                        void handleWhatsAppCampaignArtistPage(
+                          whatsappCampaignArtistsPage - 1,
+                        )
+                      }
+                      className="rounded-lg border border-white/10 px-4 py-2 text-[8px] font-black uppercase tracking-widest text-gray-400 disabled:opacity-30"
+                    >
+                      Previous
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={
+                        whatsappCampaignArtistsPage >=
+                        whatsappCampaignArtistsPagination.totalPages
+                      }
+                      onClick={() =>
+                        void handleWhatsAppCampaignArtistPage(
+                          whatsappCampaignArtistsPage + 1,
+                        )
+                      }
+                      className="rounded-lg border border-white/10 px-4 py-2 text-[8px] font-black uppercase tracking-widest text-gray-400 disabled:opacity-30"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {!whatsappCampaignStats?.meta?.configured && (
+              <div className="mt-4 rounded-xl border border-red-400/15 bg-red-400/[0.04] px-4 py-3">
+                <p className="text-[9px] text-red-300">
+                  Meta sending is not ready. Missing:{" "}
+                  {Array.isArray(whatsappCampaignStats?.meta?.missing)
+                    ? whatsappCampaignStats.meta.missing.join(", ")
+                    : "Meta configuration"}
+                </p>
+              </div>
+            )}
+
+            <div className="mt-4 rounded-xl border border-amber-400/15 bg-amber-400/[0.04] px-4 py-3">
+              <p className="text-[9px] leading-relaxed text-amber-200/80">
+                Meta bulk sending only includes artists with valid WhatsApp
+                opt-in. The All tab can still show other artists from the
+                selected state/city, but they are not included in Pending.
+              </p>
+            </div>
+          </section>
+
+          {/* ==========================================
               DIRECTORY MEMBERSHIPS
           ========================================== */}
 
@@ -3191,6 +4356,10 @@ function AdminArtists() {
                                 }
                                 onStatusChange={handleArtistStatusChange}
                                 onOpenArtist={setSelectedDirectoryArtist}
+                                onWhatsAppContact={handleArtistWhatsAppContact}
+                                whatsappBusy={
+                                  whatsappBusyArtistId === String(artist.id)
+                                }
                               />
                             ))}
                         </div>
@@ -3218,6 +4387,8 @@ function AdminArtists() {
               latestRequestByProfile={latestMembershipRequestByProfile}
               onStatusChange={handleArtistStatusChange}
               onOpenArtist={setSelectedDirectoryArtist}
+              onWhatsAppContact={handleArtistWhatsAppContact}
+              whatsappBusyArtistId={whatsappBusyArtistId}
             />
           </section>
 
@@ -3387,6 +4558,10 @@ function AdminArtists() {
           onAdminPlanChange={handleDirectPlanActivation}
           busy={directPlanBusyArtistId === selectedDirectoryArtist.id}
           nowMs={membershipClock}
+          onWhatsAppContact={handleArtistWhatsAppContact}
+          whatsappBusy={
+            whatsappBusyArtistId === String(selectedDirectoryArtist.id)
+          }
           onClose={() => setSelectedDirectoryArtist(null)}
         />
       )}
@@ -3443,6 +4618,118 @@ function DashboardStat({ label, value, highlight = false, tone = "default" }) {
 // =====================================================
 // SILVER / GOLD MEMBERSHIP PANEL
 // =====================================================
+
+function WhatsAppCampaignArtistCard({ artist }) {
+  const status = String(artist?.campaignStatus || "not-sent")
+    .trim()
+    .toLowerCase();
+
+  const sentCount = Math.max(
+    status === "sent" ? 1 : 0,
+    Number(artist?.whatsappContactCount || 0),
+  );
+
+  const plan = normalizeDirectoryPlan(artist?.plan);
+
+  const planLabel =
+    plan === "verified" ? "GOLD" : plan === "pro" ? "SILVER" : "FREE";
+
+  const statusClass =
+    status === "sent"
+      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+      : status === "failed"
+        ? "border-red-400/20 bg-red-400/10 text-red-300"
+        : "border-purple-400/20 bg-purple-400/10 text-purple-300";
+
+  const statusLabel =
+    status === "sent"
+      ? "SENT"
+      : status === "failed"
+        ? "FAILED"
+        : artist?.eligible
+          ? "PENDING"
+          : "NOT ELIGIBLE";
+
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-[#0b0b0f] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-white">
+            {artist?.name || "Tattoo Artist"}
+          </p>
+
+          <p className="mt-1 truncate text-[8px] font-mono uppercase tracking-wider text-gray-600">
+            {artist?.city || "N/A"}, {artist?.state || "N/A"}
+          </p>
+        </div>
+
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-wider ${statusClass}`}
+        >
+          {statusLabel}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <MembershipInfo label="Phone" value={artist?.phone || "N/A"} />
+        <MembershipInfo label="Plan" value={planLabel} />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
+        <div>
+          <p className="text-[7px] font-mono uppercase tracking-wider text-gray-600">
+            Message Count
+          </p>
+
+          <p className="mt-1 text-lg font-black text-emerald-300">
+            SENT {sentCount}
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-[7px] font-mono uppercase tracking-wider text-gray-600">
+            Batch
+          </p>
+
+          <p className="mt-1 text-[10px] font-black text-white">
+            {artist?.campaignBatchNumber
+              ? `#${artist.campaignBatchNumber}`
+              : "—"}
+          </p>
+        </div>
+      </div>
+
+      {artist?.campaignSentAt && (
+        <p className="mt-2 text-[7px] font-mono uppercase tracking-wider text-gray-700">
+          Last campaign send: {formatMembershipDateTime(artist.campaignSentAt)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CampaignStatCard({ label, value, tone = "default" }) {
+  const toneClass =
+    tone === "success"
+      ? "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-200"
+      : tone === "danger"
+        ? "border-red-400/20 bg-red-400/[0.06] text-red-200"
+        : tone === "highlight"
+          ? "border-[#a855f7]/25 bg-[#a855f7]/[0.07] text-purple-200"
+          : "border-white/10 bg-black/25 text-white";
+
+  return (
+    <div className={`rounded-xl border p-3 ${toneClass}`}>
+      <p className="text-[7px] font-mono font-black uppercase tracking-[0.14em] opacity-60">
+        {label}
+      </p>
+
+      <p className="mt-1 text-2xl font-black">
+        {Number(value || 0).toLocaleString("en-IN")}
+      </p>
+    </div>
+  );
+}
 
 function MembershipFilterButton({
   active,
@@ -3510,6 +4797,8 @@ function MembershipTierPanel({
   latestRequestByProfile,
   onStatusChange,
   onOpenArtist,
+  onWhatsAppContact,
+  whatsappBusyArtistId,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -3620,6 +4909,10 @@ function MembershipTierPanel({
               }
               onStatusChange={onStatusChange}
               onOpenArtist={onOpenArtist}
+              onWhatsAppContact={onWhatsAppContact}
+              whatsappBusy={
+                String(whatsappBusyArtistId || "") === String(artist.id || "")
+              }
             />
           ))}
         </div>
@@ -3678,6 +4971,8 @@ function MembershipMemberRow({
   membershipRequest = null,
   onStatusChange,
   onOpenArtist,
+  onWhatsAppContact,
+  whatsappBusy = false,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -3829,6 +5124,28 @@ function MembershipMemberRow({
         <MembershipInfo label="Email" value={artist.email || "N/A"} />
         <MembershipInfo label="Phone" value={artist.phone || "N/A"} />
       </div>
+
+      <button
+        type="button"
+        disabled={!artist.phone || whatsappBusy}
+        onClick={() => void onWhatsAppContact?.(artist)}
+        className="mt-3 flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.08] px-4 py-3 text-left transition hover:border-emerald-400/45 hover:bg-emerald-400/[0.13] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-emerald-300">
+          <MessageCircle size={15} />
+          {whatsappBusy ? "Saving..." : "WhatsApp Artist"}
+        </span>
+
+        <span className="rounded-full border border-emerald-400/20 bg-black/20 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-emerald-200">
+          Sent {Number(artist.whatsappContactCount || 0)}
+        </span>
+      </button>
+
+      {artist.whatsappLastContactedAt && (
+        <p className="mt-1.5 text-right text-[7px] font-mono uppercase tracking-wider text-gray-600">
+          Last: {formatMembershipDateTime(artist.whatsappLastContactedAt)}
+        </p>
+      )}
 
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
         <span className="text-[8px] font-mono uppercase tracking-widest text-gray-600">
@@ -4094,6 +5411,8 @@ function DirectoryArtistDetailsModal({
   onAdminPlanChange,
   busy,
   nowMs = 0,
+  onWhatsAppContact,
+  whatsappBusy = false,
   onClose,
 }) {
   const plan = normalizeDirectoryPlan(artist?.plan);
@@ -4185,7 +5504,31 @@ function DirectoryArtistDetailsModal({
               label="Claimed At"
               value={formatMembershipDateTime(artist?.claimedAt)}
             />
+            <MembershipInfo
+              label="WhatsApp Sent"
+              value={Number(artist?.whatsappContactCount || 0)}
+            />
+            <MembershipInfo
+              label="Last WhatsApp"
+              value={formatMembershipDateTime(artist?.whatsappLastContactedAt)}
+            />
           </div>
+
+          <button
+            type="button"
+            disabled={!artist?.phone || whatsappBusy}
+            onClick={() => void onWhatsAppContact?.(artist)}
+            className="flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.08] px-4 py-4 text-left transition hover:border-emerald-400/45 hover:bg-emerald-400/[0.13] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-300">
+              <MessageCircle size={17} />
+              {whatsappBusy ? "Saving Contact..." : "Open WhatsApp"}
+            </span>
+
+            <span className="rounded-full border border-emerald-400/20 bg-black/20 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-emerald-200">
+              Sent {Number(artist?.whatsappContactCount || 0)}
+            </span>
+          </button>
 
           <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
             <p className="mb-3 text-[8px] font-mono font-black uppercase tracking-widest text-gray-500">

@@ -38,6 +38,7 @@ const claimRoutes = require("./routes/claimRoutes");
 const stallBookingRoutes = require("./routes/stallBookingRoutes");
 const artistBookingRoutes = require("./routes/artistBookingRoutes");
 const membershipRequestRoutes = require("./routes/membershipRequestRoutes");
+const whatsappCampaignRoutes = require("./routes/whatsappCampaignRoutes");
 
 // NEW COMPETITION ROUTE
 const competitionRoutes = require("./routes/competitionRoutes");
@@ -384,6 +385,14 @@ console.log("✅ Artist booking routes mounted at /api/artist-bookings");
 app.use("/api/membership-requests", membershipRequestRoutes);
 
 console.log("✅ Membership request routes mounted at /api/membership-requests");
+
+// =====================================================
+// META WHATSAPP CAMPAIGN ROUTES
+// =====================================================
+
+app.use("/api/whatsapp-campaigns", whatsappCampaignRoutes);
+
+console.log("✅ WhatsApp campaign routes mounted at /api/whatsapp-campaigns");
 
 // =====================================================
 // COMPETITION ROUTES
@@ -1032,6 +1041,10 @@ app.listen(
     );
 
     console.log(`🔐 Claim API: http://localhost:${PORT}/api/claim`);
+
+    console.log(
+      `💬 WhatsApp Campaigns: http://localhost:${PORT}/api/whatsapp-campaigns`,
+    );
 
     console.log(`💳 Payment: http://localhost:${PORT}/api/payment`);
 

@@ -162,11 +162,9 @@
   border-radius: 22px;
 
   background:
-    linear-gradient(
-      145deg,
+    linear-gradient(145deg,
       rgba(255, 255, 255, 0.025),
-      rgba(255, 255, 255, 0.008)
-    );
+      rgba(255, 255, 255, 0.008));
 
   border: 1px solid rgba(255, 255, 255, 0.08);
 
@@ -396,11 +394,9 @@
   border-radius: 22px;
 
   background:
-    linear-gradient(
-      145deg,
+    linear-gradient(145deg,
       rgba(255, 255, 255, 0.025),
-      rgba(255, 255, 255, 0.008)
-    );
+      rgba(255, 255, 255, 0.008));
 
   border: 1px solid rgba(255, 255, 255, 0.08);
 
@@ -648,11 +644,9 @@
   border-radius: 22px;
 
   background:
-    linear-gradient(
-      145deg,
+    linear-gradient(145deg,
       rgba(255, 255, 255, 0.02),
-      rgba(255, 255, 255, 0.006)
-    );
+      rgba(255, 255, 255, 0.006));
 
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -821,4 +815,91 @@
     padding: 22px;
   }
 
+}
+
+/* =========================================================
+   GLOBAL ADMIN CURSOR FIX
+   Keep the normal arrow visible everywhere.
+   Show pointer only on clickable controls.
+========================================================= */
+
+html,
+body,
+#root {
+  cursor: default !important;
+}
+
+.admin-clients-page,
+.admin-clients-page *,
+.admin-clients-content,
+.admin-clients-content * {
+  cursor: default !important;
+}
+
+/* Clickable controls */
+.admin-clients-page a,
+.admin-clients-page button,
+.admin-clients-page select,
+.admin-clients-page [role="button"],
+.admin-clients-page .cursor-pointer,
+.admin-clients-page input[type="button"],
+.admin-clients-page input[type="submit"],
+.admin-clients-page input[type="checkbox"],
+.admin-clients-page input[type="radio"] {
+  cursor: pointer !important;
+}
+
+/* Text-entry controls */
+.admin-clients-page input[type="text"],
+.admin-clients-page input[type="email"],
+.admin-clients-page input[type="password"],
+.admin-clients-page input[type="search"],
+.admin-clients-page input[type="number"],
+.admin-clients-page input[type="tel"],
+.admin-clients-page input[type="url"],
+.admin-clients-page textarea {
+  cursor: text !important;
+}
+
+/* Disabled controls */
+.admin-clients-page button:disabled,
+.admin-clients-page select:disabled,
+.admin-clients-page input:disabled,
+.admin-clients-page textarea:disabled {
+  cursor: not-allowed !important;
+}
+
+/* Safety override in case another global stylesheet hides the cursor */
+body * {
+  cursor: default !important;
+}
+
+body a,
+body button,
+body select,
+body [role="button"],
+body .cursor-pointer,
+body input[type="button"],
+body input[type="submit"],
+body input[type="checkbox"],
+body input[type="radio"] {
+  cursor: pointer !important;
+}
+
+body input[type="text"],
+body input[type="email"],
+body input[type="password"],
+body input[type="search"],
+body input[type="number"],
+body input[type="tel"],
+body input[type="url"],
+body textarea {
+  cursor: text !important;
+}
+
+body button:disabled,
+body select:disabled,
+body input:disabled,
+body textarea:disabled {
+  cursor: not-allowed !important;
 }

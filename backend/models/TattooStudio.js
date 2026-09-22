@@ -98,6 +98,57 @@ const tattooStudioSchema = new mongoose.Schema(
       index: true,
     },
 
+    /* =====================================================
+       ADMIN WHATSAPP OUTREACH TRACKING
+
+       Counts how many times the admin clicked the WhatsApp
+       button for this artist from the dashboard.
+    ===================================================== */
+
+    whatsappContactCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    whatsappLastContactedAt: {
+      type: Date,
+      default: null,
+    },
+
+    /* =====================================================
+       WHATSAPP BUSINESS PLATFORM CONSENT
+
+       IMPORTANT:
+       - This is NOT automatically true for imported artists.
+       - OTP / claimed profile does NOT automatically mean marketing opt-in.
+       - Set this to true only after the artist clearly agrees to receive
+         Ink Convention messages on WhatsApp.
+    ===================================================== */
+
+    whatsappOptIn: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    whatsappOptInAt: {
+      type: Date,
+      default: null,
+    },
+
+    whatsappOptInSource: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    whatsappOptOutAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
     email: {
       type: String,
       default: "",
@@ -754,6 +805,13 @@ tattooStudioSchema.index({
    email gets an index as well. */
 tattooStudioSchema.index({
   email: 1,
+});
+
+/* Fast Meta WhatsApp campaign eligibility query */
+tattooStudioSchema.index({
+  whatsappOptIn: 1,
+  whatsappOptOutAt: 1,
+  createdAt: 1,
 });
 
 /* =========================================================

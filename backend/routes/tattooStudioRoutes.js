@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
@@ -241,6 +242,241 @@ router.post(
     }
   },
 );
+
+/* =========================================================
+   ADMIN ARTIST DIRECTORY
+
+   GET
+   /api/admin/tattoo-studios/admin-directory
+
+   IMPORTANT:
+   This route is for the admin dashboard and returns the REAL
+   MongoDB contact details, including phone numbers for FREE
+   CLAIMED artists. The public "/" route below still uses
+   serializePublicArtist(), so Free-plan phone/email stay hidden
+   from normal public visitors.
+========================================================= */
+
+router.get("/admin-directory", async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const requestedLimit = parseInt(req.query.limit, 10) || 50;
+    const limit = Math.min(Math.max(requestedLimit, 1), 1000);
+    const skip = (page - 1) * limit;
+
+    const { city, state, plan, paidOnly, claimed, search } = req.query;
+
+    const filter = {};
+
+    // Paid dashboard members = Silver + Gold with successful payment.
+    if (
+      String(paidOnly || "")
+        .trim()
+        .toLowerCase() === "true"
+    ) {
+      filter.paymentStatus = "paid";
+      filter.plan = { $in: ["pro", "verified"] };
+    } else if (
+      plan &&
+      String(plan).trim() &&
+      String(plan).trim().toUpperCase() !== "ALL"
+    ) {
+      filter.plan = normalizePlan(plan);
+    }
+
+    if (
+      city &&
+      String(city).trim() &&
+      String(city).trim().toUpperCase() !== "ALL"
+    ) {
+      filter.city = {
+        $regex: `^${escapeRegex(String(city).trim())}$`,
+        $options: "i",
+      };
+    }
+
+    if (
+      state &&
+      String(state).trim() &&
+      String(state).trim().toUpperCase() !== "ALL"
+    ) {
+      filter.state = {
+        $regex: `^${escapeRegex(String(state).trim())}$`,
+        $options: "i",
+      };
+    }
+
+    // Claimed means the owner completed any supported ownership flow.
+    if (claimed !== undefined && String(claimed).trim() !== "") {
+      const claimedValue = String(claimed).trim().toLowerCase();
+
+      if (claimedValue === "true") {
+        filter.$and = [
+          ...(Array.isArray(filter.$and) ? filter.$and : []),
+          {
+            $or: [
+              { claimed: true },
+              { phoneVerified: true },
+              { ownerVerified: true },
+              { updatedByOwner: true },
+            ],
+          },
+        ];
+      }
+
+      if (claimedValue === "false") {
+        filter.$and = [
+          ...(Array.isArray(filter.$and) ? filter.$and : []),
+          { claimed: { $ne: true } },
+          { phoneVerified: { $ne: true } },
+          { ownerVerified: { $ne: true } },
+          { updatedByOwner: { $ne: true } },
+        ];
+      }
+    }
+
+    // Admin search works on real MongoDB fields, including phone/email.
+    if (search && String(search).trim()) {
+      const rawSearch = String(search).trim();
+
+      if (rawSearch.length < 3) {
+        return res.status(200).json({
+          success: true,
+          artists: [],
+          total: 0,
+          pagination: {
+            page: 1,
+            limit,
+            total: 0,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          },
+        });
+      }
+
+      const prefixRegex = new RegExp(`^${escapeRegex(rawSearch)}`, "i");
+      const digits = rawSearch.replace(/\D/g, "");
+
+      filter.$or = [
+        { name: prefixRegex },
+        { professionalName: prefixRegex },
+        { artistName: prefixRegex },
+        { studio: prefixRegex },
+        { studioName: prefixRegex },
+        { email: prefixRegex },
+        ...(digits.length >= 3
+          ? [
+              {
+                phone: new RegExp(
+                  `^(?:\\+?91\\D*)?${digits
+                    .split("")
+                    .map((digit) => escapeRegex(digit))
+                    .join("\\D*")}`,
+                  "i",
+                ),
+              },
+            ]
+          : []),
+      ];
+    }
+
+    const artistQuery = TattooStudio.find(filter)
+      .select({
+        _id: 1,
+        name: 1,
+        artistName: 1,
+        professionalName: 1,
+        studio: 1,
+        studioName: 1,
+        city: 1,
+        state: 1,
+        country: 1,
+        category: 1,
+        tattooStyles: 1,
+        plan: 1,
+        paymentStatus: 1,
+        verified: 1,
+        spotlight: 1,
+        hallOfFameEligible: 1,
+        rating: 1,
+        reviews: 1,
+        experience: 1,
+        phone: 1,
+        email: 1,
+        instagram: 1,
+        website: 1,
+        profileLinks: 1,
+        bio: 1,
+        profileImage: 1,
+        portfolioImages: 1,
+        claimed: 1,
+        claimedAt: 1,
+        phoneVerified: 1,
+        updatedByOwner: 1,
+        ownerVerified: 1,
+        planStartedAt: 1,
+        planExpiresAt: 1,
+        paidAt: 1,
+        whatsappContactCount: 1,
+        whatsappLastContactedAt: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      })
+      .sort({
+        plan: -1,
+        updatedAt: -1,
+        name: 1,
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const [studios, total] = await Promise.all([
+      artistQuery,
+      TattooStudio.countDocuments(filter),
+    ]);
+
+    const artists = studios.map((studio) => ({
+      ...studio,
+      id: studio._id,
+      claimed: Boolean(
+        studio.claimed ||
+        studio.phoneVerified ||
+        studio.ownerVerified ||
+        studio.updatedByOwner,
+      ),
+      phone: studio.phone || "",
+      email: studio.email || "",
+      whatsappContactCount: Number(studio.whatsappContactCount || 0),
+      whatsappLastContactedAt: studio.whatsappLastContactedAt || null,
+    }));
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return res.status(200).json({
+      success: true,
+      artists,
+      total,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Admin tattoo directory error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load admin artist directory.",
+      error: error.message,
+    });
+  }
+});
 
 /* =========================================================
    PUBLIC ARTIST DIRECTORY
@@ -638,8 +874,17 @@ router.get(
         phone: 1,
         email: 1,
 
+        whatsappContactCount: 1,
+        whatsappLastContactedAt: 1,
+
         instagram: 1,
         website: 1,
+
+        claimed: 1,
+        claimedAt: 1,
+        phoneVerified: 1,
+        updatedByOwner: 1,
+        ownerVerified: 1,
 
         updatedAt: 1,
       });
@@ -690,6 +935,12 @@ router.get(
 
       const publicStudios = studios.map((studio) => ({
         ...serializePublicArtist(studio),
+
+        // Admin dashboard outreach tracking.
+        // This does not change the public membership fields.
+        whatsappContactCount: Number(studio.whatsappContactCount || 0),
+        whatsappLastContactedAt: studio.whatsappLastContactedAt || null,
+
         // Safe admin/public metadata used only to separate Free Claimed
         // from Free Unclaimed. No private Free-plan fields are exposed.
         claimed: Boolean(
@@ -1074,6 +1325,89 @@ router.get(
 
         message: "Server error while fetching directory statistics.",
 
+        error: error.message,
+      });
+    }
+  },
+);
+
+/* =========================================================
+   WHATSAPP CONTACT COUNTER
+
+   PATCH
+   /api/admin/tattoo-studios/:id/whatsapp-contact
+
+   Called only when the admin clicks the WhatsApp button.
+   It increments the permanent MongoDB counter and saves
+   the latest contact date/time.
+========================================================= */
+
+router.patch(
+  "/:id/whatsapp-contact",
+
+  async (req, res) => {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid tattoo studio ID.",
+        });
+      }
+
+      const contactedAt = new Date();
+
+      const artist = await TattooStudio.findByIdAndUpdate(
+        req.params.id,
+        {
+          $inc: { whatsappContactCount: 1 },
+          $set: { whatsappLastContactedAt: contactedAt },
+        },
+        {
+          new: true,
+          runValidators: true,
+        },
+      )
+        .select({
+          _id: 1,
+          name: 1,
+          artistName: 1,
+          professionalName: 1,
+          phone: 1,
+          whatsappContactCount: 1,
+          whatsappLastContactedAt: 1,
+        })
+        .lean();
+
+      if (!artist) {
+        return res.status(404).json({
+          success: false,
+          message: "Tattoo studio not found.",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "WhatsApp contact count updated.",
+        artist: {
+          id: artist._id,
+          _id: artist._id,
+          name:
+            artist.name ||
+            artist.artistName ||
+            artist.professionalName ||
+            "Tattoo Artist",
+          phone: artist.phone || "",
+          whatsappContactCount: Number(artist.whatsappContactCount || 0),
+          whatsappLastContactedAt:
+            artist.whatsappLastContactedAt || contactedAt,
+        },
+      });
+    } catch (error) {
+      console.error("❌ WhatsApp contact count error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to update WhatsApp contact count.",
         error: error.message,
       });
     }

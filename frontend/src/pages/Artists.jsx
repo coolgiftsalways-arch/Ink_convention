@@ -1484,28 +1484,74 @@ export default function Artists() {
 
   /* =======================================================
      OPEN SHARED ARTIST PROFILE FROM URL
+
+     Example:
+     https://inkconvention.com/artists?artist=ARTIST_MONGODB_ID
+
+     IMPORTANT:
+     We fetch the artist directly by ID instead of looking only
+     inside the currently visible 20 cards. This means a WhatsApp
+     profile link opens the correct artist even when that artist is
+     on another page/city/search result.
   ======================================================= */
 
   React.useEffect(() => {
-    if (loading || artists.length === 0) {
-      return;
-    }
-
     const params = new URLSearchParams(window.location.search);
-    const sharedArtistId = params.get("artist");
+    const sharedArtistId = String(params.get("artist") || "").trim();
 
     if (!sharedArtistId) {
-      return;
+      return undefined;
     }
 
-    const matchedArtist = artists.find(
-      (artist) => String(artist.id || "") === String(sharedArtistId),
-    );
+    const controller = new AbortController();
 
-    if (matchedArtist) {
-      setSelectedArtist(matchedArtist);
-    }
-  }, [artists, loading]);
+    const openSharedArtist = async () => {
+      // Show immediately if this artist already exists in the loaded page.
+      const matchedArtist = artists.find(
+        (artist) => String(artist.id || "") === sharedArtistId,
+      );
+
+      if (matchedArtist) {
+        setSelectedArtist(matchedArtist);
+      }
+
+      try {
+        const response = await fetch(
+          `${getApiBase()}/api/admin/tattoo-studios/public/${encodeURIComponent(
+            sharedArtistId,
+          )}`,
+          {
+            signal: controller.signal,
+            credentials: "include",
+            headers: {
+              Accept: "application/json",
+            },
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Shared artist profile HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const fullArtist = data?.artist || data?.profile;
+
+        if (!controller.signal.aborted && fullArtist) {
+          setSelectedArtist(normalizeArtist(fullArtist));
+        }
+      } catch (requestError) {
+        if (requestError?.name !== "AbortError") {
+          console.error("Unable to open shared artist profile:", requestError);
+        }
+      }
+    };
+
+    void openSharedArtist();
+
+    return () => {
+      controller.abort();
+    };
+  }, [artists]);
 
   /* =======================================================
      AUTO SCROLL
