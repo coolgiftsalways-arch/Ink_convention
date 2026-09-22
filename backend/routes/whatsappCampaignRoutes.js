@@ -1,5 +1,6 @@
 const express = require("express");
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 
 const TattooStudio = require("../models/TattooStudio");
 const WhatsAppCampaignLog = require("../models/WhatsAppCampaignLog");
@@ -1216,6 +1217,264 @@ router.get("/artists", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Unable to load artists for this location.",
+    });
+  }
+});
+
+/* =========================================================
+   SEND ONE ARTIST (TEST / MANUAL CARD BUTTON)
+
+   POST /api/whatsapp-campaigns/send-one
+
+   IMPORTANT:
+   - Uses the SAME campaignKey as SEND NEXT 100.
+   - The artist must be explicitly WhatsApp opted-in.
+   - Once attempted here, SEND NEXT 100 automatically skips them.
+   - The unique campaignKey + artistId index prevents duplicates.
+========================================================= */
+
+router.post("/send-one", requireCampaignAdminKey, async (req, res) => {
+  const campaignKey = normalizeCampaignKey(req.body?.campaignKey);
+  const artistId = String(req.body?.artistId || "").trim();
+  const selectedState = normalizeLocationFilter(req.body?.state);
+  const selectedCity = normalizeLocationFilter(req.body?.city);
+
+  if (!mongoose.Types.ObjectId.isValid(artistId)) {
+    return res.status(400).json({
+      success: false,
+      message: "A valid artist ID is required.",
+    });
+  }
+
+  try {
+    const metaStatus = getMetaWhatsAppConfigurationStatus();
+
+    if (!metaStatus.configured) {
+      return res.status(503).json({
+        success: false,
+        message: `Meta WhatsApp configuration is incomplete. Missing: ${metaStatus.missing.join(
+          ", ",
+        )}`,
+      });
+    }
+
+    const alreadyAttempted = await WhatsAppCampaignLog.findOne({
+      campaignKey,
+      artistId,
+    })
+      .select({
+        status: 1,
+        batchNumber: 1,
+        sentAt: 1,
+        attemptedAt: 1,
+      })
+      .lean();
+
+    if (alreadyAttempted) {
+      return res.status(409).json({
+        success: false,
+        message:
+          alreadyAttempted.status === "sent"
+            ? "This artist was already sent a message in this campaign."
+            : "This artist was already attempted in this campaign and will not be repeated.",
+      });
+    }
+
+    const eligibleFilter = getEligibleArtistFilter({
+      state: selectedState,
+      city: selectedCity,
+    });
+
+    eligibleFilter._id = artistId;
+
+    const artist = await TattooStudio.findOne(eligibleFilter)
+      .select({
+        _id: 1,
+        name: 1,
+        artistName: 1,
+        professionalName: 1,
+        phone: 1,
+        state: 1,
+        city: 1,
+        whatsappOptIn: 1,
+        whatsappOptInAt: 1,
+        whatsappOptOutAt: 1,
+      })
+      .lean();
+
+    if (!artist) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This artist is not eligible for Meta WhatsApp in the selected location. A valid phone number and WhatsApp opt-in are required.",
+      });
+    }
+
+    const latestBatch = await WhatsAppCampaignLog.findOne({
+      campaignKey,
+    })
+      .sort({
+        batchNumber: -1,
+      })
+      .select({
+        batchNumber: 1,
+      })
+      .lean();
+
+    const batchNumber = Number(latestBatch?.batchNumber || 0) + 1;
+    const batchId = `${campaignKey}-single-${Date.now()}-${crypto
+      .randomBytes(4)
+      .toString("hex")}`;
+
+    const artistName =
+      artist?.name ||
+      artist?.professionalName ||
+      artist?.artistName ||
+      "Tattoo Artist";
+
+    const normalizedPhone = normalizeWhatsAppPhone(artist?.phone);
+    const profileUrl = createArtistProfileUrl(String(artist._id));
+
+    if (!normalizedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "This artist does not have a valid WhatsApp phone number.",
+      });
+    }
+
+    let log;
+
+    try {
+      log = await WhatsAppCampaignLog.create({
+        campaignKey,
+        batchId,
+        batchNumber,
+        artistId: artist._id,
+        artistName,
+        artistState: String(artist?.state || ""),
+        artistCity: String(artist?.city || ""),
+        filterState: selectedState || "ALL",
+        filterCity: selectedCity || "ALL",
+        phone: String(artist?.phone || ""),
+        normalizedPhone,
+        profileUrl,
+        templateName: metaStatus.templateName,
+        status: "queued",
+        attemptedAt: new Date(),
+      });
+    } catch (error) {
+      if (error?.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          message: "This artist has already been attempted in this campaign.",
+        });
+      }
+
+      throw error;
+    }
+
+    try {
+      const metaResult = await sendArtistProfileTemplate({
+        to: normalizedPhone,
+        artistName,
+        artistId: String(artist._id),
+        profileUrl,
+      });
+
+      const sentAt = new Date();
+
+      await Promise.all([
+        WhatsAppCampaignLog.findByIdAndUpdate(log._id, {
+          $set: {
+            status: "sent",
+            metaMessageId: metaResult.messageId,
+            metaWaId: metaResult.waId,
+            sentAt,
+            error: "",
+          },
+        }),
+
+        TattooStudio.findByIdAndUpdate(artist._id, {
+          $inc: {
+            whatsappContactCount: 1,
+          },
+          $set: {
+            whatsappLastContactedAt: sentAt,
+          },
+        }),
+      ]);
+
+      const stats = await getCampaignStats(campaignKey, {
+        state: selectedState,
+        city: selectedCity,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Message sent to ${artistName}.`,
+        send: {
+          artistId: String(artist._id),
+          artistName,
+          batchId,
+          batchNumber,
+          sent: 1,
+          attempted: 1,
+          failed: 0,
+          status: "sent",
+          profileUrl,
+          messageId: metaResult.messageId,
+        },
+        batch: {
+          batchId,
+          batchNumber,
+          requested: 1,
+          attempted: 1,
+          sent: 1,
+          failed: 0,
+          skipped: 0,
+          filterState: selectedState || "ALL",
+          filterCity: selectedCity || "ALL",
+        },
+        stats,
+      });
+    } catch (error) {
+      const message = error?.message || "Unknown Meta WhatsApp sending error.";
+
+      await WhatsAppCampaignLog.findByIdAndUpdate(log._id, {
+        $set: {
+          status: "failed",
+          error: message.slice(0, 2000),
+        },
+      });
+
+      const stats = await getCampaignStats(campaignKey, {
+        state: selectedState,
+        city: selectedCity,
+      });
+
+      return res.status(502).json({
+        success: false,
+        message,
+        send: {
+          artistId: String(artist._id),
+          artistName,
+          batchId,
+          batchNumber,
+          sent: 0,
+          attempted: 1,
+          failed: 1,
+          status: "failed",
+          profileUrl,
+        },
+        stats,
+      });
+    }
+  } catch (error) {
+    console.error("❌ WhatsApp send-one error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Unable to send this WhatsApp message.",
     });
   }
 });

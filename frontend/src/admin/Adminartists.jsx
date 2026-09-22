@@ -706,6 +706,8 @@ function AdminArtists() {
   const [whatsappCampaignStats, setWhatsappCampaignStats] = useState(null);
   const [whatsappCampaignLoading, setWhatsappCampaignLoading] = useState(false);
   const [whatsappCampaignSending, setWhatsappCampaignSending] = useState(false);
+  const [whatsappSingleSendingArtistId, setWhatsappSingleSendingArtistId] =
+    useState("");
   const [whatsappCampaignError, setWhatsappCampaignError] = useState("");
   const [whatsappCampaignResult, setWhatsappCampaignResult] = useState(null);
 
@@ -2076,6 +2078,117 @@ function AdminArtists() {
     fetchMemberships,
     fetchFreeDirectoryPage,
   ]);
+
+  const handleSendSingleWhatsAppArtist = useCallback(
+    async (artist) => {
+      const artistId = String(artist?.id || "").trim();
+
+      if (!artistId) {
+        setWhatsappCampaignError("Artist ID is missing.");
+        return;
+      }
+
+      if (!artist?.eligible) {
+        setWhatsappCampaignError(
+          "This artist is not eligible for Meta WhatsApp yet. WhatsApp opt-in and a valid phone number are required.",
+        );
+        return;
+      }
+
+      if (artist?.campaignAttempted) {
+        setWhatsappCampaignError(
+          "This artist has already been attempted in this campaign, so they will not be sent again.",
+        );
+        return;
+      }
+
+      let securityKey = campaignAdminKey.trim();
+
+      if (!securityKey) {
+        const enteredKey = window.prompt(
+          "Enter the WhatsApp campaign security key to send this ONE test message.\n\nYou only need to enter it once for this browser session.",
+        );
+
+        securityKey = String(enteredKey || "").trim();
+
+        if (!securityKey) {
+          return;
+        }
+
+        setCampaignAdminKey(securityKey);
+        sessionStorage.setItem("inkWhatsAppCampaignKey", securityKey);
+      }
+
+      const confirmed = window.confirm(
+        `Send ONE Meta WhatsApp message to ${artist?.name || "this artist"}?\n\nThey will receive their own Ink Convention profile link.\n\nIf this succeeds, this artist will be marked SENT and the bulk SEND NEXT 100 will automatically skip them.`,
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setWhatsappSingleSendingArtistId(artistId);
+      setWhatsappCampaignError("");
+      setWhatsappCampaignResult(null);
+
+      try {
+        const response = await apiFetch("/api/whatsapp-campaigns/send-one", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-WhatsApp-Campaign-Key": securityKey,
+          },
+          body: JSON.stringify({
+            campaignKey: DEFAULT_META_CAMPAIGN_KEY,
+            artistId,
+            state: whatsappCampaignState === "ALL" ? "" : whatsappCampaignState,
+            city: whatsappCampaignCity === "ALL" ? "" : whatsappCampaignCity,
+          }),
+        });
+
+        const data = await getJson(response);
+
+        if (!response.ok || data.success === false) {
+          throw new Error(data.message || "Unable to send WhatsApp message.");
+        }
+
+        setWhatsappCampaignResult(data?.batch || data?.send || null);
+        setWhatsappCampaignStats(data?.stats || null);
+
+        await Promise.all([
+          fetchWhatsAppCampaignArtists({
+            stateOverride: whatsappCampaignState,
+            cityOverride: whatsappCampaignCity,
+            pageOverride: whatsappCampaignArtistsPage,
+            viewOverride: whatsappCampaignView,
+          }),
+          fetchDirectoryStats(),
+          fetchMemberships(),
+          fetchFreeDirectoryPage(true),
+        ]);
+      } catch (error) {
+        console.error("Meta WhatsApp single-send error:", error);
+
+        setWhatsappCampaignError(
+          error.message || "Unable to send this WhatsApp message.",
+        );
+      } finally {
+        setWhatsappSingleSendingArtistId("");
+      }
+    },
+    [
+      campaignAdminKey,
+      whatsappCampaignState,
+      whatsappCampaignCity,
+      whatsappCampaignArtistsPage,
+      whatsappCampaignView,
+      fetchWhatsAppCampaignArtists,
+      fetchDirectoryStats,
+      fetchMemberships,
+      fetchFreeDirectoryPage,
+    ],
+  );
 
   const handleDownloadWhatsAppCampaignCsv = useCallback(async () => {
     let securityKey = campaignAdminKey.trim();
@@ -3835,6 +3948,10 @@ function AdminArtists() {
                     <WhatsAppCampaignArtistCard
                       key={artist.id}
                       artist={artist}
+                      onSendOne={handleSendSingleWhatsAppArtist}
+                      sending={
+                        whatsappSingleSendingArtistId === String(artist.id)
+                      }
                     />
                   ))}
                 </div>
@@ -4619,7 +4736,7 @@ function DashboardStat({ label, value, highlight = false, tone = "default" }) {
 // SILVER / GOLD MEMBERSHIP PANEL
 // =====================================================
 
-function WhatsAppCampaignArtistCard({ artist }) {
+function WhatsAppCampaignArtistCard({ artist, onSendOne, sending = false }) {
   const status = String(artist?.campaignStatus || "not-sent")
     .trim()
     .toLowerCase();
@@ -4698,6 +4815,24 @@ function WhatsAppCampaignArtistCard({ artist }) {
           </p>
         </div>
       </div>
+
+      <button
+        type="button"
+        disabled={!artist?.eligible || artist?.campaignAttempted || sending}
+        onClick={() => void onSendOne?.(artist)}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.08] px-4 py-3 text-[8px] font-black uppercase tracking-[0.14em] text-emerald-300 transition hover:border-emerald-400/45 hover:bg-emerald-400/[0.13] disabled:cursor-not-allowed disabled:opacity-35"
+      >
+        <MessageCircle size={14} />
+        {sending
+          ? "Sending 1..."
+          : artist?.campaignAttempted
+            ? status === "sent"
+              ? "Already Sent"
+              : "Already Attempted"
+            : artist?.eligible
+              ? "Send 1 Test Message"
+              : "Not Eligible"}
+      </button>
 
       {artist?.campaignSentAt && (
         <p className="mt-2 text-[7px] font-mono uppercase tracking-wider text-gray-700">
