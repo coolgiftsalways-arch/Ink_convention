@@ -372,7 +372,7 @@ export default function StallBooking() {
         "en-IN",
       )} OFF Gold Membership after confirmed stall booking`,
       "",
-      "Please help me with expo availability, stall details and the ₹1,499 advance process.",
+      "Please help me with expo availability, stall details and the ₹1,999 advance process.",
     ];
 
     return lines.filter(Boolean).join("\n");

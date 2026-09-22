@@ -769,6 +769,20 @@ function escapeRegex(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function buildPhoneSearchPattern(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+
+  if (digits.length < 3) {
+    return "";
+  }
+
+  // Allows searches such as 982 to match stored values like +91 98204 11469.
+  return digits
+    .split("")
+    .map((digit) => escapeRegex(digit))
+    .join("\\D*");
+}
+
 function normalizeLocationFilter(value) {
   const text = String(value || "").trim();
 
@@ -1050,6 +1064,8 @@ router.get("/artists", async (req, res) => {
     const campaignKey = normalizeCampaignKey(req.query.campaignKey);
     const selectedState = normalizeLocationFilter(req.query.state);
     const selectedCity = normalizeLocationFilter(req.query.city);
+    const searchQuery = String(req.query.search || "").trim();
+    const searchActive = searchQuery.length >= 3;
 
     const requestedView = String(req.query.view || "pending")
       .trim()
@@ -1114,6 +1130,34 @@ router.get("/artists", async (req, res) => {
         _id: {
           $in: artistIds,
         },
+      };
+    }
+
+    if (searchActive) {
+      const textPattern = escapeRegex(searchQuery);
+      const phonePattern = buildPhoneSearchPattern(searchQuery);
+
+      const searchConditions = [
+        { name: { $regex: textPattern, $options: "i" } },
+        { artistName: { $regex: textPattern, $options: "i" } },
+        { professionalName: { $regex: textPattern, $options: "i" } },
+        { studio: { $regex: textPattern, $options: "i" } },
+        { studioName: { $regex: textPattern, $options: "i" } },
+      ];
+
+      if (phonePattern) {
+        searchConditions.push({
+          phone: { $regex: phonePattern, $options: "i" },
+        });
+      }
+
+      artistFilter = {
+        $and: [
+          artistFilter,
+          {
+            $or: searchConditions,
+          },
+        ],
       };
     }
 
@@ -1202,6 +1246,7 @@ router.get("/artists", async (req, res) => {
         state: selectedState || "ALL",
         city: selectedCity || "ALL",
         view,
+        search: searchActive ? searchQuery : "",
       },
       artists: rows,
       pagination: {

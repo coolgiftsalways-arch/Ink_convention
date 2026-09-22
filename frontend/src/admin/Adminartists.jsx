@@ -739,6 +739,13 @@ function AdminArtists() {
     totalPages: 1,
   });
 
+  // Meta campaign card search. Search starts only after 3 characters.
+  // Supported fields: artist name, studio name and phone number.
+  const [whatsappCampaignSearchQuery, setWhatsappCampaignSearchQuery] =
+    useState("");
+  const [whatsappCampaignSearchTerm, setWhatsappCampaignSearchTerm] =
+    useState("");
+
   // Search the real MongoDB directory by artist name, email or phone.
   const [directorySearchQuery, setDirectorySearchQuery] = useState("");
   const [directorySearchResults, setDirectorySearchResults] = useState([]);
@@ -1730,6 +1737,7 @@ function AdminArtists() {
       cityOverride = null,
       pageOverride = 1,
       viewOverride = null,
+      searchOverride = null,
     } = {}) => {
       const securityKey = campaignAdminKey.trim();
 
@@ -1739,6 +1747,11 @@ function AdminArtists() {
         cityOverride === null ? whatsappCampaignCity : cityOverride;
       const selectedView =
         viewOverride === null ? whatsappCampaignView : viewOverride;
+      const selectedSearch = String(
+        searchOverride === null
+          ? whatsappCampaignSearchTerm
+          : searchOverride || "",
+      ).trim();
       const selectedPage = Math.max(Number(pageOverride) || 1, 1);
 
       setWhatsappCampaignArtistsLoading(true);
@@ -1758,6 +1771,10 @@ function AdminArtists() {
 
         if (selectedCity && selectedCity !== "ALL") {
           params.set("city", selectedCity);
+        }
+
+        if (selectedSearch.length >= 3) {
+          params.set("search", selectedSearch);
         }
 
         const artistHeaders = {
@@ -1823,8 +1840,42 @@ function AdminArtists() {
       whatsappCampaignState,
       whatsappCampaignCity,
       whatsappCampaignView,
+      whatsappCampaignSearchTerm,
     ],
   );
+
+  // Debounce the campaign search. Nothing is searched until 3 characters.
+  useEffect(() => {
+    const clean = String(whatsappCampaignSearchQuery || "").trim();
+
+    if (clean.length < 3) {
+      setWhatsappCampaignSearchTerm("");
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setWhatsappCampaignSearchTerm(clean);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [whatsappCampaignSearchQuery]);
+
+  // When the active search changes, reload page 1 for the selected location/view.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    setWhatsappCampaignArtistsPage(1);
+
+    void fetchWhatsAppCampaignArtists({
+      stateOverride: whatsappCampaignState,
+      cityOverride: whatsappCampaignCity,
+      pageOverride: 1,
+      viewOverride: whatsappCampaignView,
+      searchOverride: whatsappCampaignSearchTerm,
+    });
+  }, [whatsappCampaignSearchTerm, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -1876,6 +1927,8 @@ function AdminArtists() {
       setWhatsappCampaignState(nextState);
       setWhatsappCampaignCity("ALL");
       setWhatsappCampaignView("all");
+      setWhatsappCampaignSearchQuery("");
+      setWhatsappCampaignSearchTerm("");
       setWhatsappCampaignResult(null);
       setWhatsappCampaignArtistsPage(1);
 
@@ -1907,6 +1960,8 @@ function AdminArtists() {
 
       setWhatsappCampaignCity(nextCity);
       setWhatsappCampaignView("all");
+      setWhatsappCampaignSearchQuery("");
+      setWhatsappCampaignSearchTerm("");
       setWhatsappCampaignResult(null);
       setWhatsappCampaignArtistsPage(1);
 
@@ -3711,6 +3766,79 @@ function AdminArtists() {
               </div>
             </div>
 
+            {/* SEARCH ARTIST / STUDIO / NUMBER */}
+            <div className="mt-4 rounded-2xl border border-white/[0.08] bg-black/25 p-4">
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white">
+                    Search Artist
+                  </p>
+
+                  <p className="mt-1 text-[9px] font-mono text-gray-600">
+                    Search by artist name, studio name or mobile number. Type at
+                    least 3 characters.
+                  </p>
+                </div>
+
+                {whatsappCampaignSearchTerm.length >= 3 && (
+                  <div className="rounded-full border border-purple-400/20 bg-purple-400/[0.06] px-3 py-1.5 text-[8px] font-black uppercase tracking-wider text-purple-300">
+                    {Number(
+                      whatsappCampaignArtistsPagination.total || 0,
+                    ).toLocaleString("en-IN")}{" "}
+                    MATCHES
+                  </div>
+                )}
+              </div>
+
+              <div className="relative mt-4">
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
+                />
+
+                <input
+                  type="search"
+                  value={whatsappCampaignSearchQuery}
+                  onChange={(event) =>
+                    setWhatsappCampaignSearchQuery(event.target.value)
+                  }
+                  placeholder="Search name, studio or mobile number..."
+                  className="w-full rounded-xl border border-white/10 bg-[#0b0b0f] py-3.5 pl-11 pr-24 text-xs text-white outline-none placeholder:text-gray-700 focus:border-purple-400/50"
+                />
+
+                {whatsappCampaignSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWhatsappCampaignSearchQuery("");
+                      setWhatsappCampaignSearchTerm("");
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[8px] font-black uppercase tracking-wider text-gray-500 transition hover:text-white"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {whatsappCampaignSearchQuery.trim().length > 0 &&
+                whatsappCampaignSearchQuery.trim().length < 3 && (
+                  <p className="mt-2 text-[8px] font-mono uppercase tracking-wider text-amber-300/80">
+                    Type {3 - whatsappCampaignSearchQuery.trim().length} more{" "}
+                    {3 - whatsappCampaignSearchQuery.trim().length === 1
+                      ? "character"
+                      : "characters"}{" "}
+                    to search.
+                  </p>
+                )}
+
+              {whatsappCampaignSearchTerm.length >= 3 && (
+                <p className="mt-2 text-[8px] font-mono uppercase tracking-wider text-purple-300/80">
+                  Search active: "{whatsappCampaignSearchTerm}" • showing
+                  matching cards only.
+                </p>
+              )}
+            </div>
+
             {whatsappCampaignError && (
               <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-[10px] text-red-300">
                 {whatsappCampaignError}
@@ -3935,11 +4063,13 @@ function AdminArtists() {
                   <MessageCircle size={30} className="mx-auto text-gray-700" />
 
                   <p className="mt-3 text-sm font-black text-gray-400">
-                    {whatsappCampaignView === "pending"
-                      ? "No pending artists in this location."
-                      : whatsappCampaignView === "sent"
-                        ? "No sent artists in this location yet."
-                        : "No artists found for this location."}
+                    {whatsappCampaignSearchTerm.length >= 3
+                      ? `No matching artists found for "${whatsappCampaignSearchTerm}".`
+                      : whatsappCampaignView === "pending"
+                        ? "No pending artists in this location."
+                        : whatsappCampaignView === "sent"
+                          ? "No sent artists in this location yet."
+                          : "No artists found for this location."}
                   </p>
                 </div>
               ) : (
