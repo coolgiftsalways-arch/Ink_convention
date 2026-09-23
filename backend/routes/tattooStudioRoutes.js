@@ -120,12 +120,12 @@ const storage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
   const extension = path.extname(file.originalname).toLowerCase();
 
-  const allowed = [".xlsx", ".xls", ".csv"];
+  const allowed = [".xlsx", ".csv"];
 
   if (!allowed.includes(extension)) {
     return cb(
       new Error(
-        "Invalid file type. Please upload an Excel (.xlsx/.xls) or CSV file.",
+        "Invalid file type. Please upload an Excel (.xlsx) or CSV file.",
       ),
       false,
     );
@@ -144,7 +144,7 @@ const upload = multer({
   fileFilter,
 
   limits: {
-    fileSize: 200 * 1024 * 1024,
+    fileSize: 20 * 1024 * 1024,
   },
 });
 
@@ -1469,7 +1469,7 @@ router.use((error, req, res, next) => {
       return res.status(400).json({
         success: false,
 
-        message: "Excel file is too large. Maximum size is 200 MB.",
+        message: "Excel file is too large. Maximum size is 20 MB.",
       });
     }
 

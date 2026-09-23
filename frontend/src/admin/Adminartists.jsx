@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   Trash2,
@@ -281,9 +281,12 @@ const normalizeDirectoryArtist = (source = {}) => ({
   // the claim / OTP ownership flow.
   claimed:
     toBoolean(source.claimed) ||
+    toBoolean(source.isClaimed) ||
+    toBoolean(source.claimStatus) ||
     toBoolean(source.phoneVerified) ||
     toBoolean(source.updatedByOwner) ||
-    toBoolean(source.ownerVerified),
+    toBoolean(source.ownerVerified) ||
+    Boolean(source.claimedAt),
 
   phoneVerified: toBoolean(source.phoneVerified),
   updatedByOwner: toBoolean(source.updatedByOwner),
@@ -715,11 +718,42 @@ function AdminArtists() {
 
   const [membershipError, setMembershipError] = useState("");
 
-  // Free artists are intentionally NOT downloaded on page load.
-  // They are loaded only when needed.
-  const [freeDirectoryArtists, setFreeDirectoryArtists] = useState([]);
-  const [freeDirectoryLoaded, setFreeDirectoryLoaded] = useState(false);
+  // Keep a tiny cache of FREE CLAIMED artists so the cards can appear
+  // instantly on repeat visits, just like the Silver / Gold cards.
+  const [freeDirectoryArtists, setFreeDirectoryArtists] = useState(() => {
+    try {
+      const cached = JSON.parse(
+        localStorage.getItem("ink-admin-free-claimed-cache") || "[]",
+      );
+
+      if (!Array.isArray(cached)) {
+        return [];
+      }
+
+      return cached
+        .map((artist) => normalizeDirectoryArtist(artist))
+        .filter(
+          (artist) => artist.id && artist.plan === "basic" && artist.claimed,
+        );
+    } catch (error) {
+      console.warn("Free Claimed cache ignored:", error);
+      return [];
+    }
+  });
+
+  const [freeDirectoryLoaded, setFreeDirectoryLoaded] = useState(() => {
+    try {
+      const cached = JSON.parse(
+        localStorage.getItem("ink-admin-free-claimed-cache") || "[]",
+      );
+      return Array.isArray(cached) && cached.length > 0;
+    } catch {
+      return false;
+    }
+  });
+
   const [freeDirectoryLoading, setFreeDirectoryLoading] = useState(false);
+  const freeDirectoryLoadingRef = useRef(false);
 
   // Directory membership filter:
   // basic-claimed   = FREE profile claimed by owner
@@ -1004,6 +1038,107 @@ function AdminArtists() {
   }, []);
 
   // ===================================================
+  // UNIFIED MEMBERSHIP DASHBOARD
+  // ===================================================
+  // One backend request returns BOTH the counts and the actual
+  // membership rows. This prevents a situation where the top count
+  // says 10 but the Free Claimed section has no cards.
+
+  const fetchMembershipDashboard = useCallback(async () => {
+    setMembershipError("");
+    setFreeDirectoryLoading(true);
+
+    try {
+      const response = await apiFetch(
+        "/api/admin/tattoo-studios/membership-dashboard?unclaimedLimit=100",
+      );
+
+      const data = await getJson(response);
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(
+          data?.message ||
+            data?.error ||
+            "Unable to load membership dashboard.",
+        );
+      }
+
+      const stats = data?.stats || {};
+      const members = data?.members || {};
+
+      const normalizeRows = (rows, forcedPlan, forcedClaimed) =>
+        (Array.isArray(rows) ? rows : [])
+          .map((artist) => normalizeDirectoryArtist(artist))
+          .filter((artist) => artist.id)
+          .map((artist) => ({
+            ...artist,
+            plan: forcedPlan || artist.plan,
+            ...(typeof forcedClaimed === "boolean"
+              ? { claimed: forcedClaimed }
+              : {}),
+          }));
+
+      const claimedRows = normalizeRows(members.freeClaimed, "basic", true);
+
+      const unclaimedRows = normalizeRows(
+        members.freeUnclaimed,
+        "basic",
+        false,
+      );
+
+      const silverRows = normalizeRows(members.silver, "pro");
+      const goldRows = normalizeRows(members.gold, "verified");
+
+      setDirectoryStats({
+        total: Number(stats.total || 0),
+        basic: Number(stats.basic ?? stats.free ?? 0),
+        silver: Number(stats.silver ?? stats.pro ?? 0),
+        gold: Number(stats.gold ?? stats.verified ?? 0),
+        paidSilver: Number(stats.paidSilver || silverRows.length || 0),
+        paidGold: Number(stats.paidGold || goldRows.length || 0),
+        freeClaimed: Number(
+          stats.freeClaimed ?? stats.claimedFree ?? claimedRows.length,
+        ),
+        freeUnclaimed: Number(
+          stats.freeUnclaimed ?? stats.unclaimedFree ?? unclaimedRows.length,
+        ),
+      });
+
+      // Paid rows power Silver + Gold cards.
+      setDirectoryArtists([...silverRows, ...goldRows]);
+
+      // Free rows power Free Claimed + Free Unclaimed cards.
+      // Claimed returns ALL claimed profiles; Unclaimed returns the first 100
+      // so we never send 18k+ rows to the browser at once.
+      setFreeDirectoryArtists([...claimedRows, ...unclaimedRows]);
+      setFreeDirectoryLoaded(true);
+
+      try {
+        localStorage.setItem(
+          "ink-admin-free-claimed-cache",
+          JSON.stringify(claimedRows),
+        );
+      } catch (cacheError) {
+        console.warn("Free Claimed cache skipped:", cacheError);
+      }
+
+      console.log("✅ UNIFIED MEMBERSHIP DASHBOARD READY", {
+        claimed: claimedRows.length,
+        unclaimedPreview: unclaimedRows.length,
+        silver: silverRows.length,
+        gold: goldRows.length,
+      });
+    } catch (error) {
+      console.error("Unified membership dashboard error:", error);
+      setMembershipError(
+        error?.message || "Could not load membership dashboard.",
+      );
+    } finally {
+      setFreeDirectoryLoading(false);
+    }
+  }, []);
+
+  // ===================================================
   // FETCH SILVER / GOLD DIRECTORY MEMBERS
   // ===================================================
 
@@ -1067,154 +1202,201 @@ function AdminArtists() {
   }, []);
 
   const fetchFreeDirectoryPage = useCallback(
-    async (force = false) => {
-      if (freeDirectoryLoading || (freeDirectoryLoaded && !force)) {
+    async (force = false, mode = "claimed") => {
+      if (freeDirectoryLoadingRef.current && !force) {
         return;
       }
 
+      freeDirectoryLoadingRef.current = true;
       setFreeDirectoryLoading(true);
       setMembershipError("");
 
+      const requestDirectoryRows = async (url) => {
+        const response = await apiFetch(url);
+        const data = await getJson(response);
+
+        if (!response.ok || data?.success === false) {
+          throw new Error(
+            data?.message || data?.error || `Directory HTTP ${response.status}`,
+          );
+        }
+
+        return getDirectoryArtistsArray(data)
+          .map((artist) => normalizeDirectoryArtist(artist))
+          .filter((artist) => artist.id);
+      };
+
+      const dedupeRows = (rows) =>
+        Array.from(
+          new Map(rows.map((artist) => [String(artist.id), artist])).values(),
+        );
+
+      const mergeFreeRows = (previous, nextRows, claimed) => {
+        const keepRows = previous.filter(
+          (artist) => Boolean(artist.claimed) !== Boolean(claimed),
+        );
+
+        return dedupeRows([...nextRows, ...keepRows]);
+      };
+
       try {
-        /*
-          IMPORTANT FIX:
-          Claimed and unclaimed artists are loaded independently.
+        /* =====================================================
+           FREE CLAIMED
 
-          Previously, if the huge unclaimed request failed, timed out,
-          or returned a different response shape, the function threw before
-          saving the claimed rows. That is why the top stat could correctly
-          show FREE CLAIMED = 10 while the actual list showed 0.
-        */
+           The stats endpoint already knows these profiles exist.
+           Different backend versions have used slightly different
+           filters, so try the fast filtered endpoints first and then
+           a SMALL recent-directory fallback. We never download 18k+.
+        ====================================================== */
+        if (mode === "claimed" || mode === "both") {
+          let claimedRows = [];
 
-        const loadFreeArtists = async ({ claimed, limit }) => {
-          const claimedValue = claimed ? "true" : "false";
-
-          const urls = [
-            `/api/admin/tattoo-studios/admin-directory?plan=basic&claimed=${claimedValue}&page=1&limit=${limit}`,
-            // Fallback for older backend versions where the plan alias may not
-            // be handled exactly as "basic". We still filter to basic below.
-            `/api/admin/tattoo-studios/admin-directory?claimed=${claimedValue}&page=1&limit=${limit}`,
+          const fastClaimedUrls = [
+            "/api/admin/tattoo-studios/admin-directory?plan=basic&claimed=true&page=1&limit=250",
+            "/api/admin/tattoo-studios/admin-directory?claimed=true&page=1&limit=250",
+            "/api/admin/tattoo-studios?plan=basic&claimed=true&page=1&limit=250",
+            "/api/admin/tattoo-studios?claimed=true&page=1&limit=250",
           ];
 
-          let lastError = null;
-
-          for (const url of urls) {
+          for (const url of fastClaimedUrls) {
             try {
-              const response = await apiFetch(url);
-              const data = await getJson(response);
-
-              if (!response.ok || data?.success === false) {
-                throw new Error(
-                  data?.message ||
-                    data?.error ||
-                    `Failed to load ${claimed ? "Free Claimed" : "Free Unclaimed"} artists.`,
-                );
-              }
-
-              const rawRows = getDirectoryArtistsArray(data);
-
-              console.log(
-                `✅ ${claimed ? "CLAIMED" : "UNCLAIMED"} DIRECTORY RESPONSE:`,
-                {
-                  url,
-                  rowCount: rawRows.length,
-                  responseKeys:
-                    data && typeof data === "object" ? Object.keys(data) : [],
-                },
+              const rows = await requestDirectoryRows(url);
+              const matches = rows.filter(
+                (artist) => artist.plan === "basic" && artist.claimed,
               );
 
-              const normalizedRows = rawRows
-                .map((artist) => normalizeDirectoryArtist(artist))
-                .filter((artist) => artist.id)
-                .filter((artist) => artist.plan === "basic")
-                .map((artist) => ({
-                  ...artist,
-                  claimed,
-                }));
+              if (matches.length > claimedRows.length) {
+                claimedRows = matches;
+              }
 
-              // If the first request returned real rows, use them.
-              // If it returned 0 rows, try the fallback URL once.
-              if (normalizedRows.length > 0 || url === urls[urls.length - 1]) {
-                return {
-                  rows: normalizedRows,
-                  error: null,
-                };
+              if (claimedRows.length > 0) {
+                break;
               }
             } catch (error) {
-              lastError = error;
-              console.warn(
-                `⚠️ ${claimed ? "Claimed" : "Unclaimed"} Free artist request failed:`,
-                url,
-                error,
-              );
+              console.warn("Claimed directory fallback skipped:", url, error);
             }
           }
 
-          return {
-            rows: [],
-            error: lastError,
-          };
-        };
+          // If the filtered endpoint is running an older backend build,
+          // inspect only the first few recent pages. This is capped at
+          // 1,000 records so the dashboard stays quick.
+          if (claimedRows.length === 0) {
+            const recentClaimedRows = [];
 
-        const [claimedResult, unclaimedResult] = await Promise.all([
-          loadFreeArtists({ claimed: true, limit: 1000 }),
-          loadFreeArtists({ claimed: false, limit: 100 }),
-        ]);
+            for (let page = 1; page <= 4; page += 1) {
+              try {
+                const rows = await requestDirectoryRows(
+                  `/api/admin/tattoo-studios?page=${page}&limit=250`,
+                );
 
-        const claimedRows = claimedResult.rows;
-        const unclaimedRows = unclaimedResult.rows;
+                recentClaimedRows.push(
+                  ...rows.filter(
+                    (artist) => artist.plan === "basic" && artist.claimed,
+                  ),
+                );
 
-        // Save whatever succeeded. One failed request must NOT erase the
-        // successful request from the other list.
-        const uniqueRows = Array.from(
-          new Map(
-            [...claimedRows, ...unclaimedRows].map((artist) => [
-              String(artist.id),
-              artist,
-            ]),
-          ).values(),
-        );
+                if (rows.length === 0) {
+                  break;
+                }
+              } catch (error) {
+                console.warn("Recent claimed scan stopped:", error);
+                break;
+              }
+            }
 
-        setFreeDirectoryArtists(uniqueRows);
-        setFreeDirectoryLoaded(true);
+            claimedRows = dedupeRows(recentClaimedRows);
+          }
 
-        console.log(
-          "✅ FREE ARTISTS LOADED:",
-          `claimed=${claimedRows.length}, unclaimed-preview=${unclaimedRows.length}`,
-        );
+          claimedRows.sort((first, second) => {
+            const firstTime = new Date(
+              first.claimedAt || first.updatedAt || 0,
+            ).getTime();
+            const secondTime = new Date(
+              second.claimedAt || second.updatedAt || 0,
+            ).getTime();
 
-        // Show an error only when BOTH requests failed.
-        if (claimedResult.error && unclaimedResult.error) {
-          throw claimedResult.error;
+            return secondTime - firstTime;
+          });
+
+          setFreeDirectoryArtists((previous) =>
+            mergeFreeRows(previous, claimedRows, true),
+          );
+
+          setFreeDirectoryLoaded(true);
+
+          if (claimedRows.length > 0) {
+            try {
+              localStorage.setItem(
+                "ink-admin-free-claimed-cache",
+                JSON.stringify(claimedRows),
+              );
+            } catch (error) {
+              console.warn("Could not cache Free Claimed artists:", error);
+            }
+          }
+
+          console.log("✅ FREE CLAIMED ARTISTS READY:", claimedRows.length);
         }
 
-        // A partial failure should not hide the successful list.
-        if (claimedResult.error) {
-          setMembershipError(
-            `Free Unclaimed loaded, but Free Claimed could not be loaded: ${
-              claimedResult.error?.message || "Unknown error"
-            }`,
+        /* =====================================================
+           FREE UNCLAIMED
+           Load only when this tab is selected.
+        ====================================================== */
+        if (mode === "unclaimed" || mode === "both") {
+          let unclaimedRows = [];
+
+          const unclaimedUrls = [
+            // Preferred admin endpoint: returns real admin card data.
+            "/api/admin/tattoo-studios/admin-directory?plan=basic&claimed=false&page=1&limit=100",
+
+            // Older backend fallback where plan filtering was handled differently.
+            "/api/admin/tattoo-studios/admin-directory?claimed=false&page=1&limit=100",
+
+            // Public-directory fallback. It returns less private data, but it
+            // still gives us real FREE UNCLAIMED artist cards instead of an
+            // empty syncing box. The public route caps the limit at 50.
+            "/api/admin/tattoo-studios?plan=basic&claimed=false&page=1&limit=50",
+          ];
+
+          for (const url of unclaimedUrls) {
+            try {
+              const rows = await requestDirectoryRows(url);
+              const matches = rows
+                .filter((artist) => artist.plan === "basic" && !artist.claimed)
+                .slice(0, 100);
+
+              if (matches.length > 0) {
+                unclaimedRows = matches;
+                break;
+              }
+            } catch (error) {
+              console.warn("Unclaimed directory fallback skipped:", url, error);
+            }
+          }
+
+          setFreeDirectoryArtists((previous) =>
+            mergeFreeRows(previous, unclaimedRows, false),
           );
-        } else if (unclaimedResult.error) {
-          setMembershipError(
-            `Free Claimed loaded successfully. Free Unclaimed preview could not be loaded: ${
-              unclaimedResult.error?.message || "Unknown error"
-            }`,
-          );
+
+          setFreeDirectoryLoaded(true);
+
+          console.log("✅ FREE UNCLAIMED PREVIEW READY:", unclaimedRows.length);
         }
       } catch (error) {
         console.error("Free artist fetch error:", error);
 
+        // Keep any cached / previously loaded claimed cards visible.
         setMembershipError(
           error?.name === "AbortError"
-            ? "Free artists took too long to load. Please try Refresh again."
-            : error?.message || "Could not load Free artists.",
+            ? "Artist directory request timed out. Existing cards are still available."
+            : error?.message || "Could not refresh Free artists.",
         );
       } finally {
+        freeDirectoryLoadingRef.current = false;
         setFreeDirectoryLoading(false);
       }
     },
-    [freeDirectoryLoaded, freeDirectoryLoading],
+    [],
   );
 
   // ===================================================
@@ -2239,7 +2421,7 @@ function AdminArtists() {
         }),
         fetchDirectoryStats(),
         fetchMemberships(),
-        fetchFreeDirectoryPage(true),
+        fetchFreeDirectoryPage(true, "claimed"),
       ]);
     } catch (error) {
       console.error("Meta WhatsApp batch error:", error);
@@ -2347,7 +2529,7 @@ function AdminArtists() {
           }),
           fetchDirectoryStats(),
           fetchMemberships(),
-          fetchFreeDirectoryPage(true),
+          fetchFreeDirectoryPage(true, "claimed"),
         ]);
       } catch (error) {
         console.error("Meta WhatsApp single-send error:", error);
@@ -2502,10 +2684,12 @@ function AdminArtists() {
         );
       }
 
-      // Load only active Silver / Gold members.
-      // This is a small request and does not scan/download all 18k+ artists.
+      // Load each tier from the endpoint that already works reliably.
+      // FREE CLAIMED is tiny, so load it immediately.
+      // FREE UNCLAIMED is lazy-loaded only when its tab is clicked.
+      // This avoids downloading 18k+ artists and avoids count/card mismatch.
       void fetchMemberships();
-      void fetchFreeDirectoryPage(true);
+      void fetchFreeDirectoryPage(true, "claimed");
     } catch (error) {
       console.error("Admin artists refresh error:", error);
 
@@ -2513,8 +2697,9 @@ function AdminArtists() {
         error.message || "Could not load some artist dashboard data.",
       );
 
-      // Still allow paid Silver / Gold members to attempt loading.
+      // Still load the actual paid + claimed card data independently.
       void fetchMemberships();
+      void fetchFreeDirectoryPage(true, "claimed");
     } finally {
       // Refresh button becomes available as soon as the fast dashboard
       // data has returned. It does not wait for 18k+ artist records.
@@ -2861,6 +3046,31 @@ function AdminArtists() {
         ),
     ),
   ];
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    if (membershipFilter === "free-claimed") {
+      void fetchFreeDirectoryPage(false, "claimed");
+      return;
+    }
+
+    if (membershipFilter === "free-unclaimed") {
+      void fetchFreeDirectoryPage(false, "unclaimed");
+      return;
+    }
+
+    if (membershipFilter === "pro" || membershipFilter === "verified") {
+      void fetchMemberships();
+    }
+  }, [
+    isAuthenticated,
+    membershipFilter,
+    fetchFreeDirectoryPage,
+    fetchMemberships,
+  ]);
 
   const freeClaimedMembers = freeDirectoryArtists.filter(
     (artist) => artist.plan === "basic" && artist.claimed,
@@ -3906,7 +4116,8 @@ function AdminArtists() {
                 active={membershipFilter === "all"}
                 onClick={() => {
                   setMembershipFilter("all");
-                  void fetchFreeDirectoryPage();
+                  void fetchMemberships();
+                  void fetchFreeDirectoryPage(true, "claimed");
                 }}
                 title="ALL"
                 subtitle="Free + Silver + Gold"
@@ -3922,7 +4133,7 @@ function AdminArtists() {
                 active={membershipFilter === "free-claimed"}
                 onClick={() => {
                   setMembershipFilter("free-claimed");
-                  void fetchFreeDirectoryPage();
+                  void fetchFreeDirectoryPage(true, "claimed");
                 }}
                 title="FREE CLAIMED"
                 subtitle="Owner OTP verified"
@@ -3938,7 +4149,7 @@ function AdminArtists() {
                 active={membershipFilter === "free-unclaimed"}
                 onClick={() => {
                   setMembershipFilter("free-unclaimed");
-                  void fetchFreeDirectoryPage();
+                  void fetchFreeDirectoryPage(true, "unclaimed");
                 }}
                 title="FREE UNCLAIMED"
                 subtitle="Not claimed yet"
@@ -3952,7 +4163,10 @@ function AdminArtists() {
 
               <MembershipFilterButton
                 active={membershipFilter === "pro"}
-                onClick={() => setMembershipFilter("pro")}
+                onClick={() => {
+                  setMembershipFilter("pro");
+                  void fetchMemberships();
+                }}
                 title="SILVER"
                 subtitle="₹2,999 Plan"
                 count={stateSilverArtists.length}
@@ -3961,7 +4175,10 @@ function AdminArtists() {
 
               <MembershipFilterButton
                 active={membershipFilter === "verified"}
-                onClick={() => setMembershipFilter("verified")}
+                onClick={() => {
+                  setMembershipFilter("verified");
+                  void fetchMemberships();
+                }}
                 title="GOLD"
                 subtitle="₹5,999 Plan"
                 count={stateGoldArtists.length}
@@ -4255,12 +4472,31 @@ function AdminArtists() {
               onOpenArtist={setSelectedDirectoryArtist}
               onWhatsAppContact={handleArtistWhatsAppContact}
               whatsappBusyArtistId={whatsappBusyArtistId}
-              loading={
-                freeDirectoryLoading &&
-                ["all", "free-claimed", "free-unclaimed"].includes(
-                  membershipFilter,
-                )
+              displayCount={
+                membershipFilter === "free-claimed" &&
+                directoryStateFilter === "ALL"
+                  ? directoryStats.freeClaimed
+                  : membershipFilter === "free-unclaimed" &&
+                      directoryStateFilter === "ALL"
+                    ? directoryStats.freeUnclaimed
+                    : selectedMembership.members.length
               }
+              loading={
+                (membershipFilter === "free-claimed" ||
+                  membershipFilter === "free-unclaimed") &&
+                freeDirectoryLoading
+              }
+              onSync={
+                membershipFilter === "free-claimed"
+                  ? () => fetchFreeDirectoryPage(true, "claimed")
+                  : membershipFilter === "free-unclaimed"
+                    ? () => fetchFreeDirectoryPage(true, "unclaimed")
+                    : membershipFilter === "pro" ||
+                        membershipFilter === "verified"
+                      ? fetchMemberships
+                      : undefined
+              }
+              syncing={freeDirectoryLoading}
             />
           </section>
 
@@ -4689,7 +4925,10 @@ function MembershipTierPanel({
   onOpenArtist,
   onWhatsAppContact,
   whatsappBusyArtistId,
+  displayCount,
   loading = false,
+  onSync,
+  syncing = false,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -4706,6 +4945,11 @@ function MembershipTierPanel({
   );
 
   const safeMemberPage = Math.min(memberPage, totalMemberPages - 1);
+  const reportedCount = Math.max(
+    0,
+    Number(displayCount ?? members.length) || 0,
+  );
+  const hasServerCountWithoutCards = reportedCount > 0 && members.length === 0;
   const memberStart = safeMemberPage * MEMBERS_PER_PAGE;
   const visibleMembers = members.slice(
     memberStart,
@@ -4762,41 +5006,73 @@ function MembershipTierPanel({
         <div
           className={`min-w-14 h-14 px-3 rounded-xl border flex items-center justify-center text-2xl font-black ${badgeClass}`}
         >
-          {members.length}
+          {displayCount ?? members.length}
         </div>
       </div>
 
-      {loading && members.length === 0 ? (
-        <div className="py-12 text-center">
-          <CircleDashed
-            size={28}
-            className={`mx-auto ${accentClass} opacity-70 animate-spin`}
-          />
+      {hasServerCountWithoutCards ? (
+        <div className="py-7">
+          <div
+            className={`mx-auto flex max-w-2xl flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${
+              isClaimed
+                ? "border-emerald-400/20 bg-emerald-400/[0.035]"
+                : "border-purple-400/20 bg-purple-400/[0.035]"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${badgeClass}`}
+              >
+                {isClaimed ? <BadgeCheck size={20} /> : <Sparkles size={19} />}
+              </div>
 
-          <p className="text-sm font-bold text-gray-400 mt-4">
-            Loading {title} artists...
-          </p>
+              <div>
+                <p className="text-sm font-black text-white">
+                  {reportedCount} {title} profile
+                  {reportedCount === 1 ? "" : "s"} registered
+                </p>
 
-          <p className="text-xs text-gray-600 mt-1">
-            Fetching the latest artists from MongoDB.
+                <p className="mt-1 max-w-lg text-[11px] leading-5 text-gray-500">
+                  Card data was not returned by the membership endpoint. Refresh
+                  the dashboard once.
+                </p>
+              </div>
+            </div>
+
+            {onSync && (
+              <button
+                type="button"
+                onClick={onSync}
+                disabled={syncing}
+                className={`shrink-0 rounded-xl border px-4 py-2.5 text-[9px] font-black uppercase tracking-widest transition disabled:cursor-not-allowed disabled:opacity-50 ${badgeClass}`}
+              >
+                {syncing ? "Syncing" : "Refresh Cards"}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : loading && members.length === 0 ? (
+        <div className="py-7 text-center">
+          <p className="text-xs font-bold text-gray-500">
+            Preparing artist cards...
           </p>
         </div>
       ) : members.length === 0 ? (
-        <div className="py-12 text-center">
+        <div className="py-8 text-center">
           <Sparkles size={25} className={`mx-auto ${accentClass} opacity-40`} />
 
-          <p className="text-sm font-bold text-gray-400 mt-4">
+          <p className="mt-3 text-sm font-bold text-gray-400">
             No {title} artists found
           </p>
 
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="mt-1 text-xs text-gray-600">
             {isClaimed
-              ? "The claimed counter is loaded separately. If it is above 0, use Refresh and check the API warning above this section."
+              ? "No claimed Free profiles are available for the selected filters."
               : isUnclaimed
-                ? "Unclaimed imported Free profiles will appear here."
+                ? "No unclaimed Free profiles are available for the selected filters."
                 : isBasic
-                  ? "Free artists will appear here."
-                  : "Paid members will appear here automatically."}
+                  ? "No Free artists are available for the selected filters."
+                  : "No paid members are available for the selected filters."}
           </p>
         </div>
       ) : (

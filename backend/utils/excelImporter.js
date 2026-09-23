@@ -1,4 +1,5 @@
-const XLSX = require("xlsx");
+const ExcelJS = require("exceljs");
+const path = require("path");
 const TattooStudio = require("../models/TattooStudio");
 
 /* =========================================================
@@ -14,10 +15,7 @@ function cleanText(value) {
 }
 
 function normalizeText(value) {
-  return cleanText(value)
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
+  return cleanText(value).toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function normalizeUrl(value) {
@@ -59,9 +57,7 @@ function parseReviews(value) {
 ========================================================= */
 
 function normalizeHeader(value) {
-  return normalizeText(value)
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ");
+  return normalizeText(value).replace(/[_-]+/g, " ").replace(/\s+/g, " ");
 }
 
 /* =========================================================
@@ -72,12 +68,10 @@ function getColumnFromObject(row, possibleNames) {
   const keys = Object.keys(row);
 
   for (const possibleName of possibleNames) {
-    const normalizedPossibleName =
-      normalizeHeader(possibleName);
+    const normalizedPossibleName = normalizeHeader(possibleName);
 
     const matchingKey = keys.find(
-      (key) =>
-        normalizeHeader(key) === normalizedPossibleName,
+      (key) => normalizeHeader(key) === normalizedPossibleName,
     );
 
     if (matchingKey !== undefined) {
@@ -98,19 +92,11 @@ function createDuplicateKey(data) {
   const city = normalizeText(data.city);
   const state = normalizeText(data.state);
 
-  const phone = cleanText(data.phone)
-    .replace(/\D/g, "")
-    .trim();
+  const phone = cleanText(data.phone).replace(/\D/g, "").trim();
 
   // ✅ Main duplicate identity
   if (name) {
-    return [
-      "studio",
-      name,
-      address,
-      city,
-      state,
-    ].join("|");
+    return ["studio", name, address, city, state].join("|");
   }
 
   // ✅ Fallback
@@ -125,25 +111,15 @@ function createDuplicateKey(data) {
   if (data.website) {
     return `website:${normalizeText(data.website)}`;
   }
-  
 
-  return [
-    "unknown",
-    address,
-    city,
-    state,
-  ].join("|");
+  return ["unknown", address, city, state].join("|");
 }
 
 /* =========================================================
    CONVERT HEADER-BASED ROW
 ========================================================= */
 
-function convertHeaderRowToStudio(
-  row,
-  sheetName,
-  rowNumber,
-) {
+function convertHeaderRowToStudio(row, sheetName, rowNumber) {
   const name = cleanText(
     getColumnFromObject(row, [
       "name",
@@ -172,59 +148,25 @@ function convertHeaderRowToStudio(
   );
 
   const address = cleanText(
-    getColumnFromObject(row, [
-      "address",
-      "full address",
-      "location",
-    ]),
+    getColumnFromObject(row, ["address", "full address", "location"]),
   );
 
-  const city = cleanText(
-    getColumnFromObject(row, [
-      "city",
-      "town",
-    ]),
-  );
+  const city = cleanText(getColumnFromObject(row, ["city", "town"]));
 
-  const state = cleanText(
-    getColumnFromObject(row, [
-      "state",
-      "region",
-    ]),
-  );
+  const state = cleanText(getColumnFromObject(row, ["state", "region"]));
 
   const country =
-    cleanText(
-      getColumnFromObject(row, [
-        "country",
-        "country code",
-      ]),
-    ) || "IN";
+    cleanText(getColumnFromObject(row, ["country", "country code"])) || "IN";
 
   const website = normalizeUrl(
-    getColumnFromObject(row, [
-      "website",
-      "website url",
-      "website link",
-      "url",
-    ]),
+    getColumnFromObject(row, ["website", "website url", "website link", "url"]),
   );
 
   const phone = cleanText(
-    getColumnFromObject(row, [
-      "phone",
-      "phone number",
-      "telephone",
-      "mobile",
-    ]),
+    getColumnFromObject(row, ["phone", "phone number", "telephone", "mobile"]),
   );
 
-  const items = cleanText(
-    getColumnFromObject(row, [
-      "items",
-      "item",
-    ]),
-  );
+  const items = cleanText(getColumnFromObject(row, ["items", "item"]));
 
   const mapsUrl = normalizeUrl(
     getColumnFromObject(row, [
@@ -237,11 +179,7 @@ function convertHeaderRowToStudio(
   );
 
   const category = cleanText(
-    getColumnFromObject(row, [
-      "category",
-      "business category",
-      "type",
-    ]),
+    getColumnFromObject(row, ["category", "business category", "type"]),
   );
 
   if (!name && !address && !phone) {
@@ -295,8 +233,7 @@ function convertHeaderRowToStudio(
     importedAt: new Date(),
   };
 
-  studioData.duplicateKey =
-    createDuplicateKey(studioData);
+  studioData.duplicateKey = createDuplicateKey(studioData);
 
   return studioData;
 }
@@ -322,11 +259,7 @@ function convertHeaderRowToStudio(
    12 = Category
 ========================================================= */
 
-function convertArrayRowToStudio(
-  row,
-  sheetName,
-  rowNumber,
-) {
+function convertArrayRowToStudio(row, sheetName, rowNumber) {
   if (!Array.isArray(row)) {
     return null;
   }
@@ -343,8 +276,7 @@ function convertArrayRowToStudio(
 
   const state = cleanText(row[6]);
 
-  const country =
-    cleanText(row[7]) || "IN";
+  const country = cleanText(row[7]) || "IN";
 
   const website = normalizeUrl(row[8]);
 
@@ -415,8 +347,7 @@ function convertArrayRowToStudio(
     importedAt: new Date(),
   };
 
-  studioData.duplicateKey =
-    createDuplicateKey(studioData);
+  studioData.duplicateKey = createDuplicateKey(studioData);
 
   return studioData;
 }
@@ -430,9 +361,7 @@ function looksLikeHeaderRow(row) {
     return false;
   }
 
-  const firstSeveral = row
-    .slice(0, 13)
-    .map((value) => normalizeHeader(value));
+  const firstSeveral = row.slice(0, 13).map((value) => normalizeHeader(value));
 
   const headerWords = [
     "name",
@@ -453,11 +382,141 @@ function looksLikeHeaderRow(row) {
     "google maps url",
   ];
 
-  const matches = firstSeveral.filter((value) =>
-    headerWords.includes(value),
-  );
+  const matches = firstSeveral.filter((value) => headerWords.includes(value));
 
   return matches.length >= 2;
+}
+
+/* =========================================================
+   IMPORT EXCEL FILE
+========================================================= */
+
+function excelCellToText(cell) {
+  if (!cell) {
+    return "";
+  }
+
+  /*
+    ExcelJS exposes a display-ready .text value for strings,
+    numbers, formulas, hyperlinks, dates, rich text, etc.
+    This is the closest replacement for SheetJS raw:false.
+  */
+  if (cell.text !== undefined && cell.text !== null) {
+    return String(cell.text);
+  }
+
+  const value = cell.value;
+
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "object") {
+    if (value.result !== undefined && value.result !== null) {
+      return String(value.result);
+    }
+
+    if (value.text !== undefined && value.text !== null) {
+      return String(value.text);
+    }
+
+    if (Array.isArray(value.richText)) {
+      return value.richText.map((part) => String(part?.text || "")).join("");
+    }
+  }
+
+  return String(value);
+}
+
+/* =========================================================
+   CONVERT EXCELJS WORKSHEET TO ARRAY ROWS
+
+   Same shape your old SheetJS code expected:
+   [
+     ["id", "name", "rating", ...],
+     ["1", "Studio Name", "4.8", ...]
+   ]
+========================================================= */
+
+function worksheetToRows(worksheet) {
+  if (!worksheet) {
+    return [];
+  }
+
+  const rowCount = Number(worksheet.rowCount || 0);
+  const maxColumns = Math.max(
+    Number(worksheet.columnCount || 0),
+    Number(worksheet.actualColumnCount || 0),
+    13,
+  );
+
+  const rows = [];
+
+  for (let rowNumber = 1; rowNumber <= rowCount; rowNumber++) {
+    const excelRow = worksheet.getRow(rowNumber);
+    const row = [];
+
+    for (let columnNumber = 1; columnNumber <= maxColumns; columnNumber++) {
+      row.push(excelCellToText(excelRow.getCell(columnNumber)));
+    }
+
+    /*
+      SheetJS sheet_to_json(header:1, defval:"") kept empty cells.
+      Keep the row shape, but trim only unused cells at the end.
+      Never trim below 13 columns because your headerless format
+      expects positions 0..12.
+    */
+    while (row.length > 13 && cleanText(row[row.length - 1]) === "") {
+      row.pop();
+    }
+
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+/* =========================================================
+   LOAD XLSX / CSV WITH EXCELJS
+
+   NOTE:
+   ExcelJS does not support legacy binary .xls files.
+   Convert old .xls files to .xlsx before importing.
+========================================================= */
+
+async function loadExcelWorksheets(filePath) {
+  const extension = path.extname(filePath).toLowerCase();
+  const workbook = new ExcelJS.Workbook();
+
+  if (extension === ".xlsx") {
+    await workbook.xlsx.readFile(filePath);
+
+    return workbook.worksheets;
+  }
+
+  if (extension === ".csv") {
+    const worksheet = await workbook.csv.readFile(filePath);
+
+    if (workbook.worksheets.length > 0) {
+      return workbook.worksheets;
+    }
+
+    return worksheet ? [worksheet] : [];
+  }
+
+  if (extension === ".xls") {
+    throw new Error(
+      "Legacy .xls files are not supported anymore. Open the file in Excel and save it as .xlsx, then upload it again.",
+    );
+  }
+
+  throw new Error(
+    "Unsupported spreadsheet format. Please upload an .xlsx or .csv file.",
+  );
 }
 
 /* =========================================================
@@ -471,13 +530,11 @@ async function importExcelFile(filePath) {
 
   console.log(`📁 File: ${filePath}`);
 
-  const workbook = XLSX.readFile(filePath, {
-    cellDates: false,
-    cellNF: false,
-    cellStyles: false,
-  });
+  const worksheets = await loadExcelWorksheets(filePath);
 
-  const sheetNames = workbook.SheetNames;
+  const sheetNames = worksheets.map(
+    (worksheet, index) => cleanText(worksheet?.name) || `Sheet${index + 1}`,
+  );
 
   console.log(`📄 Sheets found: ${sheetNames.length}`);
   console.log(`📄 ${sheetNames.join(", ")}`);
@@ -501,33 +558,26 @@ async function importExcelFile(filePath) {
      PROCESS EACH SHEET
   ======================================================= */
 
-  for (const sheetName of sheetNames) {
+  for (let sheetIndex = 0; sheetIndex < worksheets.length; sheetIndex++) {
+    const worksheet = worksheets[sheetIndex];
+    const sheetName = sheetNames[sheetIndex];
+
     console.log("");
     console.log(`📑 Processing sheet: ${sheetName}`);
 
-    const worksheet = workbook.Sheets[sheetName];
-
     if (!worksheet) {
-      console.log(
-        `⚠️ Sheet "${sheetName}" could not be read.`,
-      );
+      console.log(`⚠️ Sheet "${sheetName}" could not be read.`);
 
       continue;
     }
 
     /*
-      IMPORTANT:
-
-      header:1 means Excel rows are returned as arrays.
-
-      This supports your current headerless Excel file.
+      Convert ExcelJS worksheet into the same row-array format
+      previously returned by:
+      XLSX.utils.sheet_to_json(..., { header: 1 })
     */
 
-    const rows = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      defval: "",
-      raw: false,
-    });
+    const rows = worksheetToRows(worksheet);
 
     console.log(`   Rows found: ${rows.length}`);
 
@@ -541,13 +591,9 @@ async function importExcelFile(filePath) {
 
     const hasHeader = looksLikeHeaderRow(rows[0]);
 
-    console.log(
-      `   Header row detected: ${hasHeader ? "YES" : "NO"}`,
-    );
+    console.log(`   Header row detected: ${hasHeader ? "YES" : "NO"}`);
 
-    totalRows += hasHeader
-      ? Math.max(rows.length - 1, 0)
-      : rows.length;
+    totalRows += hasHeader ? Math.max(rows.length - 1, 0) : rows.length;
 
     let batch = [];
 
@@ -570,8 +616,7 @@ async function importExcelFile(filePath) {
               header !== null &&
               String(header).trim() !== ""
             ) {
-              objectRow[String(header)] =
-                rows[index][columnIndex] ?? "";
+              objectRow[String(header)] = rows[index][columnIndex] ?? "";
             }
           });
 
@@ -610,9 +655,7 @@ async function importExcelFile(filePath) {
 
             batch = [];
 
-            console.log(
-              `   ✓ Processed ${index}/${rows.length - 1} rows`,
-            );
+            console.log(`   ✓ Processed ${index}/${rows.length - 1} rows`);
           }
         } catch (error) {
           errors++;
@@ -673,9 +716,7 @@ async function importExcelFile(filePath) {
 
             batch = [];
 
-            console.log(
-              `   ✓ Processed ${index + 1}/${rows.length} rows`,
-            );
+            console.log(`   ✓ Processed ${index + 1}/${rows.length} rows`);
           }
         } catch (error) {
           errors++;
@@ -767,9 +808,7 @@ async function processBatch(batch) {
 
     const uniqueStudios = [...uniqueMap.values()];
 
-    const duplicateKeys = uniqueStudios.map(
-      (studio) => studio.duplicateKey
-    );
+    const duplicateKeys = uniqueStudios.map((studio) => studio.duplicateKey);
 
     // Find records that already exist in MongoDB
     const existingStudios = await TattooStudio.find(
@@ -780,19 +819,16 @@ async function processBatch(batch) {
       },
       {
         duplicateKey: 1,
-      }
+      },
     ).lean();
 
     const existingKeys = new Set(
-      existingStudios.map(
-        (studio) => studio.duplicateKey
-      )
+      existingStudios.map((studio) => studio.duplicateKey),
     );
 
     // ONLY keep completely new studios
     const newStudios = uniqueStudios.filter(
-      (studio) =>
-        !existingKeys.has(studio.duplicateKey)
+      (studio) => !existingKeys.has(studio.duplicateKey),
     );
 
     if (newStudios.length === 0) {
@@ -804,12 +840,9 @@ async function processBatch(batch) {
       };
     }
 
-    await TattooStudio.insertMany(
-      newStudios,
-      {
-        ordered: false,
-      }
-    );
+    await TattooStudio.insertMany(newStudios, {
+      ordered: false,
+    });
 
     return {
       imported: newStudios.length,
@@ -822,10 +855,7 @@ async function processBatch(batch) {
       errors: 0,
     };
   } catch (error) {
-    console.error(
-      "❌ MongoDB batch error:",
-      error.message
-    );
+    console.error("❌ MongoDB batch error:", error.message);
 
     return {
       imported: 0,
