@@ -1,1174 +1,1603 @@
-// backend/routes/artistBookingRoutes.js
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
 
-const express = require("express");
-const mongoose = require("mongoose");
+import { TATTOO_CATEGORIES } from "../data/tattooCategories";
 
-const ArtistBooking = require("../models/ArtistBooking");
-const TattooStudio = require("../models/TattooStudio");
-
-const {
-  sendFreeArtistBooking,
-  sendPaidArtistBooking,
-} = require("../services/interaktWhatsAppService");
-
-const router = express.Router();
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function cleanText(value) {
-  return String(value || "").trim();
-}
-
-function escapeRegex(value) {
-  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Mail,
+  MapPin,
+  Phone,
+  Sparkles,
+  User,
+  Clock3,
+  Ruler,
+  IndianRupee,
+  CheckCircle2,
+  ImagePlus,
+  Check,
+  X,
+  ShieldCheck,
+} from "lucide-react";
 
 /* =========================================================
-   NORMALIZE ARTIST PLAN
-
-   basic    = FREE
-   pro      = SILVER
-   verified = GOLD
+   BOOK ARTIST
 ========================================================= */
 
-function normalizePlan(plan) {
-  const value = cleanText(plan).toLowerCase();
+export default function BookArtist() {
+  const location = useLocation();
 
-  if (
-    value === "gold" ||
-    value === "verified" ||
-    value === "spotlight"
-  ) {
-    return "verified";
-  }
+  /* =======================================================
+     SELECTED ARTIST
 
-  if (
-    value === "silver" ||
-    value === "pro"
-  ) {
-    return "pro";
-  }
+     Artist information comes from Artists.jsx navigation.
+  ======================================================= */
 
-  return "basic";
-}
+  const selectedArtist = React.useMemo(
+    () => ({
+      id: String(
+        location.state?.preferredArtistId ||
+          location.state?.artistId ||
+          ""
+      ).trim(),
 
-/* =========================================================
-   GET ARTIST PLAN
-========================================================= */
+      name: String(
+        location.state?.preferredArtist ||
+          location.state?.artistName ||
+          ""
+      ).trim(),
 
-function getArtistPlan(artist) {
-  return normalizePlan(
-    artist?.plan ||
-      artist?.membershipPlan ||
-      artist?.subscriptionPlan ||
-      artist?.artistPlan ||
-      "basic",
+      city: String(
+        location.state?.city || ""
+      ).trim(),
+
+      state: String(
+        location.state?.state || ""
+      ).trim(),
+
+      profileImage: String(
+        location.state?.profileImage || ""
+      ).trim(),
+
+      plan: String(
+        location.state?.plan || ""
+      )
+        .trim()
+        .toLowerCase(),
+    }),
+    [location.state]
   );
-}
 
-/* =========================================================
-   GET ARTIST NAME
-========================================================= */
+  /* =======================================================
+     FORM
+  ======================================================= */
 
-function getArtistName(artist) {
-  return (
-    cleanText(
-      artist?.professionalName ||
-        artist?.studioName ||
-        artist?.studio ||
-        artist?.name,
-    ) || "Artist"
-  );
-}
+  const [form, setForm] =
+    React.useState({
+      name: "",
+      phone: "",
+      email: "",
 
-/* =========================================================
-   GET ARTIST PHONE
-========================================================= */
+      date: "",
+      time: "",
 
-function getArtistPhone(artist) {
-  return cleanText(
-    artist?.phone ||
-      artist?.phoneNumber ||
-      artist?.mobile ||
-      artist?.mobileNumber ||
-      artist?.contactNumber ||
-      artist?.whatsapp ||
-      artist?.whatsappNumber ||
-      artist?.whatsappPhone,
-  );
-}
+      tattooStyle: "",
+      tattooIdea: "",
 
-/* =========================================================
-   SERIALIZE BOOKING
+      bodyPlacement: "",
+      tattooSize: "",
+      budget: "",
+      referenceLink: "",
+    });
 
-   Adds old aliases too so existing frontend/admin code
-   can continue using:
-   city
-   state
-   category
-   preferredArtist
-========================================================= */
+  /* =======================================================
+     STATES
+  ======================================================= */
 
-function serializeBooking(booking) {
-  if (!booking) {
-    return null;
-  }
+  const [loading, setLoading] =
+    React.useState(false);
 
-  const data =
-    typeof booking.toObject === "function"
-      ? booking.toObject()
-      : { ...booking };
+  const [submitted, setSubmitted] =
+    React.useState(false);
 
-  return {
-    ...data,
+  const [error, setError] =
+    React.useState("");
 
-    // Compatibility aliases
-    preferredArtist: data.selectedArtistName || "",
-    city: data.artistCity || "",
-    state: data.artistState || "",
-    category: data.tattooStyle || "",
+  const [bookingId, setBookingId] =
+    React.useState("");
+
+  const [
+    notificationSent,
+    setNotificationSent,
+  ] = React.useState(false);
+
+  const [
+    notificationError,
+    setNotificationError,
+  ] = React.useState("");
+
+  const [
+    showConsentPopup,
+    setShowConsentPopup,
+  ] = React.useState(false);
+
+  const [
+    consentAccepted,
+    setConsentAccepted,
+  ] = React.useState(false);
+
+  /* =======================================================
+     API
+  ======================================================= */
+
+  const API_URL = (
+    import.meta.env.VITE_API_URL ||
+    "http://localhost:5000"
+  ).replace(/\/$/, "");
+
+  /* =======================================================
+     HANDLE FORM CHANGE
+  ======================================================= */
+
+  const handleChange = (event) => {
+    const { name, value } =
+      event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    if (error) {
+      setError("");
+    }
   };
+
+  /* =======================================================
+     SUBMIT BOOKING
+  ======================================================= */
+
+  const handleSubmit = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (!selectedArtist.id) {
+      setError(
+        "No artist was selected. Please return to Artists and choose an artist."
+      );
+
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      setError("");
+
+      setNotificationError("");
+
+      /* ===================================================
+         VALIDATION
+      =================================================== */
+
+      if (!form.name.trim()) {
+        throw new Error(
+          "Please enter your name."
+        );
+      }
+
+      if (!form.phone.trim()) {
+        throw new Error(
+          "Please enter your phone number."
+        );
+      }
+
+      if (!form.email.trim()) {
+        throw new Error(
+          "Please enter your email address."
+        );
+      }
+
+      if (!form.tattooStyle) {
+        throw new Error(
+          "Please select a tattoo style."
+        );
+      }
+
+      if (!form.tattooIdea.trim()) {
+        throw new Error(
+          "Please tell the artist about your tattoo idea."
+        );
+      }
+
+      if (!consentAccepted) {
+        setShowConsentPopup(true);
+
+        return;
+      }
+
+      /* ===================================================
+         CREATE BOOKING
+      =================================================== */
+
+      const bookingResponse =
+        await fetch(
+          `${API_URL}/api/artist-bookings`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              /* CUSTOMER */
+
+              name:
+                form.name.trim(),
+
+              phone:
+                form.phone.trim(),
+
+              email:
+                form.email.trim(),
+
+              /* ARTIST */
+
+              selectedArtistId:
+                selectedArtist.id,
+
+              /* BOOKING */
+
+              tattooStyle:
+                form.tattooStyle,
+
+              // Compatibility with older backend
+              category:
+                form.tattooStyle,
+
+              preferredDate:
+                form.date || null,
+
+              preferredTime:
+                form.time || "",
+
+              tattooIdea:
+                form.tattooIdea.trim(),
+
+              bodyPlacement:
+                form.bodyPlacement.trim(),
+
+              tattooSize:
+                form.tattooSize.trim(),
+
+              budget:
+                form.budget.trim(),
+
+              referenceLink:
+                form.referenceLink.trim(),
+            }),
+          }
+        );
+
+      const bookingData =
+        await bookingResponse
+          .json()
+          .catch(() => ({}));
+
+      /* ===================================================
+         API ERROR
+      =================================================== */
+
+      if (!bookingResponse.ok) {
+        throw new Error(
+          bookingData?.message ||
+            bookingData?.error ||
+            "Unable to create your booking request."
+        );
+      }
+
+      /* ===================================================
+         GET BOOKING ID
+      =================================================== */
+
+      const createdBookingId =
+        bookingData?.booking?._id ||
+        bookingData?.booking?.id ||
+        bookingData?._id ||
+        bookingData?.id ||
+        "";
+
+      setBookingId(
+        String(
+          createdBookingId || ""
+        )
+      );
+
+      /* ===================================================
+         IMPORTANT
+
+         Don't automatically set this to true.
+
+         Backend tells us whether Interakt WhatsApp
+         was actually sent successfully.
+      =================================================== */
+
+      setNotificationSent(
+        Boolean(
+          bookingData?.notificationSent
+        )
+      );
+
+      setNotificationError(
+        String(
+          bookingData?.notificationError ||
+            ""
+        )
+      );
+
+      setSubmitted(true);
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    } catch (submitError) {
+      console.error(
+        "Direct artist booking error:",
+        submitError
+      );
+
+      setError(
+        submitError?.message ||
+          "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* =======================================================
+     RESET / BOOK ANOTHER
+  ======================================================= */
+
+  const handleBookAnother =
+    () => {
+      setSubmitted(false);
+
+      setBookingId("");
+
+      setNotificationSent(false);
+
+      setNotificationError("");
+
+      setConsentAccepted(false);
+
+      setShowConsentPopup(false);
+
+      setError("");
+
+      setForm({
+        name: "",
+        phone: "",
+        email: "",
+
+        date: "",
+        time: "",
+
+        tattooStyle: "",
+        tattooIdea: "",
+
+        bodyPlacement: "",
+        tattooSize: "",
+        budget: "",
+        referenceLink: "",
+      });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    };
+
+  const artistPlanLabel =
+    getPlanLabel(
+      selectedArtist.plan
+    );
+
+  /* =======================================================
+     UI
+  ======================================================= */
+
+  return (
+    <main className="min-h-screen bg-[#08080a] text-white pt-32 pb-20 px-4 sm:px-6 lg:px-10">
+      <div className="max-w-[1180px] mx-auto">
+        {/* =================================================
+            BACK
+        ================================================= */}
+
+        <Link
+          to="/artists"
+          className="inline-flex items-center gap-2 text-[9px] font-black tracking-[0.15em] text-gray-500 hover:text-purple-400 transition"
+        >
+          <ArrowLeft size={14} />
+
+          BACK TO ARTISTS
+        </Link>
+
+        {/* =================================================
+            PAGE HEADING
+        ================================================= */}
+
+        <div className="mt-10 mb-10">
+          <div className="flex items-center gap-2 text-purple-400 mb-4">
+            <Sparkles size={14} />
+
+            <span className="text-[9px] font-mono tracking-[0.18em]">
+              DIRECT ARTIST BOOKING
+            </span>
+          </div>
+
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black uppercase tracking-[-0.05em] leading-[0.9]">
+            BOOK YOUR
+            <br />
+
+            <span className="text-purple-500">
+              ARTIST.
+            </span>
+          </h1>
+
+          <p className="mt-6 max-w-2xl text-sm text-gray-500 leading-relaxed">
+            You already selected an
+            artist. Fill in your booking
+            details and the request will
+            be sent directly to that
+            artist.
+          </p>
+        </div>
+
+        {/* =================================================
+            NO ARTIST
+        ================================================= */}
+
+        {!selectedArtist.id && (
+          <div className="mb-8 rounded-[24px] border border-yellow-500/25 bg-yellow-500/[0.06] p-6">
+            <h2 className="text-lg font-black uppercase">
+              No artist selected
+            </h2>
+
+            <p className="mt-2 text-sm text-gray-500">
+              Please open the Artists
+              page and click BOOK ARTIST
+              on the artist you want.
+            </p>
+
+            <Link
+              to="/artists"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-5 py-3 text-[9px] font-black tracking-widest transition"
+            >
+              CHOOSE AN ARTIST
+
+              <ArrowRight
+                size={13}
+              />
+            </Link>
+          </div>
+        )}
+
+        {/* =================================================
+            ARTIST CARD
+        ================================================= */}
+
+        {selectedArtist.id && (
+          <SelectedArtistCard
+            artist={
+              selectedArtist
+            }
+            planLabel={
+              artistPlanLabel
+            }
+          />
+        )}
+
+        {/* =================================================
+            ERROR
+        ================================================= */}
+
+        {error && (
+          <div className="mt-6 mb-6 border border-red-500/30 bg-red-500/[0.07] rounded-xl px-5 py-4 text-sm text-red-300">
+            {error}
+          </div>
+        )}
+
+        {/* =================================================
+            SUCCESS OR FORM
+        ================================================= */}
+
+        {submitted ? (
+          <SuccessState
+            artist={
+              selectedArtist
+            }
+            bookingId={
+              bookingId
+            }
+            notificationSent={
+              notificationSent
+            }
+            notificationError={
+              notificationError
+            }
+            onBookAnother={
+              handleBookAnother
+            }
+          />
+        ) : selectedArtist.id ? (
+          <form
+            onSubmit={
+              handleSubmit
+            }
+            className="mt-8 border border-white/10 bg-[#0d0d11] rounded-[28px] p-5 sm:p-8 lg:p-10"
+          >
+            {/* =================================================
+                FORM TITLE
+            ================================================= */}
+
+            <div className="mb-8">
+              <p className="text-[9px] font-mono tracking-[0.16em] text-purple-400">
+                YOUR DETAILS
+              </p>
+
+              <h2 className="mt-2 text-2xl sm:text-3xl font-black uppercase">
+                Booking information
+              </h2>
+            </div>
+
+            {/* =================================================
+                FORM GRID
+            ================================================= */}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* NAME */}
+
+              <FormField
+                icon={
+                  <User size={15} />
+                }
+                label="YOUR NAME *"
+              >
+                <input
+                  type="text"
+                  name="name"
+                  value={
+                    form.name
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  required
+                  placeholder="Enter your full name"
+                  className={
+                    inputClass
+                  }
+                />
+              </FormField>
+
+              {/* PHONE */}
+
+              <FormField
+                icon={
+                  <Phone
+                    size={15}
+                  />
+                }
+                label="PHONE NUMBER *"
+              >
+                <input
+                  type="tel"
+                  name="phone"
+                  value={
+                    form.phone
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  required
+                  placeholder="+91 98765 43210"
+                  className={
+                    inputClass
+                  }
+                />
+              </FormField>
+
+              {/* EMAIL */}
+
+              <FormField
+                icon={
+                  <Mail
+                    size={15}
+                  />
+                }
+                label="EMAIL *"
+              >
+                <input
+                  type="email"
+                  name="email"
+                  value={
+                    form.email
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  required
+                  placeholder="you@example.com"
+                  className={
+                    inputClass
+                  }
+                />
+              </FormField>
+
+              {/* STYLE */}
+
+              <FormField
+                icon={
+                  <Sparkles
+                    size={15}
+                  />
+                }
+                label="TATTOO STYLE / CATEGORY *"
+              >
+                <select
+                  name="tattooStyle"
+                  value={
+                    form.tattooStyle
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  required
+                  className={`${inputClass} cursor-pointer [color-scheme:dark]`}
+                >
+                  <option
+                    value=""
+                    className="bg-[#0d0d11]"
+                  >
+                    Select tattoo
+                    style
+                  </option>
+
+                  {TATTOO_CATEGORIES.map(
+                    (
+                      category
+                    ) => (
+                      <option
+                        key={
+                          category
+                        }
+                        value={
+                          category
+                        }
+                        className="bg-[#0d0d11]"
+                      >
+                        {
+                          category
+                        }
+                      </option>
+                    )
+                  )}
+                </select>
+              </FormField>
+
+              {/* DATE */}
+
+              <FormField
+                icon={
+                  <CalendarDays
+                    size={15}
+                  />
+                }
+                label="PREFERRED DATE"
+              >
+                <input
+                  type="date"
+                  name="date"
+                  value={
+                    form.date
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  className={`${inputClass} [color-scheme:dark]`}
+                />
+              </FormField>
+
+              {/* TIME */}
+
+              <FormField
+                icon={
+                  <Clock3
+                    size={15}
+                  />
+                }
+                label="PREFERRED TIME"
+              >
+                <input
+                  type="time"
+                  name="time"
+                  value={
+                    form.time
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  className={`${inputClass} [color-scheme:dark]`}
+                />
+              </FormField>
+
+              {/* BODY PLACEMENT */}
+
+              <FormField
+                icon={
+                  <MapPin
+                    size={15}
+                  />
+                }
+                label="BODY PLACEMENT"
+              >
+                <input
+                  type="text"
+                  name="bodyPlacement"
+                  value={
+                    form.bodyPlacement
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  placeholder="Forearm, back, wrist..."
+                  className={
+                    inputClass
+                  }
+                />
+              </FormField>
+
+              {/* SIZE */}
+
+              <FormField
+                icon={
+                  <Ruler
+                    size={15}
+                  />
+                }
+                label="APPROX TATTOO SIZE"
+              >
+                <input
+                  type="text"
+                  name="tattooSize"
+                  value={
+                    form.tattooSize
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  placeholder="Example: 4 x 5 inches"
+                  className={
+                    inputClass
+                  }
+                />
+              </FormField>
+
+              {/* BUDGET */}
+
+              <FormField
+                icon={
+                  <IndianRupee
+                    size={15}
+                  />
+                }
+                label="BUDGET"
+              >
+                <select
+                  name="budget"
+                  value={
+                    form.budget
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  className={`${inputClass} cursor-pointer [color-scheme:dark]`}
+                >
+                  <option
+                    value=""
+                    className="bg-[#0d0d11]"
+                  >
+                    Select budget
+                    range
+                  </option>
+
+                  <option
+                    value="Under ₹2,000"
+                    className="bg-[#0d0d11]"
+                  >
+                    Under ₹2,000
+                  </option>
+
+                  <option
+                    value="₹2,000 - ₹5,000"
+                    className="bg-[#0d0d11]"
+                  >
+                    ₹2,000 -
+                    ₹5,000
+                  </option>
+
+                  <option
+                    value="₹5,000 - ₹10,000"
+                    className="bg-[#0d0d11]"
+                  >
+                    ₹5,000 -
+                    ₹10,000
+                  </option>
+
+                  <option
+                    value="₹10,000 - ₹25,000"
+                    className="bg-[#0d0d11]"
+                  >
+                    ₹10,000 -
+                    ₹25,000
+                  </option>
+
+                  <option
+                    value="₹25,000+"
+                    className="bg-[#0d0d11]"
+                  >
+                    ₹25,000+
+                  </option>
+
+                  <option
+                    value="Discuss with artist"
+                    className="bg-[#0d0d11]"
+                  >
+                    Discuss with
+                    artist
+                  </option>
+                </select>
+              </FormField>
+
+              {/* REFERENCE */}
+
+              <FormField
+                icon={
+                  <ImagePlus
+                    size={15}
+                  />
+                }
+                label="REFERENCE IMAGE LINK"
+              >
+                <input
+                  type="url"
+                  name="referenceLink"
+                  value={
+                    form.referenceLink
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  placeholder="Google Drive / Instagram / image URL"
+                  className={
+                    inputClass
+                  }
+                />
+              </FormField>
+            </div>
+
+            {/* =================================================
+                TATTOO IDEA
+            ================================================= */}
+
+            <div className="mt-5">
+              <label className="block mb-2 text-[8px] font-black tracking-[0.15em] text-gray-500">
+                TELL THE ARTIST ABOUT
+                YOUR TATTOO *
+              </label>
+
+              <textarea
+                name="tattooIdea"
+                value={
+                  form.tattooIdea
+                }
+                onChange={
+                  handleChange
+                }
+                required
+                rows={6}
+                placeholder="Describe the tattoo idea, design, colours, reference, changes you want, etc."
+                className={
+                  textareaClass
+                }
+              />
+            </div>
+
+            {/* =================================================
+                CONSENT
+            ================================================= */}
+
+            <div className="mt-6">
+              <button
+                type="button"
+                aria-pressed={
+                  consentAccepted
+                }
+                onClick={() => {
+                  if (
+                    consentAccepted
+                  ) {
+                    setConsentAccepted(
+                      false
+                    );
+                  } else {
+                    setShowConsentPopup(
+                      true
+                    );
+                  }
+                }}
+                className={`
+                  group
+                  w-full
+                  flex
+                  items-center
+                  gap-4
+                  rounded-2xl
+                  border
+                  px-5
+                  py-5
+                  text-left
+                  transition-all
+                  duration-300
+
+                  ${
+                    consentAccepted
+                      ? `
+                        border-purple-500/50
+                        bg-purple-500/[0.08]
+                        shadow-[0_0_24px_rgba(168,85,247,0.10)]
+                      `
+                      : `
+                        border-white/10
+                        bg-white/[0.02]
+                        hover:border-purple-500/30
+                        hover:bg-purple-500/[0.04]
+                      `
+                  }
+                `}
+              >
+                <span
+                  className={`
+                    flex
+                    h-6
+                    w-6
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-md
+                    border
+                    transition-all
+                    duration-300
+
+                    ${
+                      consentAccepted
+                        ? "border-purple-500 bg-purple-600 text-white"
+                        : "border-white/20 bg-black/30 text-transparent"
+                    }
+                  `}
+                >
+                  <Check
+                    size={15}
+                    strokeWidth={
+                      3
+                    }
+                  />
+                </span>
+
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-white">
+                    Share my
+                    information with{" "}
+
+                    <span className="text-purple-400">
+                      {selectedArtist.name ||
+                        "this artist"}
+                    </span>
+                  </span>
+
+                  <span className="mt-1 block text-xs leading-relaxed text-gray-500">
+                    Your booking
+                    information will be
+                    shared according to
+                    the artist's
+                    InkConvention plan.
+                  </span>
+                </span>
+
+                <ArrowRight
+                  size={17}
+                  className={`
+                    shrink-0
+                    transition-all
+                    duration-300
+
+                    ${
+                      consentAccepted
+                        ? "rotate-90 text-purple-400"
+                        : "text-gray-600 group-hover:text-purple-400"
+                    }
+                  `}
+                />
+              </button>
+
+              {!consentAccepted && (
+                <p className="mt-2 px-1 text-[10px] leading-relaxed text-gray-600">
+                  Please review and
+                  accept this before
+                  sending your booking
+                  request.
+                </p>
+              )}
+            </div>
+
+            {/* =================================================
+                SUBMIT
+            ================================================= */}
+
+            <div className="mt-8 flex justify-end">
+              <button
+                type="submit"
+                disabled={
+                  loading
+                }
+                className={`
+                  group
+                  inline-flex
+                  items-center
+                  justify-center
+                  gap-3
+                  w-full
+                  sm:w-auto
+                  border
+                  rounded-xl
+                  px-8
+                  py-4
+                  text-[10px]
+                  font-black
+                  tracking-[0.14em]
+                  transition-all
+                  duration-300
+
+                  ${
+                    loading
+                      ? `
+                        cursor-not-allowed
+                        border-purple-500/20
+                        bg-purple-600/40
+                        text-white/60
+                      `
+                      : `
+                        bg-purple-600
+                        hover:bg-purple-500
+                        border-purple-400/40
+                        text-white
+                        shadow-[0_0_25px_rgba(168,85,247,0.22)]
+                        hover:-translate-y-1
+                      `
+                  }
+                `}
+              >
+                {loading ? (
+                  <>
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+
+                    SENDING REQUEST...
+                  </>
+                ) : (
+                  <>
+                    SEND BOOKING REQUEST
+
+                    <ArrowRight
+                      size={14}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        ) : null}
+      </div>
+
+      {/* =====================================================
+          CONSENT POPUP
+      ===================================================== */}
+
+      {showConsentPopup && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+          onMouseDown={(
+            event
+          ) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              setShowConsentPopup(
+                false
+              );
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-[28px] border border-purple-500/30 bg-[#0d0d11] p-7 shadow-[0_0_60px_rgba(168,85,247,0.16)] sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400">
+                <ShieldCheck
+                  size={22}
+                />
+              </div>
+
+              <button
+                type="button"
+                aria-label="Close confirmation"
+                onClick={() =>
+                  setShowConsentPopup(
+                    false
+                  )
+                }
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-gray-500 transition hover:bg-white/5 hover:text-white"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <p className="mt-6 text-[8px] font-black tracking-[0.18em] text-purple-400">
+              CONFIRM INFORMATION
+              SHARING
+            </p>
+
+            <h3 className="mt-2 text-2xl font-black uppercase leading-tight sm:text-3xl">
+              Share your details
+              with{" "}
+
+              <span className="text-purple-400">
+                {selectedArtist.name ||
+                  "this artist"}
+                ?
+              </span>
+            </h3>
+
+            <p className="mt-4 text-sm leading-relaxed text-gray-500">
+              By selecting YES,
+              InkConvention will send
+              your booking request to{" "}
+
+              <span className="font-bold text-white">
+                {selectedArtist.name ||
+                  "the selected artist"}
+              </span>
+              .
+            </p>
+
+            <div className="mt-6 rounded-xl border border-white/10 bg-black/30 p-4">
+              <div className="space-y-3 text-xs text-gray-400">
+                <ConsentItem>
+                  Name
+                </ConsentItem>
+
+                <ConsentItem>
+                  Phone number
+                </ConsentItem>
+
+                <ConsentItem>
+                  Email address
+                </ConsentItem>
+
+                <ConsentItem>
+                  Tattoo booking
+                  information
+                </ConsentItem>
+              </div>
+            </div>
+
+            <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setShowConsentPopup(
+                    false
+                  )
+                }
+                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4 text-[9px] font-black tracking-widest text-gray-400 transition hover:bg-white/[0.07] hover:text-white"
+              >
+                NO, GO BACK
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setConsentAccepted(
+                    true
+                  );
+
+                  setShowConsentPopup(
+                    false
+                  );
+
+                  setError("");
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-4 text-[9px] font-black tracking-widest text-white transition hover:bg-purple-500"
+              >
+                YES, I AGREE
+
+                <Check
+                  size={14}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  );
 }
 
 /* =========================================================
-   SEND WHATSAPP NOTIFICATION TO ARTIST
+   SELECTED ARTIST CARD
 ========================================================= */
 
-async function notifyArtist({
-  booking,
+function SelectedArtistCard({
   artist,
-  artistName,
-  artistPlan,
+  planLabel,
 }) {
-  const artistPhone = getArtistPhone(artist);
+  const isGold =
+    artist.plan ===
+      "verified" ||
+    artist.plan === "gold" ||
+    artist.plan ===
+      "spotlight";
 
-  if (!artistPhone) {
-    const errorMessage =
-      "Artist WhatsApp phone number is missing.";
+  const isSilver =
+    artist.plan === "pro" ||
+    artist.plan ===
+      "silver";
 
-    booking.artistNotified = false;
-    booking.artistNotifiedAt = null;
-    booking.artistNotificationChannel = "whatsapp";
-    booking.artistNotificationError = errorMessage;
+  return (
+    <section
+      className={`
+        rounded-[26px]
+        border
+        p-5
+        sm:p-6
 
-    await booking.save();
+        ${
+          isGold
+            ? `
+              border-[#f5c451]/40
+              bg-gradient-to-br
+              from-[#f5c451]/[0.10]
+              via-[#151005]
+              to-[#0d0d11]
+            `
+            : isSilver
+            ? `
+              border-slate-200/20
+              bg-gradient-to-br
+              from-white/[0.06]
+              to-[#0d0d11]
+            `
+            : `
+              border-purple-500/20
+              bg-[#0d0d11]
+            `
+        }
+      `}
+    >
+      <p className="text-[8px] font-mono tracking-[0.16em] text-gray-600">
+        YOU ARE BOOKING
+      </p>
 
-    console.error("❌ Artist WhatsApp notification failed:", {
-      bookingId: String(booking._id),
-      artistId: String(artist._id),
-      artistName,
-      reason: errorMessage,
-    });
+      <div className="mt-4 flex items-center gap-4">
+        <div
+          className={`
+            w-16
+            h-16
+            shrink-0
+            overflow-hidden
+            rounded-full
+            border-2
+            bg-black
+            flex
+            items-center
+            justify-center
+            text-xl
+            font-black
 
-    return {
-      sent: false,
-      messageId: "",
-      error: errorMessage,
-    };
-  }
+            ${
+              isGold
+                ? "border-[#f5c451] text-[#f5c451]"
+                : isSilver
+                ? "border-slate-300 text-slate-200"
+                : "border-purple-500/30 text-purple-400"
+            }
+          `}
+        >
+          {artist.profileImage ? (
+            <img
+              src={
+                artist.profileImage
+              }
+              alt={
+                artist.name ||
+                "Tattoo Artist"
+              }
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            artist.name
+              ?.charAt(0)
+              ?.toUpperCase() ||
+            "A"
+          )}
+        </div>
 
-  try {
-    let result;
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`
+                rounded-full
+                px-2.5
+                py-1
+                text-[7px]
+                font-black
 
-    /* =====================================================
-       FREE / BASIC ARTIST
+                ${
+                  isGold
+                    ? "bg-[#f5c451] text-black"
+                    : isSilver
+                    ? "bg-slate-200 text-black"
+                    : "border border-purple-500/20 bg-purple-500/10 text-purple-400"
+                }
+              `}
+            >
+              {planLabel}
+            </span>
+          </div>
 
-       Customer phone is masked inside
-       interaktWhatsAppService.js
-    ===================================================== */
+          <h2 className="mt-2 truncate text-xl sm:text-2xl font-black uppercase">
+            {artist.name ||
+              "Tattoo Artist"}
+          </h2>
 
-    if (artistPlan === "basic") {
-      result = await sendFreeArtistBooking({
-        artistPhone,
-        artistName,
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+            <MapPin size={12} />
 
-        customerName: booking.name,
-        customerPhone: booking.phone,
-
-        tattooStyle: booking.tattooStyle,
-        tattooIdea: booking.tattooIdea,
-
-        preferredDate: booking.preferredDate,
-        preferredTime: booking.preferredTime,
-
-        bookingId: String(booking._id),
-      });
-
-      booking.artistNotificationType = "free-upgrade";
-    }
-
-    /* =====================================================
-       SILVER / GOLD ARTIST
-
-       Full customer contact details
-    ===================================================== */
-
-    else {
-      result = await sendPaidArtistBooking({
-        artistPhone,
-        artistName,
-
-        customerName: booking.name,
-        customerPhone: booking.phone,
-        customerEmail: booking.email,
-
-        tattooStyle: booking.tattooStyle,
-        tattooIdea: booking.tattooIdea,
-
-        preferredDate: booking.preferredDate,
-        preferredTime: booking.preferredTime,
-
-        bookingId: String(booking._id),
-      });
-
-      booking.artistNotificationType =
-        artistPlan === "verified"
-          ? "gold-booking"
-          : "silver-booking";
-    }
-
-    const messageId = cleanText(result?.messageId);
-
-    booking.artistNotified = true;
-    booking.artistNotifiedAt = new Date();
-
-    booking.artistNotificationChannel = "whatsapp";
-
-    booking.artistNotificationMessageId = messageId;
-
-    booking.artistNotificationError = "";
-
-    booking.artistNotificationMessage =
-      artistPlan === "basic"
-        ? `Interakt template: ${
-            process.env.INTERAKT_FREE_TEMPLATE ||
-            "inkconvention_free_booking"
-          }`
-        : `Interakt template: ${
-            process.env.INTERAKT_PAID_TEMPLATE ||
-            "inkconvention_paid_booking"
-          }`;
-
-    await booking.save();
-
-    console.log("✅ Artist WhatsApp notification sent:", {
-      bookingId: String(booking._id),
-      artistId: String(artist._id),
-      artistName,
-      artistPlan,
-      messageId,
-    });
-
-    return {
-      sent: true,
-      messageId,
-      error: "",
-    };
-  } catch (error) {
-    const errorMessage =
-      error?.message ||
-      "Unable to send WhatsApp notification.";
-
-    booking.artistNotified = false;
-    booking.artistNotifiedAt = null;
-
-    booking.artistNotificationChannel = "whatsapp";
-
-    booking.artistNotificationError =
-      errorMessage.slice(0, 1000);
-
-    await booking.save();
-
-    console.error("❌ Artist WhatsApp notification failed:", {
-      bookingId: String(booking._id),
-      artistId: String(artist._id),
-      artistName,
-      artistPlan,
-      error: errorMessage,
-    });
-
-    return {
-      sent: false,
-      messageId: "",
-      error: errorMessage,
-    };
-  }
+            <span className="truncate">
+              {[
+                artist.city,
+                artist.state,
+              ]
+                .filter(Boolean)
+                .join(", ") ||
+                "India"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 /* =========================================================
-   CREATE DIRECT ARTIST BOOKING
-
-   POST /api/artist-bookings
+   SUCCESS STATE
 ========================================================= */
 
-router.post("/", async (req, res) => {
-  try {
-    /* =====================================================
-       CUSTOMER INFORMATION
-    ===================================================== */
+function SuccessState({
+  artist,
+  bookingId,
+  notificationSent,
+  notificationError,
+  onBookAnother,
+}) {
+  return (
+    <section className="mt-8 rounded-[28px] border border-emerald-500/25 bg-emerald-500/[0.05] p-7 sm:p-10 text-center">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+        <CheckCircle2
+          size={28}
+        />
+      </div>
 
-    const name = cleanText(req.body.name);
+      <p className="mt-6 text-[8px] font-mono tracking-[0.16em] text-emerald-400">
+        BOOKING REQUEST CREATED
+      </p>
 
-    const phone = cleanText(req.body.phone);
+      <h2 className="mt-3 text-2xl sm:text-4xl font-black uppercase">
+        Request sent to{" "}
 
-    const email = cleanText(
-      req.body.email,
+        <span className="text-purple-400">
+          {artist.name ||
+            "the artist"}
+        </span>
+      </h2>
+
+      <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-gray-500">
+        Your booking request has
+        been submitted
+        successfully.
+      </p>
+
+      {/* WhatsApp status */}
+
+      {notificationSent ? (
+        <div className="mx-auto mt-6 max-w-xl rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] p-4">
+          <p className="text-xs font-bold text-emerald-400">
+            ✓ WhatsApp
+            notification sent to
+            the artist.
+          </p>
+        </div>
+      ) : notificationError ? (
+        <div className="mx-auto mt-6 max-w-xl rounded-xl border border-yellow-500/20 bg-yellow-500/[0.05] p-4">
+          <p className="text-xs leading-relaxed text-yellow-300">
+            Your booking was saved,
+            but the artist WhatsApp
+            notification could not
+            be sent automatically.
+          </p>
+        </div>
+      ) : null}
+
+      {/* BOOKING ID */}
+
+      {bookingId && (
+        <div className="mx-auto mt-6 max-w-md rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+          <p className="text-[7px] font-mono tracking-widest text-gray-600">
+            BOOKING ID
+          </p>
+
+          <p className="mt-1 break-all text-xs font-black text-white">
+            {bookingId}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3">
+        <button
+          type="button"
+          onClick={
+            onBookAnother
+          }
+          className="rounded-xl border border-white/10 bg-white/[0.04] px-7 py-4 text-[9px] font-black tracking-[0.12em] hover:bg-white/10 transition"
+        >
+          EDIT / SEND AGAIN
+        </button>
+
+        <Link
+          to="/artists"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-7 py-4 text-[9px] font-black tracking-[0.12em] transition"
+        >
+          VIEW ARTISTS
+
+          <ArrowRight
+            size={14}
+          />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   PLAN LABEL
+========================================================= */
+
+function getPlanLabel(plan) {
+  const value =
+    String(
+      plan || ""
     ).toLowerCase();
 
-    /* =====================================================
-       SELECTED ARTIST
-    ===================================================== */
-
-    const selectedArtistId = cleanText(
-      req.body.selectedArtistId,
-    );
-
-    /* =====================================================
-       BOOKING INFORMATION
-    ===================================================== */
-
-    const tattooStyle = cleanText(
-      req.body.tattooStyle ||
-        req.body.category,
-    );
-
-    const tattooIdea = cleanText(
-      req.body.tattooIdea,
-    );
-
-    const preferredTime = cleanText(
-      req.body.preferredTime,
-    );
-
-    const bodyPlacement = cleanText(
-      req.body.bodyPlacement,
-    );
-
-    const tattooSize = cleanText(
-      req.body.tattooSize,
-    );
-
-    const budget = cleanText(
-      req.body.budget,
-    );
-
-    const referenceLink = cleanText(
-      req.body.referenceLink,
-    );
-
-    const additionalMessage = cleanText(
-      req.body.additionalMessage,
-    );
-
-    const preferredDate =
-      req.body.preferredDate
-        ? new Date(req.body.preferredDate)
-        : null;
-
-    /* =====================================================
-       VALIDATION
-    ===================================================== */
-
-    if (!name) {
-      return res.status(400).json({
-        success: false,
-        message: "Name is required.",
-      });
-    }
-
-    if (!phone) {
-      return res.status(400).json({
-        success: false,
-        message: "Phone number is required.",
-      });
-    }
-
-    if (
-      !email ||
-      !/^\S+@\S+\.\S+$/.test(email)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid email is required.",
-      });
-    }
-
-    if (!selectedArtistId) {
-      return res.status(400).json({
-        success: false,
-        message: "Selected artist ID is required.",
-      });
-    }
-
-    if (
-      !mongoose.Types.ObjectId.isValid(
-        selectedArtistId,
-      )
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid artist ID.",
-      });
-    }
-
-    if (!tattooStyle) {
-      return res.status(400).json({
-        success: false,
-        message: "Tattoo style is required.",
-      });
-    }
-
-    if (!tattooIdea) {
-      return res.status(400).json({
-        success: false,
-        message: "Tattoo idea is required.",
-      });
-    }
-
-    if (
-      preferredDate &&
-      Number.isNaN(
-        preferredDate.getTime(),
-      )
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid preferred date.",
-      });
-    }
-
-    /* =====================================================
-       FIND ARTIST FROM DATABASE
-
-       IMPORTANT:
-       We do NOT trust artist name/plan coming from frontend.
-    ===================================================== */
-
-    const artist =
-      await TattooStudio.findById(
-        selectedArtistId,
-      );
-
-    if (!artist) {
-      return res.status(404).json({
-        success: false,
-        message:
-          "Selected artist was not found.",
-      });
-    }
-
-    const artistName =
-      getArtistName(artist);
-
-    const artistPlan =
-      getArtistPlan(artist);
-
-    const artistPhone =
-      getArtistPhone(artist);
-
-    console.log("🎨 Selected artist:", {
-      id: String(artist._id),
-      name: artistName,
-      plan: artistPlan,
-      hasPhone: Boolean(artistPhone),
-    });
-
-    /* =====================================================
-       CREATE BOOKING
-    ===================================================== */
-
-    const booking =
-      await ArtistBooking.create({
-        /* CUSTOMER */
-
-        name,
-        phone,
-        email,
-
-        /* ARTIST */
-
-        selectedArtistId:
-          artist._id,
-
-        selectedArtistName:
-          artistName,
-
-        artistCity:
-          cleanText(artist.city),
-
-        artistState:
-          cleanText(artist.state),
-
-        artistPlanAtBooking:
-          artistPlan,
-
-        artistSelectedAt:
-          new Date(),
-
-        /* BOOKING */
-
-        tattooStyle,
-
-        preferredDate,
-
-        preferredTime,
-
-        tattooIdea,
-
-        bodyPlacement,
-
-        tattooSize,
-
-        budget,
-
-        referenceLink,
-
-        additionalMessage,
-
-        /* STATUS */
-
-        status: "pending",
-
-        /* ARTIST NOTIFICATION */
-
-        artistNotified: false,
-
-        artistNotifiedAt: null,
-
-        artistNotificationType: "",
-
-        artistNotificationChannel: "",
-
-        artistNotificationMessage: "",
-
-        artistNotificationMessageId: "",
-
-        artistNotificationError: "",
-      });
-
-    console.log(
-      "✅ Direct artist booking created:",
-      {
-        bookingId:
-          String(booking._id),
-
-        artistId:
-          String(artist._id),
-
-        artistName,
-
-        artistPlan,
-      },
-    );
-
-    /* =====================================================
-       SEND WHATSAPP THROUGH INTERAKT
-    ===================================================== */
-
-    const notification =
-      await notifyArtist({
-        booking,
-        artist,
-        artistName,
-        artistPlan,
-      });
-
-    /* =====================================================
-       RESPONSE
-    ===================================================== */
-
-    return res
-      .status(201)
-      .json({
-        success: true,
-
-        message:
-          "Booking request submitted successfully.",
-
-        notificationSent:
-          notification.sent,
-
-        notificationMessageId:
-          notification.messageId,
-
-        notificationError:
-          notification.error || "",
-
-        booking:
-          serializeBooking(
-            booking,
-          ),
-
-        artist: {
-          _id: artist._id,
-
-          name:
-            artistName,
-
-          plan:
-            artistPlan,
-
-          city:
-            cleanText(
-              artist.city,
-            ),
-
-          state:
-            cleanText(
-              artist.state,
-            ),
-
-          notificationSent:
-            notification.sent,
-        },
-      });
-  } catch (error) {
-    console.error(
-      "❌ Direct artist booking error:",
-      error,
-    );
-
-    return res
-      .status(500)
-      .json({
-        success: false,
-
-        message:
-          "Unable to submit artist booking.",
-
-        error:
-          process.env.NODE_ENV ===
-          "development"
-            ? error.message
-            : undefined,
-      });
+  if (
+    value === "verified" ||
+    value === "gold" ||
+    value === "spotlight"
+  ) {
+    return "★ GOLD";
   }
-});
 
-/* =========================================================
-   GET ALL BOOKINGS
-
-   GET /api/artist-bookings
-========================================================= */
-
-router.get("/", async (req, res) => {
-  try {
-    const page = Math.max(
-      1,
-      Number(req.query.page) || 1,
-    );
-
-    const limit = Math.min(
-      100,
-      Math.max(
-        1,
-        Number(req.query.limit) || 20,
-      ),
-    );
-
-    const skip =
-      (page - 1) * limit;
-
-    const filter = {};
-
-    /* =====================================================
-       STATUS FILTER
-    ===================================================== */
-
-    if (req.query.status) {
-      filter.status =
-        cleanText(
-          req.query.status,
-        ).toLowerCase();
-    }
-
-    /* =====================================================
-       CITY FILTER
-    ===================================================== */
-
-    if (req.query.city) {
-      filter.artistCity = {
-        $regex: `^${escapeRegex(
-          req.query.city,
-        )}$`,
-
-        $options: "i",
-      };
-    }
-
-    /* =====================================================
-       TATTOO STYLE FILTER
-    ===================================================== */
-
-    if (
-      req.query.category ||
-      req.query.tattooStyle
-    ) {
-      const style =
-        cleanText(
-          req.query.category ||
-            req.query.tattooStyle,
-        );
-
-      filter.tattooStyle = {
-        $regex: `^${escapeRegex(
-          style,
-        )}$`,
-
-        $options: "i",
-      };
-    }
-
-    /* =====================================================
-       ARTIST PLAN FILTER
-    ===================================================== */
-
-    if (req.query.plan) {
-      filter.artistPlanAtBooking =
-        normalizePlan(
-          req.query.plan,
-        );
-    }
-
-    /* =====================================================
-       ARTIST ID FILTER
-    ===================================================== */
-
-    if (req.query.artistId) {
-      const artistId =
-        cleanText(
-          req.query.artistId,
-        );
-
-      if (
-        !mongoose.Types.ObjectId.isValid(
-          artistId,
-        )
-      ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Invalid artist ID.",
-          });
-      }
-
-      filter.selectedArtistId =
-        artistId;
-    }
-
-    /* =====================================================
-       QUERY
-    ===================================================== */
-
-    const [
-      bookings,
-      total,
-    ] =
-      await Promise.all([
-        ArtistBooking.find(
-          filter,
-        )
-          .sort({
-            createdAt: -1,
-          })
-          .skip(skip)
-          .limit(limit)
-          .populate({
-            path:
-              "selectedArtistId",
-
-            select:
-              [
-                "name",
-                "professionalName",
-                "studio",
-                "studioName",
-                "city",
-                "state",
-                "plan",
-                "membershipPlan",
-                "subscriptionPlan",
-                "tattooStyles",
-                "rating",
-                "reviews",
-                "profileImage",
-                "email",
-                "phone",
-                "phoneNumber",
-                "mobile",
-                "mobileNumber",
-                "whatsapp",
-                "whatsappNumber",
-              ].join(" "),
-          })
-          .lean(),
-
-        ArtistBooking.countDocuments(
-          filter,
-        ),
-      ]);
-
-    return res
-      .status(200)
-      .json({
-        success: true,
-
-        count:
-          bookings.length,
-
-        total,
-
-        bookings:
-          bookings.map(
-            serializeBooking,
-          ),
-
-        pagination: {
-          page,
-
-          limit,
-
-          total,
-
-          totalPages:
-            Math.max(
-              1,
-              Math.ceil(
-                total / limit,
-              ),
-            ),
-
-          hasNextPage:
-            page * limit <
-            total,
-
-          hasPreviousPage:
-            page > 1,
-        },
-      });
-  } catch (error) {
-    console.error(
-      "❌ Get artist bookings error:",
-      error,
-    );
-
-    return res
-      .status(500)
-      .json({
-        success: false,
-
-        message:
-          "Unable to load artist bookings.",
-
-        error:
-          process.env.NODE_ENV ===
-          "development"
-            ? error.message
-            : undefined,
-      });
+  if (
+    value === "pro" ||
+    value === "silver"
+  ) {
+    return "SILVER PRO";
   }
-});
+
+  return "FREE";
+}
 
 /* =========================================================
-   GET ONE BOOKING
-
-   GET /api/artist-bookings/:id
+   FORM FIELD
 ========================================================= */
 
-router.get(
-  "/:id",
-  async (req, res) => {
-    try {
-      if (
-        !mongoose.Types.ObjectId.isValid(
-          req.params.id,
-        )
-      ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
+function FormField({
+  icon,
+  label,
+  children,
+}) {
+  return (
+    <div>
+      <label className="flex items-center gap-2 mb-2 text-[8px] font-black tracking-[0.15em] text-gray-500">
+        <span className="text-purple-400">
+          {icon}
+        </span>
 
-            message:
-              "Invalid booking ID.",
-          });
-      }
+        {label}
+      </label>
 
-      const booking =
-        await ArtistBooking.findById(
-          req.params.id,
-        )
-          .populate({
-            path:
-              "selectedArtistId",
-
-            select:
-              [
-                "name",
-                "professionalName",
-                "studio",
-                "studioName",
-                "city",
-                "state",
-                "plan",
-                "membershipPlan",
-                "subscriptionPlan",
-                "tattooStyles",
-                "rating",
-                "reviews",
-                "profileImage",
-                "email",
-                "phone",
-                "phoneNumber",
-                "mobile",
-                "mobileNumber",
-                "whatsapp",
-                "whatsappNumber",
-              ].join(" "),
-          })
-          .lean();
-
-      if (!booking) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-
-            message:
-              "Booking not found.",
-          });
-      }
-
-      return res
-        .status(200)
-        .json({
-          success: true,
-
-          booking:
-            serializeBooking(
-              booking,
-            ),
-        });
-    } catch (error) {
-      console.error(
-        "❌ Get booking error:",
-        error,
-      );
-
-      return res
-        .status(500)
-        .json({
-          success: false,
-
-          message:
-            "Unable to load booking.",
-
-          error:
-            process.env.NODE_ENV ===
-            "development"
-              ? error.message
-              : undefined,
-        });
-    }
-  },
-);
+      {children}
+    </div>
+  );
+}
 
 /* =========================================================
-   UPDATE BOOKING STATUS
-
-   PATCH /api/artist-bookings/:id/status
+   CONSENT ITEM
 ========================================================= */
 
-router.patch(
-  "/:id/status",
-  async (req, res) => {
-    try {
-      if (
-        !mongoose.Types.ObjectId.isValid(
-          req.params.id,
-        )
-      ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
+function ConsentItem({
+  children,
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <Check
+        size={14}
+        className="text-purple-400"
+      />
 
-            message:
-              "Invalid booking ID.",
-          });
-      }
-
-      const allowedStatuses = [
-        "pending",
-        "accepted",
-        "declined",
-        "contacted",
-        "confirmed",
-        "completed",
-        "cancelled",
-      ];
-
-      const status =
-        cleanText(
-          req.body.status,
-        ).toLowerCase();
-
-      if (
-        !allowedStatuses.includes(
-          status,
-        )
-      ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-
-            message:
-              "Invalid booking status.",
-          });
-      }
-
-      const booking =
-        await ArtistBooking.findById(
-          req.params.id,
-        );
-
-      if (!booking) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-
-            message:
-              "Booking not found.",
-          });
-      }
-
-      booking.status =
-        status;
-
-      /* =====================================================
-         ACCEPTED
-      ===================================================== */
-
-      if (
-        status === "accepted"
-      ) {
-        booking.acceptedAt =
-          new Date();
-
-        booking.declinedAt =
-          null;
-
-        booking.declineReason =
-          "";
-      }
-
-      /* =====================================================
-         DECLINED
-      ===================================================== */
-
-      if (
-        status === "declined"
-      ) {
-        booking.declinedAt =
-          new Date();
-
-        booking.declineReason =
-          cleanText(
-            req.body.declineReason,
-          );
-      }
-
-      /* =====================================================
-         CONTACTED
-      ===================================================== */
-
-      if (
-        status === "contacted"
-      ) {
-        booking.contactedAt =
-          new Date();
-      }
-
-      /* =====================================================
-         CONFIRMED
-      ===================================================== */
-
-      if (
-        status === "confirmed"
-      ) {
-        booking.confirmedAt =
-          new Date();
-      }
-
-      /* =====================================================
-         COMPLETED
-      ===================================================== */
-
-      if (
-        status === "completed"
-      ) {
-        booking.completedAt =
-          new Date();
-      }
-
-      /* =====================================================
-         CANCELLED
-      ===================================================== */
-
-      if (
-        status === "cancelled"
-      ) {
-        booking.cancelledAt =
-          new Date();
-      }
-
-      await booking.save();
-
-      return res
-        .status(200)
-        .json({
-          success: true,
-
-          message:
-            "Booking status updated.",
-
-          booking:
-            serializeBooking(
-              booking,
-            ),
-        });
-    } catch (error) {
-      console.error(
-        "❌ Booking status error:",
-        error,
-      );
-
-      return res
-        .status(500)
-        .json({
-          success: false,
-
-          message:
-            "Unable to update booking.",
-
-          error:
-            process.env.NODE_ENV ===
-            "development"
-              ? error.message
-              : undefined,
-        });
-    }
-  },
-);
+      {children}
+    </div>
+  );
+}
 
 /* =========================================================
-   EXPORT
+   INPUT STYLES
 ========================================================= */
 
-module.exports = router;
+const inputClass = `
+  w-full
+  bg-black/30
+  border
+  border-white/10
+  focus:border-purple-500
+  rounded-xl
+  px-4
+  py-4
+  text-sm
+  text-white
+  placeholder:text-gray-700
+  outline-none
+  transition
+`;
+
+const textareaClass = `
+  w-full
+  bg-black/30
+  border
+  border-white/10
+  focus:border-purple-500
+  rounded-xl
+  px-4
+  py-4
+  text-sm
+  text-white
+  placeholder:text-gray-700
+  outline-none
+  resize-none
+  transition
+`;

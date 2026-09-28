@@ -6,6 +6,7 @@
     "build": "npm --prefix frontend run build"
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "react-simple-maps": "^5.0.5"
   }
 }
