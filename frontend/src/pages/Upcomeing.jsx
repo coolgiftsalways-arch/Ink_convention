@@ -65,7 +65,7 @@ const upcomingEvents = [
     city: "UDAIPUR",
     state: "Rajasthan",
     eventStatus: "upcoming",
-    date: "6 / 7 / 8 November",
+    date: "13 / 14 / 15 November",
     venue: "Venue to be announced",
     desc: "Ink Convention is coming to Udaipur on 6 / 7 / 8 November. Venue, artist registrations and stall booking details will be announced soon.",
     image:
@@ -76,7 +76,7 @@ const upcomingEvents = [
     city: "KOTA",
     state: "Rajasthan",
     eventStatus: "upcoming",
-    date: "13 / 14 / 15 November",
+    date: "20 / 21 / 22 November",
     venue: "Venue to be announced",
     desc: "Ink Convention is coming to Kota on 13 / 14 / 15 November. Venue, artist registrations and stall booking details will be announced soon.",
     image:

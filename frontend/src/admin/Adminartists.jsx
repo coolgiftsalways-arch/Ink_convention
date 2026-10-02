@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars, react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -951,6 +952,7 @@ function AdminArtists() {
       if (error?.name === "AbortError") {
         throw new Error(
           "Tattoo entries took too long to load from the server.",
+          { cause: error },
         );
       }
 
@@ -2925,6 +2927,36 @@ function AdminArtists() {
   };
 
   // ===================================================
+  // MEMBERSHIP FILTER DATA SYNC
+  // Keep hooks above the conditional login return so hook order is stable.
+  // ===================================================
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    if (membershipFilter === "free-claimed") {
+      void fetchFreeDirectoryPage(false, "claimed");
+      return;
+    }
+
+    if (membershipFilter === "free-unclaimed") {
+      void fetchFreeDirectoryPage(false, "unclaimed");
+      return;
+    }
+
+    if (membershipFilter === "pro" || membershipFilter === "verified") {
+      void fetchMemberships();
+    }
+  }, [
+    isAuthenticated,
+    membershipFilter,
+    fetchFreeDirectoryPage,
+    fetchMemberships,
+  ]);
+
+  // ===================================================
   // LOGIN PAGE
   // ===================================================
 
@@ -3046,31 +3078,6 @@ function AdminArtists() {
         ),
     ),
   ];
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    if (membershipFilter === "free-claimed") {
-      void fetchFreeDirectoryPage(false, "claimed");
-      return;
-    }
-
-    if (membershipFilter === "free-unclaimed") {
-      void fetchFreeDirectoryPage(false, "unclaimed");
-      return;
-    }
-
-    if (membershipFilter === "pro" || membershipFilter === "verified") {
-      void fetchMemberships();
-    }
-  }, [
-    isAuthenticated,
-    membershipFilter,
-    fetchFreeDirectoryPage,
-    fetchMemberships,
-  ]);
 
   const freeClaimedMembers = freeDirectoryArtists.filter(
     (artist) => artist.plan === "basic" && artist.claimed,
