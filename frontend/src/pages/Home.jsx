@@ -1199,7 +1199,7 @@ function Home() {
                   leading-tight
                 "
               >
-                FREE ARTIST ENTRY
+                 CLAIM YOUR PROFILE
               </h3>
 
               <p
