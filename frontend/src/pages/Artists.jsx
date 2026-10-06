@@ -32,8 +32,6 @@ const MIN_SEARCH_CHARACTERS = 3;
    3. Replace cache only after fresh response arrives.
 ========================================================= */
 const ARTIST_CACHE_KEY = "inkConventionArtistsPageCacheV2";
-const ARTIST_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
 const CITY_FILTER_CACHE_KEY = "inkConventionArtistCitiesV1";
 const CITY_FILTER_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -1091,14 +1089,6 @@ function writeArtistCache(cacheKey, value) {
   }
 }
 
-function isArtistCacheFresh(entry) {
-  return (
-    entry &&
-    Number(entry.savedAt) > 0 &&
-    Date.now() - Number(entry.savedAt) < ARTIST_CACHE_TTL
-  );
-}
-
 function readCityFilterCache() {
   try {
     const raw = localStorage.getItem(CITY_FILTER_CACHE_KEY);
@@ -1114,7 +1104,7 @@ function readCityFilterCache() {
     }
 
     return parsed;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -1128,7 +1118,7 @@ function writeCityFilterCache(cities) {
         savedAt: Date.now(),
       }),
     );
-  } catch (error) {
+  } catch {
     // Ignore cache write errors.
   }
 }
@@ -1241,15 +1231,18 @@ export default function Artists() {
   React.useEffect(() => {
     const clean = searchQuery.trim();
 
-    if (clean.length < MIN_SEARCH_CHARACTERS) {
-      setDebouncedSearchQuery("");
-      return undefined;
-    }
+    const timer = window.setTimeout(
+      () => {
+        if (clean.length < MIN_SEARCH_CHARACTERS) {
+          setDebouncedSearchQuery("");
+          return;
+        }
 
-    const timer = window.setTimeout(() => {
-      setDebouncedSearchQuery(clean);
-      setPage(0);
-    }, 300);
+        setDebouncedSearchQuery(clean);
+        setPage(0);
+      },
+      clean.length < MIN_SEARCH_CHARACTERS ? 0 : 300,
+    );
 
     return () => window.clearTimeout(timer);
   }, [searchQuery]);
@@ -1266,10 +1259,6 @@ export default function Artists() {
       Refresh them later in the background.
     */
     const cachedCities = readCityFilterCache();
-
-    if (cachedCities && Array.isArray(cachedCities.cities)) {
-      setDirectoryCities(cachedCities.cities);
-    }
 
     const loadCities = async () => {
       try {
@@ -1362,13 +1351,6 @@ export default function Artists() {
         );
         setTotalArtistPages(Math.max(1, Number(cached.totalArtistPages || 1)));
         setLoading(false);
-      } else {
-        /*
-          Never blank the directory while searching.
-          Keep the current cards visible and search silently in background.
-          Full loader is only allowed when there are literally no cards yet.
-        */
-        setLoading(artists.length === 0);
       }
 
       setRefreshingArtists(true);
@@ -4553,7 +4535,7 @@ function ArtistModal({ artist, onClose }) {
 
                   <div className="flex w-full flex-row flex-nowrap items-center gap-3">
                     {a.profileLinks.map((link, index) => {
-                      let label = `Link ${index + 1}`;
+                      let label;
 
                       try {
                         const url = new URL(link);
@@ -4979,51 +4961,6 @@ function Pagination({ page, totalPages, onPrevious, onNext }) {
           <ArrowRight size={13} />
         </button>
       </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   LOADER
-========================================================= */
-
-function DirectoryLoader() {
-  return (
-    <div
-      className="
-        min-h-[320px]
-        rounded-[28px]
-        border
-        border-dashed
-        border-white/10
-        flex
-        flex-col
-        items-center
-        justify-center
-      "
-    >
-      <div
-        className="
-          h-12
-          w-12
-          animate-spin
-          rounded-full
-          border-2
-          border-white/10
-          border-t-purple-500
-        "
-      />
-
-      <p
-        className="
-          mt-5
-          text-[9px]
-          font-mono
-          text-purple-400
-        "
-      >
-        LOADING REAL ARTISTS...
-      </p>
     </div>
   );
 }

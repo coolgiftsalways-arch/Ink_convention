@@ -1,25 +1,27 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Link } from "react-router-dom";
 
 import {
   Globe,
   Award,
-  Target,
   Scale,
   Trophy,
   Medal,
   PenTool,
   Star,
   Search,
-  TrendingUp,
   Users,
   Briefcase,
   Heart,
   Building2,
-  ChevronDown,
   ShieldCheck,
   ArrowUpRight,
-  Play,
   Eye,
   Crown,
   Handshake,
@@ -34,8 +36,6 @@ import "../Style/About.css";
 /* =========================================================
    ABOUT IMAGES
 ========================================================= */
-
-import heroImage from "../assets/about-ecosystem-bg.png";
 
 import missionImage from "../assets/purple_noir_tattoo_studio.png";
 
@@ -347,24 +347,6 @@ function About() {
     };
   };
 
-  const measureSmoke = () => {
-    const modal = modalRef.current;
-    if (!modal || !selectedBenefit) return;
-
-    const rect = modal.getBoundingClientRect();
-    const end = getModalAnchor(rect, smokeSource);
-
-    setSmokeGeometry({
-      width: window.innerWidth,
-      height: window.innerHeight,
-      path: makeSmokePath(smokeSource, end),
-      startX: smokeSource.x,
-      startY: smokeSource.y,
-      endX: end.x,
-      endY: end.y,
-    });
-  };
-
   const openBenefit = (item, event) => {
     const rect = event.currentTarget.getBoundingClientRect();
 
@@ -385,7 +367,7 @@ function About() {
     hideReadCursor();
   };
 
-  const closeBenefit = () => {
+  const closeBenefit = useCallback(() => {
     if (!selectedBenefit || modalPhase === "closing") return;
 
     setModalPhase("closing");
@@ -396,7 +378,7 @@ function About() {
       setModalPhase("closed");
       closeTimerRef.current = null;
     }, 520);
-  };
+  }, [selectedBenefit, modalPhase]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -435,7 +417,7 @@ function About() {
     return () => {
       window.removeEventListener("resize", measure);
     };
-  }, [selectedBenefit, smokeSource.x, smokeSource.y]);
+  }, [selectedBenefit, smokeSource]);
 
   useEffect(() => {
     if (!selectedBenefit || modalPhase !== "opening") return undefined;
@@ -468,7 +450,7 @@ function About() {
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
     };
-  }, [selectedBenefit, modalPhase]);
+  }, [selectedBenefit, closeBenefit]);
 
   useEffect(() => {
     return () => {
