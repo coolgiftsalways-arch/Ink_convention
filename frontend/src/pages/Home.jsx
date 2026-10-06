@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Store,
   Users,
+  Ticket,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -97,6 +98,12 @@ function Home() {
           { opacity: 0, y: 18 },
           { opacity: 1, y: 0, stagger: 0.1, duration: 0.55 },
           "-=0.2",
+        )
+        .fromTo(
+          ".inkHero__ticket",
+          { opacity: 0, y: 18, scale: 0.98 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.6 },
+          "-=0.28",
         )
         .fromTo(
           ".inkHero__moreInk",
@@ -215,6 +222,21 @@ function Home() {
             <Link to="/Enter" className="inkHero__button inkHero__button--dark">
               <span>JOIN DIRECTORY FREE</span>
               <ArrowRight size={16} strokeWidth={1.8} />
+            </Link>
+
+            <Link
+              to="/entry"
+              className="inkHero__button inkHero__button--entry"
+              aria-label="Get entry to Ink Convention"
+            >
+              <span className="inkHero__entryText">
+                <small>VISITOR ACCESS</small>
+                GET ENTRY
+              </span>
+
+              <span className="inkHero__entryArrow">
+                <ArrowRight size={17} strokeWidth={2} />
+              </span>
             </Link>
           </div>
         </div>
@@ -342,6 +364,14 @@ function Home() {
           >
             <span>JOIN DIRECTORY FREE</span>
             <ArrowRight size={18} strokeWidth={1.8} />
+          </Link>
+
+          <Link
+            to="/entry"
+            className="inkMobileHero__button inkMobileHero__button--entry"
+          >
+            <span>GET ENTRY</span>
+            <ArrowRight size={18} strokeWidth={2} />
           </Link>
         </div>
 
@@ -1199,7 +1229,7 @@ function Home() {
                   leading-tight
                 "
               >
-                 CLAIM YOUR PROFILE
+                CLAIM YOUR PROFILE
               </h3>
 
               <p

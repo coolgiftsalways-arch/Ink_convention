@@ -32,6 +32,7 @@ import Gallery from "./pages/Gallery";
 import HallOfFame from "./pages/Halloffam";
 import Artists from "./pages/Artists";
 import Enter from "./pages/Enter";
+import Get from "./pages/Get";
 import Upload from "./pages/Upload";
 import TOP from "./pages/TOP";
 import Upcoming from "./pages/Upcomeing";
@@ -53,6 +54,7 @@ import AdminStalls from "./admin/AdminStalls";
 import AdminArtists from "./admin/Adminartists";
 import AdminLogin from "./admin/Login";
 import ArtistBookings from "./admin/ArtistBookings";
+import AdminGets from "./admin/AdminGets.jsx";
 
 // import WhatsAppCampaigns from "./admin/WhatsAppCampaigns";
 
@@ -223,6 +225,19 @@ function Layout() {
               element={
                 <PageTransition>
                   <Enter />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                GET ENTRY
+            ================================================= */}
+
+            <Route
+              path="/entry"
+              element={
+                <PageTransition>
+                  <Get />
                 </PageTransition>
               }
             />
@@ -468,6 +483,19 @@ function Layout() {
               element={
                 <PageTransition>
                   <ArtistBookings />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN GET ENTRIES
+            ================================================= */}
+
+            <Route
+              path="/admin/get"
+              element={
+                <PageTransition>
+                  <AdminGets />
                 </PageTransition>
               }
             />

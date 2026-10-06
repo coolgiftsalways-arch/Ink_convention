@@ -6,6 +6,7 @@ import {
   Store,
   Trophy,
   CalendarDays,
+  Ticket,
   LogOut,
   Menu,
   X,
@@ -58,6 +59,22 @@ const getBookingsArray = (data) => {
 
   if (Array.isArray(data?.stalls)) {
     return data.stalls;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+
+  return [];
+};
+
+const getEntriesArray = (data) => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.entries)) {
+    return data.entries;
   }
 
   if (Array.isArray(data?.data)) {
@@ -149,6 +166,7 @@ export default function AdminSidebar({
   stallCount,
   artistCount,
   bookingCount,
+  getCount,
 }) {
   const location = useLocation();
 
@@ -161,6 +179,8 @@ export default function AdminSidebar({
   const [liveArtistCount, setLiveArtistCount] = useState(0);
 
   const [liveBookingCount, setLiveBookingCount] = useState(0);
+
+  const [liveGetCount, setLiveGetCount] = useState(0);
 
   /* =======================================================
      ACTIVE ROUTES
@@ -183,6 +203,10 @@ export default function AdminSidebar({
   const isBookingActive =
     location.pathname === "/admin/artist-bookings" ||
     location.pathname.startsWith("/admin/artist-bookings/");
+
+  const isGetActive =
+    location.pathname === "/admin/get" ||
+    location.pathname.startsWith("/admin/get/");
 
   /* =======================================================
      LOAD LIVE COUNTS
@@ -219,6 +243,14 @@ export default function AdminSidebar({
           }),
 
           fetch(`${API_URL}/api/artist-bookings`, {
+            headers: {
+              Accept: "application/json",
+            },
+
+            credentials: "include",
+          }),
+
+          fetch(`${API_URL}/api/get`, {
             headers: {
               Accept: "application/json",
             },
@@ -282,6 +314,22 @@ export default function AdminSidebar({
             setLiveBookingCount(bookings.length);
           }
         }
+
+        /* GET ENTRIES */
+
+        if (results[4].status === "fulfilled" && results[4].value.ok) {
+          const data = await results[4].value.json().catch(() => ({}));
+
+          const entries = getEntriesArray(data);
+
+          const total = Number(
+            data?.stats?.total ?? data?.total ?? data?.count ?? entries.length,
+          );
+
+          if (!cancelled) {
+            setLiveGetCount(Number.isFinite(total) ? total : entries.length);
+          }
+        }
       } catch (error) {
         console.error("Admin sidebar count error:", error);
       }
@@ -307,6 +355,8 @@ export default function AdminSidebar({
   const finalArtistCount = artistCount ?? liveArtistCount;
 
   const finalBookingCount = bookingCount ?? liveBookingCount;
+
+  const finalGetCount = getCount ?? liveGetCount;
 
   const closeMobileSidebar = () => {
     setSidebarOpen(false);
@@ -484,6 +534,25 @@ export default function AdminSidebar({
             />
 
             <NavItem
+              to="/admin/get"
+              active={isGetActive}
+              icon={
+                <Ticket
+                  size={17}
+                  className={
+                    isGetActive
+                      ? "text-[#a855f7]"
+                      : "text-gray-500 group-hover:text-[#a855f7]"
+                  }
+                />
+              }
+              title="Get Entries"
+              subtitle="VISITOR ENTRIES"
+              count={finalGetCount}
+              onNavigate={closeMobileSidebar}
+            />
+
+            <NavItem
               to="/admin/artists"
               active={isArtistActive}
               icon={
@@ -551,6 +620,8 @@ export default function AdminSidebar({
             <StatusRow label="STALL BOOKINGS" count={finalStallCount} />
 
             <StatusRow label="COMPETITION" count={finalCompetitionCount} />
+
+            <StatusRow label="GET ENTRIES" count={finalGetCount} />
 
             <StatusRow label="ARTIST ENTER" count={finalArtistCount} />
 

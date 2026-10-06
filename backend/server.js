@@ -21,10 +21,15 @@ require("dotenv").config();
 // =====================================================
 
 const express = require("express");
+
 const mongoose = require("mongoose");
+
 const multer = require("multer");
+
 const path = require("path");
+
 const fs = require("fs");
+
 const nodemailer = require("nodemailer");
 
 // =====================================================
@@ -32,16 +37,30 @@ const nodemailer = require("nodemailer");
 // =====================================================
 
 const paymentRoutes = require("./routes/payment");
+
 const clientRoutes = require("./routes/ClientRoutes");
+
 const tattooStudioRoutes = require("./routes/tattooStudioRoutes");
+
 const claimRoutes = require("./routes/claimRoutes");
+
 const stallBookingRoutes = require("./routes/stallBookingRoutes");
+
 const artistBookingRoutes = require("./routes/artistBookingRoutes");
+
 const membershipRequestRoutes = require("./routes/membershipRequestRoutes");
+
 const whatsappCampaignRoutes = require("./routes/whatsappCampaignRoutes");
 
 // NEW COMPETITION ROUTE
+
 const competitionRoutes = require("./routes/competitionRoutes");
+
+// =====================================================
+// GET ENTRY ROUTE
+// =====================================================
+
+const getRoutes = require("./routes/getRoutes");
 
 // =====================================================
 // MODELS
@@ -58,6 +77,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Hostinger / nginx / reverse proxy support
+
 app.set("trust proxy", 1);
 
 // =====================================================
@@ -66,24 +86,35 @@ app.set("trust proxy", 1);
 
 const allowedOrigins = [
   // LIVE WEBSITE
+
   "https://inkconvention.com",
+
   "https://www.inkconvention.com",
 
   // HOSTINGER TEMP DOMAIN
+
   "https://brown-walrus-852933.hostingersite.com",
 
   // TEST WEBSITE
+
   "http://test.inkconvention.com:5173",
+
   "https://test.inkconvention.com",
+
   "https://test.inkconvention.com:5173",
 
   // LOCAL DEVELOPMENT
+
   "http://localhost:5173",
+
   "http://localhost:5174",
+
   "http://localhost:3000",
 
   "http://127.0.0.1:5173",
+
   "http://127.0.0.1:5174",
+
   "http://127.0.0.1:3000",
 ];
 
@@ -96,48 +127,86 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
 
   console.log("");
+
   console.log("============================================");
+
   console.log("🌐 REQUEST");
+
   console.log("METHOD:", req.method);
+
   console.log("URL:", req.originalUrl);
+
   console.log("ORIGIN:", origin || "NO ORIGIN");
+
   console.log("============================================");
 
   if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader(
+      "Access-Control-Allow-Origin",
 
-    console.log("✅ CORS origin allowed:", origin);
+      origin,
+    );
+
+    console.log(
+      "✅ CORS origin allowed:",
+
+      origin,
+    );
   } else if (!origin) {
     console.log("✅ Request without Origin allowed");
   } else {
-    console.log("❌ CORS origin not in list:", origin);
+    console.log(
+      "❌ CORS origin not in list:",
+
+      origin,
+    );
   }
 
   res.setHeader(
     "Access-Control-Allow-Methods",
+
     "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   );
 
   res.setHeader(
     "Access-Control-Allow-Headers",
+
     "Origin, X-Requested-With, Content-Type, Accept, Authorization",
   );
 
-  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Credentials",
 
-  res.setHeader("Access-Control-Max-Age", "86400");
+    "true",
+  );
 
-  res.setHeader("Vary", "Origin");
+  res.setHeader(
+    "Access-Control-Max-Age",
+
+    "86400",
+  );
+
+  res.setHeader(
+    "Vary",
+
+    "Origin",
+  );
 
   if (req.method === "OPTIONS") {
     console.log("✅ OPTIONS PREFLIGHT RECEIVED");
 
     if (origin && !allowedOrigins.includes(origin)) {
-      console.log("❌ OPTIONS BLOCKED:", origin);
+      console.log(
+        "❌ OPTIONS BLOCKED:",
+
+        origin,
+      );
 
       return res.status(403).json({
         success: false,
+
         message: "Origin is not allowed.",
+
         origin,
       });
     }
@@ -163,6 +232,7 @@ app.use(
 app.use(
   express.urlencoded({
     extended: true,
+
     limit: "15mb",
   }),
 );
@@ -171,19 +241,31 @@ app.use(
 // UPLOAD DIRECTORY
 // =====================================================
 
-const uploadDir = path.join(__dirname, "uploads");
+const uploadDir = path.join(
+  __dirname,
+
+  "uploads",
+);
 
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, {
-    recursive: true,
-  });
+  fs.mkdirSync(
+    uploadDir,
+
+    {
+      recursive: true,
+    },
+  );
 }
 
 // =====================================================
 // STATIC UPLOAD FILES
 // =====================================================
 
-app.use("/uploads", express.static(uploadDir));
+app.use(
+  "/uploads",
+
+  express.static(uploadDir),
+);
 
 // =====================================================
 // MULTER STORAGE
@@ -191,15 +273,31 @@ app.use("/uploads", express.static(uploadDir));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(
+      null,
+
+      uploadDir,
+    );
   },
 
   filename: (req, file, cb) => {
     const safeName = file.originalname
-      .replace(/\s+/g, "-")
-      .replace(/[^a-zA-Z0-9._-]/g, "");
+      .replace(
+        /\s+/g,
 
-    cb(null, `${Date.now()}-${safeName}`);
+        "-",
+      )
+      .replace(
+        /[^a-zA-Z0-9._-]/g,
+
+        "",
+      );
+
+    cb(
+      null,
+
+      `${Date.now()}-${safeName}`,
+    );
   },
 });
 
@@ -223,14 +321,22 @@ if (!process.env.MONGO_URI) {
   console.error("❌ MONGO_URI missing in .env");
 } else {
   mongoose
-    .connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 10000,
-    })
+    .connect(
+      process.env.MONGO_URI,
+
+      {
+        serverSelectionTimeoutMS: 10000,
+      },
+    )
     .then(() => {
       console.log("✅ Successfully connected to MongoDB Atlas!");
     })
     .catch((error) => {
-      console.error("❌ MongoDB connection failed:", error.message);
+      console.error(
+        "❌ MongoDB connection failed:",
+
+        error.message,
+      );
     });
 }
 
@@ -238,13 +344,25 @@ if (!process.env.MONGO_URI) {
 // MONGODB EVENTS
 // =====================================================
 
-mongoose.connection.on("error", (error) => {
-  console.error("❌ MongoDB error:", error.message);
-});
+mongoose.connection.on(
+  "error",
 
-mongoose.connection.on("disconnected", () => {
-  console.log("⚠️ MongoDB disconnected");
-});
+  (error) => {
+    console.error(
+      "❌ MongoDB error:",
+
+      error.message,
+    );
+  },
+);
+
+mongoose.connection.on(
+  "disconnected",
+
+  () => {
+    console.log("⚠️ MongoDB disconnected");
+  },
+);
 
 // =====================================================
 // EMAIL TRANSPORT
@@ -271,7 +389,11 @@ const transporter = nodemailer.createTransport({
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   transporter.verify((error) => {
     if (error) {
-      console.error("❌ Hostinger SMTP connection failed:", error.message);
+      console.error(
+        "❌ Hostinger SMTP connection failed:",
+
+        error.message,
+      );
     } else {
       console.log("✅ Hostinger SMTP server is ready!");
     }
@@ -284,72 +406,100 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
 // ROOT ROUTE
 // =====================================================
 
-app.get("/", (req, res) => {
-  return res.status(200).json({
-    success: true,
+app.get(
+  "/",
 
-    message: "Ink Convention API running",
+  (req, res) => {
+    return res.status(200).json({
+      success: true,
 
-    timestamp: new Date().toISOString(),
-  });
-});
+      message: "Ink Convention API running",
+
+      timestamp: new Date().toISOString(),
+    });
+  },
+);
 
 // =====================================================
 // HEALTH ROUTE
 // =====================================================
 
-app.get("/api/health", (req, res) => {
-  return res.status(200).json({
-    success: true,
+app.get(
+  "/api/health",
 
-    message: "Ink Convention Backend Running",
+  (req, res) => {
+    return res.status(200).json({
+      success: true,
 
-    database:
-      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+      message: "Ink Convention Backend Running",
 
-    port: PORT,
+      database:
+        mongoose.connection.readyState === 1 ? "connected" : "disconnected",
 
-    timestamp: new Date().toISOString(),
-  });
-});
+      port: PORT,
+
+      timestamp: new Date().toISOString(),
+    });
+  },
+);
 
 // =====================================================
 // CORS TEST ROUTE
 // =====================================================
 
-app.get("/api/cors-test", (req, res) => {
-  return res.status(200).json({
-    success: true,
+app.get(
+  "/api/cors-test",
 
-    message: "CORS is working",
+  (req, res) => {
+    return res.status(200).json({
+      success: true,
 
-    origin: req.headers.origin || "No origin",
+      message: "CORS is working",
 
-    timestamp: new Date().toISOString(),
-  });
-});
+      origin: req.headers.origin || "No origin",
+
+      timestamp: new Date().toISOString(),
+    });
+  },
+);
 
 // =====================================================
 // PAYMENT ROUTES
 // =====================================================
 
-app.use("/api/payment", paymentRoutes);
+app.use(
+  "/api/payment",
+
+  paymentRoutes,
+);
 
 // =====================================================
 // CLIENT ROUTES
 // =====================================================
 
-app.use("/api/clients", clientRoutes);
+app.use(
+  "/api/clients",
+
+  clientRoutes,
+);
 
 // =====================================================
 // STALL BOOKING ROUTES
 // =====================================================
 
-app.use("/api/stall-bookings", stallBookingRoutes);
+app.use(
+  "/api/stall-bookings",
+
+  stallBookingRoutes,
+);
 
 // OLD ROUTE SUPPORT
 
-app.use("/api/stalls", stallBookingRoutes);
+app.use(
+  "/api/stalls",
+
+  stallBookingRoutes,
+);
 
 console.log("✅ Stall booking routes mounted at /api/stall-bookings");
 
@@ -359,13 +509,21 @@ console.log("✅ Stall booking alias mounted at /api/stalls");
 // TATTOO DIRECTORY ROUTES
 // =====================================================
 
-app.use("/api/admin/tattoo-studios", tattooStudioRoutes);
+app.use(
+  "/api/admin/tattoo-studios",
+
+  tattooStudioRoutes,
+);
 
 // =====================================================
 // CLAIM ROUTES
 // =====================================================
 
-app.use("/api/claim", claimRoutes);
+app.use(
+  "/api/claim",
+
+  claimRoutes,
+);
 
 console.log("✅ Claim routes mounted at /api/claim");
 
@@ -373,7 +531,11 @@ console.log("✅ Claim routes mounted at /api/claim");
 // ARTIST BOOKING ROUTES
 // =====================================================
 
-app.use("/api/artist-bookings", artistBookingRoutes);
+app.use(
+  "/api/artist-bookings",
+
+  artistBookingRoutes,
+);
 
 console.log("✅ Artist booking routes mounted at /api/artist-bookings");
 
@@ -382,7 +544,11 @@ console.log("✅ Artist booking routes mounted at /api/artist-bookings");
 // NO RAZORPAY - MANUAL TEAM CONFIRMATION
 // =====================================================
 
-app.use("/api/membership-requests", membershipRequestRoutes);
+app.use(
+  "/api/membership-requests",
+
+  membershipRequestRoutes,
+);
 
 console.log("✅ Membership request routes mounted at /api/membership-requests");
 
@@ -390,7 +556,11 @@ console.log("✅ Membership request routes mounted at /api/membership-requests")
 // META WHATSAPP CAMPAIGN ROUTES
 // =====================================================
 
-app.use("/api/whatsapp-campaigns", whatsappCampaignRoutes);
+app.use(
+  "/api/whatsapp-campaigns",
+
+  whatsappCampaignRoutes,
+);
 
 console.log("✅ WhatsApp campaign routes mounted at /api/whatsapp-campaigns");
 
@@ -400,9 +570,25 @@ console.log("✅ WhatsApp campaign routes mounted at /api/whatsapp-campaigns");
 // TEAM REVIEW WITHIN 48 HOURS
 // =====================================================
 
-app.use("/api/competitions", competitionRoutes);
+app.use(
+  "/api/competitions",
+
+  competitionRoutes,
+);
 
 console.log("🏆 Competition routes mounted at /api/competitions");
+
+// =====================================================
+// GET ENTRY ROUTES
+// =====================================================
+
+app.use(
+  "/api/get",
+
+  getRoutes,
+);
+
+console.log("🎟️ GET ENTRY routes mounted at /api/get");
 
 // =====================================================
 // ADMIN LOGIN
@@ -412,11 +598,15 @@ const adminLogin = (req, res) => {
   try {
     console.log("🔐 Admin login request received");
 
-    console.log("📦 Login request body:", {
-      email: req.body?.email || req.body?.gmail || "missing",
+    console.log(
+      "📦 Login request body:",
 
-      passwordProvided: Boolean(req.body?.password),
-    });
+      {
+        email: req.body?.email || req.body?.gmail || "missing",
+
+        passwordProvided: Boolean(req.body?.password),
+      },
+    );
 
     const receivedEmail = req.body?.email || req.body?.gmail || "";
 
@@ -457,7 +647,11 @@ const adminLogin = (req, res) => {
     const adminPassword = String(process.env.ADMIN_PASSWORD);
 
     if (email === adminEmail && password === adminPassword) {
-      console.log("✅ Admin login successful:", email);
+      console.log(
+        "✅ Admin login successful:",
+
+        email,
+      );
 
       return res.status(200).json({
         success: true,
@@ -470,7 +664,11 @@ const adminLogin = (req, res) => {
       });
     }
 
-    console.log("❌ Invalid admin login:", email);
+    console.log(
+      "❌ Invalid admin login:",
+
+      email,
+    );
 
     return res.status(401).json({
       success: false,
@@ -478,7 +676,11 @@ const adminLogin = (req, res) => {
       message: "Invalid email or password.",
     });
   } catch (error) {
-    console.error("❌ Admin login error:", error);
+    console.error(
+      "❌ Admin login error:",
+
+      error,
+    );
 
     return res.status(500).json({
       success: false,
@@ -494,9 +696,17 @@ const adminLogin = (req, res) => {
 // ADMIN LOGIN ROUTES
 // =====================================================
 
-app.post("/api/login", adminLogin);
+app.post(
+  "/api/login",
 
-app.post("/api/admin/login", adminLogin);
+  adminLogin,
+);
+
+app.post(
+  "/api/admin/login",
+
+  adminLogin,
+);
 
 // =====================================================
 // OLD COMPETITION SIGNUP
@@ -512,11 +722,13 @@ app.post(
   upload.fields([
     {
       name: "images",
+
       maxCount: 5,
     },
 
     {
       name: "videos",
+
       maxCount: 3,
     },
   ]),
@@ -692,7 +904,11 @@ app.post(
 
       await newUser.save();
 
-      console.log("✅ Artist saved:", entryId);
+      console.log(
+        "✅ Artist saved:",
+
+        entryId,
+      );
 
       let emailSent = false;
 
@@ -706,38 +922,42 @@ app.post(
             subject: "Ink Convention Registration Successful",
 
             html: `
-              <div
-                style="
-                  font-family: Arial, sans-serif;
-                  padding: 30px;
-                  background: #08080a;
-                  color: white;
-                "
-              >
-                <h1 style="color:#a855f7;">
-                  INK CONVENTION 2026
-                </h1>
+                <div
+                  style="
+                    font-family: Arial, sans-serif;
+                    padding: 30px;
+                    background: #08080a;
+                    color: white;
+                  "
+                >
+                  <h1 style="color:#a855f7;">
+                    INK CONVENTION 2026
+                  </h1>
 
-                <p>
-                  Hi ${firstName},
-                </p>
+                  <p>
+                    Hi ${firstName},
+                  </p>
 
-                <p>
-                  Your entry has been received successfully.
-                </p>
+                  <p>
+                    Your entry has been received successfully.
+                  </p>
 
-                <h2>
-                  Entry ID: ${entryId}
-                </h2>
-              </div>
-            `,
+                  <h2>
+                    Entry ID: ${entryId}
+                  </h2>
+                </div>
+              `,
           });
 
           emailSent = true;
 
           console.log("✅ Confirmation email sent");
         } catch (emailError) {
-          console.error("❌ Email:", emailError.message);
+          console.error(
+            "❌ Email:",
+
+            emailError.message,
+          );
         }
       }
 
@@ -753,7 +973,11 @@ app.post(
         user: newUser,
       });
     } catch (error) {
-      console.error("❌ Signup error:", error);
+      console.error(
+        "❌ Signup error:",
+
+        error,
+      );
 
       return res.status(500).json({
         success: false,
@@ -796,7 +1020,11 @@ app.get(
         users,
       });
     } catch (error) {
-      console.error("❌ Unable to load users:", error);
+      console.error(
+        "❌ Unable to load users:",
+
+        error,
+      );
 
       return res.status(500).json({
         success: false,
@@ -840,7 +1068,11 @@ app.get(
         user,
       });
     } catch (error) {
-      console.error("❌ Unable to load user:", error);
+      console.error(
+        "❌ Unable to load user:",
+
+        error,
+      );
 
       return res.status(500).json({
         success: false,
@@ -906,7 +1138,11 @@ app.patch(
         updated,
       });
     } catch (error) {
-      console.error("❌ Unable to update user:", error);
+      console.error(
+        "❌ Unable to update user:",
+
+        error,
+      );
 
       return res.status(500).json({
         success: false,
@@ -950,7 +1186,11 @@ app.delete(
         message: "User deleted successfully.",
       });
     } catch (error) {
-      console.error("❌ Unable to delete user:", error);
+      console.error(
+        "❌ Unable to delete user:",
+
+        error,
+      );
 
       return res.status(500).json({
         success: false,
@@ -970,7 +1210,13 @@ app.use(
   "/api",
 
   (req, res) => {
-    console.log("❌ API ROUTE NOT FOUND:", req.method, req.originalUrl);
+    console.log(
+      "❌ API ROUTE NOT FOUND:",
+
+      req.method,
+
+      req.originalUrl,
+    );
 
     return res.status(404).json({
       success: false,
@@ -985,7 +1231,11 @@ app.use(
 // =====================================================
 
 app.use((error, req, res, next) => {
-  console.error("❌ GLOBAL SERVER ERROR:", error);
+  console.error(
+    "❌ GLOBAL SERVER ERROR:",
+
+    error,
+  );
 
   if (error instanceof multer.MulterError) {
     return res.status(400).json({
@@ -1057,6 +1307,8 @@ app.listen(
     );
 
     console.log(`🏆 Competitions: http://localhost:${PORT}/api/competitions`);
+
+    console.log(`🎟️ GET Entries: http://localhost:${PORT}/api/get`);
 
     console.log("==============================================");
 
