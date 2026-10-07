@@ -11,7 +11,6 @@ import {
   ArrowRight,
   Store,
   Users,
-  Ticket,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -145,7 +144,93 @@ function Home() {
           1. HERO SECTION — REFERENCE-MATCHED / NO NAVBAR
       ===================================================== */}
 
-      <section className="inkHero inkHero--desktop">
+      <section className="inkHero inkHero--desktop inkHero--repositionedActions">
+        {/* Scoped overrides for the existing Home.css hero styles. */}
+        <style>{`
+          .inkHero--repositionedActions {
+            position: relative;
+          }
+
+          .inkHero--repositionedActions .inkHero__categoryActionRow {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 18px 28px;
+            width: max-content;
+            max-width: calc(100vw - 160px);
+            min-height: 72px;
+            margin-top: 20px;
+            margin-bottom: 26px;
+          }
+
+          .inkHero--repositionedActions .inkHero__categoryActionRow .inkHero__categories {
+            display: flex;
+            align-items: center;
+            flex: 0 0 auto;
+            gap: clamp(16px, 1.8vw, 34px);
+            width: auto;
+            margin: 0;
+            white-space: nowrap;
+          }
+
+          /* All three lower buttons share one row and one height. */
+          .inkHero--repositionedActions .inkHero__bottomActions {
+            position: absolute;
+            left: clamp(24px, 4.3vw, 90px);
+            right: clamp(24px, 4.3vw, 90px);
+            bottom: clamp(28px, 5vh, 64px);
+            z-index: 20;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            align-items: end;
+            column-gap: clamp(24px, 9vw, 180px);
+          }
+
+          .inkHero--repositionedActions .inkHero__bottomLeft {
+            display: grid;
+            gap: 12px;
+            min-width: 0;
+          }
+
+          .inkHero--repositionedActions .inkHero__bottomActions .inkHero__button {
+            position: relative;
+            inset: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            width: 100%;
+            max-width: none;
+            min-width: 0;
+            height: 76px;
+            min-height: 76px;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 16px clamp(16px, 1.7vw, 32px);
+            white-space: normal;
+            pointer-events: auto;
+          }
+
+          .inkHero--repositionedActions .inkHero__bottomLeft .inkHero__button--purple {
+            height: 62px;
+            min-height: 62px;
+          }
+
+          .inkHero--repositionedActions .inkHero__bottomActions svg {
+            flex-shrink: 0;
+          }
+
+          @media (max-width: 1199px) {
+            .inkHero--repositionedActions .inkHero__categoryActionRow {
+              max-width: calc(100vw - 80px);
+              gap: 16px;
+            }
+
+            .inkHero--repositionedActions .inkHero__categoryActionRow .inkHero__categories {
+              gap: 14px;
+            }
+          }
+        `}</style>
         {/* IMAGE 5 — TATTOO WALL / EXPO BOOTHS */}
         <div className="inkHero__wall" aria-hidden="true">
           <img src={HERO_WALL} alt="" />
@@ -192,17 +277,22 @@ function Home() {
             className="inkHero__titleImage"
           />
 
-          <div className="inkHero__categories">
-            <span>TATTOO</span>
-            <b>/</b>
-            <span>ART</span>
-            <b>/</b>
-            <span>CULTURE</span>
-            <b>/</b>
-            <span>MUSIC</span>
+          <div className="inkHero__categoryActionRow">
+            <div className="inkHero__categories">
+              <span>TATTOO</span>
+              <b>/</b>
+              <span>ART</span>
+              <b>/</b>
+              <span>CULTURE</span>
+              <b>/</b>
+              <span>MUSIC</span>
+            </div>
           </div>
+        </div>
 
-          <div className="inkHero__buttons">
+        {/* ONE ALIGNED BOTTOM ROW: STALL / ENTRY / DIRECTORY */}
+        <div className="inkHero__bottomActions">
+          <div className="inkHero__bottomLeft">
             <Link
               to="/artists"
               className="inkHero__button inkHero__button--purple"
@@ -218,27 +308,25 @@ function Home() {
               <span>BOOK YOUR STALL NOW</span>
               <ArrowRight size={16} strokeWidth={1.8} />
             </Link>
-
-            <Link to="/Enter" className="inkHero__button inkHero__button--dark">
-              <span>JOIN DIRECTORY FREE</span>
-              <ArrowRight size={16} strokeWidth={1.8} />
-            </Link>
-
-            <Link
-              to="/entry"
-              className="inkHero__button inkHero__button--entry"
-              aria-label="Get entry to Ink Convention"
-            >
-              <span className="inkHero__entryText">
-                <small>VISITOR ACCESS</small>
-                GET ENTRY
-              </span>
-
-              <span className="inkHero__entryArrow">
-                <ArrowRight size={17} strokeWidth={2} />
-              </span>
-            </Link>
           </div>
+
+          <Link
+            to="/entry"
+            className="inkHero__button inkHero__button--entry"
+            aria-label="Get entry to Ink Convention"
+          >
+            <span className="inkHero__entryText">
+              <small>VISITOR ACCESS</small>
+              GET ENTRY
+            </span>
+            <span className="inkHero__entryArrow">
+              <ArrowRight size={17} strokeWidth={2} />
+            </span>
+          </Link>
+
+          <Link to="/Enter" className="inkHero__button inkHero__button--dark">
+            <span>JOIN DIRECTORY FREE FOR ARTISTS ONLY</span>
+          </Link>
         </div>
 
         <img

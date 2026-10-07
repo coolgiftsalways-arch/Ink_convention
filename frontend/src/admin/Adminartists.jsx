@@ -20,6 +20,7 @@ import {
   CircleDashed,
   Search,
   MessageCircle,
+  Lock,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -781,6 +782,7 @@ function AdminArtists() {
   const [membershipRequestError, setMembershipRequestError] = useState("");
   const [membershipRequestBusyId, setMembershipRequestBusyId] = useState("");
   const [directPlanBusyArtistId, setDirectPlanBusyArtistId] = useState("");
+  const [unclaimBusyArtistId, setUnclaimBusyArtistId] = useState("");
   const [whatsappBusyArtistId, setWhatsappBusyArtistId] = useState("");
 
   // ===================================================
@@ -1843,6 +1845,124 @@ function AdminArtists() {
       }
     },
     [fetchMembershipRequests, fetchDirectoryStats],
+  );
+
+  // ===================================================
+  // ADMIN UNCLAIM ARTIST
+  // Resets owner-claim flags without deleting the artist.
+  // ===================================================
+
+  const handleUnclaimArtist = useCallback(
+    async (artist) => {
+      if (!artist?.id) {
+        alert("Artist ID is missing.");
+        return;
+      }
+
+      if (!artist.claimed) {
+        alert("This artist is already unclaimed.");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Unclaim ${artist.name || "this artist"}? They will need to verify OTP again to claim the card. Their profile data and membership plan will not be deleted.`,
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      const artistId = String(artist.id);
+
+      setUnclaimBusyArtistId(artistId);
+      setMembershipError("");
+
+      try {
+        const response = await apiFetch(
+          `/api/admin/tattoo-studios/${artistId}/unclaim`,
+          {
+            method: "PATCH",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        const data = await getJson(response);
+
+        if (!response.ok || data?.success === false) {
+          throw new Error(
+            data?.message || data?.error || "Unable to unclaim artist.",
+          );
+        }
+
+        const updatedArtist = normalizeDirectoryArtist(
+          data?.artist || {
+            ...artist,
+            claimed: false,
+            claimedAt: null,
+            phoneVerified: false,
+            ownerVerified: false,
+            updatedByOwner: false,
+          },
+        );
+
+        const patchArtist = (item) =>
+          String(item.id || "") === artistId
+            ? { ...item, ...updatedArtist, claimed: false }
+            : item;
+
+        // Keep the artist in memory, but mark them unclaimed so the current
+        // FREE CLAIMED filter removes the card immediately.
+        setFreeDirectoryArtists((previous) => previous.map(patchArtist));
+        setDirectoryArtists((previous) => previous.map(patchArtist));
+        setDirectorySearchResults((previous) => previous.map(patchArtist));
+
+        setSelectedDirectoryArtist((previous) => {
+          if (!previous || String(previous.id || "") !== artistId) {
+            return previous;
+          }
+
+          return {
+            ...previous,
+            ...updatedArtist,
+            claimed: false,
+          };
+        });
+
+        // FREE CLAIMED cache must no longer contain this artist.
+        try {
+          const cached = JSON.parse(
+            localStorage.getItem("ink-admin-free-claimed-cache") || "[]",
+          );
+
+          if (Array.isArray(cached)) {
+            localStorage.setItem(
+              "ink-admin-free-claimed-cache",
+              JSON.stringify(
+                cached.filter(
+                  (item) =>
+                    String(item?._id || item?.id || item?.profileId || "") !==
+                    artistId,
+                ),
+              ),
+            );
+          }
+        } catch (cacheError) {
+          console.warn("Unable to update Free Claimed cache:", cacheError);
+        }
+
+        await fetchDirectoryStats();
+      } catch (error) {
+        console.error("Unclaim artist error:", error);
+
+        setMembershipError(error?.message || "Unable to unclaim this artist.");
+      } finally {
+        setUnclaimBusyArtistId("");
+      }
+    },
+    [fetchDirectoryStats],
   );
 
   // ===================================================
@@ -4450,6 +4570,10 @@ function AdminArtists() {
                                 whatsappBusy={
                                   whatsappBusyArtistId === String(artist.id)
                                 }
+                                onUnclaimArtist={handleUnclaimArtist}
+                                unclaimBusy={
+                                  unclaimBusyArtistId === String(artist.id)
+                                }
                               />
                             ))}
                         </div>
@@ -4479,6 +4603,8 @@ function AdminArtists() {
               onOpenArtist={setSelectedDirectoryArtist}
               onWhatsAppContact={handleArtistWhatsAppContact}
               whatsappBusyArtistId={whatsappBusyArtistId}
+              onUnclaimArtist={handleUnclaimArtist}
+              unclaimBusyArtistId={unclaimBusyArtistId}
               displayCount={
                 membershipFilter === "free-claimed" &&
                 directoryStateFilter === "ALL"
@@ -4676,6 +4802,10 @@ function AdminArtists() {
           onWhatsAppContact={handleArtistWhatsAppContact}
           whatsappBusy={
             whatsappBusyArtistId === String(selectedDirectoryArtist.id)
+          }
+          onUnclaimArtist={handleUnclaimArtist}
+          unclaimBusy={
+            unclaimBusyArtistId === String(selectedDirectoryArtist.id)
           }
           onClose={() => setSelectedDirectoryArtist(null)}
         />
@@ -4932,6 +5062,8 @@ function MembershipTierPanel({
   onOpenArtist,
   onWhatsAppContact,
   whatsappBusyArtistId,
+  onUnclaimArtist,
+  unclaimBusyArtistId,
   displayCount,
   loading = false,
   onSync,
@@ -5102,6 +5234,10 @@ function MembershipTierPanel({
               whatsappBusy={
                 String(whatsappBusyArtistId || "") === String(artist.id || "")
               }
+              onUnclaimArtist={onUnclaimArtist}
+              unclaimBusy={
+                String(unclaimBusyArtistId || "") === String(artist.id || "")
+              }
             />
           ))}
         </div>
@@ -5162,6 +5298,8 @@ function MembershipMemberRow({
   onOpenArtist,
   onWhatsAppContact,
   whatsappBusy = false,
+  onUnclaimArtist,
+  unclaimBusy = false,
 }) {
   const isGold = tone === "gold";
   const isSilver = tone === "silver";
@@ -5334,6 +5472,18 @@ function MembershipMemberRow({
         <p className="mt-1.5 text-right text-[7px] font-mono uppercase tracking-wider text-gray-600">
           Last: {formatMembershipDateTime(artist.whatsappLastContactedAt)}
         </p>
+      )}
+
+      {artist.claimed && onUnclaimArtist && (
+        <button
+          type="button"
+          disabled={unclaimBusy}
+          onClick={() => void onUnclaimArtist(artist)}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-400/[0.07] px-4 py-3 text-[9px] font-black uppercase tracking-widest text-red-300 transition hover:border-red-400/45 hover:bg-red-400/[0.12] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Lock size={14} />
+          {unclaimBusy ? "Unclaiming..." : "Unclaim Artist"}
+        </button>
       )}
 
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
@@ -5602,6 +5752,8 @@ function DirectoryArtistDetailsModal({
   nowMs = 0,
   onWhatsAppContact,
   whatsappBusy = false,
+  onUnclaimArtist,
+  unclaimBusy = false,
   onClose,
 }) {
   const plan = normalizeDirectoryPlan(artist?.plan);
@@ -5718,6 +5870,29 @@ function DirectoryArtistDetailsModal({
               Sent {Number(artist?.whatsappContactCount || 0)}
             </span>
           </button>
+
+          {artist?.claimed && onUnclaimArtist && (
+            <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-4">
+              <p className="text-[8px] font-mono font-black uppercase tracking-widest text-red-300">
+                OWNERSHIP CLAIM
+              </p>
+
+              <p className="mt-2 text-[11px] leading-5 text-gray-500">
+                Unclaiming resets the OTP ownership flags only. The artist
+                record, contact details and membership plan stay saved.
+              </p>
+
+              <button
+                type="button"
+                disabled={unclaimBusy}
+                onClick={() => void onUnclaimArtist(artist)}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-[9px] font-black uppercase tracking-widest text-red-300 transition hover:bg-red-400/[0.16] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Lock size={15} />
+                {unclaimBusy ? "Unclaiming..." : "Unclaim Artist"}
+              </button>
+            </div>
+          )}
 
           <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
             <p className="mb-3 text-[8px] font-mono font-black uppercase tracking-widest text-gray-500">

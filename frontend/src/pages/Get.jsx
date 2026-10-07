@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import { Link, useNavigate } from "react-router-dom";
 
 import {
-  ArrowLeft,
   ArrowRight,
   CheckCircle2,
   Mail,
@@ -26,7 +26,8 @@ const API_URL = import.meta.env.DEV
    SETTINGS
 ========================================================= */
 
-const TICKET_PRICE = 1100;
+const FIRST_TICKET_PRICE = 2999;
+const ADDITIONAL_TICKET_PRICE = 1499;
 
 const events = [
   {
@@ -49,7 +50,7 @@ const events = [
 ];
 
 /* =========================================================
-   GET ENTRY PAGE
+   GET ENTRY
 ========================================================= */
 
 export default function Get() {
@@ -63,6 +64,10 @@ export default function Get() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  const [checkingClaim, setCheckingClaim] = useState(true);
+
+  const [verifiedArtist, setVerifiedArtist] = useState(null);
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -73,11 +78,182 @@ export default function Get() {
   });
 
   /* =======================================================
+     SAFE RESPONSE
+  ======================================================= */
+
+  const readResponse = async (response) => {
+    const text = await response.text();
+
+    if (!text) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return {
+        message: text,
+      };
+    }
+  };
+
+  /* =======================================================
+     OPEN CLAIM FLOW
+
+     GET ENTRY remembers that the user came from /entry.
+     After OTP verification, Enter.jsx FIRST shows EDIT YOUR PROFILE.
+     After the user saves/closes that profile step, they return to /entry.
+  ======================================================= */
+
+  const openClaimFlow = () => {
+    navigate("/enter", {
+      replace: true,
+
+      state: {
+        entryMode: true,
+        returnTo: "/entry",
+        claimSource: "get-entry",
+      },
+    });
+  };
+
+  /* =======================================================
+     VERIFY CLAIM SESSION
+
+     /entry cannot open until /api/claim/me succeeds.
+  ======================================================= */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const verifyClaimSession = async () => {
+      try {
+        setCheckingClaim(true);
+
+        setError("");
+
+        const response = await fetch(`${API_URL}/api/claim/me`, {
+          method: "GET",
+
+          headers: {
+            Accept: "application/json",
+          },
+
+          credentials: "include",
+        });
+
+        const data = await readResponse(response);
+
+        if (cancelled) {
+          return;
+        }
+
+        /* =========================================
+             NO ACTIVE CLAIM SESSION
+          ========================================= */
+
+        if (response.status === 401 || response.status === 403) {
+          openClaimFlow();
+
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            data?.message ||
+              `Unable to verify artist card (HTTP ${response.status}).`,
+          );
+        }
+
+        const profile = data?.profile || data?.artist || null;
+
+        /* =========================================
+             SECURITY
+
+             Session exists but card is not actually
+             fully ownership-verified.
+          ========================================= */
+
+        if (
+          !profile ||
+          !profile.claimed ||
+          !profile.phoneVerified ||
+          !profile.ownerVerified
+        ) {
+          openClaimFlow();
+
+          return;
+        }
+
+        /* =========================================
+             VERIFIED
+          ========================================= */
+
+        setVerifiedArtist(profile);
+
+        /* =========================================
+             AUTO-FILL VERIFIED ARTIST DATA
+          ========================================= */
+
+        setFormData((previous) => ({
+          ...previous,
+
+          fullName:
+            profile.name ||
+            profile.artistName ||
+            profile.professionalName ||
+            previous.fullName,
+
+          email: profile.email || previous.email,
+
+          mobile:
+            profile.phone ||
+            profile.mobile ||
+            profile.phoneNumber ||
+            previous.mobile,
+
+          state: profile.state || previous.state,
+        }));
+      } catch (claimError) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error("GET ENTRY claim check error:", claimError);
+
+        setVerifiedArtist(null);
+
+        setError(
+          claimError.message ||
+            "Unable to verify your artist card. Please try again.",
+        );
+      } finally {
+        if (!cancelled) {
+          setCheckingClaim(false);
+        }
+      }
+    };
+
+    verifyClaimSession();
+
+    return () => {
+      cancelled = true;
+    };
+
+    // Run whenever /entry first opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* =======================================================
      TOTAL
   ======================================================= */
 
   const totalAmount = useMemo(() => {
-    return Number(formData.tickets || 1) * TICKET_PRICE;
+    const ticketCount = Math.max(1, Number(formData.tickets || 1));
+    return (
+      FIRST_TICKET_PRICE +
+      Math.max(0, ticketCount - 1) * ADDITIONAL_TICKET_PRICE
+    );
   }, [formData.tickets]);
 
   /* =======================================================
@@ -149,31 +325,21 @@ export default function Get() {
   };
 
   /* =======================================================
-     SAFE RESPONSE READER
-  ======================================================= */
-
-  const readResponse = async (response) => {
-    const text = await response.text();
-
-    if (!text) {
-      return {};
-    }
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      return {
-        message: text,
-      };
-    }
-  };
-
-  /* =======================================================
      SUBMIT
   ======================================================= */
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    /* =============================================
+         FRONTEND CLAIM GUARD
+      ============================================= */
+
+    if (!verifiedArtist) {
+      openClaimFlow();
+
+      return;
+    }
 
     const validationError = validateForm();
 
@@ -216,6 +382,16 @@ export default function Get() {
 
       const data = await readResponse(response);
 
+      /* =========================================
+           CLAIM EXPIRED WHILE FORM WAS OPEN
+        ========================================= */
+
+      if (response.status === 401 || response.status === 403) {
+        openClaimFlow();
+
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(
           data?.message || `Request failed with HTTP ${response.status}.`,
@@ -228,6 +404,7 @@ export default function Get() {
 
       window.scrollTo({
         top: 0,
+
         behavior: "smooth",
       });
     } catch (submitError) {
@@ -238,6 +415,189 @@ export default function Get() {
       setSubmitting(false);
     }
   };
+
+  /* =======================================================
+     CHECKING CLAIM
+  ======================================================= */
+
+  if (checkingClaim) {
+    return (
+      <main
+        className="
+          min-h-screen
+          bg-[#050507]
+          px-5
+          py-16
+          text-white
+        "
+      >
+        <div
+          className="
+            mx-auto
+            flex
+            min-h-[72vh]
+            max-w-2xl
+            items-center
+            justify-center
+          "
+        >
+          <div
+            className="
+              w-full
+              rounded-[30px]
+              border
+              border-fuchsia-500/25
+              bg-[#0b0b10]
+              p-8
+              text-center
+            "
+          >
+            <p
+              className="
+                text-[10px]
+                font-black
+                uppercase
+                tracking-[0.28em]
+                text-fuchsia-400
+              "
+            >
+              SECURE ENTRY
+            </p>
+
+            <h1
+              className="
+                mt-3
+                text-3xl
+                font-black
+                uppercase
+                sm:text-5xl
+              "
+            >
+              Checking Artist Card
+            </h1>
+
+            <p
+              className="
+                mx-auto
+                mt-4
+                max-w-lg
+                text-sm
+                leading-7
+                text-gray-400
+              "
+            >
+              We are checking your verified artist-card session before opening
+              the GET ENTRY form.
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  /* =======================================================
+     ENTRY LOCKED
+  ======================================================= */
+
+  if (!verifiedArtist) {
+    return (
+      <main
+        className="
+          min-h-screen
+          bg-[#050507]
+          px-5
+          py-16
+          text-white
+        "
+      >
+        <div
+          className="
+            mx-auto
+            flex
+            min-h-[72vh]
+            max-w-2xl
+            items-center
+            justify-center
+          "
+        >
+          <div
+            className="
+              w-full
+              rounded-[30px]
+              border
+              border-red-500/25
+              bg-[#0b0b10]
+              p-8
+              text-center
+            "
+          >
+            <p
+              className="
+                text-[10px]
+                font-black
+                uppercase
+                tracking-[0.28em]
+                text-red-400
+              "
+            >
+              ENTRY LOCKED
+            </p>
+
+            <h1
+              className="
+                mt-3
+                text-3xl
+                font-black
+                uppercase
+                sm:text-5xl
+              "
+            >
+              Claim Your Card First
+            </h1>
+
+            <p
+              className="
+                mx-auto
+                mt-4
+                max-w-lg
+                text-sm
+                leading-7
+                text-gray-400
+              "
+            >
+              {error ||
+                "A verified artist-card session is required before you can submit an entry."}
+            </p>
+
+            <button
+              type="button"
+              onClick={openClaimFlow}
+              className="
+                mt-7
+                inline-flex
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                bg-fuchsia-600
+                px-6
+                py-3
+                text-xs
+                font-black
+                uppercase
+                tracking-wider
+                transition
+                hover:bg-fuchsia-500
+              "
+            >
+              Claim / Verify Card
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   /* =======================================================
      SUCCESS
@@ -282,15 +642,32 @@ export default function Get() {
               </div>
 
               <div className="flex items-center justify-between border-b border-white/10 py-3">
-                <span className="text-xs text-gray-500">Price per ticket</span>
+                <span className="text-xs text-gray-500">First person</span>
 
                 <span className="font-black text-white">
-                  ₹{TICKET_PRICE.toLocaleString("en-IN")}
+                  ₹{FIRST_TICKET_PRICE.toLocaleString("en-IN")}
                 </span>
               </div>
 
+              {Number(ticketCount) > 1 && (
+                <div className="flex items-center justify-between border-b border-white/10 py-3">
+                  <span className="text-xs text-gray-500">
+                    Additional {Number(ticketCount) - 1} person(s) × ₹
+                    {ADDITIONAL_TICKET_PRICE.toLocaleString("en-IN")}
+                  </span>
+
+                  <span className="font-black text-white">
+                    ₹
+                    {(
+                      (Number(ticketCount) - 1) *
+                      ADDITIONAL_TICKET_PRICE
+                    ).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between pt-3">
-                <span className="text-xs font-bold text-gray-300">Total</span>
+                <span className="text-sm font-bold text-gray-300">Total</span>
 
                 <span className="text-xl font-black text-fuchsia-300">
                   ₹{Number(total).toLocaleString("en-IN")}
@@ -326,6 +703,10 @@ export default function Get() {
 
   return (
     <main className="min-h-screen bg-[#050507] text-white">
+      {/* ===================================================
+          HERO
+      =================================================== */}
+
       <div className="relative overflow-hidden border-b border-white/5 bg-[#08080c]">
         <div className="pointer-events-none absolute -right-24 -top-32 h-[420px] w-[420px] rounded-full bg-fuchsia-600/10 blur-[120px]" />
 
@@ -333,10 +714,7 @@ export default function Get() {
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400 transition hover:text-white"
-          >
-            <ArrowLeft size={16} />
-            Back to Home
-          </Link>
+          ></Link>
 
           <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_360px]">
             <div>
@@ -366,25 +744,50 @@ export default function Get() {
                   </p>
 
                   <p className="mt-1 text-2xl font-black">
-                    ₹{TICKET_PRICE.toLocaleString("en-IN")}
+                    ₹{FIRST_TICKET_PRICE.toLocaleString("en-IN")}
                   </p>
                 </div>
               </div>
 
               <p className="mt-4 text-xs leading-6 text-gray-400">
-                Price is ₹1,100 per person. Your total automatically updates
-                based on the number of tickets selected.
+                The first person is ₹2,999. Every additional person is ₹1,499.
+                Your total updates automatically when you add more people.
               </p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ===================================================
+          CONTENT
+      =================================================== */}
+
       <section className="mx-auto grid max-w-7xl gap-8 px-5 py-12 sm:px-8 lg:grid-cols-[1fr_360px] lg:px-10 lg:py-16">
         <form
           onSubmit={handleSubmit}
           className="rounded-[30px] border border-white/10 bg-[#0b0b10] p-5 shadow-2xl sm:p-7 lg:p-8"
         >
+          {/* ===============================================
+              VERIFIED CARD
+          =============================================== */}
+
+          <div className="mb-6 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
+              VERIFIED ARTIST CARD
+            </p>
+
+            <p className="mt-1 text-sm font-bold text-white">
+              {verifiedArtist.name ||
+                verifiedArtist.artistName ||
+                verifiedArtist.professionalName ||
+                "Verified Artist"}
+            </p>
+          </div>
+
+          {/* ===============================================
+              PERSONAL DETAILS
+          =============================================== */}
+
           <div className="border-b border-white/10 pb-6">
             <p className="text-[9px] font-black uppercase tracking-[0.24em] text-fuchsia-400">
               PERSONAL DETAILS
@@ -435,6 +838,10 @@ export default function Get() {
             />
           </div>
 
+          {/* ===============================================
+              ENTRY DETAILS
+          =============================================== */}
+
           <div className="mt-8 border-t border-white/10 pt-7">
             <p className="text-[9px] font-black uppercase tracking-[0.24em] text-fuchsia-400">
               ENTRY DETAILS
@@ -483,19 +890,47 @@ export default function Get() {
             </div>
           </div>
 
+          {/* ===============================================
+              ERROR
+          =============================================== */}
+
           {error && (
             <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-300">
               {error}
             </div>
           )}
 
-          <div className="mt-8 rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/[0.06] p-5">
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>
-                ₹{TICKET_PRICE.toLocaleString("en-IN")} × {formData.tickets}
-              </span>
+          {/* ===============================================
+              TOTAL
+          =============================================== */}
 
-              <span>{formData.tickets} ticket(s)</span>
+          <div className="mt-8 rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/[0.06] p-5">
+            <div className="space-y-2 text-xs text-gray-400">
+              <div className="flex items-center justify-between">
+                <span>First person</span>
+                <span>₹{FIRST_TICKET_PRICE.toLocaleString("en-IN")}</span>
+              </div>
+
+              {Number(formData.tickets) > 1 && (
+                <div className="flex items-center justify-between">
+                  <span>
+                    Additional {Number(formData.tickets) - 1} person(s) × ₹
+                    {ADDITIONAL_TICKET_PRICE.toLocaleString("en-IN")}
+                  </span>
+                  <span>
+                    ₹
+                    {(
+                      (Number(formData.tickets) - 1) *
+                      ADDITIONAL_TICKET_PRICE
+                    ).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <span>Total people</span>
+                <span>{formData.tickets}</span>
+              </div>
             </div>
 
             <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-4">
@@ -509,6 +944,10 @@ export default function Get() {
             </div>
           </div>
 
+          {/* ===============================================
+              SUBMIT
+          =============================================== */}
+
           <button
             type="submit"
             disabled={submitting}
@@ -519,6 +958,10 @@ export default function Get() {
             <ArrowRight size={18} />
           </button>
         </form>
+
+        {/* =================================================
+            SIDEBAR
+        ================================================= */}
 
         <aside className="space-y-5">
           <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0b10]">

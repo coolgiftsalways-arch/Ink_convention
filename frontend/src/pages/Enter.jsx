@@ -509,6 +509,25 @@ export default function Enter() {
 
   const location = useLocation();
 
+  /* =======================================================
+     RETURN AFTER CLAIM
+
+     Examples:
+     GET ENTRY -> /enter -> claim -> /entry
+     ARTISTS   -> /Enter -> claim -> /artists
+  ======================================================= */
+
+  const requestedReturnTo = String(location.state?.returnTo || "").trim();
+
+  const returnTo =
+    requestedReturnTo.startsWith("/") && !requestedReturnTo.startsWith("//")
+      ? requestedReturnTo
+      : "";
+
+  const entryModeRequested = Boolean(
+    location.state?.entryMode || returnTo === "/entry",
+  );
+
   const manageProfileRequested = Boolean(
     location.state?.manageProfile || location.state?.ownerMode,
   );
@@ -817,7 +836,25 @@ export default function Enter() {
 
         setError("");
 
-        setSuccess("Your verified session is still active.");
+        /* =========================================
+             VERIFIED SESSION
+
+             IMPORTANT:
+             Even when the user came from GET ENTRY
+             or ARTISTS, do NOT leave this page yet.
+
+             First show EDIT YOUR PROFILE.
+             The user returns to the source page only
+             after finishing/closing the profile step.
+          ========================================= */
+
+        setSuccess(
+          returnTo === "/entry"
+            ? "Your card is verified. Review your profile, then save to continue to GET ENTRY."
+            : returnTo === "/artists"
+              ? "Your card is verified. Review your profile, then save to return to Artists."
+              : "Your verified session is still active.",
+        );
 
         setScreen("edit");
       } catch (sessionError) {
@@ -1340,7 +1377,29 @@ export default function Enter() {
           maskedPhone,
       );
 
-      setSuccess("OTP verified. You can now update your profile.");
+      /* =============================================
+         OTP SUCCESS
+
+         IMPORTANT:
+         NEVER redirect immediately after OTP.
+
+         GET ENTRY:
+         OTP -> EDIT PROFILE -> SAVE/CLOSE -> /entry
+
+         ARTISTS:
+         OTP -> EDIT PROFILE -> SAVE/CLOSE -> /artists
+
+         Normal /Enter:
+         OTP -> EDIT PROFILE
+      ============================================= */
+
+      setSuccess(
+        returnTo === "/entry"
+          ? "OTP verified. Review your profile, then save to continue to GET ENTRY."
+          : returnTo === "/artists"
+            ? "OTP verified. Review your profile, then save to return to Artists."
+            : "OTP verified. You can now update your profile.",
+      );
 
       setScreen("edit");
 
@@ -1721,13 +1780,8 @@ export default function Enter() {
       const savedPlan = normalizePlan(finalProfile.plan);
 
       /*
-        SILVER owner gets TWO choices on the edit screen:
-
-        DONE & VIEW PROFILE
-        -> save changes and return to Artists
-
-        SAVE & GO GOLD
-        -> save changes first, then open the Gold upgrade screen
+        Silver keeps the explicit SAVE & GO GOLD action.
+        If that button was pressed, open the plan screen.
       */
       if (savedPlan === "pro" && profileAction === "upgrade-gold") {
         setSuccess(
@@ -1743,7 +1797,37 @@ export default function Enter() {
         return;
       }
 
-      /* Existing SILVER / GOLD owner pressed DONE. */
+      /*
+        SOURCE-AWARE RETURN
+
+        GET ENTRY:
+        /entry -> /Enter -> OTP -> EDIT PROFILE -> SAVE -> /entry
+
+        ARTISTS:
+        /artists -> /Enter -> OTP -> EDIT PROFILE -> SAVE -> /artists
+
+        This runs for FREE, SILVER and GOLD.
+      */
+      if (returnTo) {
+        navigate(returnTo, {
+          replace: true,
+          state: {
+            claimCompleted: true,
+            profileCompleted: true,
+            verifiedProfileId:
+              finalProfile._id || finalProfile.id || selectedArtist.id || "",
+            refreshDirectory: returnTo === "/artists" ? Date.now() : undefined,
+            newArtistId:
+              returnTo === "/artists"
+                ? finalProfile.id || finalProfile._id || selectedArtist.id
+                : undefined,
+          },
+        });
+
+        return;
+      }
+
+      /* Normal /Enter behavior when there is no source page. */
       if (savedPlan === "pro" || savedPlan === "verified") {
         navigate("/artists", {
           state: {
@@ -1756,7 +1840,7 @@ export default function Enter() {
         return;
       }
 
-      /* FREE / BASIC continues to the membership selection screen. */
+      /* FREE / BASIC direct profile management keeps membership selection. */
       setSuccess("Profile updated successfully. Choose your membership plan.");
 
       setScreen("plans");
@@ -2718,7 +2802,24 @@ export default function Enter() {
             >
               <button
                 type="button"
-                onClick={() => navigate("/artists")}
+                onClick={() => {
+                  const destination = returnTo || "/artists";
+
+                  navigate(destination, {
+                    replace: Boolean(returnTo),
+                    state: {
+                      claimCompleted: Boolean(returnTo),
+                      profileCompleted: false,
+                      verifiedProfileId:
+                        currentProfile?._id ||
+                        currentProfile?.id ||
+                        selectedArtist?.id ||
+                        "",
+                      refreshDirectory:
+                        destination === "/artists" ? Date.now() : undefined,
+                    },
+                  });
+                }}
                 className="
                   text-[9px]
                   font-mono
@@ -2727,7 +2828,11 @@ export default function Enter() {
                   transition
                 "
               >
-                VIEW PUBLIC PROFILE
+                {returnTo === "/entry"
+                  ? "CLOSE & GO TO ENTRY"
+                  : returnTo === "/artists"
+                    ? "CLOSE & BACK TO ARTISTS"
+                    : "VIEW PUBLIC PROFILE"}
               </button>
 
               <button
@@ -3625,7 +3730,13 @@ export default function Enter() {
                       hover:bg-white
                     "
                   >
-                    <span>DONE & VIEW PROFILE</span>
+                    <span>
+                      {returnTo === "/entry"
+                        ? "SAVE & CONTINUE TO ENTRY"
+                        : returnTo === "/artists"
+                          ? "SAVE & BACK TO ARTISTS"
+                          : "DONE & VIEW PROFILE"}
+                    </span>
                     <ArrowRight
                       size={15}
                       className="transition-transform group-hover:translate-x-1"
@@ -3688,9 +3799,13 @@ export default function Enter() {
                   "
                 >
                   <span>
-                    {currentPlan === "verified"
-                      ? "DONE & VIEW PROFILE"
-                      : "UPDATE PROFILE"}
+                    {returnTo === "/entry"
+                      ? "SAVE & CONTINUE TO ENTRY"
+                      : returnTo === "/artists"
+                        ? "SAVE & BACK TO ARTISTS"
+                        : currentPlan === "verified"
+                          ? "DONE & VIEW PROFILE"
+                          : "UPDATE PROFILE"}
                   </span>
 
                   <ArrowRight

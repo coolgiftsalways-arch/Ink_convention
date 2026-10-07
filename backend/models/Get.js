@@ -2,6 +2,13 @@ const mongoose = require("mongoose");
 
 const getSchema = new mongoose.Schema(
   {
+    artistProfile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TattooStudio",
+      required: [true, "Verified artist profile is required."],
+      index: true,
+    },
+
     fullName: {
       type: String,
       required: [true, "Full name is required."],
@@ -51,7 +58,13 @@ const getSchema = new mongoose.Schema(
     ticketPrice: {
       type: Number,
       required: true,
-      default: 1100,
+      default: 2999,
+    },
+
+    additionalTicketPrice: {
+      type: Number,
+      required: true,
+      default: 1499,
     },
 
     totalAmount: {
@@ -81,6 +94,11 @@ getSchema.index({
 
 getSchema.index({
   status: 1,
+});
+
+getSchema.index({
+  artistProfile: 1,
+  createdAt: -1,
 });
 
 const Get = mongoose.models.Get || mongoose.model("Get", getSchema);

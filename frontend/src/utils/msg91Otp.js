@@ -1,8 +1,75 @@
 const SCRIPT_ID = "msg91-otp-provider";
 const SCRIPT_URL = "https://verify.msg91.com/otp-provider.js";
 
-let initPromise = null;
-let currentReqId = "";
+const GLOBAL_STATE_KEY = "__INKCONVENTION_MSG91_OTP_STATE__";
+
+const fallbackState = {
+  initPromise: null,
+  initialized: false,
+  currentReqId: "",
+};
+
+function getOtpState() {
+  if (typeof window === "undefined") {
+    return fallbackState;
+  }
+
+  if (!window[GLOBAL_STATE_KEY]) {
+    window[GLOBAL_STATE_KEY] = {
+      initPromise: null,
+      initialized: false,
+      currentReqId: "",
+    };
+  }
+
+  return window[GLOBAL_STATE_KEY];
+}
+
+function otpMethodsReady() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.sendOtp === "function" &&
+    typeof window.retryOtp === "function" &&
+    typeof window.verifyOtp === "function"
+  );
+}
+
+function getCurrentReqId() {
+  return String(getOtpState().currentReqId || "");
+}
+
+function setCurrentReqId(value) {
+  getOtpState().currentReqId = String(value || "");
+}
+
+function resetCaptchaSafely() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+
+  const container = document.getElementById("msg91-captcha");
+
+  if (!container || !window.hcaptcha) {
+    return;
+  }
+
+  const widgetId =
+    container.getAttribute("data-hcaptcha-widget-id") ||
+    container.dataset?.hcaptchaWidgetId ||
+    "";
+
+  try {
+    if (typeof window.hcaptcha.reset === "function") {
+      if (widgetId !== "") {
+        window.hcaptcha.reset(widgetId);
+      } else {
+        window.hcaptcha.reset();
+      }
+    }
+  } catch (error) {
+    console.warn("⚠️ hCaptcha reset skipped:", error);
+  }
+}
 
 /* =========================================================
    ENV
@@ -32,17 +99,28 @@ function getMsg91Config() {
 ========================================================= */
 
 function makeError(error, fallback) {
-  if (error instanceof Error) {
-    return error;
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : error?.message || error?.error || error?.description || fallback;
+
+  const cleanMessage = String(message || fallback || "MSG91 OTP error").trim();
+
+  if (/ipblocked/i.test(cleanMessage)) {
+    return new Error(
+      "MSG91 blocked this IP. For localhost testing, allow your current IP/domain in MSG91 or test from your approved test/live domain.",
+    );
   }
 
-  if (typeof error === "string" && error.trim()) {
-    return new Error(error);
+  if (/network-error/i.test(cleanMessage)) {
+    return new Error(
+      "MSG91/hCaptcha network error. If you are on localhost, test from an approved host or check the MSG91 widget domain/IP settings.",
+    );
   }
 
-  return new Error(
-    error?.message || error?.error || error?.description || fallback,
-  );
+  return new Error(cleanMessage);
 }
 
 /* =========================================================
@@ -266,10 +344,7 @@ function waitForMethods() {
     const startedAt = Date.now();
 
     const timer = window.setInterval(() => {
-      const ready =
-        typeof window.sendOtp === "function" &&
-        typeof window.retryOtp === "function" &&
-        typeof window.verifyOtp === "function";
+      const ready = otpMethodsReady();
 
       if (ready) {
         window.clearInterval(timer);
@@ -297,26 +372,45 @@ function waitForMethods() {
 ========================================================= */
 
 export async function initMsg91Otp() {
-  if (initPromise) {
-    return initPromise;
+  const state = getOtpState();
+
+  /*
+    Vite/React can mount the page more than once in development.
+    The MSG91 script and hCaptcha globals survive those remounts.
+
+    If the OTP methods already exist, reuse them instead of calling
+    initSendOTP() again. This prevents:
+    "hCaptcha was already rendered."
+  */
+  if (otpMethodsReady()) {
+    state.initialized = true;
+    return true;
   }
 
-  initPromise = (async () => {
+  if (state.initPromise) {
+    return state.initPromise;
+  }
+
+  state.initPromise = (async () => {
     const { widgetId, tokenAuth } = getMsg91Config();
 
     await loadMsg91Script();
+
+    if (otpMethodsReady()) {
+      state.initialized = true;
+      return true;
+    }
 
     if (typeof window.initSendOTP !== "function") {
       throw new Error("MSG91 initSendOTP is unavailable.");
     }
 
+    resetCaptchaSafely();
+
     const configuration = {
       widgetId,
-
       tokenAuth,
-
       exposeMethods: true,
-
       captchaRenderId: "msg91-captcha",
 
       success: () => {
@@ -332,16 +426,21 @@ export async function initMsg91Otp() {
 
     await waitForMethods();
 
+    state.initialized = true;
+
     console.log("✅ MSG91 OTP READY");
 
     return true;
-  })().catch((error) => {
-    initPromise = null;
+  })()
+    .catch((error) => {
+      state.initialized = false;
+      throw error;
+    })
+    .finally(() => {
+      state.initPromise = null;
+    });
 
-    throw error;
-  });
-
-  return initPromise;
+  return state.initPromise;
 }
 
 /* =========================================================
@@ -360,6 +459,8 @@ export async function sendMsg91Otp(identifier) {
   }
 
   return new Promise((resolve, reject) => {
+    resetCaptchaSafely();
+
     window.sendOtp(
       cleanIdentifier,
 
@@ -367,7 +468,7 @@ export async function sendMsg91Otp(identifier) {
         const reqId = extractReqId(data);
 
         if (reqId) {
-          currentReqId = reqId;
+          setCurrentReqId(reqId);
         }
 
         console.log("✅ MSG91 OTP sent");
@@ -394,7 +495,7 @@ export async function resendMsg91Otp() {
       const reqId = extractReqId(data);
 
       if (reqId) {
-        currentReqId = reqId;
+        setCurrentReqId(reqId);
       }
 
       console.log("✅ MSG91 OTP resent");
@@ -405,6 +506,8 @@ export async function resendMsg91Otp() {
     const failure = (error) => {
       reject(makeError(error, "Unable to resend OTP."));
     };
+
+    const currentReqId = getCurrentReqId();
 
     if (currentReqId) {
       window.retryOtp(null, success, failure, currentReqId);
@@ -437,6 +540,8 @@ export async function verifyMsg91Otp(otp) {
     const failure = (error) => {
       reject(makeError(error, "Incorrect or expired OTP."));
     };
+
+    const currentReqId = getCurrentReqId();
 
     if (currentReqId) {
       window.verifyOtp(cleanOtp, success, failure, currentReqId);

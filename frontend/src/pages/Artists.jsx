@@ -4350,6 +4350,11 @@ function ArtistModal({ artist, onClose }) {
   const manageState = {
     manageProfile: true,
     ownerMode: true,
+
+    // OTP -> EDIT PROFILE first. After save/close, return to Artists.
+    returnTo: "/artists",
+    claimSource: "artists",
+
     profileId: a.id,
     claimArtistId: a.id,
     artistId: a.id,

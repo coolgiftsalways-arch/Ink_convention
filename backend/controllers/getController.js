@@ -4,7 +4,6 @@ const Get = require("../models/Get");
 const TattooStudio = require("../models/TattooStudio");
 
 const FIRST_TICKET_PRICE = 2999;
-
 const ADDITIONAL_TICKET_PRICE = 1499;
 
 const EVENT_DATES = {
@@ -19,18 +18,8 @@ const isValidMongoId = (id) => {
   return mongoose.Types.ObjectId.isValid(String(id || ""));
 };
 
-/* =========================================================
-   CREATE GET ENTRY
-
-   POST /api/get
-========================================================= */
-
 const createGet = async (req, res) => {
   try {
-    /* =====================================================
-       VERIFIED ARTIST SESSION
-    ===================================================== */
-
     const verifiedProfileId = String(req.claimSession?.profileId || "").trim();
 
     if (!verifiedProfileId || !isValidMongoId(verifiedProfileId)) {
@@ -41,10 +30,6 @@ const createGet = async (req, res) => {
       });
     }
 
-    /* =====================================================
-       LOAD ARTIST
-    ===================================================== */
-
     const verifiedArtist = await TattooStudio.findById(verifiedProfileId);
 
     if (!verifiedArtist) {
@@ -54,10 +39,6 @@ const createGet = async (req, res) => {
         message: "Verified artist profile not found.",
       });
     }
-
-    /* =====================================================
-       CHECK CLAIM STATUS
-    ===================================================== */
 
     if (
       !verifiedArtist.claimed ||
@@ -71,16 +52,8 @@ const createGet = async (req, res) => {
       });
     }
 
-    /* =====================================================
-       FORM DATA
-    ===================================================== */
-
     const { fullName, email, mobile, state, eventCity, tickets } =
       req.body || {};
-
-    /* =====================================================
-       FULL NAME
-    ===================================================== */
 
     if (!fullName || !String(fullName).trim()) {
       return res.status(400).json({
@@ -89,10 +62,6 @@ const createGet = async (req, res) => {
         message: "Full name is required.",
       });
     }
-
-    /* =====================================================
-       EMAIL
-    ===================================================== */
 
     if (!email || !String(email).trim()) {
       return res.status(400).json({
@@ -114,10 +83,6 @@ const createGet = async (req, res) => {
       });
     }
 
-    /* =====================================================
-       MOBILE
-    ===================================================== */
-
     if (!mobile || !String(mobile).trim()) {
       return res.status(400).json({
         success: false,
@@ -138,10 +103,6 @@ const createGet = async (req, res) => {
       });
     }
 
-    /* =====================================================
-       STATE
-    ===================================================== */
-
     if (!state || !String(state).trim()) {
       return res.status(400).json({
         success: false,
@@ -151,10 +112,6 @@ const createGet = async (req, res) => {
     }
 
     const cleanState = String(state).trim();
-
-    /* =====================================================
-       EVENT CITY
-    ===================================================== */
 
     const normalizedCity = String(eventCity || "")
       .trim()
@@ -168,10 +125,6 @@ const createGet = async (req, res) => {
       });
     }
 
-    /* =====================================================
-       PEOPLE / TICKETS
-    ===================================================== */
-
     const ticketCount = Number(tickets || 1);
 
     if (!Number.isInteger(ticketCount) || ticketCount < 1 || ticketCount > 10) {
@@ -182,28 +135,9 @@ const createGet = async (req, res) => {
       });
     }
 
-    /* =====================================================
-       PRICING
-
-       1 person = ₹2,999
-
-       Every additional person = ₹1,499
-
-       Examples:
-
-       1 = ₹2,999
-       2 = ₹4,498
-       3 = ₹5,997
-       4 = ₹7,496
-    ===================================================== */
-
     const totalAmount =
       FIRST_TICKET_PRICE +
       Math.max(0, ticketCount - 1) * ADDITIONAL_TICKET_PRICE;
-
-    /* =====================================================
-       DATABASE
-    ===================================================== */
 
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
@@ -212,10 +146,6 @@ const createGet = async (req, res) => {
         message: "Database not connected.",
       });
     }
-
-    /* =====================================================
-       CREATE ENTRY
-    ===================================================== */
 
     const entry = await Get.create({
       artistProfile: verifiedArtist._id,
@@ -242,10 +172,6 @@ const createGet = async (req, res) => {
 
       status: "New",
     });
-
-    /* =====================================================
-       SUCCESS
-    ===================================================== */
 
     return res.status(201).json({
       success: true,
@@ -277,12 +203,6 @@ const createGet = async (req, res) => {
     });
   }
 };
-
-/* =========================================================
-   GET ALL
-
-   GET /api/get
-========================================================= */
 
 const getAllGets = async (req, res) => {
   try {
@@ -331,13 +251,9 @@ const getAllGets = async (req, res) => {
 
       stats: {
         total,
-
         new: newCount,
-
         contacted,
-
         confirmed,
-
         cancelled,
       },
 
@@ -355,12 +271,6 @@ const getAllGets = async (req, res) => {
     });
   }
 };
-
-/* =========================================================
-   GET SINGLE
-
-   GET /api/get/:id
-========================================================= */
 
 const getGetById = async (req, res) => {
   try {
@@ -389,7 +299,6 @@ const getGetById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-
       entry,
     });
   } catch (error) {
@@ -402,12 +311,6 @@ const getGetById = async (req, res) => {
     });
   }
 };
-
-/* =========================================================
-   UPDATE STATUS
-
-   PATCH /api/get/:id/status
-========================================================= */
 
 const updateGetStatus = async (req, res) => {
   try {
@@ -439,17 +342,10 @@ const updateGetStatus = async (req, res) => {
       updateData.contactedAt = new Date();
     }
 
-    const entry = await Get.findByIdAndUpdate(
-      id,
-
-      updateData,
-
-      {
-        new: true,
-
-        runValidators: true,
-      },
-    );
+    const entry = await Get.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!entry) {
       return res.status(404).json({
@@ -476,12 +372,6 @@ const updateGetStatus = async (req, res) => {
     });
   }
 };
-
-/* =========================================================
-   DELETE
-
-   DELETE /api/get/:id
-========================================================= */
 
 const deleteGet = async (req, res) => {
   try {
@@ -522,10 +412,6 @@ const deleteGet = async (req, res) => {
     });
   }
 };
-
-/* =========================================================
-   EXPORT
-========================================================= */
 
 module.exports = {
   createGet,

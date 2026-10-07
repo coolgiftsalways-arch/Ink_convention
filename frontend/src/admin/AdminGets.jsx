@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   Eye,
@@ -33,96 +33,119 @@ export default function AdminGets() {
   const [search, setSearch] = useState("");
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const entriesRequestRef = useRef(null);
 
   /* =========================================================
      LOAD ALL GET ENTRIES
   ========================================================= */
 
-  const loadEntries = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  const loadEntries = useCallback(() => {
+    // Cancel an older load so it cannot overwrite newer results.
+    entriesRequestRef.current?.abort();
+    const controller = new AbortController();
+    entriesRequestRef.current = controller;
 
-      const response = await fetch(`${API_URL}/api/get`, {
-        method: "GET",
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-        },
-        credentials: "include",
-      });
+    return fetch(`${API_URL}/api/get`, {
+      method: "GET",
+      signal: controller.signal,
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then(async (response) => {
+        const rawText = await response.text();
+        if (controller.signal.aborted) return;
 
-      const rawText = await response.text();
+        let data = {};
 
-      let data = {};
+        if (rawText.trim()) {
+          try {
+            data = JSON.parse(rawText);
+          } catch (parseError) {
+            throw new Error(
+              `Invalid server response (HTTP ${response.status}): ${rawText.slice(0, 180)}`,
+              { cause: parseError },
+            );
+          }
+        }
 
-      if (rawText.trim()) {
-        try {
-          data = JSON.parse(rawText);
-        } catch (parseError) {
+        if (!response.ok) {
           throw new Error(
-            `Invalid server response (HTTP ${response.status}): ${rawText.slice(0, 180)}`,
+            data?.message ||
+              `GET /api/get failed with HTTP ${response.status}.`,
           );
         }
-      }
 
-      if (!response.ok) {
-        throw new Error(
-          data?.message || `GET /api/get failed with HTTP ${response.status}.`,
-        );
-      }
+        if (!rawText.trim()) {
+          throw new Error(
+            `GET /api/get returned an empty response (HTTP ${response.status}).`,
+          );
+        }
 
-      if (!rawText.trim()) {
-        throw new Error(
-          `GET /api/get returned an empty response (HTTP ${response.status}).`,
-        );
-      }
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.entries)
+            ? data.entries
+            : Array.isArray(data?.data)
+              ? data.data
+              : [];
 
-      const list = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.entries)
-          ? data.entries
-          : Array.isArray(data?.data)
-            ? data.data
-            : [];
+        setError("");
+        setEntries(list);
 
-      setEntries(list);
+        setStats({
+          total: Number(data?.stats?.total ?? list.length ?? 0),
 
-      setStats({
-        total: Number(data?.stats?.total ?? list.length ?? 0),
+          new: Number(
+            data?.stats?.new ??
+              list.filter((item) => item.status === "New").length,
+          ),
 
-        new: Number(
-          data?.stats?.new ??
-            list.filter((item) => item.status === "New").length,
-        ),
+          contacted: Number(
+            data?.stats?.contacted ??
+              list.filter((item) => item.status === "Contacted").length,
+          ),
 
-        contacted: Number(
-          data?.stats?.contacted ??
-            list.filter((item) => item.status === "Contacted").length,
-        ),
+          confirmed: Number(
+            data?.stats?.confirmed ??
+              list.filter((item) => item.status === "Confirmed").length,
+          ),
 
-        confirmed: Number(
-          data?.stats?.confirmed ??
-            list.filter((item) => item.status === "Confirmed").length,
-        ),
+          cancelled: Number(
+            data?.stats?.cancelled ??
+              list.filter((item) => item.status === "Cancelled").length,
+          ),
+        });
+      })
+      .catch((loadError) => {
+        if (controller.signal.aborted) return;
+        console.error("Admin GET entries load error:", loadError);
 
-        cancelled: Number(
-          data?.stats?.cancelled ??
-            list.filter((item) => item.status === "Cancelled").length,
-        ),
+        setError(loadError.message || "Unable to load GET ENTRY submissions.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       });
-    } catch (loadError) {
-      console.error("Admin GET entries load error:", loadError);
+  }, []);
 
-      setError(loadError.message || "Unable to load GET ENTRY submissions.");
-    } finally {
-      setLoading(false);
-    }
+  // Loading already starts as true on mount. Reset it only for user actions.
+  const refreshEntries = () => {
+    setLoading(true);
+    setError("");
+    return loadEntries();
   };
 
   useEffect(() => {
     void loadEntries();
-  }, []);
+
+    return () => {
+      entriesRequestRef.current?.abort();
+    };
+  }, [loadEntries]);
 
   /* =========================================================
      SEARCH
@@ -187,7 +210,7 @@ export default function AdminGets() {
         setSelectedEntry(data.entry);
       }
 
-      await loadEntries();
+      await refreshEntries();
     } catch (statusError) {
       console.error("Update GET status error:", statusError);
 
@@ -238,7 +261,7 @@ export default function AdminGets() {
         setSelectedEntry(null);
       }
 
-      await loadEntries();
+      await refreshEntries();
     } catch (deleteError) {
       console.error("Delete GET entry error:", deleteError);
 
@@ -306,7 +329,7 @@ export default function AdminGets() {
 
           <button
             type="button"
-            onClick={loadEntries}
+            onClick={refreshEntries}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3 font-mono text-[10px] font-black uppercase tracking-wider transition hover:border-purple-500/40 hover:bg-purple-500/10"
           >
             <RefreshCcw size={15} />

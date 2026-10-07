@@ -24,19 +24,8 @@ function compactOwnerProfile(source = {}) {
   return profile;
 }
 
-/* =========================================================
-   CLAIM SESSION
-
-   EXACTLY 4 HOURS
-========================================================= */
-
 const CLAIM_COOKIE = "ink_claim_session";
-
 const CLAIM_SESSION_MS = 4 * 60 * 60 * 1000;
-
-/* =========================================================
-   PHONE HELPERS
-========================================================= */
 
 function normalizePhone(phone) {
   let digits = String(phone || "").replace(/\D/g, "");
@@ -66,20 +55,9 @@ function maskPhone(phone) {
   return `${digits.slice(0, 2)}XXXXXX${digits.slice(-2)}`;
 }
 
-/* =========================================================
-   REGEX SAFE
-========================================================= */
-
 function escapeRegExp(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-
-/* =========================================================
-   TATTOO STYLE HELPERS
-
-   PULLED BOOK YOUR ARTIST
-   FEATURE KEPT
-========================================================= */
 
 function normalizeTattooStyles(styles) {
   if (!Array.isArray(styles)) {
@@ -89,7 +67,6 @@ function normalizeTattooStyles(styles) {
   const allowedMap = new Map(
     TATTOO_CATEGORIES.map((category) => [
       String(category).toLowerCase(),
-
       String(category),
     ]),
   );
@@ -103,10 +80,6 @@ function normalizeTattooStyles(styles) {
   return [...new Set(cleanedStyles)];
 }
 
-/* =========================================================
-   CLAIM SESSION SECRET
-========================================================= */
-
 function getClaimSecret() {
   const secret = String(process.env.CLAIM_SESSION_SECRET || "").trim();
 
@@ -117,19 +90,10 @@ function getClaimSecret() {
   return secret;
 }
 
-/* =========================================================
-   CREATE CLAIM SESSION
-========================================================= */
-
-function signClaimToken(
-  profileId,
-
-  expiresAt = Date.now() + CLAIM_SESSION_MS,
-) {
+function signClaimToken(profileId, expiresAt = Date.now() + CLAIM_SESSION_MS) {
   const payload = Buffer.from(
     JSON.stringify({
       profileId: String(profileId),
-
       exp: Number(expiresAt),
     }),
   ).toString("base64url");
@@ -141,10 +105,6 @@ function signClaimToken(
 
   return `${payload}.${signature}`;
 }
-
-/* =========================================================
-   VERIFY CLAIM SESSION
-========================================================= */
 
 function verifyClaimToken(token) {
   try {
@@ -160,7 +120,6 @@ function verifyClaimToken(token) {
       .digest("base64url");
 
     const actualBuffer = Buffer.from(signature);
-
     const expectedBuffer = Buffer.from(expected);
 
     if (
@@ -182,10 +141,6 @@ function verifyClaimToken(token) {
   }
 }
 
-/* =========================================================
-   READ COOKIE
-========================================================= */
-
 function getCookie(req, name) {
   const raw = String(req.headers.cookie || "");
 
@@ -200,68 +155,108 @@ function getCookie(req, name) {
   return "";
 }
 
-/* =========================================================
-   COOKIE SETTINGS
-========================================================= */
-
 function claimCookieOptions() {
   const production = process.env.NODE_ENV === "production";
 
   return {
     httpOnly: true,
-
     secure: production,
-
     sameSite: production ? "none" : "lax",
-
     maxAge: CLAIM_SESSION_MS,
 
-    path: "/api/claim",
+    // IMPORTANT:
+    // Must work for both /api/claim and /api/get
+    path: "/api",
   };
 }
 
-function clearClaimCookieOptions() {
+function clearClaimCookieOptions(path = "/api") {
   const production = process.env.NODE_ENV === "production";
 
   return {
     httpOnly: true,
-
     secure: production,
-
     sameSite: production ? "none" : "lax",
-
-    path: "/api/claim",
+    path,
   };
 }
 
-/* =========================================================
-   REQUIRE LOGIN SESSION
-========================================================= */
+function clearClaimSessionCookies(res) {
+  res.clearCookie(CLAIM_COOKIE, clearClaimCookieOptions("/api"));
 
-function requireClaimSession(req, res, next) {
-  const token = getCookie(req, CLAIM_COOKIE);
-
-  const session = verifyClaimToken(token);
-
-  if (!session) {
-    return res.status(401).json({
-      success: false,
-
-      sessionExpired: true,
-
-      message:
-        "Your 4-hour verification session expired. Please verify OTP again.",
-    });
-  }
-
-  req.claimSession = session;
-
-  next();
+  // Remove older cookie too.
+  res.clearCookie(CLAIM_COOKIE, clearClaimCookieOptions("/api/claim"));
 }
 
-/* =========================================================
-   JWT PAYLOAD
-========================================================= */
+async function requireClaimSession(req, res, next) {
+  try {
+    const token = getCookie(req, CLAIM_COOKIE);
+
+    const session = verifyClaimToken(token);
+
+    if (!session) {
+      clearClaimSessionCookies(res);
+
+      return res.status(401).json({
+        success: false,
+        loggedIn: false,
+        sessionExpired: true,
+        message:
+          "Your 4-hour verification session expired. Please verify OTP again.",
+      });
+    }
+
+    const artist = await TattooStudio.findById(session.profileId).select(
+      "claimed phoneVerified ownerVerified updatedByOwner",
+    );
+
+    if (!artist) {
+      clearClaimSessionCookies(res);
+
+      return res.status(401).json({
+        success: false,
+        loggedIn: false,
+        sessionExpired: true,
+        claimRevoked: true,
+        message: "Artist profile not found. Please verify OTP again.",
+      });
+    }
+
+    const claimActive = Boolean(
+      artist.claimed === true &&
+      artist.phoneVerified === true &&
+      artist.ownerVerified === true,
+    );
+
+    if (!claimActive) {
+      clearClaimSessionCookies(res);
+
+      return res.status(401).json({
+        success: false,
+        loggedIn: false,
+        sessionExpired: true,
+        claimRevoked: true,
+        message: "Your artist claim was reset. Please verify OTP again.",
+      });
+    }
+
+    req.claimSession = session;
+    req.claimArtist = artist;
+
+    return next();
+  } catch (error) {
+    console.error("❌ Claim session validation error:", error);
+
+    clearClaimSessionCookies(res);
+
+    return res.status(401).json({
+      success: false,
+      loggedIn: false,
+      sessionExpired: true,
+      message: "Unable to verify your claim session. Please verify OTP again.",
+    });
+  }
+}
 
 function decodeJwtPayload(token) {
   try {
@@ -276,10 +271,6 @@ function decodeJwtPayload(token) {
     return null;
   }
 }
-
-/* =========================================================
-   MSG91 PHONE EXTRACTION
-========================================================= */
 
 function tryParseJsonString(value) {
   if (typeof value !== "string") {
@@ -306,10 +297,6 @@ function tryParseJsonString(value) {
     return null;
   }
 }
-
-/* =========================================================
-   ADD PHONE CANDIDATE
-========================================================= */
 
 function addPhoneCandidate(value, found) {
   if (typeof value === "number") {
@@ -352,30 +339,14 @@ function addPhoneCandidate(value, found) {
   }
 }
 
-/* =========================================================
-   COLLECT VERIFIED PHONES
-========================================================= */
-
-function collectVerifiedPhones(
-  value,
-
-  depth = 0,
-
-  found = new Set(),
-) {
+function collectVerifiedPhones(value, depth = 0, found = new Set()) {
   if (value === null || value === undefined || depth > 8) {
     return found;
   }
 
   if (Array.isArray(value)) {
     for (const item of value) {
-      collectVerifiedPhones(
-        item,
-
-        depth + 1,
-
-        found,
-      );
+      collectVerifiedPhones(item, depth + 1, found);
     }
 
     return found;
@@ -385,13 +356,7 @@ function collectVerifiedPhones(
     const parsed = tryParseJsonString(value);
 
     if (parsed !== null) {
-      collectVerifiedPhones(
-        parsed,
-
-        depth + 1,
-
-        found,
-      );
+      collectVerifiedPhones(parsed, depth + 1, found);
     }
 
     addPhoneCandidate(value, found);
@@ -410,21 +375,11 @@ function collectVerifiedPhones(
   }
 
   for (const nested of Object.values(value)) {
-    collectVerifiedPhones(
-      nested,
-
-      depth + 1,
-
-      found,
-    );
+    collectVerifiedPhones(nested, depth + 1, found);
   }
 
   return found;
 }
-
-/* =========================================================
-   GET VERIFIED PHONE CANDIDATES
-========================================================= */
 
 function getVerifiedPhoneCandidates(msg91Result, accessToken) {
   const found = new Set();
@@ -440,10 +395,6 @@ function getVerifiedPhoneCandidates(msg91Result, accessToken) {
   return found;
 }
 
-/* =========================================================
-   PHONE CONFIRMATION
-========================================================= */
-
 function isVerifiedPhoneConfirmed(msg91Result, accessToken, expectedPhone) {
   if (!expectedPhone) {
     return false;
@@ -454,22 +405,9 @@ function isVerifiedPhoneConfirmed(msg91Result, accessToken, expectedPhone) {
   return candidates.has(expectedPhone);
 }
 
-/* =========================================================
-   SAFE PHONE LOGGING
-========================================================= */
-
 function maskCandidatePhones(candidates) {
   return Array.from(candidates).map((phone) => maskPhone(phone));
 }
-
-/* =========================================================
-   MSG91 DIRECT OTP HELPERS
-
-   USED FOR CHANGE PHONE ONLY
-
-   MAIN OWNER OTP STILL USES
-   MSG91 WIDGET
-========================================================= */
 
 function getMsg91AuthKey() {
   const authkey = String(process.env.MSG91_AUTH_KEY || "").trim();
@@ -480,10 +418,6 @@ function getMsg91AuthKey() {
 
   return authkey;
 }
-
-/* =========================================================
-   OTP TEMPLATE
-========================================================= */
 
 function getMsg91OtpTemplateId() {
   const templateId = String(
@@ -496,10 +430,6 @@ function getMsg91OtpTemplateId() {
 
   return templateId;
 }
-
-/* =========================================================
-   READ MSG91 RESPONSE
-========================================================= */
 
 async function readMsg91Json(response) {
   const rawText = await response.text();
@@ -516,12 +446,6 @@ async function readMsg91Json(response) {
     throw new Error("MSG91 returned an invalid response.");
   }
 }
-
-/* =========================================================
-   SEND DIRECT OTP
-
-   CHANGE PHONE ONLY
-========================================================= */
 
 async function sendDirectMsg91Otp(phone) {
   const authkey = getMsg91AuthKey();
@@ -541,9 +465,7 @@ async function sendDirectMsg91Otp(phone) {
 
     headers: {
       Accept: "application/json",
-
       "Content-Type": "application/json",
-
       authkey,
     },
   });
@@ -565,12 +487,6 @@ async function sendDirectMsg91Otp(phone) {
   return data;
 }
 
-/* =========================================================
-   VERIFY DIRECT OTP
-
-   CHANGE PHONE ONLY
-========================================================= */
-
 async function verifyDirectMsg91Otp(phone, otp) {
   const authkey = getMsg91AuthKey();
 
@@ -585,7 +501,6 @@ async function verifyDirectMsg91Otp(phone, otp) {
 
     headers: {
       Accept: "application/json",
-
       authkey,
     },
   });
@@ -617,1012 +532,658 @@ async function verifyDirectMsg91Otp(phone, otp) {
   return data;
 }
 
-/* =========================================================
-   HEALTH CHECK
+router.get("/", (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "Claim API is working.",
+    sessionHours: 4,
+  });
+});
 
-   GET
-   /api/claim
-========================================================= */
+router.post("/find", async (req, res) => {
+  try {
+    const query = String(req.body?.query || "").trim();
 
-router.get(
-  "/",
+    if (query.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter at least 2 characters.",
+      });
+    }
 
-  (req, res) => {
+    const regex = new RegExp(escapeRegExp(query), "i");
+
+    const profiles = await TattooStudio.find({
+      $or: [
+        {
+          name: regex,
+        },
+        {
+          artistName: regex,
+        },
+        {
+          professionalName: regex,
+        },
+        {
+          studio: regex,
+        },
+        {
+          studioName: regex,
+        },
+        {
+          city: regex,
+        },
+        {
+          state: regex,
+        },
+      ],
+    })
+      .limit(25)
+      .lean();
+
+    const safeProfiles = profiles.map((profile) => ({
+      _id: profile._id,
+
+      id: profile._id,
+
+      name:
+        profile.name ||
+        profile.artistName ||
+        profile.professionalName ||
+        "Artist",
+
+      studio: profile.studio || profile.studioName || "",
+
+      city: profile.city || "",
+
+      state: profile.state || "",
+
+      profileImage: profile.profileImage || "",
+
+      plan: normalizePlan(profile.plan),
+
+      paymentStatus: String(profile.paymentStatus || "unpaid")
+        .trim()
+        .toLowerCase(),
+
+      planStartedAt: profile.planStartedAt || null,
+
+      planExpiresAt: profile.planExpiresAt || null,
+
+      silverToGoldUpgradeUsed: Boolean(profile.silverToGoldUpgradeUsed),
+
+      claimed: Boolean(profile.claimed),
+
+      maskedPhone: maskPhone(profile.phone),
+
+      phoneMasked: maskPhone(profile.phone),
+    }));
+
     return res.status(200).json({
       success: true,
 
-      message: "Claim API is working.",
+      count: safeProfiles.length,
 
-      sessionHours: 4,
+      profiles: safeProfiles,
+
+      artists: safeProfiles,
+
+      results: safeProfiles,
     });
-  },
-);
+  } catch (error) {
+    console.error("❌ Claim search error:", error);
 
-/* =========================================================
-   FIND ARTIST
+    return res.status(500).json({
+      success: false,
 
-   POST
-   /api/claim/find
-========================================================= */
+      message: "Unable to search profiles.",
 
-router.post(
-  "/find",
+      error: error.message,
+    });
+  }
+});
 
-  async (req, res) => {
-    try {
-      const query = String(req.body?.query || "").trim();
+router.post("/send-otp", async (req, res) => {
+  try {
+    const { profileId } = req.body || {};
 
-      if (query.length < 2) {
-        return res.status(400).json({
-          success: false,
-
-          message: "Enter at least 2 characters.",
-        });
-      }
-
-      const regex = new RegExp(escapeRegExp(query), "i");
-
-      const profiles = await TattooStudio.find({
-        $or: [
-          {
-            name: regex,
-          },
-
-          {
-            artistName: regex,
-          },
-
-          {
-            professionalName: regex,
-          },
-
-          {
-            studio: regex,
-          },
-
-          {
-            studioName: regex,
-          },
-
-          {
-            city: regex,
-          },
-
-          {
-            state: regex,
-          },
-        ],
-      })
-        .limit(25)
-        .lean();
-
-      /* =============================================
-         DO NOT EXPOSE RAW PHONE
-         DURING OWNER SEARCH
-      ============================================= */
-
-      const safeProfiles = profiles.map((profile) => ({
-        _id: profile._id,
-
-        id: profile._id,
-
-        name:
-          profile.name ||
-          profile.artistName ||
-          profile.professionalName ||
-          "Artist",
-
-        studio: profile.studio || profile.studioName || "",
-
-        city: profile.city || "",
-
-        state: profile.state || "",
-
-        profileImage: profile.profileImage || "",
-
-        plan: normalizePlan(profile.plan),
-
-        paymentStatus: String(profile.paymentStatus || "unpaid")
-          .trim()
-          .toLowerCase(),
-
-        planStartedAt: profile.planStartedAt || null,
-
-        planExpiresAt: profile.planExpiresAt || null,
-
-        silverToGoldUpgradeUsed: Boolean(profile.silverToGoldUpgradeUsed),
-
-        claimed: Boolean(profile.claimed),
-
-        maskedPhone: maskPhone(profile.phone),
-
-        phoneMasked: maskPhone(profile.phone),
-      }));
-
-      return res.status(200).json({
-        success: true,
-
-        count: safeProfiles.length,
-
-        profiles: safeProfiles,
-
-        artists: safeProfiles,
-
-        results: safeProfiles,
-      });
-    } catch (error) {
-      console.error("❌ Claim search error:", error);
-
-      return res.status(500).json({
-        success: false,
-
-        message: "Unable to search profiles.",
-
-        error: error.message,
-      });
-    }
-  },
-);
-
-/* =========================================================
-   PREPARE MAIN OTP
-
-   POST
-   /api/claim/send-otp
-
-   FRONTEND SENDS PROFILE ID.
-
-   BACKEND READS SAVED PHONE.
-========================================================= */
-
-router.post(
-  "/send-otp",
-
-  async (req, res) => {
-    try {
-      const { profileId } = req.body || {};
-
-      if (!profileId) {
-        return res.status(400).json({
-          success: false,
-
-          message: "profileId is required.",
-        });
-      }
-
-      const studio = await TattooStudio.findById(profileId)
-        .select("_id phone")
-        .lean();
-
-      if (!studio) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Artist profile not found.",
-        });
-      }
-
-      const identifier = normalizePhone(studio.phone);
-
-      if (!identifier) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "This artist does not have a valid registered mobile number.",
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-
-        identifier,
-
-        maskedPhone: maskPhone(identifier),
-
-        phoneMasked: maskPhone(identifier),
-      });
-    } catch (error) {
-      console.error("❌ Prepare OTP error:", error);
-
-      return res.status(500).json({
-        success: false,
-
-        message: "Unable to prepare OTP verification.",
-
-        error: error.message,
-      });
-    }
-  },
-);
-
-/* =========================================================
-   VERIFY MAIN OTP
-
-   POST
-   /api/claim/verify-otp
-
-   {
-     profileId,
-     accessToken
-   }
-========================================================= */
-
-router.post(
-  "/verify-otp",
-
-  async (req, res) => {
-    try {
-      const { profileId, accessToken } = req.body || {};
-
-      if (!profileId || !accessToken) {
-        return res.status(400).json({
-          success: false,
-
-          message: "profileId and accessToken are required.",
-        });
-      }
-
-      const studio = await TattooStudio.findById(profileId);
-
-      if (!studio) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Artist profile not found.",
-        });
-      }
-
-      /* =============================================
-         VERIFY TOKEN WITH MSG91
-      ============================================= */
-
-      const msg91Result = await verifyMsg91AccessToken(accessToken);
-
-      /* =============================================
-         PHONE SAVED ON THIS ARTIST
-      ============================================= */
-
-      const profilePhone = normalizePhone(studio.phone);
-
-      if (!profilePhone) {
-        return res.status(400).json({
-          success: false,
-
-          message:
-            "This artist does not have a valid registered mobile number.",
-        });
-      }
-
-      /* =============================================
-         GET VERIFIED PHONE FROM MSG91
-      ============================================= */
-
-      const verifiedPhoneCandidates = getVerifiedPhoneCandidates(
-        msg91Result,
-
-        accessToken,
-      );
-
-      console.log("========================================");
-
-      console.log("✅ MSG91 access token verified");
-
-      console.log("📱 EXPECTED PROFILE PHONE:", maskPhone(profilePhone));
-
-      console.log(
-        "📱 VERIFIED PHONE CANDIDATES:",
-        maskCandidatePhones(verifiedPhoneCandidates),
-      );
-
-      console.log("========================================");
-
-      /* =============================================
-         SECURITY
-
-         A VALID OTP FOR ARTIST A
-         CANNOT UNLOCK ARTIST B.
-      ============================================= */
-
-      const phoneConfirmed = verifiedPhoneCandidates.has(profilePhone);
-
-      if (!phoneConfirmed) {
-        console.error(
-          "❌ MSG91 verified token phone does not match artist profile.",
-        );
-
-        return res.status(403).json({
-          success: false,
-
-          message: "Verified mobile number does not match this artist profile.",
-        });
-      }
-
-      console.log("✅ Verified mobile matches artist profile");
-
-      /* =============================================
-         MARK OWNER VERIFIED
-      ============================================= */
-
-      const now = new Date();
-
-      studio.claimed = true;
-
-      studio.phoneVerified = true;
-
-      studio.ownerVerified = true;
-
-      studio.updatedByOwner = true;
-
-      if (!studio.claimedAt) {
-        studio.claimedAt = now;
-      }
-
-      studio.updatedAt = now;
-
-      await studio.save();
-
-      /* =============================================
-         CHECK MEMBERSHIP EXPIRY
-      ============================================= */
-
-      await ensureMembershipCurrent(studio);
-
-      /* =============================================
-         CREATE EXACT 4-HOUR SESSION
-
-         THIS HAPPENS ONLY AFTER OTP.
-
-         PAYMENT NEVER RESTARTS
-         THIS SESSION.
-      ============================================= */
-
-      const sessionExpiresAt = Date.now() + CLAIM_SESSION_MS;
-
-      const claimToken = signClaimToken(
-        studio._id,
-
-        sessionExpiresAt,
-      );
-
-      res.cookie(
-        CLAIM_COOKIE,
-
-        claimToken,
-
-        claimCookieOptions(),
-      );
-
-      console.log("✅ OTP verified");
-
-      console.log("🔐 4-hour claim session started:", String(studio._id));
-
-      return res.status(200).json({
-        success: true,
-
-        message: "OTP verified successfully. You are logged in for 4 hours.",
-
-        sessionHours: 4,
-
-        sessionExpiresAt,
-
-        profile: studio.toObject(),
-
-        artist: studio.toObject(),
-
-        maskedPhone: maskPhone(studio.phone),
-
-        phoneMasked: maskPhone(studio.phone),
-      });
-    } catch (error) {
-      console.error("❌ Verify OTP error:", error);
-
-      return res.status(401).json({
-        success: false,
-
-        message: error.message || "OTP verification failed or expired.",
-      });
-    }
-  },
-);
-
-/* =========================================================
-   CURRENT VERIFIED PROFILE
-
-   GET
-   /api/claim/me
-
-   PRIVATE OWNER FLOW ONLY.
-
-   THIS DOES NOT CREATE
-   OR REFRESH A SESSION.
-========================================================= */
-
-router.get(
-  "/me",
-
-  requireClaimSession,
-
-  async (req, res) => {
-    try {
-      const studio = await TattooStudio.findById(req.claimSession.profileId);
-
-      if (!studio) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Artist profile not found.",
-        });
-      }
-
-      await ensureMembershipCurrent(studio);
-
-      return res.status(200).json({
-        success: true,
-
-        loggedIn: true,
-
-        sessionHours: 4,
-
-        /* =========================================
-             ORIGINAL SESSION EXPIRY
-
-             DO NOT RESET.
-          ========================================= */
-
-        sessionExpiresAt: Number(req.claimSession.exp),
-
-        profile: studio.toObject(),
-
-        artist: studio.toObject(),
-
-        maskedPhone: maskPhone(studio.phone),
-
-        phoneMasked: maskPhone(studio.phone),
-      });
-    } catch (error) {
-      console.error("❌ Claim me error:", error);
-
-      return res.status(500).json({
-        success: false,
-
-        message: "Unable to load profile.",
-      });
-    }
-  },
-);
-
-/* =========================================================
-   IMPORTANT
-
-   THERE IS NO:
-
-   /refresh-session
-
-   OWNER SESSION IS EXACTLY
-   4 HOURS FROM MAIN OTP.
-========================================================= */
-
-/* =========================================================
-   UPDATE PROFILE
-
-   POST
-   /api/claim/update
-
-   ALL DETAILS ARE SAVED
-   REGARDLESS OF PLAN.
-
-   PLAN ONLY CONTROLS
-   PUBLIC VISIBILITY.
-========================================================= */
-
-router.post(
-  "/update",
-
-  requireClaimSession,
-
-  async (req, res) => {
-    try {
-      const {
-        profileId,
-
-        name,
-
-        email,
-
-        city,
-
-        state,
-
-        studio,
-
-        experience,
-
-        instagram,
-
-        tattooStyles,
-
-        bio,
-
-        profileLinks,
-
-        profileImage,
-
-        portfolioImages,
-      } = req.body || {};
-
-      /* =============================================
-         SECURITY
-
-         OWNER CAN UPDATE ONLY
-         THE VERIFIED PROFILE.
-      ============================================= */
-
-      if (
-        !profileId ||
-        String(profileId) !== String(req.claimSession.profileId)
-      ) {
-        return res.status(403).json({
-          success: false,
-
-          message: "You cannot update this profile.",
-        });
-      }
-
-      const artist = await TattooStudio.findById(profileId);
-
-      if (!artist) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Artist profile not found.",
-        });
-      }
-
-      /* =============================================
-         NAME
-      ============================================= */
-
-      if (typeof name === "string") {
-        artist.name = name.trim();
-      }
-
-      /* =============================================
-         EMAIL
-      ============================================= */
-
-      if (typeof email === "string") {
-        artist.email = email.trim().toLowerCase();
-      }
-
-      /* =============================================
-         CITY
-      ============================================= */
-
-      if (typeof city === "string") {
-        artist.city = city.trim();
-      }
-
-      /* =============================================
-         STATE
-      ============================================= */
-
-      if (typeof state === "string") {
-        artist.state = state.trim();
-      }
-
-      /* =============================================
-         STUDIO
-      ============================================= */
-
-      if (typeof studio === "string") {
-        artist.studio = studio.trim();
-
-        if (
-          Object.prototype.hasOwnProperty.call(artist.toObject(), "studioName")
-        ) {
-          artist.studioName = studio.trim();
-        }
-      }
-
-      /* =============================================
-         EXPERIENCE
-      ============================================= */
-
-      if (typeof experience === "string") {
-        artist.experience = experience.trim();
-      }
-
-      /* =============================================
-         INSTAGRAM
-      ============================================= */
-
-      if (typeof instagram === "string") {
-        artist.instagram = instagram.trim();
-      }
-
-      /* =============================================
-         BIO
-      ============================================= */
-
-      if (typeof bio === "string") {
-        const cleanBio = bio.trim();
-
-        if (cleanBio.length > 1500) {
-          return res.status(400).json({
-            success: false,
-
-            message: "Bio must be 1500 characters or less.",
-          });
-        }
-
-        artist.bio = cleanBio;
-      }
-
-      /* =============================================
-   PROFILE LINKS
-
-   MAXIMUM 3 SAVED
-   SAVED FOR FREE / SILVER / GOLD
-============================================= */
-
-      if (profileLinks !== undefined) {
-        if (!Array.isArray(profileLinks)) {
-          return res.status(400).json({
-            success: false,
-            message: "profileLinks must be an array.",
-          });
-        }
-
-        artist.profileLinks = profileLinks
-          .map((link) => String(link || "").trim())
-          .filter(Boolean)
-          .slice(0, 3);
-      }
-
-      /* =============================================
-         PROFILE IMAGE
-      ============================================= */
-
-      if (typeof profileImage === "string") {
-        artist.profileImage = profileImage.trim() ? profileImage : "";
-      }
-
-      /* =============================================
-         TATTOO SPECIALITIES
-
-         PULLED BOOK YOUR ARTIST
-         FEATURE KEPT
-      ============================================= */
-
-      if (tattooStyles !== undefined) {
-        if (!Array.isArray(tattooStyles)) {
-          return res.status(400).json({
-            success: false,
-
-            message: "tattooStyles must be an array.",
-          });
-        }
-
-        const normalizedStyles = normalizeTattooStyles(tattooStyles);
-
-        if (tattooStyles.length > 0 && normalizedStyles.length === 0) {
-          return res.status(400).json({
-            success: false,
-
-            message: "Please select valid tattoo styles.",
-          });
-        }
-
-        artist.tattooStyles = normalizedStyles;
-      }
-
-      /* =============================================
-         PORTFOLIO
-
-         MAXIMUM 10 SAVED
-      ============================================= */
-
-      if (portfolioImages !== undefined) {
-        if (!Array.isArray(portfolioImages)) {
-          return res.status(400).json({
-            success: false,
-
-            message: "portfolioImages must be an array.",
-          });
-        }
-
-        artist.portfolioImages = portfolioImages
-          .map((image) => String(image || "").trim())
-          .filter(Boolean)
-          .slice(0, 10);
-      }
-
-      /* =============================================
-         OWNER FLAGS
-      ============================================= */
-
-      artist.claimed = true;
-
-      artist.phoneVerified = true;
-
-      artist.ownerVerified = true;
-
-      artist.updatedByOwner = true;
-
-      artist.updatedAt = new Date();
-
-      /* =============================================
-         SAVE
-
-         FREE / SILVER / GOLD
-         DOES NOT DELETE DETAILS.
-      ============================================= */
-
-      await artist.save();
-
-      const responseProfile =
-        String(req.query?.compact || "") === "1"
-          ? compactOwnerProfile(artist)
-          : artist.toObject();
-
-      return res.status(200).json({
-        success: true,
-
-        message: "Profile updated successfully.",
-
-        profile: responseProfile,
-
-        artist: responseProfile,
-
-        maskedPhone: maskPhone(artist.phone),
-
-        phoneMasked: maskPhone(artist.phone),
-      });
-    } catch (error) {
-      console.error("❌ Update profile error:", error);
-
-      return res.status(500).json({
-        success: false,
-
-        message: error.message || "Unable to update profile.",
-      });
-    }
-  },
-);
-
-/* =========================================================
-   SELECT FREE / BASIC
-
-   POST
-   /api/claim/select-free
-
-   PROFILE DETAILS STAY SAVED.
-========================================================= */
-
-router.post(
-  "/select-free",
-
-  requireClaimSession,
-
-  async (req, res) => {
-    try {
-      const artist = await TattooStudio.findById(req.claimSession.profileId);
-
-      if (!artist) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Artist profile not found.",
-        });
-      }
-
-      /* =============================================
-         FIRST CHECK MEMBERSHIP
-      ============================================= */
-
-      await ensureMembershipCurrent(artist);
-
-      const currentPlan = normalizePlan(artist.plan);
-
-      const expiry = artist.planExpiresAt
-        ? new Date(artist.planExpiresAt).getTime()
-        : 0;
-
-      const hasActivePaidMembership =
-        (currentPlan === "pro" || currentPlan === "verified") &&
-        artist.paymentStatus === "paid" &&
-        expiry > Date.now();
-
-      /* =============================================
-         DO NOT DESTROY ACTIVE
-         SILVER / GOLD MEMBERSHIP
-      ============================================= */
-
-      if (hasActivePaidMembership) {
-        return res.status(409).json({
-          success: false,
-
-          message:
-            "Your paid membership is still active. It will return to Free automatically after expiry.",
-
-          plan: currentPlan,
-
-          planExpiresAt: artist.planExpiresAt,
-        });
-      }
-
-      /* =============================================
-         ACTIVATE FREE
-      ============================================= */
-
-      applyBasicPlan(artist);
-
-      artist.planStartedAt = null;
-
-      artist.planExpiresAt = null;
-
-      await artist.save();
-
-      return res.status(200).json({
-        success: true,
-
-        message: "Free / Basic listing is active.",
-
-        profile: artist.toObject(),
-
-        artist: artist.toObject(),
-      });
-    } catch (error) {
-      console.error("❌ Select free plan error:", error);
-
-      return res.status(500).json({
-        success: false,
-
-        message: error.message || "Unable to activate the Free plan.",
-      });
-    }
-  },
-);
-
-/* =========================================================
-   CHANGE PHONE
-
-   SEND OTP
-
-   POST
-   /api/claim/change-phone/send-otp
-========================================================= */
-
-router.post(
-  "/change-phone/send-otp",
-
-  requireClaimSession,
-
-  async (req, res) => {
-    try {
-      const { profileId, newPhone } = req.body || {};
-
-      /* =============================================
-         OWNERSHIP CHECK
-      ============================================= */
-
-      if (
-        !profileId ||
-        String(profileId) !== String(req.claimSession.profileId)
-      ) {
-        return res.status(403).json({
-          success: false,
-
-          message: "You cannot update this profile.",
-        });
-      }
-
-      const normalizedNewPhone = normalizePhone(newPhone);
-
-      if (!normalizedNewPhone) {
-        return res.status(400).json({
-          success: false,
-
-          message: "Enter a valid new mobile number.",
-        });
-      }
-
-      const artist = await TattooStudio.findById(profileId).lean();
-
-      if (!artist) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Artist profile not found.",
-        });
-      }
-
-      const currentPhone = normalizePhone(artist.phone);
-
-      if (currentPhone && currentPhone === normalizedNewPhone) {
-        return res.status(400).json({
-          success: false,
-
-          message: "This is already your registered mobile number.",
-        });
-      }
-
-      /* =============================================
-         SEND OTP FROM BACKEND
-      ============================================= */
-
-      await sendDirectMsg91Otp(normalizedNewPhone);
-
-      console.log("📲 Change-phone OTP sent:", maskPhone(normalizedNewPhone));
-
-      return res.status(200).json({
-        success: true,
-
-        message: "OTP sent to the new mobile number.",
-
-        maskedPhone: maskPhone(normalizedNewPhone),
-
-        phoneMasked: maskPhone(normalizedNewPhone),
-      });
-    } catch (error) {
-      console.error("❌ Change phone send OTP error:", error);
-
+    if (!profileId) {
       return res.status(400).json({
         success: false,
 
-        message:
-          error.message || "Unable to send OTP to the new mobile number.",
+        message: "profileId is required.",
       });
     }
-  },
-);
 
-/* =========================================================
-   CHANGE PHONE
+    const studio = await TattooStudio.findById(profileId)
+      .select("_id phone")
+      .lean();
 
-   VERIFY OTP
+    if (!studio) {
+      return res.status(404).json({
+        success: false,
 
-   POST
-   /api/claim/change-phone/verify-otp
+        message: "Artist profile not found.",
+      });
+    }
 
-   SUPPORTS:
+    const identifier = normalizePhone(studio.phone);
 
-   {
-     profileId,
-     newPhone,
-     otp
-   }
+    if (!identifier) {
+      return res.status(400).json({
+        success: false,
 
-   OR
+        message: "This artist does not have a valid registered mobile number.",
+      });
+    }
 
-   {
-     profileId,
-     newPhone,
-     accessToken
-   }
-========================================================= */
+    return res.status(200).json({
+      success: true,
+
+      identifier,
+
+      maskedPhone: maskPhone(identifier),
+
+      phoneMasked: maskPhone(identifier),
+    });
+  } catch (error) {
+    console.error("❌ Prepare OTP error:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Unable to prepare OTP verification.",
+
+      error: error.message,
+    });
+  }
+});
+
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const { profileId, accessToken } = req.body || {};
+
+    if (!profileId || !accessToken) {
+      return res.status(400).json({
+        success: false,
+
+        message: "profileId and accessToken are required.",
+      });
+    }
+
+    const studio = await TattooStudio.findById(profileId);
+
+    if (!studio) {
+      return res.status(404).json({
+        success: false,
+
+        message: "Artist profile not found.",
+      });
+    }
+
+    const msg91Result = await verifyMsg91AccessToken(accessToken);
+
+    const profilePhone = normalizePhone(studio.phone);
+
+    if (!profilePhone) {
+      return res.status(400).json({
+        success: false,
+
+        message: "This artist does not have a valid registered mobile number.",
+      });
+    }
+
+    const verifiedPhoneCandidates = getVerifiedPhoneCandidates(
+      msg91Result,
+      accessToken,
+    );
+
+    console.log("========================================");
+
+    console.log("✅ MSG91 access token verified");
+
+    console.log("📱 EXPECTED PROFILE PHONE:", maskPhone(profilePhone));
+
+    console.log(
+      "📱 VERIFIED PHONE CANDIDATES:",
+      maskCandidatePhones(verifiedPhoneCandidates),
+    );
+
+    console.log("========================================");
+
+    const phoneConfirmed = verifiedPhoneCandidates.has(profilePhone);
+
+    if (!phoneConfirmed) {
+      console.error(
+        "❌ MSG91 verified token phone does not match artist profile.",
+      );
+
+      return res.status(403).json({
+        success: false,
+
+        message: "Verified mobile number does not match this artist profile.",
+      });
+    }
+
+    console.log("✅ Verified mobile matches artist profile");
+
+    const now = new Date();
+
+    studio.claimed = true;
+    studio.phoneVerified = true;
+    studio.ownerVerified = true;
+    studio.updatedByOwner = true;
+
+    if (!studio.claimedAt) {
+      studio.claimedAt = now;
+    }
+
+    studio.updatedAt = now;
+
+    await studio.save();
+
+    await ensureMembershipCurrent(studio);
+
+    const sessionExpiresAt = Date.now() + CLAIM_SESSION_MS;
+
+    const claimToken = signClaimToken(studio._id, sessionExpiresAt);
+
+    res.cookie(CLAIM_COOKIE, claimToken, claimCookieOptions());
+
+    console.log("✅ OTP verified");
+
+    console.log("🔐 4-hour claim session started:", String(studio._id));
+
+    return res.status(200).json({
+      success: true,
+
+      message: "OTP verified successfully. You are logged in for 4 hours.",
+
+      sessionHours: 4,
+
+      sessionExpiresAt,
+
+      profile: studio.toObject(),
+
+      artist: studio.toObject(),
+
+      maskedPhone: maskPhone(studio.phone),
+
+      phoneMasked: maskPhone(studio.phone),
+    });
+  } catch (error) {
+    console.error("❌ Verify OTP error:", error);
+
+    return res.status(401).json({
+      success: false,
+
+      message: error.message || "OTP verification failed or expired.",
+    });
+  }
+});
+
+router.get("/me", requireClaimSession, async (req, res) => {
+  try {
+    const studio = await TattooStudio.findById(req.claimSession.profileId);
+
+    if (!studio) {
+      return res.status(404).json({
+        success: false,
+
+        message: "Artist profile not found.",
+      });
+    }
+
+    await ensureMembershipCurrent(studio);
+
+    return res.status(200).json({
+      success: true,
+
+      loggedIn: true,
+
+      sessionHours: 4,
+
+      sessionExpiresAt: Number(req.claimSession.exp),
+
+      profile: studio.toObject(),
+
+      artist: studio.toObject(),
+
+      maskedPhone: maskPhone(studio.phone),
+
+      phoneMasked: maskPhone(studio.phone),
+    });
+  } catch (error) {
+    console.error("❌ Claim me error:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Unable to load profile.",
+    });
+  }
+});
+
+router.post("/update", requireClaimSession, async (req, res) => {
+  try {
+    const {
+      profileId,
+      name,
+      email,
+      city,
+      state,
+      studio,
+      experience,
+      instagram,
+      tattooStyles,
+      bio,
+      profileLinks,
+      profileImage,
+      portfolioImages,
+    } = req.body || {};
+
+    if (
+      !profileId ||
+      String(profileId) !== String(req.claimSession.profileId)
+    ) {
+      return res.status(403).json({
+        success: false,
+
+        message: "You cannot update this profile.",
+      });
+    }
+
+    const artist = await TattooStudio.findById(profileId);
+
+    if (!artist) {
+      return res.status(404).json({
+        success: false,
+
+        message: "Artist profile not found.",
+      });
+    }
+
+    if (typeof name === "string") {
+      artist.name = name.trim();
+    }
+
+    if (typeof email === "string") {
+      artist.email = email.trim().toLowerCase();
+    }
+
+    if (typeof city === "string") {
+      artist.city = city.trim();
+    }
+
+    if (typeof state === "string") {
+      artist.state = state.trim();
+    }
+
+    if (typeof studio === "string") {
+      artist.studio = studio.trim();
+
+      if (
+        Object.prototype.hasOwnProperty.call(artist.toObject(), "studioName")
+      ) {
+        artist.studioName = studio.trim();
+      }
+    }
+
+    if (typeof experience === "string") {
+      artist.experience = experience.trim();
+    }
+
+    if (typeof instagram === "string") {
+      artist.instagram = instagram.trim();
+    }
+
+    if (typeof bio === "string") {
+      const cleanBio = bio.trim();
+
+      if (cleanBio.length > 1500) {
+        return res.status(400).json({
+          success: false,
+
+          message: "Bio must be 1500 characters or less.",
+        });
+      }
+
+      artist.bio = cleanBio;
+    }
+
+    if (profileLinks !== undefined) {
+      if (!Array.isArray(profileLinks)) {
+        return res.status(400).json({
+          success: false,
+
+          message: "profileLinks must be an array.",
+        });
+      }
+
+      artist.profileLinks = profileLinks
+        .map((link) => String(link || "").trim())
+        .filter(Boolean)
+        .slice(0, 3);
+    }
+
+    if (typeof profileImage === "string") {
+      artist.profileImage = profileImage.trim() ? profileImage : "";
+    }
+
+    if (tattooStyles !== undefined) {
+      if (!Array.isArray(tattooStyles)) {
+        return res.status(400).json({
+          success: false,
+
+          message: "tattooStyles must be an array.",
+        });
+      }
+
+      const normalizedStyles = normalizeTattooStyles(tattooStyles);
+
+      if (tattooStyles.length > 0 && normalizedStyles.length === 0) {
+        return res.status(400).json({
+          success: false,
+
+          message: "Please select valid tattoo styles.",
+        });
+      }
+
+      artist.tattooStyles = normalizedStyles;
+    }
+
+    if (portfolioImages !== undefined) {
+      if (!Array.isArray(portfolioImages)) {
+        return res.status(400).json({
+          success: false,
+
+          message: "portfolioImages must be an array.",
+        });
+      }
+
+      artist.portfolioImages = portfolioImages
+        .map((image) => String(image || "").trim())
+        .filter(Boolean)
+        .slice(0, 10);
+    }
+
+    artist.claimed = true;
+    artist.phoneVerified = true;
+    artist.ownerVerified = true;
+    artist.updatedByOwner = true;
+    artist.updatedAt = new Date();
+
+    await artist.save();
+
+    const responseProfile =
+      String(req.query?.compact || "") === "1"
+        ? compactOwnerProfile(artist)
+        : artist.toObject();
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Profile updated successfully.",
+
+      profile: responseProfile,
+
+      artist: responseProfile,
+
+      maskedPhone: maskPhone(artist.phone),
+
+      phoneMasked: maskPhone(artist.phone),
+    });
+  } catch (error) {
+    console.error("❌ Update profile error:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: error.message || "Unable to update profile.",
+    });
+  }
+});
+
+router.post("/select-free", requireClaimSession, async (req, res) => {
+  try {
+    const artist = await TattooStudio.findById(req.claimSession.profileId);
+
+    if (!artist) {
+      return res.status(404).json({
+        success: false,
+
+        message: "Artist profile not found.",
+      });
+    }
+
+    await ensureMembershipCurrent(artist);
+
+    const currentPlan = normalizePlan(artist.plan);
+
+    const expiry = artist.planExpiresAt
+      ? new Date(artist.planExpiresAt).getTime()
+      : 0;
+
+    const hasActivePaidMembership =
+      (currentPlan === "pro" || currentPlan === "verified") &&
+      artist.paymentStatus === "paid" &&
+      expiry > Date.now();
+
+    if (hasActivePaidMembership) {
+      return res.status(409).json({
+        success: false,
+
+        message:
+          "Your paid membership is still active. It will return to Free automatically after expiry.",
+
+        plan: currentPlan,
+
+        planExpiresAt: artist.planExpiresAt,
+      });
+    }
+
+    applyBasicPlan(artist);
+
+    artist.planStartedAt = null;
+    artist.planExpiresAt = null;
+
+    await artist.save();
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Free / Basic listing is active.",
+
+      profile: artist.toObject(),
+
+      artist: artist.toObject(),
+    });
+  } catch (error) {
+    console.error("❌ Select free plan error:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: error.message || "Unable to activate the Free plan.",
+    });
+  }
+});
+
+router.post("/change-phone/send-otp", requireClaimSession, async (req, res) => {
+  try {
+    const { profileId, newPhone } = req.body || {};
+
+    if (
+      !profileId ||
+      String(profileId) !== String(req.claimSession.profileId)
+    ) {
+      return res.status(403).json({
+        success: false,
+
+        message: "You cannot update this profile.",
+      });
+    }
+
+    const normalizedNewPhone = normalizePhone(newPhone);
+
+    if (!normalizedNewPhone) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Enter a valid new mobile number.",
+      });
+    }
+
+    const artist = await TattooStudio.findById(profileId).lean();
+
+    if (!artist) {
+      return res.status(404).json({
+        success: false,
+
+        message: "Artist profile not found.",
+      });
+    }
+
+    const currentPhone = normalizePhone(artist.phone);
+
+    if (currentPhone && currentPhone === normalizedNewPhone) {
+      return res.status(400).json({
+        success: false,
+
+        message: "This is already your registered mobile number.",
+      });
+    }
+
+    await sendDirectMsg91Otp(normalizedNewPhone);
+
+    console.log("📲 Change-phone OTP sent:", maskPhone(normalizedNewPhone));
+
+    return res.status(200).json({
+      success: true,
+
+      message: "OTP sent to the new mobile number.",
+
+      maskedPhone: maskPhone(normalizedNewPhone),
+
+      phoneMasked: maskPhone(normalizedNewPhone),
+    });
+  } catch (error) {
+    console.error("❌ Change phone send OTP error:", error);
+
+    return res.status(400).json({
+      success: false,
+
+      message: error.message || "Unable to send OTP to the new mobile number.",
+    });
+  }
+});
 
 router.post(
   "/change-phone/verify-otp",
-
   requireClaimSession,
-
   async (req, res) => {
     try {
-      const {
-        profileId,
-
-        newPhone,
-
-        otp,
-
-        accessToken,
-      } = req.body || {};
-
-      /* =============================================
-         OWNERSHIP CHECK
-      ============================================= */
+      const { profileId, newPhone, otp, accessToken } = req.body || {};
 
       if (
         !profileId ||
@@ -1644,21 +1205,13 @@ router.post(
           message: "Enter a valid new mobile number.",
         });
       }
-
-      /* =============================================
-         OPTION 1
-
-         MSG91 WIDGET TOKEN
-      ============================================= */
 
       if (accessToken) {
         const msg91Result = await verifyMsg91AccessToken(accessToken);
 
         const newPhoneConfirmed = isVerifiedPhoneConfirmed(
           msg91Result,
-
           accessToken,
-
           normalizedNewPhone,
         );
 
@@ -1671,12 +1224,6 @@ router.post(
           });
         }
       } else {
-        /* ===========================================
-           OPTION 2
-
-           DIRECT OTP FROM ENTER.JSX
-        =========================================== */
-
         const cleanOtp = String(otp || "").replace(/\D/g, "");
 
         if (!/^\d{4,6}$/.test(cleanOtp)) {
@@ -1687,18 +1234,8 @@ router.post(
           });
         }
 
-        await verifyDirectMsg91Otp(
-          normalizedNewPhone,
-
-          cleanOtp,
-        );
+        await verifyDirectMsg91Otp(normalizedNewPhone, cleanOtp);
       }
-
-      /* =============================================
-         OTP VERIFIED
-
-         UPDATE PHONE
-      ============================================= */
 
       const artist = await TattooStudio.findById(profileId);
 
@@ -1713,23 +1250,12 @@ router.post(
       artist.phone = `+${normalizedNewPhone}`;
 
       artist.phoneVerified = true;
-
       artist.claimed = true;
-
       artist.ownerVerified = true;
-
       artist.updatedByOwner = true;
-
       artist.updatedAt = new Date();
 
       await artist.save();
-
-      /* =============================================
-         IMPORTANT
-
-         PHONE CHANGE DOES NOT
-         RESTART THE 4-HOUR SESSION.
-      ============================================= */
 
       return res.status(200).json({
         success: true,
@@ -1756,35 +1282,18 @@ router.post(
   },
 );
 
-/* =========================================================
-   LOGOUT
+router.post("/logout", (req, res) => {
+  clearClaimSessionCookies(res);
 
-   POST
-   /api/claim/logout
-========================================================= */
-
-router.post(
-  "/logout",
-
-  (req, res) => {
-    res.clearCookie(
-      CLAIM_COOKIE,
-
-      clearClaimCookieOptions(),
-    );
-
-    return res.status(200).json({
-      success: true,
-
-      loggedIn: false,
-
-      message: "Logged out successfully.",
-    });
-  },
-);
-
-/* =========================================================
-   EXPORT
-========================================================= */
+  return res.status(200).json({
+    success: true,
+    loggedIn: false,
+    message: "Logged out successfully.",
+  });
+});
 
 module.exports = router;
+
+// IMPORTANT:
+// GET ENTRY reuses the exact same claim-session middleware.
+module.exports.requireClaimSession = requireClaimSession;

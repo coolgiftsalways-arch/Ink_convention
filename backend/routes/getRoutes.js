@@ -8,45 +8,38 @@ const {
   deleteGet,
 } = require("../Controller/getController");
 
+const claimRoutes = require("./claimRoutes");
+
 const router = express.Router();
 
-/* =========================================================
-   CREATE GET ENTRY
-   POST /api/get
-========================================================= */
+const requireClaimSession = claimRoutes.requireClaimSession;
 
-router.post("/", createGet);
+const requireGetEntryClaimSession = (req, res, next) => {
+  if (typeof requireClaimSession !== "function") {
+    console.error("❌ requireClaimSession is not exported from claimRoutes.js");
 
-/* =========================================================
-   GET ALL ENTRIES
-   GET /api/get
-========================================================= */
+    return res.status(500).json({
+      success: false,
+      message: "Claim-session middleware is not configured correctly.",
+    });
+  }
 
+  return requireClaimSession(req, res, next);
+};
+
+// CREATE GET ENTRY
+router.post("/", requireGetEntryClaimSession, createGet);
+
+// GET ALL
 router.get("/", getAllGets);
 
-/* =========================================================
-   GET SINGLE ENTRY
-   GET /api/get/:id
-========================================================= */
-
+// GET SINGLE
 router.get("/:id", getGetById);
 
-/* =========================================================
-   UPDATE STATUS
-   PATCH /api/get/:id/status
-========================================================= */
-
+// UPDATE STATUS
 router.patch("/:id/status", updateGetStatus);
 
-/* =========================================================
-   DELETE ENTRY
-   DELETE /api/get/:id
-========================================================= */
-
+// DELETE
 router.delete("/:id", deleteGet);
-
-/* =========================================================
-   EXPORT
-========================================================= */
 
 module.exports = router;
