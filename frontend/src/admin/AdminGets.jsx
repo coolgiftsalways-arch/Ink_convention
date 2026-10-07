@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import AdminSidebar from "./AdminSidebar";
+
 import {
   CheckCircle2,
   Eye,
@@ -18,6 +21,20 @@ const API_URL = import.meta.env.DEV
 const STATUS_OPTIONS = ["New", "Contacted", "Confirmed", "Cancelled"];
 
 export default function AdminGets() {
+  const navigate = useNavigate();
+
+  /* =========================================================
+     LOGOUT
+  ========================================================= */
+
+  const handleLogout = () => {
+    navigate("/admin/login");
+  };
+
+  /* =========================================================
+     STATE
+  ========================================================= */
+
   const [entries, setEntries] = useState([]);
 
   const [stats, setStats] = useState({
@@ -29,10 +46,15 @@ export default function AdminGets() {
   });
 
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState("");
+
   const [search, setSearch] = useState("");
+
   const [selectedEntry, setSelectedEntry] = useState(null);
+
   const [deletingId, setDeletingId] = useState(null);
+
   const entriesRequestRef = useRef(null);
 
   /* =========================================================
@@ -40,23 +62,31 @@ export default function AdminGets() {
   ========================================================= */
 
   const loadEntries = useCallback(() => {
-    // Cancel an older load so it cannot overwrite newer results.
     entriesRequestRef.current?.abort();
+
     const controller = new AbortController();
+
     entriesRequestRef.current = controller;
 
     return fetch(`${API_URL}/api/get`, {
       method: "GET",
+
       signal: controller.signal,
+
       cache: "no-store",
+
       headers: {
         Accept: "application/json",
       },
+
       credentials: "include",
     })
       .then(async (response) => {
         const rawText = await response.text();
-        if (controller.signal.aborted) return;
+
+        if (controller.signal.aborted) {
+          return;
+        }
 
         let data = {};
 
@@ -65,8 +95,13 @@ export default function AdminGets() {
             data = JSON.parse(rawText);
           } catch (parseError) {
             throw new Error(
-              `Invalid server response (HTTP ${response.status}): ${rawText.slice(0, 180)}`,
-              { cause: parseError },
+              `Invalid server response (HTTP ${response.status}): ${rawText.slice(
+                0,
+                180,
+              )}`,
+              {
+                cause: parseError,
+              },
             );
           }
         }
@@ -93,6 +128,7 @@ export default function AdminGets() {
               : [];
 
         setError("");
+
         setEntries(list);
 
         setStats({
@@ -120,7 +156,10 @@ export default function AdminGets() {
         });
       })
       .catch((loadError) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) {
+          return;
+        }
+
         console.error("Admin GET entries load error:", loadError);
 
         setError(loadError.message || "Unable to load GET ENTRY submissions.");
@@ -132,12 +171,21 @@ export default function AdminGets() {
       });
   }, []);
 
-  // Loading already starts as true on mount. Reset it only for user actions.
+  /* =========================================================
+     REFRESH
+  ========================================================= */
+
   const refreshEntries = () => {
     setLoading(true);
+
     setError("");
+
     return loadEntries();
   };
+
+  /* =========================================================
+     FIRST LOAD
+  ========================================================= */
 
   useEffect(() => {
     void loadEntries();
@@ -194,6 +242,7 @@ export default function AdminGets() {
       });
 
       const rawText = await response.text();
+
       const data = rawText.trim() ? JSON.parse(rawText) : {};
 
       if (!response.ok) {
@@ -247,6 +296,7 @@ export default function AdminGets() {
       });
 
       const rawText = await response.text();
+
       const data = rawText.trim() ? JSON.parse(rawText) : {};
 
       if (!response.ok) {
@@ -302,270 +352,455 @@ export default function AdminGets() {
   ========================================================= */
 
   return (
-    <div className="min-h-screen bg-[#050507] p-5 text-white lg:p-8">
-      <div className="mx-auto max-w-[1600px]">
-        {/* HEADER */}
+    <div className="min-h-screen bg-[#050507] text-white">
+      {/* =====================================================
+          ADMIN SIDEBAR
+      ===================================================== */}
 
-        <div className="flex flex-col justify-between gap-5 border-b border-white/10 pb-7 lg:flex-row lg:items-end">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1.5">
-              <Ticket size={13} className="text-purple-400" />
+      <AdminSidebar onLogout={handleLogout} getCount={stats.total} />
 
-              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-purple-300">
-                INK CONVENTION 2026
-              </span>
+      {/* =====================================================
+          MAIN CONTENT
+
+          Sidebar width = w-72
+          lg:ml-72 keeps content beside sidebar.
+      ===================================================== */}
+
+      <main className="min-h-screen lg:ml-72">
+        <div className="p-5 lg:p-8">
+          <div className="mx-auto max-w-[1600px]">
+            {/* =================================================
+                HEADER
+            ================================================= */}
+
+            <div className="flex flex-col justify-between gap-5 border-b border-white/10 pb-7 lg:flex-row lg:items-end">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1.5">
+                  <Ticket size={13} className="text-purple-400" />
+
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-purple-300">
+                    INK CONVENTION 2026
+                  </span>
+                </div>
+
+                <h1 className="mt-5 text-4xl font-black uppercase tracking-tight sm:text-5xl">
+                  Visitor Entries
+                  <span className="text-[#a855f7]">.</span>
+                </h1>
+
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-500">
+                  View visitors who submitted the GET ENTRY form, ticket
+                  quantities and contact status.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={refreshEntries}
+                disabled={loading}
+                className="
+                  inline-flex
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  border
+                  border-white/10
+                  bg-white/[0.04]
+                  px-5
+                  py-3
+                  font-mono
+                  text-[10px]
+                  font-black
+                  uppercase
+                  tracking-wider
+                  transition
+                  hover:border-purple-500/40
+                  hover:bg-purple-500/10
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
+                "
+              >
+                <RefreshCcw
+                  size={15}
+                  className={loading ? "animate-spin" : ""}
+                />
+
+                {loading ? "Refreshing..." : "Refresh"}
+              </button>
             </div>
 
-            <h1 className="mt-5 text-4xl font-black uppercase tracking-tight sm:text-5xl">
-              Visitor Entries
-              <span className="text-[#a855f7]">.</span>
-            </h1>
+            {/* =================================================
+                STATS
+            ================================================= */}
 
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-500">
-              View visitors who submitted the GET ENTRY form, ticket quantities
-              and contact status.
-            </p>
-          </div>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <StatCard label="Total Entries" value={stats.total} />
 
-          <button
-            type="button"
-            onClick={refreshEntries}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3 font-mono text-[10px] font-black uppercase tracking-wider transition hover:border-purple-500/40 hover:bg-purple-500/10"
-          >
-            <RefreshCcw size={15} />
-            Refresh
-          </button>
-        </div>
+              <StatCard
+                label="New"
+                value={stats.new}
+                accent="text-purple-400"
+              />
 
-        {/* STATS */}
+              <StatCard
+                label="Contacted"
+                value={stats.contacted}
+                accent="text-blue-400"
+              />
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <StatCard label="Total Entries" value={stats.total} />
+              <StatCard
+                label="Confirmed"
+                value={stats.confirmed}
+                accent="text-emerald-400"
+              />
 
-          <StatCard label="New" value={stats.new} accent="text-purple-400" />
-
-          <StatCard
-            label="Contacted"
-            value={stats.contacted}
-            accent="text-blue-400"
-          />
-
-          <StatCard
-            label="Confirmed"
-            value={stats.confirmed}
-            accent="text-emerald-400"
-          />
-
-          <StatCard
-            label="Cancelled"
-            value={stats.cancelled}
-            accent="text-red-400"
-          />
-        </div>
-
-        {/* SEARCH */}
-
-        <div className="mt-7 rounded-2xl border border-white/10 bg-[#0b0b10] p-4">
-          <div className="relative">
-            <Search
-              size={17}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
-            />
-
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search name, email, mobile, state or city..."
-              className="h-12 w-full rounded-xl border border-white/10 bg-[#07070a] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-gray-700 focus:border-purple-500"
-            />
-          </div>
-        </div>
-
-        {/* TABLE */}
-
-        <div className="mt-7 overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b10]">
-          <div className="flex items-center justify-between border-b border-white/10 p-5">
-            <div>
-              <h2 className="text-xl font-black uppercase">
-                GET ENTRY REQUESTS
-              </h2>
-
-              <p className="mt-1 font-mono text-[9px] uppercase tracking-wider text-gray-600">
-                Showing {filteredEntries.length} entries
-              </p>
+              <StatCard
+                label="Cancelled"
+                value={stats.cancelled}
+                accent="text-red-400"
+              />
             </div>
 
-            <Ticket size={21} className="text-purple-400" />
-          </div>
+            {/* =================================================
+                SEARCH
+            ================================================= */}
 
-          {error && (
-            <div className="m-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
-              {error}
+            <div className="mt-7 rounded-2xl border border-white/10 bg-[#0b0b10] p-4">
+              <div className="relative">
+                <Search
+                  size={17}
+                  className="
+                    absolute
+                    left-4
+                    top-1/2
+                    -translate-y-1/2
+                    text-gray-600
+                  "
+                />
+
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search name, email, mobile, state or city..."
+                  className="
+                    h-12
+                    w-full
+                    rounded-xl
+                    border
+                    border-white/10
+                    bg-[#07070a]
+                    pl-11
+                    pr-4
+                    text-sm
+                    text-white
+                    outline-none
+                    transition
+                    placeholder:text-gray-700
+                    focus:border-purple-500
+                  "
+                />
+              </div>
             </div>
-          )}
 
-          {loading ? (
-            <div className="p-12 text-center font-mono text-xs uppercase tracking-wider text-gray-500">
-              Loading entries...
-            </div>
-          ) : filteredEntries.length === 0 ? (
-            <div className="p-12 text-center">
-              <Ticket size={30} className="mx-auto text-gray-700" />
+            {/* =================================================
+                TABLE
+            ================================================= */}
 
-              <p className="mt-4 font-mono text-xs uppercase tracking-wider text-gray-600">
-                No GET ENTRY submissions yet
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1250px]">
-                <thead className="bg-white/[0.025]">
-                  <tr className="text-left font-mono text-[9px] font-black uppercase tracking-wider text-gray-600">
-                    <th className="px-5 py-4">Visitor</th>
+            <div className="mt-7 overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b10]">
+              {/* TABLE HEADER */}
 
-                    <th className="px-5 py-4">Mobile</th>
+              <div className="flex items-center justify-between border-b border-white/10 p-5">
+                <div>
+                  <h2 className="text-xl font-black uppercase">
+                    GET ENTRY REQUESTS
+                  </h2>
 
-                    <th className="px-5 py-4">State</th>
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-wider text-gray-600">
+                    Showing {filteredEntries.length} entries
+                  </p>
+                </div>
 
-                    <th className="px-5 py-4">Event</th>
+                <Ticket size={21} className="text-purple-400" />
+              </div>
 
-                    <th className="px-5 py-4">Tickets</th>
+              {/* ERROR */}
 
-                    <th className="px-5 py-4">Total</th>
+              {error && (
+                <div className="m-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
 
-                    <th className="px-5 py-4">Submitted</th>
+              {/* LOADING */}
 
-                    <th className="px-5 py-4">Status</th>
+              {loading ? (
+                <div className="p-12 text-center font-mono text-xs uppercase tracking-wider text-gray-500">
+                  Loading entries...
+                </div>
+              ) : filteredEntries.length === 0 ? (
+                /* EMPTY */
 
-                    <th className="px-5 py-4">Action</th>
-                  </tr>
-                </thead>
+                <div className="p-12 text-center">
+                  <Ticket size={30} className="mx-auto text-gray-700" />
 
-                <tbody className="divide-y divide-white/5">
-                  {filteredEntries.map((entry) => (
-                    <tr
-                      key={entry._id}
-                      className="text-xs text-gray-400 transition hover:bg-white/[0.02]"
-                    >
-                      {/* VISITOR */}
+                  <p className="mt-4 font-mono text-xs uppercase tracking-wider text-gray-600">
+                    No GET ENTRY submissions yet
+                  </p>
+                </div>
+              ) : (
+                /* TABLE */
 
-                      <td className="px-5 py-4">
-                        <p className="font-black text-white">
-                          {entry.fullName || "—"}
-                        </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1250px]">
+                    <thead className="bg-white/[0.025]">
+                      <tr className="text-left font-mono text-[9px] font-black uppercase tracking-wider text-gray-600">
+                        <th className="px-5 py-4">Visitor</th>
 
-                        <p className="mt-1 max-w-[220px] truncate text-[10px] text-gray-600">
-                          {entry.email || "—"}
-                        </p>
-                      </td>
+                        <th className="px-5 py-4">Mobile</th>
 
-                      {/* MOBILE */}
+                        <th className="px-5 py-4">State</th>
 
-                      <td className="px-5 py-4">{entry.mobile || "—"}</td>
+                        <th className="px-5 py-4">Event</th>
 
-                      {/* STATE */}
+                        <th className="px-5 py-4">Tickets</th>
 
-                      <td className="px-5 py-4">{entry.state || "—"}</td>
+                        <th className="px-5 py-4">Total</th>
 
-                      {/* EVENT */}
+                        <th className="px-5 py-4">Submitted</th>
 
-                      <td className="px-5 py-4">
-                        <p className="font-black uppercase text-white">
-                          {entry.eventCity || "—"}
-                        </p>
+                        <th className="px-5 py-4">Status</th>
 
-                        <p className="mt-1 text-[9px] text-gray-600">
-                          {entry.eventDate || "—"}
-                        </p>
-                      </td>
+                        <th className="px-5 py-4">Action</th>
+                      </tr>
+                    </thead>
 
-                      {/* TICKETS */}
-
-                      <td className="px-5 py-4">
-                        <span className="inline-flex min-w-[36px] items-center justify-center rounded-lg bg-purple-500/10 px-2 py-2 font-black text-purple-300">
-                          {entry.tickets || 0}
-                        </span>
-                      </td>
-
-                      {/* TOTAL */}
-
-                      <td className="px-5 py-4 font-black text-purple-300">
-                        ₹
-                        {Number(entry.totalAmount || 0).toLocaleString("en-IN")}
-                      </td>
-
-                      {/* DATE */}
-
-                      <td className="px-5 py-4 text-[10px]">
-                        {formatDateTime(entry.createdAt)}
-                      </td>
-
-                      {/* STATUS */}
-
-                      <td className="px-5 py-4">
-                        <select
-                          value={entry.status || "New"}
-                          onChange={(event) =>
-                            updateStatus(entry._id, event.target.value)
-                          }
-                          className="rounded-lg border border-white/10 bg-[#07070a] px-3 py-2 font-mono text-[9px] font-bold uppercase text-white outline-none focus:border-purple-500"
+                    <tbody className="divide-y divide-white/5">
+                      {filteredEntries.map((entry) => (
+                        <tr
+                          key={entry._id}
+                          className="
+                              text-xs
+                              text-gray-400
+                              transition
+                              hover:bg-white/[0.02]
+                            "
                         >
-                          {STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+                          {/* VISITOR */}
 
-                      {/* ACTION */}
+                          <td className="px-5 py-4">
+                            <p className="font-black text-white">
+                              {entry.fullName || "—"}
+                            </p>
 
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedEntry(entry)}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-400 transition hover:border-purple-500/50 hover:bg-purple-500/10 hover:text-purple-300"
-                            title="View entry"
-                          >
-                            <Eye size={15} />
-                          </button>
+                            <p className="mt-1 max-w-[220px] truncate text-[10px] text-gray-600">
+                              {entry.email || "—"}
+                            </p>
+                          </td>
 
-                          <button
-                            type="button"
-                            disabled={deletingId === entry._id}
-                            onClick={() => deleteEntry(entry)}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/20 text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                            title="Delete entry"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          {/* MOBILE */}
+
+                          <td className="px-5 py-4">{entry.mobile || "—"}</td>
+
+                          {/* STATE */}
+
+                          <td className="px-5 py-4">{entry.state || "—"}</td>
+
+                          {/* EVENT */}
+
+                          <td className="px-5 py-4">
+                            <p className="font-black uppercase text-white">
+                              {entry.eventCity || "—"}
+                            </p>
+
+                            <p className="mt-1 text-[9px] text-gray-600">
+                              {entry.eventDate || "—"}
+                            </p>
+                          </td>
+
+                          {/* TICKETS */}
+
+                          <td className="px-5 py-4">
+                            <span className="inline-flex min-w-[36px] items-center justify-center rounded-lg bg-purple-500/10 px-2 py-2 font-black text-purple-300">
+                              {entry.tickets || 0}
+                            </span>
+                          </td>
+
+                          {/* TOTAL */}
+
+                          <td className="px-5 py-4 font-black text-purple-300">
+                            ₹
+                            {Number(entry.totalAmount || 0).toLocaleString(
+                              "en-IN",
+                            )}
+                          </td>
+
+                          {/* DATE */}
+
+                          <td className="px-5 py-4 text-[10px]">
+                            {formatDateTime(entry.createdAt)}
+                          </td>
+
+                          {/* STATUS */}
+
+                          <td className="px-5 py-4">
+                            <select
+                              value={entry.status || "New"}
+                              onChange={(event) =>
+                                updateStatus(entry._id, event.target.value)
+                              }
+                              className="
+                                  rounded-lg
+                                  border
+                                  border-white/10
+                                  bg-[#07070a]
+                                  px-3
+                                  py-2
+                                  font-mono
+                                  text-[9px]
+                                  font-bold
+                                  uppercase
+                                  text-white
+                                  outline-none
+                                  focus:border-purple-500
+                                "
+                            >
+                              {STATUS_OPTIONS.map((status) => (
+                                <option key={status} value={status}>
+                                  {status}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          {/* ACTION */}
+
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2">
+                              {/* VIEW */}
+
+                              <button
+                                type="button"
+                                onClick={() => setSelectedEntry(entry)}
+                                className="
+                                    flex
+                                    h-9
+                                    w-9
+                                    items-center
+                                    justify-center
+                                    rounded-lg
+                                    border
+                                    border-white/10
+                                    text-gray-400
+                                    transition
+                                    hover:border-purple-500/50
+                                    hover:bg-purple-500/10
+                                    hover:text-purple-300
+                                  "
+                                title="View entry"
+                              >
+                                <Eye size={15} />
+                              </button>
+
+                              {/* DELETE */}
+
+                              <button
+                                type="button"
+                                disabled={deletingId === entry._id}
+                                onClick={() => deleteEntry(entry)}
+                                className="
+                                    flex
+                                    h-9
+                                    w-9
+                                    items-center
+                                    justify-center
+                                    rounded-lg
+                                    border
+                                    border-red-500/20
+                                    text-red-400
+                                    transition
+                                    hover:bg-red-500/10
+                                    disabled:cursor-not-allowed
+                                    disabled:opacity-40
+                                  "
+                                title="Delete entry"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      </main>
 
       {/* =====================================================
           VIEW ENTRY MODAL
       ===================================================== */}
 
       {selectedEntry && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-5 backdrop-blur-sm">
-          <div className="relative w-full max-w-2xl rounded-[28px] border border-white/10 bg-[#0b0b10] p-6 shadow-2xl sm:p-7">
+        <div
+          className="
+            fixed
+            inset-0
+            z-[10000]
+            flex
+            items-center
+            justify-center
+            bg-black/80
+            p-5
+            backdrop-blur-sm
+          "
+        >
+          <div
+            className="
+              relative
+              w-full
+              max-w-2xl
+              rounded-[28px]
+              border
+              border-white/10
+              bg-[#0b0b10]
+              p-6
+              shadow-2xl
+              sm:p-7
+            "
+          >
+            {/* CLOSE */}
+
             <button
               type="button"
               onClick={() => setSelectedEntry(null)}
-              className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-gray-500 transition hover:border-white/20 hover:text-white"
+              className="
+                absolute
+                right-5
+                top-5
+                flex
+                h-9
+                w-9
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-white/10
+                text-gray-500
+                transition
+                hover:border-white/20
+                hover:text-white
+              "
+              aria-label="Close entry"
             >
               <X size={16} />
             </button>
+
+            {/* MODAL HEADER */}
 
             <div className="flex items-center gap-3 pr-12">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-300">
@@ -578,10 +813,12 @@ export default function AdminGets() {
                 </p>
 
                 <h3 className="mt-1 text-2xl font-black">
-                  {selectedEntry.fullName}
+                  {selectedEntry.fullName || "Visitor"}
                 </h3>
               </div>
             </div>
+
+            {/* INFO */}
 
             <div className="mt-7 grid gap-4 sm:grid-cols-2">
               <Info label="Email" value={selectedEntry.email} />
@@ -602,7 +839,14 @@ export default function AdminGets() {
               <Info
                 label="Price Per Ticket"
                 value={`₹${Number(
-                  selectedEntry.ticketPrice || 1100,
+                  selectedEntry.ticketPrice || 2999,
+                ).toLocaleString("en-IN")}`}
+              />
+
+              <Info
+                label="Additional Ticket"
+                value={`₹${Number(
+                  selectedEntry.additionalTicketPrice || 1499,
                 ).toLocaleString("en-IN")}`}
               />
 
@@ -630,11 +874,31 @@ export default function AdminGets() {
               />
             </div>
 
+            {/* MARK CONTACTED */}
+
             {selectedEntry.status !== "Contacted" && (
               <button
                 type="button"
                 onClick={() => updateStatus(selectedEntry._id, "Contacted")}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 font-mono text-[10px] font-black uppercase tracking-wider transition hover:bg-purple-500"
+                className="
+                  mt-6
+                  flex
+                  w-full
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-purple-600
+                  px-5
+                  py-3
+                  font-mono
+                  text-[10px]
+                  font-black
+                  uppercase
+                  tracking-wider
+                  transition
+                  hover:bg-purple-500
+                "
               >
                 <CheckCircle2 size={16} />
                 Mark as Contacted
@@ -677,7 +941,7 @@ function Info({ label, value }) {
       </p>
 
       <p className="mt-2 break-words text-sm font-semibold text-white">
-        {value || "—"}
+        {value ?? "—"}
       </p>
     </div>
   );

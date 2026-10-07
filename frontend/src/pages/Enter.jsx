@@ -1780,76 +1780,44 @@ export default function Enter() {
       const savedPlan = normalizePlan(finalProfile.plan);
 
       /*
-        Silver keeps the explicit SAVE & GO GOLD action.
-        If that button was pressed, open the plan screen.
+        IMPORTANT FLOW
+
+        OTP
+        -> EDIT PROFILE
+        -> SAVE
+        -> MEMBERSHIP OPTIONS
+        -> choose FREE / GOLD
+        -> then return to the page that started the flow.
+
+        We DO NOT redirect to /entry or /artists immediately after SAVE.
       */
+
       if (savedPlan === "pro" && profileAction === "upgrade-gold") {
         setSuccess(
-          "Changes saved. You can now upgrade your Silver profile to Gold.",
+          "Changes saved. You can now continue with your Gold upgrade request.",
         );
-        setScreen("plans");
-
-        window.scrollTo({
-          top: 0,
-          behavior: "smooth",
-        });
-
-        return;
+      } else if (savedPlan === "verified") {
+        setSuccess(
+          "Profile updated successfully. Your Gold membership is already active.",
+        );
+      } else if (savedPlan === "pro") {
+        setSuccess(
+          "Profile updated successfully. Your Silver membership is active. You can upgrade to Gold.",
+        );
+      } else {
+        setSuccess(
+          "Profile updated successfully. Choose Free or Gold to continue.",
+        );
       }
-
-      /*
-        SOURCE-AWARE RETURN
-
-        GET ENTRY:
-        /entry -> /Enter -> OTP -> EDIT PROFILE -> SAVE -> /entry
-
-        ARTISTS:
-        /artists -> /Enter -> OTP -> EDIT PROFILE -> SAVE -> /artists
-
-        This runs for FREE, SILVER and GOLD.
-      */
-      if (returnTo) {
-        navigate(returnTo, {
-          replace: true,
-          state: {
-            claimCompleted: true,
-            profileCompleted: true,
-            verifiedProfileId:
-              finalProfile._id || finalProfile.id || selectedArtist.id || "",
-            refreshDirectory: returnTo === "/artists" ? Date.now() : undefined,
-            newArtistId:
-              returnTo === "/artists"
-                ? finalProfile.id || finalProfile._id || selectedArtist.id
-                : undefined,
-          },
-        });
-
-        return;
-      }
-
-      /* Normal /Enter behavior when there is no source page. */
-      if (savedPlan === "pro" || savedPlan === "verified") {
-        navigate("/artists", {
-          state: {
-            refreshDirectory: Date.now(),
-            newArtistId:
-              finalProfile.id || finalProfile._id || selectedArtist.id,
-          },
-        });
-
-        return;
-      }
-
-      /* FREE / BASIC direct profile management keeps membership selection. */
-      setSuccess("Profile updated successfully. Choose your membership plan.");
 
       setScreen("plans");
 
       window.scrollTo({
         top: 0,
-
         behavior: "smooth",
       });
+
+      return;
     } catch (saveError) {
       console.error("❌ PROFILE UPDATE ERROR:", saveError);
 
@@ -2040,17 +2008,25 @@ export default function Enter() {
 
       window.setTimeout(
         () => {
-          navigate(
-            "/artists",
+          const destination = returnTo || "/artists";
 
-            {
-              state: {
-                newArtistId: finalProfile._id || finalProfile.id,
-
-                refreshDirectory: Date.now(),
-              },
+          navigate(destination, {
+            replace: Boolean(returnTo),
+            state: {
+              claimCompleted: Boolean(returnTo),
+              profileCompleted: true,
+              membershipCompleted: true,
+              membershipPlan: "basic",
+              verifiedProfileId:
+                finalProfile._id || finalProfile.id || selectedArtist?.id || "",
+              newArtistId:
+                destination === "/artists"
+                  ? finalProfile._id || finalProfile.id || selectedArtist?.id
+                  : undefined,
+              refreshDirectory:
+                destination === "/artists" ? Date.now() : undefined,
             },
-          );
+          });
         },
 
         700,
@@ -2167,6 +2143,45 @@ export default function Enter() {
         top: 0,
         behavior: "smooth",
       });
+
+      /*
+        After the membership request is saved, return to the page
+        that originally started the claim flow.
+
+        GET ENTRY -> /entry
+        ARTISTS   -> /artists
+        Direct    -> /artists
+      */
+      window.setTimeout(() => {
+        const destination = returnTo || "/artists";
+
+        navigate(destination, {
+          replace: Boolean(returnTo),
+          state: {
+            claimCompleted: Boolean(returnTo),
+            profileCompleted: true,
+            membershipCompleted: true,
+            membershipPlan: selectedPlan.id,
+            membershipRequestId:
+              request._id || request.id || data.requestId || "",
+            verifiedProfileId:
+              currentProfile?._id ||
+              currentProfile?.id ||
+              selectedArtist?._id ||
+              selectedArtist?.id ||
+              "",
+            newArtistId:
+              destination === "/artists"
+                ? currentProfile?._id ||
+                  currentProfile?.id ||
+                  selectedArtist?._id ||
+                  selectedArtist?.id
+                : undefined,
+            refreshDirectory:
+              destination === "/artists" ? Date.now() : undefined,
+          },
+        });
+      }, 1500);
     } catch (requestError) {
       console.error("❌ MEMBERSHIP REQUEST ERROR:", requestError);
 
@@ -3730,13 +3745,7 @@ export default function Enter() {
                       hover:bg-white
                     "
                   >
-                    <span>
-                      {returnTo === "/entry"
-                        ? "SAVE & CONTINUE TO ENTRY"
-                        : returnTo === "/artists"
-                          ? "SAVE & BACK TO ARTISTS"
-                          : "DONE & VIEW PROFILE"}
-                    </span>
+                    <span>SAVE & VIEW MEMBERSHIP</span>
                     <ArrowRight
                       size={15}
                       className="transition-transform group-hover:translate-x-1"
@@ -3799,13 +3808,9 @@ export default function Enter() {
                   "
                 >
                   <span>
-                    {returnTo === "/entry"
-                      ? "SAVE & CONTINUE TO ENTRY"
-                      : returnTo === "/artists"
-                        ? "SAVE & BACK TO ARTISTS"
-                        : currentPlan === "verified"
-                          ? "DONE & VIEW PROFILE"
-                          : "UPDATE PROFILE"}
+                    {currentPlan === "verified"
+                      ? "SAVE & VIEW MEMBERSHIP"
+                      : "SAVE & CHOOSE MEMBERSHIP"}
                   </span>
 
                   <ArrowRight
@@ -3874,9 +3879,8 @@ export default function Enter() {
               leading-relaxed
             "
           >
-            All your information is saved. Choose Free to keep the essential
-            public listing, or choose Gold to unlock your complete artist
-            profile and premium visibility.
+            Your profile is saved. Choose GO FREE for the basic listing, or TAKE
+            GOLD for the complete verified profile and premium visibility.
           </p>
         </div>
 
@@ -3983,134 +3987,74 @@ export default function Enter() {
           </div>
         )}
 
-        {currentPlan === "verified" ? (
-          <div
-            className="
-              enter-reveal
-              mt-12
-              max-w-2xl
-              mx-auto
-              border
-              border-[#f5c451]/30
-              bg-[#f5c451]/[0.05]
-              rounded-[28px]
-              p-8
-              text-center
-            "
-          >
-            <CheckCircle2
-              size={36}
-              className="
-                text-[#f5c451]
-                mx-auto
-              "
-            />
+        {/* =============================================
+            ALWAYS SHOW FREE + GOLD AFTER PROFILE SAVE
 
-            <h2
-              className="
-                mt-5
-                text-3xl
-                font-black
-                uppercase
-              "
-            >
-              GOLD ALREADY ACTIVE
-            </h2>
+            User requirement:
+            EDIT PROFILE -> SAVE -> GO FREE / TAKE GOLD
 
-            <p
-              className="
-                mt-3
-                text-sm
-                text-gray-500
-              "
-            >
-              Your Gold / Verified membership is already active.
-            </p>
+            Silver stays supported in backend/current memberships,
+            but it is intentionally not shown on this choice screen.
+        ============================================= */}
 
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  "/artists",
-
-                  {
-                    state: {
-                      refreshDirectory: Date.now(),
-                    },
-                  },
-                )
-              }
-              className="
-                mt-6
-                bg-[#f5c451]
-                text-black
-                rounded-xl
-                px-6
-                py-4
-                text-[9px]
-                font-black
-                tracking-widest
-              "
-            >
-              VIEW PUBLIC PROFILE →
-            </button>
-          </div>
-        ) : (
-          <div
-            className={`
-              enter-reveal
-              mt-12
-              grid
-              grid-cols-1
-
-              ${
-                currentPlan === "pro"
-                  ? `
-                    max-w-2xl
-                    mx-auto
-                  `
-                  : `
-                    max-w-5xl
-                    mx-auto
-                    lg:grid-cols-2
-                  `
-              }
-
-              gap-6
-            `}
-          >
-            {PLANS.filter((plan) => {
-              /* =================================
-                   SILVER ACTIVE:
-
-                   ONLY GOLD UPGRADE SHOWN.
-
-                   Prevent destroying active paid
-                   membership with Free.
-                ================================= */
-
-              if (currentPlan === "pro") {
-                return plan.id === "verified";
-              }
-
-              // New / Free artists see only FREE + GOLD.
-              // SILVER remains supported in backend/current memberships,
-              // but its plan card is intentionally hidden here.
-              return plan.id === "basic" || plan.id === "verified";
-            }).map((plan) => (
-              <PlanCard
-                key={plan.id}
-                plan={plan}
-                saving={saving && savingPlanId === plan.id}
-                onClick={() =>
-                  plan.id === "basic"
-                    ? chooseFreePlan()
-                    : requestPaidPlan(plan.id)
+        <div
+          className="
+            enter-reveal
+            mt-12
+            grid
+            grid-cols-1
+            max-w-5xl
+            mx-auto
+            lg:grid-cols-2
+            gap-6
+          "
+        >
+          {PLANS.filter(
+            (plan) => plan.id === "basic" || plan.id === "verified",
+          ).map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              saving={saving && savingPlanId === plan.id}
+              onClick={() => {
+                if (plan.id === "basic") {
+                  void chooseFreePlan();
+                  return;
                 }
-              />
-            ))}
-          </div>
-        )}
+
+                /*
+                  If Gold is already active, do not create another
+                  membership request. Continue with the existing Gold plan.
+                */
+                if (currentPlan === "verified") {
+                  const destination = returnTo || "/artists";
+
+                  navigate(destination, {
+                    replace: Boolean(returnTo),
+                    state: {
+                      claimCompleted: Boolean(returnTo),
+                      profileCompleted: true,
+                      membershipCompleted: true,
+                      membershipPlan: "verified",
+                      verifiedProfileId:
+                        currentProfile?._id ||
+                        currentProfile?.id ||
+                        selectedArtist?._id ||
+                        selectedArtist?.id ||
+                        "",
+                      refreshDirectory:
+                        destination === "/artists" ? Date.now() : undefined,
+                    },
+                  });
+
+                  return;
+                }
+
+                void requestPaidPlan("verified");
+              }}
+            />
+          ))}
+        </div>
 
         <Message error={error} success={success} />
       </div>
@@ -4348,7 +4292,7 @@ function PlanCard({
         button:
           "border-purple-500/40 bg-purple-600 text-white hover:bg-purple-500",
 
-        buttonText: "CONTINUE FREE",
+        buttonText: "GO FREE",
       }
     : isVerified
       ? {
@@ -4363,7 +4307,7 @@ function PlanCard({
           button:
             "border-[#ffe59a]/60 bg-gradient-to-r from-[#b77b15] via-[#f2cf65] to-[#b77b15] text-[#211600]",
 
-          buttonText: "SEND GOLD REQUEST",
+          buttonText: "TAKE GOLD",
         }
       : {
           card: "border-slate-300/80 bg-gradient-to-br from-white/[0.07] via-[#111318] to-[#0b0b0d] shadow-[0_0_28px_rgba(226,232,240,0.10)]",
