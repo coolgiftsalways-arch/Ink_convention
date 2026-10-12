@@ -27,6 +27,129 @@ import HERO_TITLE from "../assets/hero-title.png";
 import HERO_MORE_THAN_INK from "../assets/hero-more-than-ink.png";
 
 /* =========================================================
+   INLINE SVG ICONS — HERO ACTIONS
+   No extra image files or icon packages are required.
+========================================================= */
+
+function StallSvgIcon() {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      width="30"
+      height="30"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M6.5 13 9 5.5h14L25.5 13"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.5 13v2.2a3.1 3.1 0 0 0 6.2 0 3.3 3.3 0 0 0 6.6 0 3.1 3.1 0 0 0 6.2 0V13"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 18.1V27h14v-8.9M13.7 27v-6.9h4.6V27"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.5 13h19"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function TicketSvgIcon() {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      width="30"
+      height="30"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M7 8h18v5.2a2.8 2.8 0 0 0 0 5.6V24H7v-5.2a2.8 2.8 0 0 0 0-5.6V8Z"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17.2 9.5v3.2m0 3.1v2.5m0 3.1v1.1"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeDasharray="1.1 1.8"
+      />
+      <path
+        d="m10.2 13.3 3 2.7-3 2.7"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function DirectorySvgIcon() {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      width="30"
+      height="30"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="16" cy="10" r="4" stroke="currentColor" strokeWidth="2.2" />
+      <path
+        d="M7.8 25.5v-2.4a8.2 8.2 0 0 1 16.4 0v2.4H7.8Z"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.6 11.9a3.2 3.2 0 1 0-1.1 6.3M24.4 11.9a3.2 3.2 0 1 1 1.1 6.3M6.3 20.7a5.7 5.7 0 0 0-3.6 4.8h3M25.7 20.7a5.7 5.7 0 0 1 3.6 4.8h-3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function HeroArrowSvg() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M4.5 12h14m-5.7-5.7 5.7 5.7-5.7 5.7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/* =========================================================
    HOME
 ========================================================= */
 
@@ -93,7 +216,7 @@ function Home() {
           "-=0.4",
         )
         .fromTo(
-          ".inkHero__button",
+          ".inkActionCard, .inkHero__artistTextLink",
           { opacity: 0, y: 18 },
           { opacity: 1, y: 0, stagger: 0.1, duration: 0.55 },
           "-=0.2",
@@ -145,90 +268,247 @@ function Home() {
       ===================================================== */}
 
       <section className="inkHero inkHero--desktop inkHero--repositionedActions">
-        {/* Scoped overrides for the existing Home.css hero styles. */}
+        {/* Hero-only overrides. Existing Home.css and all other page sections stay intact. */}
         <style>{`
-          .inkHero--repositionedActions {
-            position: relative;
-          }
+          /* ----------------------------------------------------
+             DESKTOP: find-artists text ABOVE 3 equal-sized CTAs
+          ---------------------------------------------------- */
+          .inkHero--repositionedActions { position: relative; }
 
           .inkHero--repositionedActions .inkHero__categoryActionRow {
             display: flex;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 18px 28px;
             width: max-content;
             max-width: calc(100vw - 160px);
-            min-height: 72px;
             margin-top: 20px;
-            margin-bottom: 26px;
           }
-
           .inkHero--repositionedActions .inkHero__categoryActionRow .inkHero__categories {
             display: flex;
             align-items: center;
-            flex: 0 0 auto;
             gap: clamp(16px, 1.8vw, 34px);
             width: auto;
             margin: 0;
             white-space: nowrap;
           }
 
-          /* All three lower buttons share one row and one height. */
-          .inkHero--repositionedActions .inkHero__bottomActions {
+          .inkHero--repositionedActions .inkHero__actionArea {
             position: absolute;
+            z-index: 25;
+            bottom: clamp(24px, 4.3vh, 52px);
             left: clamp(24px, 4.3vw, 90px);
             right: clamp(24px, 4.3vw, 90px);
-            bottom: clamp(28px, 5vh, 64px);
-            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 22px;
+            pointer-events: none;
+          }
+
+          /* A TEXT LINK, never a rectangular button. */
+          .inkHero--repositionedActions .inkHero__artistTextLink,
+          .inkMobileHero .inkMobileHero__artistTextLink {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            align-self: flex-start;
+            gap: 18px;
+            width: fit-content;
+            max-width: 100%;
+            padding: 0 0 12px 22px;
+            border: 0;
+            background: transparent;
+            color: #fff;
+            font-weight: 900;
+            font-size: clamp(16px, 1.28vw, 22px);
+            letter-spacing: .14em;
+            line-height: 1.3;
+            text-decoration: none;
+            text-transform: uppercase;
+            white-space: normal;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: color .25s ease;
+          }
+          .inkHero--repositionedActions .inkHero__artistTextLink::before,
+          .inkMobileHero .inkMobileHero__artistTextLink::before {
+            content: "";
+            position: absolute;
+            top: .55em;
+            left: 0;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #cb42ff;
+            box-shadow: 0 0 12px rgba(203,66,255,.8);
+          }
+          .inkHero--repositionedActions .inkHero__artistTextLink::after,
+          .inkMobileHero .inkMobileHero__artistTextLink::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #ce35ff, #aa35f8 60%, transparent);
+            box-shadow: 0 0 10px rgba(185,50,252,.38);
+          }
+          .inkHero--repositionedActions .inkHero__artistTextLink:hover,
+          .inkMobileHero .inkMobileHero__artistTextLink:hover {
+            color: #e8c9ff;
+          }
+          .inkHero--repositionedActions .inkHero__artistTextLink svg,
+          .inkMobileHero .inkMobileHero__artistTextLink svg { flex-shrink: 0; }
+
+          /* Three columns, precisely identical button dimensions. */
+          .inkHero--repositionedActions .inkHero__bottomActions {
+            position: relative;
+            inset: auto;
+            width: 100%;
+            margin: 0;
+            padding: 0;
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            align-items: end;
-            column-gap: clamp(24px, 9vw, 180px);
+            gap: clamp(12px, 1.4vw, 24px);
+            align-items: stretch;
+            pointer-events: auto;
           }
 
-          .inkHero--repositionedActions .inkHero__bottomLeft {
-            display: grid;
-            gap: 12px;
-            min-width: 0;
-          }
-
-          .inkHero--repositionedActions .inkHero__bottomActions .inkHero__button {
+          /* ----------------------------------------------------
+             SHARED ACTION CARDS: desktop AND mobile
+             Icons are hand-written SVG components.
+          ---------------------------------------------------- */
+          .inkActionCard {
             position: relative;
             inset: auto;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 16px;
+            gap: clamp(9px, 1vw, 17px);
             width: 100%;
-            max-width: none;
             min-width: 0;
-            height: 76px;
-            min-height: 76px;
-            box-sizing: border-box;
+            max-width: none;
+            height: 88px;
+            min-height: 88px;
             margin: 0;
-            padding: 16px clamp(16px, 1.7vw, 32px);
+            padding: 14px clamp(13px, 1.5vw, 24px);
+            box-sizing: border-box;
+            border: 1.5px solid #b72cee;
+            border-radius: 0;
+            background: linear-gradient(110deg, rgba(48,7,67,.9), rgba(15,8,27,.89) 85%);
+            color: #fff;
+            text-decoration: none;
+            text-align: left;
             white-space: normal;
+            box-shadow: inset 0 0 23px rgba(190,39,242,.1), 0 0 16px rgba(178,45,245,.12);
+            cursor: pointer;
             pointer-events: auto;
+            transition: background .25s ease, border-color .25s ease,
+                        box-shadow .25s ease, transform .25s ease;
           }
+          .inkActionCard:hover {
+            transform: translateY(-3px);
+            border-color: #e085ff;
+            background: linear-gradient(110deg, rgba(91,18,111,.96), rgba(31,9,48,.96));
+            box-shadow: 0 0 24px rgba(198,46,255,.35);
+          }
+          .inkActionCard:focus-visible,
+          .inkHero__artistTextLink:focus-visible,
+          .inkMobileHero__artistTextLink:focus-visible {
+            outline: 2px solid #f4d7ff;
+            outline-offset: 4px;
+          }
+          .inkActionCard__icon {
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            width: 38px;
+            height: 38px;
+            color: #d94fff;
+          }
+          .inkActionCard__icon svg { width: 32px; height: 32px; }
+          .inkActionCard__copy {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            min-width: 0;
+            line-height: 1.24;
+          }
+          .inkActionCard__title {
+            display: block;
+            font-size: clamp(10px, .92vw, 14px);
+            font-weight: 900;
+            letter-spacing: .055em;
+            text-transform: uppercase;
+            overflow-wrap: break-word;
+          }
+          .inkActionCard__subtitle {
+            display: block;
+            font-size: clamp(9px, .78vw, 12px);
+            font-weight: 500;
+            letter-spacing: .08em;
+            color: #efe2f4;
+            text-transform: uppercase;
+          }
+          .inkActionCard__arrow {
+            display: grid;
+            place-items: center;
+            margin-left: auto;
+            flex: 0 0 auto;
+            color: white;
+          }
+          .inkActionCard__arrow svg { width: 20px; height: 20px; }
 
-          .inkHero--repositionedActions .inkHero__bottomLeft .inkHero__button--purple {
-            height: 62px;
-            min-height: 62px;
+          /* ----------------------------------------------------
+             MOBILE: text first, then THREE same-width cards.
+             Fits into the existing separate mobile hero.
+          ---------------------------------------------------- */
+          .inkMobileHero .inkMobileHero__buttons--three {
+            position: relative;
+            inset: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            width: calc(100% - 36px);
+            max-width: 540px;
+            margin: 16px auto 0;
+            padding: 0;
+            gap: 9px;
+            box-sizing: border-box;
+            z-index: 25;
           }
-
-          .inkHero--repositionedActions .inkHero__bottomActions svg {
-            flex-shrink: 0;
+          .inkMobileHero .inkMobileHero__artistTextLink {
+            margin: 0 0 8px;
+            font-size: clamp(15px, 4.2vw, 20px);
+            letter-spacing: .1em;
           }
+          .inkMobileHero .inkActionCard {
+            width: 100%;
+            height: 72px;
+            min-height: 72px;
+            padding: 11px 15px;
+            gap: 13px;
+          }
+          .inkMobileHero .inkActionCard__icon { width: 35px; height: 35px; }
+          .inkMobileHero .inkActionCard__icon svg { width: 30px; height: 30px; }
+          .inkMobileHero .inkActionCard__title { font-size: clamp(10px, 3vw, 13px); }
+          .inkMobileHero .inkActionCard__subtitle { font-size: clamp(9px, 2.65vw, 11px); }
+          .inkMobileHero .inkActionCard__arrow svg { width: 19px; height: 19px; }
 
           @media (max-width: 1199px) {
             .inkHero--repositionedActions .inkHero__categoryActionRow {
               max-width: calc(100vw - 80px);
-              gap: 16px;
             }
-
-            .inkHero--repositionedActions .inkHero__categoryActionRow .inkHero__categories {
-              gap: 14px;
-            }
+            .inkHero--repositionedActions .inkHero__categoryActionRow .inkHero__categories { gap: 14px; }
+            .inkHero--repositionedActions .inkHero__actionArea { gap: 17px; }
+          }
+          @media (max-width: 390px) {
+            .inkMobileHero .inkMobileHero__buttons--three { width: calc(100% - 26px); }
+            .inkMobileHero .inkActionCard { padding: 10px 12px; gap: 8px; }
+            .inkMobileHero .inkActionCard__icon { width: 29px; }
+            .inkMobileHero .inkActionCard__icon svg { width: 26px; height: 26px; }
+            .inkMobileHero .inkActionCard__title { font-size: 10px; }
+            .inkMobileHero .inkActionCard__subtitle { font-size: 9px; }
           }
         `}</style>
         {/* IMAGE 5 — TATTOO WALL / EXPO BOOTHS */}
@@ -290,43 +570,65 @@ function Home() {
           </div>
         </div>
 
-        {/* ONE ALIGNED BOTTOM ROW: STALL / ENTRY / DIRECTORY */}
-        <div className="inkHero__bottomActions">
-          <div className="inkHero__bottomLeft">
-            <Link
-              to="/artists"
-              className="inkHero__button inkHero__button--purple"
-            >
-              <span>FIND YOUR ARTISTS</span>
-              <ArrowRight size={16} strokeWidth={1.8} />
-            </Link>
+        {/* STYLISH ARTISTS TEXT ABOVE THREE EQUAL HERO BUTTONS */}
+        <div className="inkHero__actionArea">
+          <Link to="/artists" className="inkHero__artistTextLink">
+            FIND YOUR ARTISTS
+            <HeroArrowSvg />
+          </Link>
 
+          <div className="inkHero__bottomActions">
             <Link
               to="/stall-booking"
-              className="inkHero__button inkHero__button--stall"
+              className="inkActionCard inkActionCard--stall"
             >
-              <span>BOOK YOUR STALL NOW</span>
-              <ArrowRight size={16} strokeWidth={1.8} />
+              <span className="inkActionCard__icon">
+                <StallSvgIcon />
+              </span>
+              <span className="inkActionCard__copy">
+                <span className="inkActionCard__title">
+                  BOOK YOUR STALL NOW
+                </span>
+                <span className="inkActionCard__subtitle">FOR RAJASTHAN</span>
+              </span>
+              <span className="inkActionCard__arrow">
+                <HeroArrowSvg />
+              </span>
+            </Link>
+
+            <Link to="/entry" className="inkActionCard inkActionCard--entry">
+              <span className="inkActionCard__icon">
+                <TicketSvgIcon />
+              </span>
+              <span className="inkActionCard__copy">
+                <span className="inkActionCard__title">GET ENTRY PASS</span>
+                <span className="inkActionCard__subtitle">RAJASTHAN</span>
+              </span>
+              <span className="inkActionCard__arrow">
+                <HeroArrowSvg />
+              </span>
+            </Link>
+
+            <Link
+              to="/Enter"
+              className="inkActionCard inkActionCard--directory"
+            >
+              <span className="inkActionCard__icon">
+                <DirectorySvgIcon />
+              </span>
+              <span className="inkActionCard__copy">
+                <span className="inkActionCard__title">
+                  JOIN DIRECTORY FREE
+                </span>
+                <span className="inkActionCard__subtitle">
+                  FOR ARTISTS ONLY
+                </span>
+              </span>
+              <span className="inkActionCard__arrow">
+                <HeroArrowSvg />
+              </span>
             </Link>
           </div>
-
-          <Link
-            to="/entry"
-            className="inkHero__button inkHero__button--entry"
-            aria-label="Get entry to Ink Convention"
-          >
-            <span className="inkHero__entryText">
-              <small>VISITOR ACCESS</small>
-              GET ENTRY
-            </span>
-            <span className="inkHero__entryArrow">
-              <ArrowRight size={17} strokeWidth={2} />
-            </span>
-          </Link>
-
-          <Link to="/Enter" className="inkHero__button inkHero__button--dark">
-            <span>JOIN DIRECTORY FREE FOR ARTISTS ONLY</span>
-          </Link>
         </div>
 
         <img
@@ -428,38 +730,53 @@ function Home() {
           <span>MUSIC</span>
         </div>
 
-        {/* BUTTONS AT THE BOTTOM — NEVER OVER THE GIRL */}
-        <div className="inkMobileHero__buttons">
-          <Link
-            to="/artists"
-            className="inkMobileHero__button inkMobileHero__button--purple"
-          >
-            <span>FIND YOUR ARTISTS</span>
-            <ArrowRight size={18} strokeWidth={1.8} />
+        {/* MOBILE: ARTISTS TEXT ABOVE THREE IDENTICAL-SIZE SVG BUTTONS */}
+        <div className="inkMobileHero__buttons inkMobileHero__buttons--three">
+          <Link to="/artists" className="inkMobileHero__artistTextLink">
+            FIND YOUR ARTISTS
+            <HeroArrowSvg />
           </Link>
 
           <Link
             to="/stall-booking"
-            className="inkMobileHero__button inkMobileHero__button--stall"
+            className="inkActionCard inkActionCard--stall"
           >
-            <span>BOOK YOUR STALL NOW</span>
-            <ArrowRight size={18} strokeWidth={1.8} />
+            <span className="inkActionCard__icon">
+              <StallSvgIcon />
+            </span>
+            <span className="inkActionCard__copy">
+              <span className="inkActionCard__title">BOOK YOUR STALL NOW</span>
+              <span className="inkActionCard__subtitle">FOR RAJASTHAN</span>
+            </span>
+            <span className="inkActionCard__arrow">
+              <HeroArrowSvg />
+            </span>
           </Link>
 
-          <Link
-            to="/Enter"
-            className="inkMobileHero__button inkMobileHero__button--dark"
-          >
-            <span>JOIN DIRECTORY FREE</span>
-            <ArrowRight size={18} strokeWidth={1.8} />
+          <Link to="/entry" className="inkActionCard inkActionCard--entry">
+            <span className="inkActionCard__icon">
+              <TicketSvgIcon />
+            </span>
+            <span className="inkActionCard__copy">
+              <span className="inkActionCard__title">GET ENTRY PASS</span>
+              <span className="inkActionCard__subtitle">RAJASTHAN</span>
+            </span>
+            <span className="inkActionCard__arrow">
+              <HeroArrowSvg />
+            </span>
           </Link>
 
-          <Link
-            to="/entry"
-            className="inkMobileHero__button inkMobileHero__button--entry"
-          >
-            <span>GET ENTRY</span>
-            <ArrowRight size={18} strokeWidth={2} />
+          <Link to="/Enter" className="inkActionCard inkActionCard--directory">
+            <span className="inkActionCard__icon">
+              <DirectorySvgIcon />
+            </span>
+            <span className="inkActionCard__copy">
+              <span className="inkActionCard__title">JOIN DIRECTORY FREE</span>
+              <span className="inkActionCard__subtitle">FOR ARTISTS ONLY</span>
+            </span>
+            <span className="inkActionCard__arrow">
+              <HeroArrowSvg />
+            </span>
           </Link>
         </div>
 

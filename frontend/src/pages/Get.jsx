@@ -1,1074 +1,1105 @@
 import { useEffect, useMemo, useState } from "react";
-
-import { Link, useNavigate } from "react-router-dom";
-
+import { useNavigate } from "react-router-dom";
 import {
+  ArrowLeft,
   ArrowRight,
+  CalendarDays,
+  Check,
   CheckCircle2,
-  Mail,
-  MapPin,
-  Phone,
+  Clock3,
+  Gift,
+  Minus,
+  Plus,
   Ticket,
-  User,
+  Trophy,
+  Users,
+  UtensilsCrossed,
+  X,
 } from "lucide-react";
 
-/* =========================================================
-   API
-========================================================= */
-
+// INKCONVENTION — Public GET ENTRY (no artist claim / no OTP).
 const API_URL = import.meta.env.DEV
   ? "http://localhost:5000"
   : String(import.meta.env.VITE_API_URL || "https://api.inkconvention.com")
       .trim()
       .replace(/\/$/, "");
 
-/* =========================================================
-   SETTINGS
-========================================================= */
-
-const FIRST_TICKET_PRICE = 2999;
-const ADDITIONAL_TICKET_PRICE = 1499;
-
-const events = [
+// Uses the four PNG files already in frontend/src/assets/Gust/.
+const guestFiles = import.meta.glob(
+  "../assets/Gust/*.{png,jpg,jpeg,webp,avif}",
   {
-    value: "jaipur",
-    city: "Jaipur",
-    date: "30 Oct – 01 Nov 2026",
+    eager: true,
+    query: "?url",
+    import: "default",
   },
+);
+const guestImage = (prefix) =>
+  Object.entries(guestFiles).find(([path]) =>
+    path.split("/").pop().toLowerCase().startsWith(prefix.toLowerCase()),
+  )?.[1] || "";
 
+const GUESTS = [
   {
-    value: "udaipur",
-    city: "Udaipur",
-    date: "13 Nov – 15 Nov 2026",
+    name: "Divinya Chauhan",
+    role: "JUDGE",
+    subtitle: "Tattoo artist • Judge panel",
+    detail: "Evaluating artistry, creativity and technique.",
+    photo: guestImage("Divinya"),
+    color: "#ff736d",
   },
-
   {
-    value: "kota",
-    city: "Kota",
-    date: "20 Nov – 22 Nov 2026",
+    name: "Ganesh Gupta",
+    role: "JUDGE",
+    subtitle: "Tattoo artist • Judge panel",
+    detail: "Bringing an artist’s eye to the competition.",
+    photo: guestImage("Ganesh"),
+    color: "#48cfc6",
+  },
+  {
+    name: "Rapha Lopes",
+    role: "CHIEF GUEST",
+    subtitle: "International guest tattoo artist",
+    detail: "Joining the tour as a special guest.",
+    photo: guestImage("Rapha"),
+    color: "#f5c56f",
+  },
+  {
+    name: "Satvik Subramaniam",
+    role: "EMCEE",
+    subtitle: "Host • Emcee • Stage presenter",
+    detail: "Guiding introductions and event moments.",
+    photo: guestImage("Satvik"),
+    color: "#48cfc6",
   },
 ];
 
-/* =========================================================
-   GET ENTRY
-========================================================= */
+const CITIES = [
+  {
+    id: "jaipur",
+    name: "Jaipur",
+    range: "30 Oct – 1 Nov 2026",
+    color: "#ff736d",
+    venue: "Jaipur Exhibition & Convention Centre (JECC)",
+    address: "Sitapura, Tonk Road, Jaipur",
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/6/6d/Jaipur-Hawa_Mahal-Panoramic_view-20131017.jpg",
+    dates: [
+      { value: "2026-10-30", label: "30 Oct", day: "Friday" },
+      { value: "2026-10-31", label: "31 Oct", day: "Saturday" },
+      { value: "2026-11-01", label: "1 Nov", day: "Sunday" },
+    ],
+  },
+  {
+    id: "udaipur",
+    name: "Udaipur",
+    range: "13–15 Nov 2026",
+    color: "#48cfc6",
+    venue: "Hotel Inder Residency",
+    address: "Goverdhan Vilas, Ekling Nagar, Udaipur",
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/d/d3/City_Palace_Udaipur.jpg",
+    dates: [
+      { value: "2026-11-13", label: "13 Nov", day: "Friday" },
+      { value: "2026-11-14", label: "14 Nov", day: "Saturday" },
+      { value: "2026-11-15", label: "15 Nov", day: "Sunday" },
+    ],
+  },
+  {
+    id: "kota",
+    name: "Kota",
+    range: "20–22 Nov 2026",
+    color: "#f5c56f",
+    venue: "Umed Bhawan Palace",
+    address: "Station Main Road, Kota",
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/c/cb/GARH_PALACE_kota_Rajasthan.jpg",
+    dates: [
+      { value: "2026-11-20", label: "20 Nov", day: "Friday" },
+      { value: "2026-11-21", label: "21 Nov", day: "Saturday" },
+      { value: "2026-11-22", label: "22 Nov", day: "Sunday" },
+    ],
+  },
+];
+
+const PASS_PRICES = { 1: 2999, 2: 4999, 3: 5999 };
+const EXTRA_PERSON = 1499;
+const money = (amount) => `₹${Number(amount || 0).toLocaleString("en-IN")}`;
+const inputClass =
+  "mt-2 h-12 w-full rounded-xl border border-white/15 bg-[#080a0e] px-4 text-sm text-white outline-none focus:border-fuchsia-400";
+
+const MAIN_BENEFITS = [
+  "Exhibition entry on selected day(s)",
+  "Certificate of participation",
+  "Complimentary lunch / buffet",
+  "INKCONVENTION mini artist kit",
+  "Meet sponsors and network with tattoo artists",
+  "Witness competitions and their winners",
+];
+const EXTRA_BENEFITS = [
+  "Exhibition entry on selected day(s)",
+  "Complimentary lunch / buffet",
+  "Meet sponsors and industry guests",
+  "Connect with tattoo artists",
+  "Watch competitions and winners",
+];
+
+// These panels only mount when opened in the popup.
+function GuestPanel() {
+  return (
+    <div className="p-4 sm:p-7">
+      <div className="rounded-2xl border border-teal-400/30 bg-teal-400/10 p-4 text-center">
+        <p className="flex items-center justify-center gap-2 text-xs font-bold uppercase text-teal-300">
+          <Clock3 size={16} /> Guest Appearance Hours
+        </p>
+        <p className="mt-2 text-base font-black">
+          11:00 AM – 7:30 PM • All 3 City Stops
+        </p>
+        <p className="mt-1 text-xs text-gray-400">
+          Individual guest appearance times have not been specified.
+        </p>
+      </div>
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        {GUESTS.map((guest) => (
+          <article
+            key={guest.name}
+            className="relative rounded-2xl border bg-[#070a0f] p-4 pt-6"
+            style={{ borderColor: guest.color }}
+          >
+            <div
+              className="absolute left-3 right-3 top-2 h-1 rounded-full"
+              style={{ backgroundColor: guest.color }}
+            />
+            <div className="flex items-center gap-3">
+              {guest.photo ? (
+                <img
+                  src={guest.photo}
+                  alt={`${guest.name} event illustration`}
+                  loading="lazy"
+                  className="h-24 w-24 shrink-0 rounded-xl border-[3px] object-cover sm:h-28 sm:w-28"
+                  style={{ borderColor: guest.color }}
+                />
+              ) : (
+                <div
+                  className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border text-center text-xs text-gray-400"
+                  style={{ borderColor: guest.color }}
+                >
+                  Photo not found
+                </div>
+              )}
+              <div className="min-w-0">
+                <p
+                  className="text-xs font-black"
+                  style={{ color: guest.color }}
+                >
+                  {guest.role}
+                </p>
+                <h3 className="mt-1 break-words text-base font-black uppercase sm:text-xl">
+                  {guest.name}
+                </h3>
+                <div className="my-2 h-px bg-amber-300/40" />
+                <p className="text-xs font-semibold text-amber-100">
+                  {guest.subtitle}
+                </p>
+                <p className="mt-1 text-[11px] leading-5 text-gray-400">
+                  {guest.detail}
+                </p>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BenefitsPanel() {
+  const cards = [
+    {
+      title: "Main Ticket — First Attendee",
+      price: "₹2,999",
+      caption: "1-day starting price",
+      items: MAIN_BENEFITS,
+      color: "#f5c56f",
+      first: true,
+    },
+    {
+      title: "Additional Attendee",
+      price: "₹1,499",
+      caption: "each extra person, per city",
+      items: EXTRA_BENEFITS,
+      color: "#48cfc6",
+      first: false,
+    },
+  ];
+  return (
+    <div className="p-4 sm:p-7">
+      <p className="mb-5 text-center text-sm text-gray-400">
+        Attendee access, complimentary lunch, competitions and networking.
+      </p>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {cards.map((card) => (
+          <article
+            key={card.title}
+            className="rounded-2xl border bg-[#070a0f] p-5"
+            style={{ borderColor: card.color }}
+          >
+            <h3
+              className="flex items-center gap-2 text-lg font-black uppercase"
+              style={{ color: card.color }}
+            >
+              {card.first ? <Gift size={19} /> : <Users size={19} />}{" "}
+              {card.title}
+            </h3>
+            <p className="mt-2 text-2xl font-black">
+              {card.price}{" "}
+              <span className="text-xs font-normal text-gray-400">
+                {card.caption}
+              </span>
+            </p>
+            <ul className="mt-4 space-y-3 border-t border-white/10 pt-4">
+              {card.items.map((item) => (
+                <li key={item} className="flex gap-2 text-sm text-gray-200">
+                  <Check
+                    size={16}
+                    className="mt-0.5 shrink-0"
+                    style={{ color: card.color }}
+                  />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            {card.first ? (
+              <div className="mt-5 rounded-xl border border-amber-300/25 bg-amber-400/10 p-4">
+                <p className="flex items-center gap-2 text-xs font-black uppercase text-amber-300">
+                  <Trophy size={17} /> Lucky Draw — Main Ticket Only
+                </p>
+                <p className="mt-2 text-xs leading-6 text-gray-300">
+                  Two lucky winners get a chance to present the winners on stage
+                  and be photographed with the judges / panel members.
+                </p>
+              </div>
+            ) : (
+              <p className="mt-5 rounded-xl border border-teal-300/25 bg-teal-400/10 p-4 text-xs leading-6 text-gray-300">
+                Certificate, mini artist kit and lucky-draw eligibility are
+                exclusive to the first attendee.
+              </p>
+            )}
+          </article>
+        ))}
+      </div>
+      <div className="mt-5 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-black/20 p-4 text-center">
+        {[1, 2, 3].map((days) => (
+          <div key={days} className="text-xs font-bold">
+            {days}-Day Pass{" "}
+            <span className="mt-1 block text-sm font-black text-fuchsia-300">
+              {money(PASS_PRICES[days])}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-4 text-center text-xs text-gray-500">
+        Attendee access only; stall bookings are separate. No payment is
+        collected at this step.
+      </p>
+    </div>
+  );
+}
 
 export default function Get() {
   const navigate = useNavigate();
-
-  const [submitted, setSubmitted] = useState(false);
-
-  const [savedEntry, setSavedEntry] = useState(null);
-
-  const [error, setError] = useState("");
-
-  const [submitting, setSubmitting] = useState(false);
-
-  const [checkingClaim, setCheckingClaim] = useState(true);
-
-  const [verifiedArtist, setVerifiedArtist] = useState(null);
-
-  const [formData, setFormData] = useState({
+  const [infoModal, setInfoModal] = useState(null); // null | 'guests' | 'benefits'; closed by default
+  const [form, setForm] = useState({
     fullName: "",
     email: "",
     mobile: "",
     state: "",
-    eventCity: "",
-    tickets: 1,
   });
+  const [citySelections, setCitySelections] = useState({});
+  const [expandedCity, setExpandedCity] = useState(null);
+  const [people, setPeople] = useState(1);
+  const [reviewing, setReviewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [requestId, setRequestId] = useState("");
+  const [error, setError] = useState("");
 
-  /* =======================================================
-     SAFE RESPONSE
-  ======================================================= */
-
-  const readResponse = async (response) => {
-    const text = await response.text();
-
-    if (!text) {
-      return {};
-    }
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      return {
-        message: text,
-      };
-    }
-  };
-
-  /* =======================================================
-     OPEN CLAIM FLOW
-
-     GET ENTRY remembers that the user came from /entry.
-     After OTP verification, Enter.jsx FIRST shows EDIT YOUR PROFILE.
-     After the user saves/closes that profile step, they return to /entry.
-  ======================================================= */
-
-  const openClaimFlow = () => {
-    navigate("/enter", {
-      replace: true,
-
-      state: {
-        entryMode: true,
-        returnTo: "/entry",
-        claimSource: "get-entry",
-      },
-    });
-  };
-
-  /* =======================================================
-     VERIFY CLAIM SESSION
-
-     /entry cannot open until /api/claim/me succeeds.
-  ======================================================= */
-
+  // Prevent the background page scrolling when a popup is open; Escape also closes it.
   useEffect(() => {
-    let cancelled = false;
-
-    const verifyClaimSession = async () => {
-      try {
-        setCheckingClaim(true);
-
-        setError("");
-
-        const response = await fetch(`${API_URL}/api/claim/me`, {
-          method: "GET",
-
-          headers: {
-            Accept: "application/json",
-          },
-
-          credentials: "include",
-        });
-
-        const data = await readResponse(response);
-
-        if (cancelled) {
-          return;
-        }
-
-        /* =========================================
-             NO ACTIVE CLAIM SESSION
-          ========================================= */
-
-        if (response.status === 401 || response.status === 403) {
-          openClaimFlow();
-
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(
-            data?.message ||
-              `Unable to verify artist card (HTTP ${response.status}).`,
-          );
-        }
-
-        const profile = data?.profile || data?.artist || null;
-
-        /* =========================================
-             SECURITY
-
-             Session exists but card is not actually
-             fully ownership-verified.
-          ========================================= */
-
-        if (
-          !profile ||
-          !profile.claimed ||
-          !profile.phoneVerified ||
-          !profile.ownerVerified
-        ) {
-          openClaimFlow();
-
-          return;
-        }
-
-        /* =========================================
-             VERIFIED
-          ========================================= */
-
-        setVerifiedArtist(profile);
-
-        /* =========================================
-             AUTO-FILL VERIFIED ARTIST DATA
-          ========================================= */
-
-        setFormData((previous) => ({
-          ...previous,
-
-          fullName:
-            profile.name ||
-            profile.artistName ||
-            profile.professionalName ||
-            previous.fullName,
-
-          email: profile.email || previous.email,
-
-          mobile:
-            profile.phone ||
-            profile.mobile ||
-            profile.phoneNumber ||
-            previous.mobile,
-
-          state: profile.state || previous.state,
-        }));
-      } catch (claimError) {
-        if (cancelled) {
-          return;
-        }
-
-        console.error("GET ENTRY claim check error:", claimError);
-
-        setVerifiedArtist(null);
-
-        setError(
-          claimError.message ||
-            "Unable to verify your artist card. Please try again.",
-        );
-      } finally {
-        if (!cancelled) {
-          setCheckingClaim(false);
-        }
-      }
+    if (!infoModal) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setInfoModal(null);
     };
-
-    verifyClaimSession();
-
+    window.addEventListener("keydown", closeOnEscape);
     return () => {
-      cancelled = true;
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
     };
+  }, [infoModal]);
 
-    // Run whenever /entry first opens.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const bookings = useMemo(
+    () =>
+      CITIES.flatMap((city) => {
+        const selection = citySelections[city.id];
+        if (!selection || selection.dates.length !== selection.passDays)
+          return [];
+        const firstPersonPrice = PASS_PRICES[selection.passDays];
+        const additionalAmount = (people - 1) * EXTRA_PERSON;
+        return [
+          {
+            eventCity: city.id,
+            city: city.name,
+            passDays: selection.passDays,
+            selectedDates: [...selection.dates].sort(),
+            tickets: people,
+            firstPersonPrice,
+            additionalAmount,
+            totalAmount: firstPersonPrice + additionalAmount,
+          },
+        ];
+      }),
+    [citySelections, people],
+  );
 
-  /* =======================================================
-     TOTAL
-  ======================================================= */
+  const incompleteCities = CITIES.filter((city) => {
+    const selection = citySelections[city.id];
+    return selection && selection.dates.length !== selection.passDays;
+  });
+  const total = bookings.reduce((sum, booking) => sum + booking.totalAmount, 0);
 
-  const totalAmount = useMemo(() => {
-    const ticketCount = Math.max(1, Number(formData.tickets || 1));
-    return (
-      FIRST_TICKET_PRICE +
-      Math.max(0, ticketCount - 1) * ADDITIONAL_TICKET_PRICE
-    );
-  }, [formData.tickets]);
-
-  /* =======================================================
-     SELECTED EVENT
-  ======================================================= */
-
-  const selectedEvent = useMemo(() => {
-    return events.find((event) => event.value === formData.eventCity);
-  }, [formData.eventCity]);
-
-  /* =======================================================
-     CHANGE
-  ======================================================= */
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-
-    setError("");
-
-    setFormData((previous) => ({
-      ...previous,
-
-      [name]: name === "tickets" ? Number(value) : value,
+  function selectPass(city, days) {
+    setCitySelections((old) => ({
+      ...old,
+      [city.id]: {
+        passDays: days,
+        dates: days === 3 ? city.dates.map((date) => date.value) : [],
+      },
     }));
-  };
+    setError("");
+  }
 
-  /* =======================================================
-     VALIDATION
-  ======================================================= */
+  function toggleDate(cityId, dateValue) {
+    const city = CITIES.find((item) => item.id === cityId);
+    if (!city?.dates.some((date) => date.value === dateValue)) return;
+    setCitySelections((old) => {
+      const current = old[cityId];
+      if (!current || current.passDays === 3) return old;
+      const nextDates = current.dates.includes(dateValue)
+        ? current.dates.filter((date) => date !== dateValue)
+        : current.dates.length < current.passDays
+          ? [...current.dates, dateValue]
+          : current.dates;
+      return { ...old, [cityId]: { ...current, dates: [...nextDates].sort() } };
+    });
+    setError("");
+  }
 
-  const validateForm = () => {
-    if (!formData.fullName.trim()) {
-      return "Please enter your full name.";
-    }
+  function removeCity(cityId) {
+    setCitySelections((old) => {
+      const next = { ...old };
+      delete next[cityId];
+      return next;
+    });
+    setExpandedCity(null);
+    setError("");
+  }
 
-    if (!formData.email.trim()) {
-      return "Please enter your email address.";
-    }
-
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailPattern.test(formData.email)) {
-      return "Please enter a valid email address.";
-    }
-
-    if (!formData.mobile.trim()) {
-      return "Please enter your mobile number.";
-    }
-
-    const phoneDigits = formData.mobile.replace(/\D/g, "");
-
-    if (phoneDigits.length < 10) {
-      return "Please enter a valid mobile number.";
-    }
-
-    if (!formData.state.trim()) {
-      return "Please enter your state.";
-    }
-
-    if (!formData.eventCity) {
-      return "Please select the Ink Convention event.";
-    }
-
-    if (!formData.tickets || formData.tickets < 1) {
-      return "Please select at least 1 ticket.";
-    }
-
+  function validate() {
+    if (!form.fullName.trim()) return "Please enter your full name.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      return "Enter a valid email address.";
+    const digits = form.mobile.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 15)
+      return "Enter a valid mobile number.";
+    if (!form.state.trim()) return "Please enter your state.";
+    if (incompleteCities.length)
+      return `Complete date selection for ${incompleteCities.map((city) => city.name).join(", ")}.`;
+    if (!bookings.length)
+      return "Select at least one city, pass and required dates.";
     return "";
-  };
+  }
 
-  /* =======================================================
-     SUBMIT
-  ======================================================= */
-
-  const handleSubmit = async (event) => {
+  function handleReview(event) {
     event.preventDefault();
+    const problem = validate();
+    if (problem) return setError(problem);
+    setError("");
+    setReviewing(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-    /* =============================================
-         FRONTEND CLAIM GUARD
-      ============================================= */
-
-    if (!verifiedArtist) {
-      openClaimFlow();
-
+  async function submitResponse() {
+    if (submitting || submitted) return;
+    const problem = validate();
+    if (problem) {
+      setError(problem);
+      setReviewing(false);
       return;
     }
-
-    const validationError = validateForm();
-
-    if (validationError) {
-      setError(validationError);
-
-      return;
-    }
-
+    setSubmitting(true);
+    setError("");
     try {
-      setSubmitting(true);
-
-      setError("");
-
-      const response = await fetch(`${API_URL}/api/get`, {
+      const response = await fetch(`${API_URL}/api/get/response`, {
         method: "POST",
-
         headers: {
           "Content-Type": "application/json",
-
           Accept: "application/json",
         },
-
-        credentials: "include",
-
         body: JSON.stringify({
-          fullName: formData.fullName,
-
-          email: formData.email,
-
-          mobile: formData.mobile,
-
-          state: formData.state,
-
-          eventCity: formData.eventCity,
-
-          tickets: formData.tickets,
+          fullName: form.fullName.trim(),
+          email: form.email.trim(),
+          mobile: form.mobile.trim(),
+          state: form.state.trim(),
+          tickets: people,
+          bookings: bookings.map(({ eventCity, passDays, selectedDates }) => ({
+            eventCity,
+            passDays,
+            selectedDates,
+          })),
+          source: "rajasthan-entry",
         }),
       });
-
-      const data = await readResponse(response);
-
-      /* =========================================
-           CLAIM EXPIRED WHILE FORM WAS OPEN
-        ========================================= */
-
-      if (response.status === 401 || response.status === 403) {
-        openClaimFlow();
-
-        return;
+      const text = await response.text();
+      let result;
+      try {
+        result = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error("Invalid response from server.");
       }
-
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(
-          data?.message || `Request failed with HTTP ${response.status}.`,
+          result.message || `Submission failed (HTTP ${response.status}).`,
         );
-      }
-
-      setSavedEntry(data?.entry || null);
-
+      if (result.success !== true || !result.request?._id)
+        throw new Error("Server did not confirm that the request was saved.");
+      setRequestId(String(result.request._id));
       setSubmitted(true);
-
-      window.scrollTo({
-        top: 0,
-
-        behavior: "smooth",
-      });
-    } catch (submitError) {
-      console.error("GET ENTRY submit error:", submitError);
-
-      setError(submitError.message || "Unable to submit your entry.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      setError(err.message || "Unable to submit. Please try again.");
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
-  /* =======================================================
-     CHECKING CLAIM
-  ======================================================= */
-
-  if (checkingClaim) {
+  if (submitted)
     return (
-      <main
-        className="
-          min-h-screen
-          bg-[#050507]
-          px-5
-          py-16
-          text-white
-        "
-      >
-        <div
-          className="
-            mx-auto
-            flex
-            min-h-[72vh]
-            max-w-2xl
-            items-center
-            justify-center
-          "
-        >
-          <div
-            className="
-              w-full
-              rounded-[30px]
-              border
-              border-fuchsia-500/25
-              bg-[#0b0b10]
-              p-8
-              text-center
-            "
+      <main className="flex min-h-screen items-center justify-center bg-[#07080c] px-4 py-28 text-white">
+        <section className="w-full max-w-2xl rounded-3xl border border-emerald-400/35 bg-[#101017] p-6 text-center sm:p-10">
+          <CheckCircle2 size={54} className="mx-auto text-emerald-400" />
+          <p className="mt-5 text-xs font-black uppercase tracking-widest text-fuchsia-300">
+            INKCONVENTION • RAJASTHAN TOUR 2026
+          </p>
+          <h1 className="mt-3 text-3xl font-black sm:text-4xl">
+            YOUR RESPONSE HAS BEEN SUBMITTED!
+          </h1>
+          <p className="mt-4 text-sm text-gray-300">
+            Thank you, {form.fullName}.
+          </p>
+          <div className="mt-6 rounded-2xl border border-fuchsia-400/35 bg-fuchsia-500/10 p-5">
+            <Clock3 size={28} className="mx-auto text-fuchsia-300" />
+            <h2 className="mt-3 text-xl font-black">
+              WE WILL CONTACT YOU WITHIN 24 HOURS
+            </h2>
+            <p className="mt-2 text-sm leading-7 text-gray-300">
+              Our INKCONVENTION team will contact you regarding your entry
+              confirmation and next steps.
+            </p>
+          </div>
+          <div className="mt-6 space-y-3 rounded-xl border border-white/10 p-4 text-left">
+            {bookings.map((booking) => (
+              <div
+                key={booking.eventCity}
+                className="border-b border-white/10 pb-3 text-sm"
+              >
+                <strong>
+                  {booking.city} • {booking.passDays}-Day Pass
+                </strong>
+                <p className="mt-1 text-xs text-gray-400">
+                  {booking.selectedDates.join(" • ")}
+                </p>
+                <p className="mt-1 text-xs text-fuchsia-300">
+                  {money(booking.totalAmount)}
+                </p>
+              </div>
+            ))}
+            <p className="text-sm">People per city: {people}</p>
+            <p className="font-black text-fuchsia-300">
+              Estimated Total: {money(total)}
+            </p>
+            <p className="break-all text-xs text-gray-500">
+              Request ID: {requestId}
+            </p>
+          </div>
+          <p className="mt-4 text-xs text-gray-500">
+            No payment has been collected. This is an entry request, not a
+            confirmed ticket.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="mt-6 rounded-xl bg-fuchsia-600 px-7 py-3 text-sm font-black"
           >
-            <p
-              className="
-                text-[10px]
-                font-black
-                uppercase
-                tracking-[0.28em]
-                text-fuchsia-400
-              "
-            >
-              SECURE ENTRY
-            </p>
-
-            <h1
-              className="
-                mt-3
-                text-3xl
-                font-black
-                uppercase
-                sm:text-5xl
-              "
-            >
-              Checking Artist Card
-            </h1>
-
-            <p
-              className="
-                mx-auto
-                mt-4
-                max-w-lg
-                text-sm
-                leading-7
-                text-gray-400
-              "
-            >
-              We are checking your verified artist-card session before opening
-              the GET ENTRY form.
-            </p>
-          </div>
-        </div>
+            BACK TO HOME
+          </button>
+        </section>
       </main>
     );
-  }
-
-  /* =======================================================
-     ENTRY LOCKED
-  ======================================================= */
-
-  if (!verifiedArtist) {
-    return (
-      <main
-        className="
-          min-h-screen
-          bg-[#050507]
-          px-5
-          py-16
-          text-white
-        "
-      >
-        <div
-          className="
-            mx-auto
-            flex
-            min-h-[72vh]
-            max-w-2xl
-            items-center
-            justify-center
-          "
-        >
-          <div
-            className="
-              w-full
-              rounded-[30px]
-              border
-              border-red-500/25
-              bg-[#0b0b10]
-              p-8
-              text-center
-            "
-          >
-            <p
-              className="
-                text-[10px]
-                font-black
-                uppercase
-                tracking-[0.28em]
-                text-red-400
-              "
-            >
-              ENTRY LOCKED
-            </p>
-
-            <h1
-              className="
-                mt-3
-                text-3xl
-                font-black
-                uppercase
-                sm:text-5xl
-              "
-            >
-              Claim Your Card First
-            </h1>
-
-            <p
-              className="
-                mx-auto
-                mt-4
-                max-w-lg
-                text-sm
-                leading-7
-                text-gray-400
-              "
-            >
-              {error ||
-                "A verified artist-card session is required before you can submit an entry."}
-            </p>
-
-            <button
-              type="button"
-              onClick={openClaimFlow}
-              className="
-                mt-7
-                inline-flex
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-fuchsia-600
-                px-6
-                py-3
-                text-xs
-                font-black
-                uppercase
-                tracking-wider
-                transition
-                hover:bg-fuchsia-500
-              "
-            >
-              Claim / Verify Card
-              <ArrowRight size={15} />
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  /* =======================================================
-     SUCCESS
-  ======================================================= */
-
-  if (submitted) {
-    const ticketCount = savedEntry?.tickets ?? formData.tickets;
-
-    const total = savedEntry?.totalAmount ?? totalAmount;
-
-    return (
-      <main className="min-h-screen bg-[#050507] px-5 py-16 text-white">
-        <div className="mx-auto flex min-h-[75vh] max-w-3xl items-center justify-center">
-          <div className="w-full rounded-[32px] border border-fuchsia-500/30 bg-[#0b0b10] p-7 text-center shadow-[0_0_60px_rgba(168,85,247,0.12)] sm:p-10">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-fuchsia-500/15 text-fuchsia-300">
-              <CheckCircle2 size={32} />
-            </div>
-
-            <p className="mt-6 text-[10px] font-black uppercase tracking-[0.28em] text-fuchsia-400">
-              INKCONVENTION ENTRY
-            </p>
-
-            <h1 className="mt-3 text-3xl font-black uppercase sm:text-5xl">
-              Entry Details Received
-            </h1>
-
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-gray-400">
-              Thank you,{" "}
-              <span className="font-bold text-white">{formData.fullName}</span>.
-              Your entry details for{" "}
-              <span className="font-bold text-white">
-                {selectedEvent?.city}
-              </span>{" "}
-              have been received successfully.
-            </p>
-
-            <div className="mx-auto mt-7 max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <span className="text-xs text-gray-500">Tickets</span>
-
-                <span className="font-black text-white">{ticketCount}</span>
-              </div>
-
-              <div className="flex items-center justify-between border-b border-white/10 py-3">
-                <span className="text-xs text-gray-500">First person</span>
-
-                <span className="font-black text-white">
-                  ₹{FIRST_TICKET_PRICE.toLocaleString("en-IN")}
-                </span>
-              </div>
-
-              {Number(ticketCount) > 1 && (
-                <div className="flex items-center justify-between border-b border-white/10 py-3">
-                  <span className="text-xs text-gray-500">
-                    Additional {Number(ticketCount) - 1} person(s) × ₹
-                    {ADDITIONAL_TICKET_PRICE.toLocaleString("en-IN")}
-                  </span>
-
-                  <span className="font-black text-white">
-                    ₹
-                    {(
-                      (Number(ticketCount) - 1) *
-                      ADDITIONAL_TICKET_PRICE
-                    ).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-3">
-                <span className="text-sm font-bold text-gray-300">Total</span>
-
-                <span className="text-xl font-black text-fuchsia-300">
-                  ₹{Number(total).toLocaleString("en-IN")}
-                </span>
-              </div>
-            </div>
-
-            <div className="mx-auto mt-6 max-w-lg rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/[0.06] px-5 py-4">
-              <p className="text-sm font-semibold leading-6 text-gray-300">
-                Our team will contact you within{" "}
-                <span className="font-black text-fuchsia-300">24 hours</span>{" "}
-                regarding your entry confirmation and payment process.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-fuchsia-600 px-6 py-3 text-xs font-black uppercase tracking-wider transition hover:bg-fuchsia-500"
-            >
-              Back to Home
-              <ArrowRight size={15} />
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  /* =======================================================
-     FORM
-  ======================================================= */
 
   return (
-    <main className="min-h-screen bg-[#050507] text-white">
-      {/* ===================================================
-          HERO
-      =================================================== */}
-
-      <div className="relative overflow-hidden border-b border-white/5 bg-[#08080c]">
-        <div className="pointer-events-none absolute -right-24 -top-32 h-[420px] w-[420px] rounded-full bg-fuchsia-600/10 blur-[120px]" />
-
-        <div className="relative mx-auto max-w-7xl px-5 pb-12 pt-10 sm:px-8 lg:px-10">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400 transition hover:text-white"
-          ></Link>
-
-          <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_360px]">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-fuchsia-400">
-                VISITOR ACCESS
-              </p>
-
-              <h1 className="mt-3 text-4xl font-black uppercase leading-[0.92] tracking-tight sm:text-6xl">
-                GET <span className="text-fuchsia-500">ENTRY</span>
-              </h1>
-
-              <p className="mt-5 max-w-2xl text-sm leading-7 text-gray-400 sm:text-base">
-                Be part of Ink Convention. Fill in your details, choose your
-                event city and select how many tickets you need.
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-fuchsia-500/30 bg-fuchsia-500/[0.06] p-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-fuchsia-500/15 text-fuchsia-300">
-                  <Ticket size={21} />
-                </div>
-
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-400">
-                    ENTRY TICKET
-                  </p>
-
-                  <p className="mt-1 text-2xl font-black">
-                    ₹{FIRST_TICKET_PRICE.toLocaleString("en-IN")}
-                  </p>
-                </div>
-              </div>
-
-              <p className="mt-4 text-xs leading-6 text-gray-400">
-                The first person is ₹2,999. Every additional person is ₹1,499.
-                Your total updates automatically when you add more people.
-              </p>
-            </div>
-          </div>
+    <main className="min-h-screen bg-[#07080c] pb-20 text-white">
+      <header className="border-b border-amber-400/20 bg-gradient-to-br from-[#201016] via-[#0b0a10] to-[#082124]">
+        <div className="mx-auto max-w-7xl px-4 pb-7 pt-28 sm:px-8">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-300">
+            INKCONVENTION • RAJASTHAN TOUR 2026
+          </p>
+          <h1 className="mt-3 text-4xl font-black uppercase sm:text-6xl">
+            GET <span className="text-fuchsia-400">ENTRY PASS</span>
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-300">
+            Choose city, pass, dates and people. Want to know the guests or
+            ticket benefits? Open the details below.
+          </p>
         </div>
-      </div>
+      </header>
 
-      {/* ===================================================
-          CONTENT
-      =================================================== */}
-
-      <section className="mx-auto grid max-w-7xl gap-8 px-5 py-12 sm:px-8 lg:grid-cols-[1fr_360px] lg:px-10 lg:py-16">
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-[30px] border border-white/10 bg-[#0b0b10] p-5 shadow-2xl sm:p-7 lg:p-8"
+      {/* Both information panels are CLOSED by default. Buttons open popups, NOT long page sections. */}
+      <section className="mx-auto grid max-w-7xl gap-3 px-4 pt-5 sm:grid-cols-2 sm:px-8">
+        <button
+          type="button"
+          onClick={() => setInfoModal("guests")}
+          className="flex items-center justify-between gap-3 rounded-2xl border border-teal-400/35 bg-[#0c171a] px-4 py-4 text-left transition hover:border-teal-300"
         >
-          {/* ===============================================
-              VERIFIED CARD
-          =============================================== */}
-
-          <div className="mb-6 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-3">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400">
-              VERIFIED ARTIST CARD
-            </p>
-
-            <p className="mt-1 text-sm font-bold text-white">
-              {verifiedArtist.name ||
-                verifiedArtist.artistName ||
-                verifiedArtist.professionalName ||
-                "Verified Artist"}
-            </p>
-          </div>
-
-          {/* ===============================================
-              PERSONAL DETAILS
-          =============================================== */}
-
-          <div className="border-b border-white/10 pb-6">
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-fuchsia-400">
-              PERSONAL DETAILS
-            </p>
-
-            <h2 className="mt-2 text-2xl font-black uppercase">
-              Tell us about yourself
-            </h2>
-          </div>
-
-          <div className="mt-7 grid gap-5 sm:grid-cols-2">
-            <Field
-              label="Full Name"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              placeholder="Enter your full name"
-              icon={<User size={16} />}
-            />
-
-            <Field
-              label="Email Address"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              icon={<Mail size={16} />}
-            />
-
-            <Field
-              label="Mobile Number"
-              name="mobile"
-              type="tel"
-              value={formData.mobile}
-              onChange={handleChange}
-              placeholder="+91 98765 43210"
-              icon={<Phone size={16} />}
-            />
-
-            <Field
-              label="State"
-              name="state"
-              value={formData.state}
-              onChange={handleChange}
-              placeholder="Enter your state"
-              icon={<MapPin size={16} />}
-            />
-          </div>
-
-          {/* ===============================================
-              ENTRY DETAILS
-          =============================================== */}
-
-          <div className="mt-8 border-t border-white/10 pt-7">
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-fuchsia-400">
-              ENTRY DETAILS
-            </p>
-
-            <div className="mt-5 grid gap-5 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block text-xs font-bold text-gray-300">
-                  Select Event City *
-                </span>
-
-                <select
-                  name="eventCity"
-                  value={formData.eventCity}
-                  onChange={handleChange}
-                  className="h-12 w-full rounded-xl border border-white/10 bg-[#08080c] px-4 text-sm text-white outline-none transition focus:border-fuchsia-500"
-                >
-                  <option value="">Choose event</option>
-
-                  {events.map((event) => (
-                    <option key={event.value} value={event.value}>
-                      {event.city} — {event.date}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-xs font-bold text-gray-300">
-                  Number of Tickets *
-                </span>
-
-                <select
-                  name="tickets"
-                  value={formData.tickets}
-                  onChange={handleChange}
-                  className="h-12 w-full rounded-xl border border-white/10 bg-[#08080c] px-4 text-sm text-white outline-none transition focus:border-fuchsia-500"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((number) => (
-                    <option key={number} value={number}>
-                      {number} {number === 1 ? "Ticket" : "Tickets"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </div>
-
-          {/* ===============================================
-              ERROR
-          =============================================== */}
-
-          {error && (
-            <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-300">
-              {error}
-            </div>
-          )}
-
-          {/* ===============================================
-              TOTAL
-          =============================================== */}
-
-          <div className="mt-8 rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/[0.06] p-5">
-            <div className="space-y-2 text-xs text-gray-400">
-              <div className="flex items-center justify-between">
-                <span>First person</span>
-                <span>₹{FIRST_TICKET_PRICE.toLocaleString("en-IN")}</span>
-              </div>
-
-              {Number(formData.tickets) > 1 && (
-                <div className="flex items-center justify-between">
-                  <span>
-                    Additional {Number(formData.tickets) - 1} person(s) × ₹
-                    {ADDITIONAL_TICKET_PRICE.toLocaleString("en-IN")}
-                  </span>
-                  <span>
-                    ₹
-                    {(
-                      (Number(formData.tickets) - 1) *
-                      ADDITIONAL_TICKET_PRICE
-                    ).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <span>Total people</span>
-                <span>{formData.tickets}</span>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-4">
-              <span className="text-sm font-black uppercase tracking-wider">
-                Total
+          <span className="flex items-center gap-3">
+            <Users size={22} className="shrink-0 text-teal-300" />
+            <span>
+              <strong className="block text-sm">MEET OUR SPECIAL GUESTS</strong>
+              <span className="mt-0.5 block text-xs text-gray-400">
+                4 guests • Appearance hours
               </span>
-
-              <span className="text-3xl font-black text-fuchsia-300">
-                ₹{totalAmount.toLocaleString("en-IN")}
+            </span>
+          </span>
+          <span className="flex items-center gap-1 text-xs font-bold text-teal-300">
+            VIEW <ArrowRight size={15} />
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setInfoModal("benefits")}
+          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-400/35 bg-[#1a140e] px-4 py-4 text-left transition hover:border-amber-300"
+        >
+          <span className="flex items-center gap-3">
+            <Gift size={22} className="shrink-0 text-amber-300" />
+            <span>
+              <strong className="block text-sm">WHAT YOUR PASS INCLUDES</strong>
+              <span className="mt-0.5 block text-xs text-gray-400">
+                Lunch • Certificate • Lucky draw & more
               </span>
-            </div>
-          </div>
+            </span>
+          </span>
+          <span className="flex items-center gap-1 text-xs font-bold text-amber-300">
+            VIEW <ArrowRight size={15} />
+          </span>
+        </button>
+      </section>
 
-          {/* ===============================================
-              SUBMIT
-          =============================================== */}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-6 flex w-full items-center justify-between rounded-xl bg-fuchsia-600 px-5 py-4 text-sm font-black uppercase tracking-wider transition hover:bg-fuchsia-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <span>{submitting ? "Submitting..." : "Continue Entry"}</span>
-
-            <ArrowRight size={18} />
-          </button>
-        </form>
-
-        {/* =================================================
-            SIDEBAR
-        ================================================= */}
-
-        <aside className="space-y-5">
-          <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0b10]">
-            <div className="border-b border-white/10 p-5">
-              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-fuchsia-400">
-                RAJASTHAN TOUR 2026
+      {/* Booking form appears right below the two buttons. */}
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-6">
+          {reviewing ? (
+            <section className="rounded-3xl border border-fuchsia-400/30 bg-[#110e17] p-5 sm:p-8">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => {
+                  setReviewing(false);
+                  setError("");
+                }}
+                className="flex items-center gap-2 text-sm text-gray-300"
+              >
+                <ArrowLeft size={17} /> Edit Selection
+              </button>
+              <CheckCircle2 size={39} className="mt-7 text-fuchsia-400" />
+              <h2 className="mt-4 text-2xl font-black uppercase sm:text-3xl">
+                Review Your Response
+              </h2>
+              <p className="mt-2 text-sm text-gray-400">
+                Review before submitting. No payment is taken now.
               </p>
-
-              <h3 className="mt-2 text-xl font-black uppercase">
-                Choose your city
-              </h3>
-            </div>
-
-            <div className="divide-y divide-white/10">
-              {events.map((event) => (
-                <button
-                  key={event.value}
-                  type="button"
-                  onClick={() =>
-                    setFormData((previous) => ({
-                      ...previous,
-
-                      eventCity: event.value,
-                    }))
-                  }
-                  className={`flex w-full items-center justify-between gap-4 p-5 text-left transition ${
-                    formData.eventCity === event.value
-                      ? "bg-fuchsia-500/10"
-                      : "hover:bg-white/[0.03]"
-                  }`}
-                >
-                  <div>
-                    <p className="text-sm font-black uppercase text-white">
-                      {event.city}
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {[
+                  ["Name", form.fullName],
+                  ["Mobile", form.mobile],
+                  ["Email", form.email],
+                  ["State", form.state],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-xl border border-white/10 p-3"
+                  >
+                    <p className="text-[10px] uppercase text-gray-500">
+                      {label}
                     </p>
-
-                    <p className="mt-1 text-[10px] text-gray-500">
-                      {event.date}
+                    <p className="mt-1 break-words text-sm font-bold">
+                      {value}
                     </p>
                   </div>
-
-                  <ArrowRight
-                    size={16}
-                    className={
-                      formData.eventCity === event.value
-                        ? "text-fuchsia-300"
-                        : "text-gray-600"
+                ))}
+              </div>
+              <div className="mt-6 space-y-3">
+                {bookings.map((booking) => (
+                  <article
+                    key={booking.eventCity}
+                    className="rounded-xl border border-white/10 p-4"
+                  >
+                    <div className="flex flex-wrap justify-between gap-2">
+                      <strong>
+                        {booking.city} • {booking.passDays}-Day Pass
+                      </strong>
+                      <strong className="text-fuchsia-300">
+                        {money(booking.totalAmount)}
+                      </strong>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-400">
+                      Selected dates: {booking.selectedDates.join(" • ")}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {people} person(s) • First attendee{" "}
+                      {money(booking.firstPersonPrice)}
+                      {people > 1 ? ` + ${people - 1} × ₹1,499` : ""}
+                    </p>
+                  </article>
+                ))}
+              </div>
+              <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5">
+                <strong>GRAND TOTAL</strong>
+                <strong className="text-3xl text-fuchsia-300">
+                  {money(total)}
+                </strong>
+              </div>
+              {error && (
+                <p
+                  role="alert"
+                  className="mt-4 rounded-xl border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-300"
+                >
+                  {error}
+                </p>
+              )}
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={submitResponse}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-fuchsia-600 px-4 py-4 text-sm font-black disabled:opacity-50"
+              >
+                {submitting ? "SUBMITTING..." : "SUBMIT YOUR RESPONSE"}
+                {!submitting && <ArrowRight size={18} />}
+              </button>
+              <p className="mt-3 text-center text-xs text-gray-400">
+                Our team will contact you within 24 hours.
+              </p>
+            </section>
+          ) : (
+            <form onSubmit={handleReview} className="space-y-6">
+              <section className="rounded-3xl border border-white/10 bg-[#100e15] p-5 sm:p-7">
+                <p className="text-xs font-black uppercase tracking-widest text-fuchsia-300">
+                  Step 1
+                </p>
+                <h2 className="mt-2 text-2xl font-black">Your Details</h2>
+                <p className="mt-2 text-sm text-gray-400">
+                  No artist-card claim or OTP required.
+                </p>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  {[
+                    ["fullName", "Full Name", "text"],
+                    ["email", "Email Address", "email"],
+                    ["mobile", "Mobile Number", "tel"],
+                    ["state", "State", "text"],
+                  ].map(([name, label, type]) => (
+                    <label
+                      key={name}
+                      className="block text-xs font-bold text-gray-200"
+                    >
+                      {label} *
+                      <input
+                        required
+                        name={name}
+                        type={type}
+                        value={form[name]}
+                        onChange={(event) => {
+                          setForm((old) => ({
+                            ...old,
+                            [name]: event.target.value,
+                          }));
+                          setError("");
+                        }}
+                        className={inputClass}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </section>
+              <section className="rounded-3xl border border-white/10 bg-[#100e15] p-5 sm:p-7">
+                <p className="text-xs font-black uppercase tracking-widest text-fuchsia-300">
+                  Step 2
+                </p>
+                <h2 className="mt-2 text-2xl font-black">
+                  Choose City, Pass & Dates
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-gray-400">
+                  Choose any 1, 2 or all 3 cities. Each city has its own pass
+                  and dates.
+                </p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  {CITIES.map((city) => {
+                    const selection = citySelections[city.id];
+                    const complete = Boolean(
+                      selection &&
+                      selection.dates.length === selection.passDays,
+                    );
+                    const active = expandedCity === city.id;
+                    return (
+                      <button
+                        key={city.id}
+                        type="button"
+                        onClick={() => {
+                          setExpandedCity(city.id);
+                          setError("");
+                        }}
+                        className={`overflow-hidden rounded-2xl border text-left transition ${active ? "border-fuchsia-400 bg-fuchsia-500/10" : complete ? "border-emerald-400/70" : "border-white/15"}`}
+                      >
+                        <div className="relative h-28 bg-gradient-to-br from-[#5d2631] via-[#0f2830] to-[#120d13]">
+                          <img
+                            src={city.image}
+                            alt={`${city.name}, Rajasthan`}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                            onError={(event) => {
+                              event.currentTarget.style.display = "none";
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
+                          {complete && (
+                            <span className="absolute right-2 top-2 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-black">
+                              SELECTED
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <strong style={{ color: city.color }}>
+                            {city.name.toUpperCase()}
+                          </strong>
+                          <p className="mt-1 text-[11px] text-gray-400">
+                            {city.range}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {expandedCity &&
+                  (() => {
+                    const city = CITIES.find(
+                      (item) => item.id === expandedCity,
+                    );
+                    if (!city) return null;
+                    const selection = citySelections[city.id];
+                    const days = selection?.passDays || 0;
+                    const dates = selection?.dates || [];
+                    const complete = Boolean(days && dates.length === days);
+                    return (
+                      <div className="mt-5 rounded-2xl border border-fuchsia-500/25 bg-[#15101d] p-4 sm:p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-black text-fuchsia-300">
+                              SELECT YOUR PASS
+                            </p>
+                            <h3 className="mt-1 text-xl font-black">
+                              {city.name.toUpperCase()}
+                            </h3>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedCity(null)}
+                            aria-label="Close city details"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                        <div className="mt-4 rounded-xl border border-white/10 p-3 text-xs text-gray-300">
+                          <p className="font-black text-amber-300">VENUE</p>
+                          <p className="mt-1 text-sm font-bold">{city.venue}</p>
+                          <p className="mt-1">{city.address}</p>
+                          <p className="mt-2 flex items-center gap-1 text-teal-300">
+                            <Clock3 size={13} /> Guest window: 11:00 AM – 7:30
+                            PM
+                          </p>
+                        </div>
+                        <div className="mt-5 grid grid-cols-3 gap-2">
+                          {[1, 2, 3].map((count) => (
+                            <button
+                              key={count}
+                              type="button"
+                              onClick={() => selectPass(city, count)}
+                              className={`rounded-xl border px-2 py-3 text-center ${days === count ? "border-fuchsia-400 bg-fuchsia-400/20" : "border-white/15"}`}
+                            >
+                              <span className="block text-xs font-black">
+                                {count}-DAY
+                              </span>
+                              <span className="mt-1 block text-sm font-black text-fuchsia-300">
+                                {money(PASS_PRICES[count])}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        {days > 0 && (
+                          <>
+                            <h4 className="mt-5 flex items-center gap-2 text-sm font-black">
+                              <CalendarDays size={17} /> SELECT DATES (
+                              {dates.length}/{days})
+                            </h4>
+                            <p className="mt-2 text-xs text-gray-400">
+                              {days === 3
+                                ? "All three dates included automatically."
+                                : `Choose exactly ${days} date(s). To switch, unselect a chosen date first.`}
+                            </p>
+                            <div className="mt-4 grid grid-cols-3 gap-2">
+                              {city.dates.map((date) => {
+                                const chosen = dates.includes(date.value);
+                                const disabled =
+                                  days === 3 ||
+                                  (!chosen && dates.length >= days);
+                                return (
+                                  <button
+                                    key={date.value}
+                                    type="button"
+                                    disabled={disabled}
+                                    onClick={() =>
+                                      toggleDate(city.id, date.value)
+                                    }
+                                    className={`rounded-xl border px-2 py-3 text-center disabled:cursor-not-allowed ${chosen ? "border-fuchsia-400 bg-fuchsia-400/20" : disabled ? "border-white/5 opacity-35" : "border-white/15"}`}
+                                  >
+                                    <span className="block text-[10px] text-gray-400">
+                                      {date.day}
+                                    </span>
+                                    <strong className="mt-1 block text-xs sm:text-sm">
+                                      {date.label}
+                                    </strong>
+                                    <span className="mt-1 block text-[10px] text-fuchsia-300">
+                                      {chosen
+                                        ? "✓ Selected"
+                                        : disabled
+                                          ? "Unavailable"
+                                          : "Select"}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div className="mt-5 flex flex-wrap gap-3">
+                              <button
+                                type="button"
+                                disabled={!complete}
+                                onClick={() => setExpandedCity(null)}
+                                className="rounded-xl bg-fuchsia-600 px-5 py-3 text-xs font-black disabled:opacity-40"
+                              >
+                                DONE • ADD ANOTHER CITY
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeCity(city.id)}
+                                className="rounded-xl border border-white/15 px-4 py-3 text-xs text-gray-300"
+                              >
+                                Remove City
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
+                {bookings.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {bookings.map((booking) => (
+                      <button
+                        key={booking.eventCity}
+                        type="button"
+                        onClick={() => setExpandedCity(booking.eventCity)}
+                        className="rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-2 text-xs font-bold"
+                      >
+                        {booking.city} • {booking.passDays}-Day ✓
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+              <section className="rounded-3xl border border-white/10 bg-[#100e15] p-5 sm:p-7">
+                <p className="text-xs font-black uppercase tracking-widest text-fuchsia-300">
+                  Step 3
+                </p>
+                <h2 className="mt-2 text-2xl font-black">How Many People?</h2>
+                <p className="mt-2 text-sm leading-6 text-gray-400">
+                  The first attendee gets main-pass benefits. Each additional
+                  attendee costs {money(EXTRA_PERSON)} per selected city and
+                  receives additional-attendee benefits, including complimentary
+                  lunch.
+                </p>
+                <div className="mt-5 flex items-center gap-5">
+                  <button
+                    type="button"
+                    disabled={people <= 1}
+                    onClick={() => setPeople((value) => Math.max(1, value - 1))}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 disabled:opacity-30"
+                  >
+                    <Minus size={18} />
+                  </button>
+                  <strong className="text-3xl">{people}</strong>
+                  <button
+                    type="button"
+                    disabled={people >= 10}
+                    onClick={() =>
+                      setPeople((value) => Math.min(10, value + 1))
                     }
-                  />
-                </button>
-              ))}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 disabled:opacity-30"
+                  >
+                    <Plus size={18} />
+                  </button>
+                  <span className="text-xs text-gray-400">People per city</span>
+                </div>
+                <p className="mt-4 flex items-center gap-2 text-xs text-teal-300">
+                  <UtensilsCrossed size={15} /> Complimentary lunch / buffet
+                  included for all attendees.
+                </p>
+              </section>
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-300"
+                >
+                  {error}
+                </p>
+              )}
+              <button
+                type="submit"
+                className="flex w-full items-center justify-between rounded-xl bg-fuchsia-600 px-5 py-4 font-black"
+              >
+                <span>REVIEW RESPONSE • {money(total)}</span>
+                <ArrowRight size={19} />
+              </button>
+            </form>
+          )}
+        </div>
+        <aside className="min-w-0">
+          <div className="rounded-3xl border border-fuchsia-400/30 bg-[#160e1d] p-5 lg:sticky lg:top-24">
+            <Ticket size={25} className="text-fuchsia-300" />
+            <h2 className="mt-3 text-xl font-black">YOUR ENTRY SUMMARY</h2>
+            <div className="mt-4 flex justify-between text-xs text-gray-400">
+              <span>Cities selected</span>
+              <strong className="text-white">{bookings.length}/3</strong>
             </div>
-          </div>
-
-          <div className="rounded-[28px] border border-white/10 bg-gradient-to-br from-fuchsia-500/15 to-purple-500/[0.04] p-6">
-            <Ticket size={27} className="text-fuchsia-300" />
-
-            <h3 className="mt-5 text-xl font-black uppercase">
-              One ticket.
-              <br />
-              One experience.
-            </h3>
-
-            <p className="mt-3 text-xs leading-6 text-gray-400">
-              Meet tattoo artists, experience live art and be part of the Ink
-              Convention community.
+            <div className="mt-2 flex justify-between text-xs text-gray-400">
+              <span>People per city</span>
+              <strong className="text-white">{people}</strong>
+            </div>
+            {bookings.length ? (
+              <div className="mt-5 space-y-4 border-t border-white/10 pt-4">
+                {bookings.map((booking) => (
+                  <div
+                    key={booking.eventCity}
+                    className="border-b border-white/10 pb-4"
+                  >
+                    <div className="flex justify-between gap-2">
+                      <strong>{booking.city}</strong>
+                      <strong className="text-fuchsia-300">
+                        {money(booking.totalAmount)}
+                      </strong>
+                    </div>
+                    <p className="mt-1 text-xs text-fuchsia-300">
+                      {booking.passDays}-Day Pass
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {booking.selectedDates.join(" • ")}
+                    </p>
+                    <p className="mt-2 text-[11px] text-gray-500">
+                      First attendee {money(booking.firstPersonPrice)}
+                      {people > 1 ? ` + ${people - 1} × ₹1,499` : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-5 text-xs text-gray-400">
+                Choose a city, pass and dates to begin.
+              </p>
+            )}
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-5">
+              <strong>GRAND TOTAL</strong>
+              <strong className="text-2xl text-fuchsia-300">
+                {money(total)}
+              </strong>
+            </div>
+            <p className="mt-4 flex items-center gap-2 text-xs text-teal-300">
+              <UtensilsCrossed size={14} /> Lunch / buffet included
+            </p>
+            <p className="mt-3 text-xs leading-5 text-gray-500">
+              No payment now. Submit your response and our team will contact you
+              within 24 hours.
             </p>
           </div>
         </aside>
-      </section>
-    </main>
-  );
-}
-
-/* =========================================================
-   FIELD
-========================================================= */
-
-function Field({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  icon,
-  type = "text",
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-bold text-gray-300">
-        {label} *
-      </span>
-
-      <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-600">
-          {icon}
-        </span>
-
-        <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          className="h-12 w-full rounded-xl border border-white/10 bg-[#08080c] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-gray-700 focus:border-fuchsia-500"
-        />
       </div>
-    </label>
+
+      {/* Popups render above the form and never push it down the page. */}
+      {infoModal && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-3 backdrop-blur-sm sm:p-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setInfoModal(null);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              infoModal === "guests" ? "Special guests" : "Pass benefits"
+            }
+            className="flex max-h-[90dvh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-amber-400/35 bg-[#08090f] shadow-2xl"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#141017] px-4 py-4 sm:px-6">
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-amber-300">
+                  INKCONVENTION • RAJASTHAN TOUR 2026
+                </p>
+                <h2 className="mt-1 text-lg font-black uppercase sm:text-xl">
+                  {infoModal === "guests"
+                    ? "Meet Our Special Guests"
+                    : "What Your Pass Includes"}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInfoModal(null)}
+                aria-label="Close details"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/5 hover:bg-white/10"
+              >
+                <X size={21} />
+              </button>
+            </div>
+            <div className="min-h-0 overflow-y-auto overscroll-contain">
+              {infoModal === "guests" ? <GuestPanel /> : <BenefitsPanel />}
+              <div className="px-4 pb-5 text-center">
+                <button
+                  type="button"
+                  onClick={() => setInfoModal(null)}
+                  className="rounded-xl bg-fuchsia-600 px-7 py-3 text-xs font-black hover:bg-fuchsia-500"
+                >
+                  CLOSE & CONTINUE BOOKING
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }

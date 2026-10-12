@@ -26,21 +26,6 @@ const navLinks = [
   },
 
   {
-    label: "Event 2026",
-    path: "/enter",
-
-    // IMPORTANT:
-    // Same state used by the existing GET ENTRY flow.
-    // After claiming and editing their profile,
-    // visitors return to the GET ENTRY form at /entry.
-    state: {
-      entryMode: true,
-      returnTo: "/entry",
-      claimSource: "get-entry",
-    },
-  },
-
-  {
     label: "Gallery",
     path: "/gallery",
   },
@@ -83,16 +68,6 @@ function Navbar() {
     location.pathname.startsWith("/competition/");
 
   /* =========================================================
-     EVENT 2026 ACTIVE ROUTE
-  ========================================================= */
-
-  const isEventRoute =
-    location.pathname === "/enter" ||
-    location.pathname.startsWith("/enter/") ||
-    location.pathname === "/entry" ||
-    location.pathname.startsWith("/entry/");
-
-  /* =========================================================
      MENU FUNCTIONS
   ========================================================= */
 
@@ -109,7 +84,7 @@ function Navbar() {
   ========================================================= */
 
   useEffect(() => {
-    setIsOpen(false); 
+    setIsOpen(false);
   }, [location.pathname]);
 
   /* =========================================================
@@ -119,22 +94,6 @@ function Navbar() {
   const checkActive = (path, isActive) => {
     if (path === "/upcoming") {
       return isExpoRoute;
-    }
-
-    if (path === "/enter") {
-      // Only highlight Event 2026 while using the
-      // GET ENTRY claim flow, not the Artist Directory flow.
-      if (
-        location.pathname.toLowerCase() === "/enter" ||
-        location.pathname.toLowerCase().startsWith("/enter/")
-      ) {
-        return (
-          location.state?.entryMode === true ||
-          location.state?.returnTo === "/entry"
-        );
-      }
-
-      return isEventRoute;
     }
 
     return isActive;
