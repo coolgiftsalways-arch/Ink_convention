@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap");
 
 /* =========================================================
    ABOUT PAGE — AWWWARDS STYLE
@@ -638,7 +638,7 @@
    SECTION 4 — WHAT WE BELIEVE
 ========================================================= */
 
-.about-container>section:nth-of-type(4) {
+.about-container>section.removed-beliefs-section {
      padding-top: 7rem !important;
      padding-bottom: 8rem !important;
 
@@ -646,12 +646,12 @@
           #050506 !important;
 }
 
-.about-container>section:nth-of-type(4)>div {
+.about-container>section.removed-beliefs-section>div {
      max-width:
           1450px !important;
 }
 
-.about-container>section:nth-of-type(4) h2 {
+.about-container>section.removed-beliefs-section h2 {
      font-size:
           clamp(2.3rem,
                4vw,
@@ -666,7 +666,7 @@
 
 /* CARDS */
 
-.about-container>section:nth-of-type(4) .grid>div {
+.about-container>section.removed-beliefs-section .grid>div {
      position: relative;
 
      min-height: 260px;
@@ -688,7 +688,7 @@
           background 0.4s ease;
 }
 
-.about-container>section:nth-of-type(4) .grid>div::before {
+.about-container>section.removed-beliefs-section .grid>div::before {
      content: "";
 
      position: absolute;
@@ -706,7 +706,7 @@
           width 0.5s var(--about-ease);
 }
 
-.about-container>section:nth-of-type(4) .grid>div:hover {
+.about-container>section.removed-beliefs-section .grid>div:hover {
      transform:
           translateY(-8px);
 
@@ -717,7 +717,7 @@
           rgba(168, 85, 247, 0.035) !important;
 }
 
-.about-container>section:nth-of-type(4) .grid>div:hover::before {
+.about-container>section.removed-beliefs-section .grid>div:hover::before {
      width: 100%;
 }
 
@@ -725,7 +725,7 @@
    SECTION 5 — JOURNEY
 ========================================================= */
 
-.about-container>section:nth-of-type(5) {
+.about-container>section.removed-journey-section {
      padding-top: 8rem !important;
      padding-bottom: 8rem !important;
 
@@ -735,7 +735,7 @@
                #050506) !important;
 }
 
-.about-container>section:nth-of-type(5) h2 {
+.about-container>section.removed-journey-section h2 {
      font-size:
           clamp(2.8rem,
                5vw,
@@ -753,7 +753,7 @@
 
 /* FLOW ITEMS */
 
-.about-container>section:nth-of-type(5) .max-w-\[140px\] {
+.about-container>section.removed-journey-section .max-w-\[140px\] {
      position: relative;
 
      overflow: hidden;
@@ -769,7 +769,7 @@
           border-color 0.3s ease;
 }
 
-.about-container>section:nth-of-type(5) .max-w-\[140px\]:hover {
+.about-container>section.removed-journey-section .max-w-\[140px\]:hover {
      transform:
           translateY(-6px);
 
@@ -781,7 +781,7 @@
    SECTION 6 — ECOSYSTEM
 ========================================================= */
 
-.about-container>section:nth-of-type(6) {
+.about-container>section:nth-of-type(4) {
      min-height: 700px;
 
      padding-top:
@@ -797,7 +797,7 @@
           1px solid var(--about-line);
 }
 
-.about-container>section:nth-of-type(6) h2 {
+.about-container>section:nth-of-type(4) h2 {
      max-width: 620px;
 
      font-size:
@@ -817,7 +817,7 @@
 
 /* GLASS ECOSYSTEM CARDS */
 
-.about-container>section:nth-of-type(6) .group {
+.about-container>section:nth-of-type(4) .group {
      border-radius:
           0 !important;
 
@@ -833,7 +833,7 @@
           background 0.4s ease !important;
 }
 
-.about-container>section:nth-of-type(6) .group:hover {
+.about-container>section:nth-of-type(4) .group:hover {
      transform:
           translateY(-8px) !important;
 
@@ -845,7 +845,7 @@
    SECTION 7 — COMPETITION
 ========================================================= */
 
-.about-container>section:nth-of-type(7) {
+.about-container>section:nth-of-type(5) {
      padding-top:
           9rem !important;
 
@@ -858,7 +858,7 @@
           #050506 !important;
 }
 
-.about-container>section:nth-of-type(7)::after {
+.about-container>section:nth-of-type(5)::after {
      content: "";
 
      position: absolute;
@@ -881,7 +881,7 @@
           0 0 90px rgba(168, 85, 247, 0.04);
 }
 
-.about-container>section:nth-of-type(7) h2 {
+.about-container>section:nth-of-type(5) h2 {
      font-size:
           clamp(2.8rem,
                5vw,
@@ -899,7 +899,7 @@
 
 /* BUTTON */
 
-.about-container>section:nth-of-type(7) a {
+.about-container>section:nth-of-type(5) a {
      position: relative;
 
      overflow: hidden;
@@ -913,7 +913,7 @@
           background 0.3s ease;
 }
 
-.about-container>section:nth-of-type(7) a:hover {
+.about-container>section:nth-of-type(5) a:hover {
      transform:
           translateY(-4px);
 }
@@ -922,7 +922,7 @@
    SECTION 8 — WHO IS IT FOR
 ========================================================= */
 
-.about-container>section:nth-of-type(8) {
+.about-container>section:nth-of-type(6) {
      padding-top:
           7rem !important;
 
@@ -933,7 +933,7 @@
           #070709 !important;
 }
 
-.about-container>section:nth-of-type(8) h2 {
+.about-container>section:nth-of-type(6) h2 {
      font-size:
           clamp(2.3rem,
                4vw,
@@ -946,7 +946,7 @@
           -0.05em !important;
 }
 
-.about-container>section:nth-of-type(8) .grid>div {
+.about-container>section:nth-of-type(6) .grid>div {
      position: relative;
 
      min-height: 220px;
@@ -966,7 +966,7 @@
           border-color 0.4s ease;
 }
 
-.about-container>section:nth-of-type(8) .grid>div:hover {
+.about-container>section:nth-of-type(6) .grid>div:hover {
      transform:
           translateY(-7px);
 
@@ -981,7 +981,7 @@
    SECTION 9 — CREDIBILITY / VISION
 ========================================================= */
 
-.about-container>section:nth-of-type(9) {
+.about-container>section:nth-of-type(7) {
      padding-top:
           7rem !important;
 
@@ -994,12 +994,12 @@
                #07070a) !important;
 }
 
-.about-container>section:nth-of-type(9)>div {
+.about-container>section:nth-of-type(7)>div {
      max-width:
           1400px !important;
 }
 
-.about-container>section:nth-of-type(9)>div>div {
+.about-container>section:nth-of-type(7)>div>div {
      position: relative;
 
      min-height: 410px;
@@ -1014,17 +1014,17 @@
           border-color 0.4s ease;
 }
 
-.about-container>section:nth-of-type(9)>div>div:hover {
+.about-container>section:nth-of-type(7)>div>div:hover {
      transform:
           translateY(-8px);
 }
 
-.about-container>section:nth-of-type(9)>div>div:first-child {
+.about-container>section:nth-of-type(7)>div>div:first-child {
      background:
           rgba(255, 255, 255, 0.012) !important;
 }
 
-.about-container>section:nth-of-type(9)>div>div:last-child {
+.about-container>section:nth-of-type(7)>div>div:last-child {
      background:
           radial-gradient(circle at 90% 10%,
                rgba(168, 85, 247, 0.12),
@@ -1036,7 +1036,7 @@
 
 /* HUGE DECORATIVE NUMBERS */
 
-.about-container>section:nth-of-type(9)>div>div:first-child::after {
+.about-container>section:nth-of-type(7)>div>div:first-child::after {
      content: "01";
 
      position: absolute;
@@ -1056,7 +1056,7 @@
      font-weight: 700;
 }
 
-.about-container>section:nth-of-type(9)>div>div:last-child::after {
+.about-container>section:nth-of-type(7)>div>div:last-child::after {
      content: "02";
 
      position: absolute;
@@ -1216,9 +1216,9 @@
      }
 
      .about-container>section:nth-of-type(3) h2,
-     .about-container>section:nth-of-type(5) h2,
-     .about-container>section:nth-of-type(6) h2,
-     .about-container>section:nth-of-type(7) h2 {
+     .about-container>section.removed-journey-section h2,
+     .about-container>section:nth-of-type(4) h2,
+     .about-container>section:nth-of-type(5) h2 {
           font-size:
                clamp(2.6rem,
                     7vw,
@@ -1292,12 +1292,12 @@
      /* COMMON */
 
      .about-container>section:nth-of-type(3),
+     .about-container>section.removed-beliefs-section,
+     .about-container>section.removed-journey-section,
      .about-container>section:nth-of-type(4),
      .about-container>section:nth-of-type(5),
      .about-container>section:nth-of-type(6),
-     .about-container>section:nth-of-type(7),
-     .about-container>section:nth-of-type(8),
-     .about-container>section:nth-of-type(9) {
+     .about-container>section:nth-of-type(7) {
           padding-top:
                5.5rem !important;
 
@@ -1310,35 +1310,35 @@
                2.7rem !important;
      }
 
-     .about-container>section:nth-of-type(4) .grid>div {
+     .about-container>section.removed-beliefs-section .grid>div {
           min-height: 220px;
      }
 
-     .about-container>section:nth-of-type(5) h2 {
+     .about-container>section.removed-journey-section h2 {
           font-size:
                2.8rem !important;
      }
 
-     .about-container>section:nth-of-type(6) {
+     .about-container>section:nth-of-type(4) {
           min-height: auto;
      }
 
-     .about-container>section:nth-of-type(6) h2 {
+     .about-container>section:nth-of-type(4) h2 {
           font-size:
                3rem !important;
      }
 
-     .about-container>section:nth-of-type(7) h2 {
+     .about-container>section:nth-of-type(5) h2 {
           font-size:
                2.7rem !important;
      }
 
-     .about-container>section:nth-of-type(8) .grid>div {
+     .about-container>section:nth-of-type(6) .grid>div {
           min-height:
                190px;
      }
 
-     .about-container>section:nth-of-type(9)>div>div {
+     .about-container>section:nth-of-type(7)>div>div {
           min-height:
                340px;
      }
@@ -1360,9 +1360,9 @@
      }
 
      .about-container>section:nth-of-type(3) h2,
-     .about-container>section:nth-of-type(5) h2,
-     .about-container>section:nth-of-type(6) h2,
-     .about-container>section:nth-of-type(7) h2 {
+     .about-container>section.removed-journey-section h2,
+     .about-container>section:nth-of-type(4) h2,
+     .about-container>section:nth-of-type(5) h2 {
           font-size:
                2.35rem !important;
      }
@@ -3845,5 +3845,588 @@
           opacity: 1 !important;
           transform: none !important;
           transition: none !important;
+     }
+}
+
+/* ===========================================================================
+   INK CONVENTION — PREMIUM LIGHT ABOUT PAGE, 2026
+   White / warm ivory / charcoal / graphite. No purple or gaming effects.
+   Keep the original scroll, hover, modal and responsive mechanics above.
+   What We Believe + More Than a One-Time Contest sections removed in JSX.
+=========================================================================== */
+.about-container.about-light-theme {
+     --about-bg: #f8f6f2;
+     --about-bg-soft: #f1eee9;
+     --about-card: #ffffff;
+     --about-white: #191a1c;
+     --about-text: #53545a;
+     --about-muted: #747479;
+     --about-purple: #55565a;
+     --about-purple-light: #76777b;
+     --about-purple-dark: #323338;
+     --about-line: rgba(23, 24, 26, .12);
+     --about-line-strong: rgba(23, 24, 26, .2);
+     background: #f8f6f2 !important;
+     color: #1b1c1e !important;
+     font-family: "Manrope", system-ui, sans-serif;
+}
+
+.about-container.about-light-theme::before,
+.about-container.about-light-theme::after {
+     display: none !important;
+}
+
+.about-container.about-light-theme>section::before {
+     display: none !important;
+}
+
+.about-container.about-light-theme h1,
+.about-container.about-light-theme h2,
+.about-container.about-light-theme h3 {
+     font-family: "Barlow Condensed", "Manrope", sans-serif !important;
+     color: #1c1d20;
+     letter-spacing: -.015em;
+     text-rendering: optimizeLegibility;
+}
+
+.about-container.about-light-theme p {
+     color: #5e5f63;
+}
+
+.about-container.about-light-theme [class*="text-[#a855f7]"],
+.about-container.about-light-theme [class*="text-gray-400"],
+.about-container.about-light-theme [class*="text-gray-300"],
+.about-container.about-light-theme [class*="text-gray-500"] {
+     color: #626368 !important;
+}
+
+.about-container.about-light-theme [class*="border-white/"],
+.about-container.about-light-theme [class*="border-[#a855f7]"] {
+     border-color: rgba(33, 34, 36, .14) !important;
+}
+
+.about-container.about-light-theme>section:not(.expo-showcase):not(.why-exhibit):not(.about-ecosystem) {
+     background: #f8f6f2 !important;
+     color: #1c1d20 !important;
+     border-color: #e4e0da !important;
+}
+
+.about-container.about-light-theme>section:nth-of-type(even):not(.expo-showcase):not(.why-exhibit):not(.about-ecosystem) {
+     background: #f1efeb !important;
+}
+
+/* HERO: real imagery can remain colorful while the copy reads on ivory. */
+.about-container.about-light-theme>section.expo-showcase {
+     background: #eae6e0 !important;
+     border-bottom: 1px solid #e2ded8 !important;
+}
+
+.about-light-theme .expo-showcase__image {
+     filter: grayscale(.16) saturate(.88) brightness(1.06) contrast(.96) !important;
+}
+
+.about-light-theme .expo-showcase__overlay--left {
+     background: linear-gradient(90deg,
+               rgba(249, 247, 243, .99) 0%, rgba(249, 247, 243, .98) 18%,
+               rgba(249, 247, 243, .94) 32%, rgba(249, 247, 243, .68) 46%,
+               rgba(249, 247, 243, .15) 68%, transparent 88%) !important;
+}
+
+.about-light-theme .expo-showcase__overlay--bottom {
+     background: linear-gradient(0deg, rgba(248, 246, 242, .84), transparent 44%) !important;
+}
+
+.about-light-theme .expo-showcase__overlay--top {
+     background: linear-gradient(180deg, rgba(248, 246, 242, .16), transparent 36%) !important;
+}
+
+.about-container.about-light-theme>section.expo-showcase p.expo-showcase__kicker {
+     color: #4d4e52 !important;
+     font-family: "Manrope", sans-serif !important;
+     font-weight: 800;
+     letter-spacing: .19em !important;
+}
+
+.about-container.about-light-theme>section.expo-showcase h1.expo-showcase__title {
+     color: #1b1c1e !important;
+     font-family: "Barlow Condensed", sans-serif !important;
+     font-weight: 800 !important;
+     font-size: clamp(3.65rem, 5.8vw, 6.9rem) !important;
+     line-height: .86 !important;
+     max-width: 800px !important;
+}
+
+.about-light-theme .expo-showcase__title-purple {
+     color: #66676b !important;
+     text-shadow: none !important;
+}
+
+.about-container.about-light-theme>section.expo-showcase p.expo-showcase__intro {
+     color: #424349 !important;
+     font-size: clamp(.87rem, 1.12vw, 1.05rem) !important;
+     font-weight: 500 !important;
+}
+
+.about-light-theme .expo-showcase__stat {
+     border-right-color: #c8c5c0 !important;
+}
+
+.about-light-theme .expo-showcase__stat svg,
+.about-light-theme .expo-showcase__stat strong {
+     color: #232428 !important;
+}
+
+.about-light-theme .expo-showcase__stat span {
+     color: #64656a !important;
+}
+
+.about-light-theme .expo-showcase__stamp span,
+.about-light-theme .expo-showcase__stamp small {
+     color: #292a2c !important;
+     text-shadow: 0 1px 8px rgba(255, 255, 255, .7);
+}
+
+.about-container.about-light-theme .expo-showcase__primary {
+     background: #505156 !important;
+     border: 1px solid #505156 !important;
+     color: #fff !important;
+     border-radius: 5px !important;
+     box-shadow: none !important;
+     letter-spacing: .07em !important;
+}
+
+.about-container.about-light-theme .expo-showcase__primary:hover {
+     background: #252629 !important;
+     border-color: #252629 !important;
+     box-shadow: 0 10px 30px rgba(24, 25, 28, .15) !important;
+}
+
+/* WHY EXHIBIT: eight readable editorial cards, neutral hover. */
+.about-container.about-light-theme>section.why-exhibit {
+     background: #f1efeb !important;
+     border-bottom: 1px solid #e1ddd7 !important;
+}
+
+.about-container.about-light-theme>section.why-exhibit::before {
+     background: #e1ddd7 !important;
+}
+
+.about-container.about-light-theme>section.why-exhibit .why-exhibit__eyebrow {
+     color: #66676a !important;
+     letter-spacing: .18em !important;
+}
+
+.about-light-theme .why-exhibit__eyebrow span {
+     background: #8a8987 !important;
+}
+
+.about-container.about-light-theme>section.why-exhibit h2 {
+     color: #1c1d20 !important;
+     font-size: clamp(2rem, 3.3vw, 3.4rem) !important;
+     font-weight: 800 !important;
+}
+
+.about-container.about-light-theme>section.why-exhibit p.why-exhibit__sub {
+     color: #67686c !important;
+}
+
+.about-container.about-light-theme>section.why-exhibit .why-card {
+     background: #fff !important;
+     border: 1px solid #dfdcd6 !important;
+     border-radius: 10px !important;
+     box-shadow: 0 8px 22px rgba(16, 17, 19, .035) !important;
+     color: #232428 !important;
+     text-align: left !important;
+}
+
+.about-container.about-light-theme>section.why-exhibit .why-card:hover {
+     border-color: #999a9c !important;
+     background: #faf9f7 !important;
+     box-shadow: 0 12px 28px rgba(16, 17, 19, .09) !important;
+}
+
+.about-container.about-light-theme>section.why-exhibit .why-card h3,
+.about-container.about-light-theme>section.why-exhibit .why-card svg.why-card__icon {
+     color: #48494d !important;
+}
+
+.about-container.about-light-theme>section.why-exhibit .why-card p {
+     color: #616267 !important;
+     font-family: "Manrope", sans-serif !important;
+     font-size: .72rem !important;
+     line-height: 1.65 !important;
+}
+
+.about-light-theme .why-card__number {
+     color: #8b8b8e !important;
+}
+
+.about-light-theme .why-card__line {
+     background: #75767a !important;
+}
+
+.about-light-theme .why-card__mobile-hint {
+     color: #45464a !important;
+}
+
+.about-light-theme .why-read-cursor {
+     display: none !important;
+}
+
+/* WHY-EXHIBIT DETAIL MODAL: cream paper instead of a dark, multi-color panel. */
+.about-light-theme .why-modal-backdrop {
+     background: rgba(28, 29, 31, .46) !important;
+}
+
+.about-light-theme .why-modal {
+     --modal-accent: #57585d !important;
+     background: #fdfbf8 !important;
+     border: 1px solid #cfcbc5 !important;
+     box-shadow: 0 32px 100px rgba(24, 25, 27, .22) !important;
+     color: #1c1d20 !important;
+}
+
+.about-light-theme .why-modal__topline,
+.about-light-theme .why-modal__footer {
+     border-color: #e4e1dc !important;
+}
+
+.about-light-theme .why-modal__close,
+.about-light-theme .why-modal__cancel {
+     border-color: #d9d5d0 !important;
+     background: #f1efea !important;
+     color: #343539 !important;
+}
+
+.about-container.about-light-theme .why-modal__headline h2 {
+     color: #1c1d20 !important;
+}
+
+.about-container.about-light-theme .why-modal__headline p,
+.about-container.about-light-theme .why-modal__point p,
+.about-container.about-light-theme .why-modal__topline p {
+     color: #55565b !important;
+}
+
+.about-light-theme .why-modal__point {
+     border-color: #e2ded8 !important;
+}
+
+.about-light-theme .why-modal__footer>span {
+     color: #6b6a6b !important;
+}
+
+.about-light-theme .genie-tail {
+     display: none !important;
+}
+
+/* MISSION + WHY WE EXIST: paper sections and authentic grayscale photos. */
+.about-container.about-light-theme>section:nth-of-type(3) {
+     background: #faf9f6 !important;
+     padding-top: 6.5rem !important;
+     padding-bottom: 6.5rem !important;
+}
+
+.about-container.about-light-theme>section:nth-of-type(3)>div>div:last-child {
+     background: #efede8 !important;
+     border: 1px solid #e0dcd6 !important;
+     border-radius: 12px !important;
+     box-shadow: none !important;
+}
+
+.about-container.about-light-theme>section:nth-of-type(3)>div>div:last-child::before {
+     color: rgba(27, 28, 30, .04) !important;
+}
+
+.about-container.about-light-theme>section:nth-of-type(3) h4 {
+     color: #737174 !important;
+}
+
+.about-container.about-light-theme>section:nth-of-type(3) h2 {
+     color: #1d1e20 !important;
+     font-size: clamp(2.5rem, 4vw, 4.5rem) !important;
+     font-weight: 800 !important;
+}
+
+.about-container.about-light-theme>section:nth-of-type(3) p {
+     color: #5d5e63 !important;
+}
+
+.about-light-theme>section:nth-of-type(3) img {
+     filter: grayscale(.32) brightness(1.02) contrast(1.05) !important;
+}
+
+/* ECOSYSTEM: breathable photo treatment and four white information cards. */
+.about-container.about-light-theme>section.about-ecosystem {
+     background: #e9e7e2 !important;
+     border-color: #dedbd5 !important;
+     padding-top: 7rem !important;
+     padding-bottom: 7rem !important;
+     min-height: 0 !important;
+}
+
+.about-light-theme .about-ecosystem>div>img {
+     filter: grayscale(.7) brightness(1.1) !important;
+     opacity: .16 !important;
+}
+
+.about-light-theme .about-ecosystem__veil {
+     background: linear-gradient(90deg, rgba(246, 244, 240, .97) 0%, rgba(246, 244, 240, .89) 52%, rgba(246, 244, 240, .69) 100%) !important;
+}
+
+.about-light-theme .about-ecosystem__lower-veil {
+     background: linear-gradient(0deg, rgba(245, 243, 239, .9), transparent 70%) !important;
+}
+
+.about-container.about-light-theme>section.about-ecosystem h2 {
+     color: #202124 !important;
+     font-weight: 800 !important;
+}
+
+.about-container.about-light-theme>section.about-ecosystem p,
+.about-container.about-light-theme>section.about-ecosystem h3 {
+     color: #44454a !important;
+}
+
+.about-container.about-light-theme>section.about-ecosystem .group {
+     border: 1px solid #dedbd5 !important;
+     background: rgba(255, 255, 255, .91) !important;
+     border-radius: 10px !important;
+     backdrop-filter: none !important;
+     box-shadow: 0 8px 20px rgba(28, 29, 31, .035);
+}
+
+.about-container.about-light-theme>section.about-ecosystem .group:hover {
+     background: #fff !important;
+     border-color: #9fa0a2 !important;
+}
+
+.about-light-theme>section.about-ecosystem .group svg {
+     color: #535458 !important;
+}
+
+/* COMPETITION + WHO IS IT FOR — premium text to replace the pictured old copy. */
+.about-container.about-light-theme>section.about-competition {
+     padding-top: clamp(70px, 8vw, 125px) !important;
+     padding-bottom: clamp(70px, 8vw, 125px) !important;
+     background: #f8f6f2 !important;
+     color: #1c1d20 !important;
+}
+
+.about-container.about-light-theme>section.about-competition::after {
+     display: none !important;
+}
+
+.about-light-theme .about-section-eyebrow {
+     display: inline-block;
+     color: #696a6d;
+     font: 800 11px "Manrope", sans-serif;
+     letter-spacing: .2em;
+     text-transform: uppercase;
+}
+
+.about-container.about-light-theme>section.about-competition h2,
+.about-container.about-light-theme>section.about-audience h2 {
+     color: #1d1e21 !important;
+     font-size: clamp(2.7rem, 5.5vw, 5.7rem) !important;
+     font-weight: 800 !important;
+     line-height: .94 !important;
+     letter-spacing: -.025em !important;
+     margin: 18px 0 24px !important;
+}
+
+.about-container.about-light-theme>section.about-competition p {
+     max-width: 770px;
+     margin-left: auto;
+     margin-right: auto;
+     color: #57585d !important;
+     font: 500 clamp(14px, 1.25vw, 17px)/1.9 "Manrope", sans-serif !important;
+}
+
+.about-light-theme .about-competition__values {
+     display: flex;
+     justify-content: center;
+     flex-wrap: wrap;
+     gap: 10px;
+     margin-top: 35px;
+}
+
+.about-light-theme .about-competition__values span {
+     padding: 11px 16px;
+     font: 800 10px "Manrope", sans-serif;
+     letter-spacing: .1em;
+     border: 1px solid #d9d6d0;
+     border-radius: 4px;
+     color: #5a5b5e;
+     background: #fdfbf8;
+}
+
+.about-container.about-light-theme>section.about-audience {
+     background: #efede8 !important;
+     padding-top: 6.5rem !important;
+     padding-bottom: 7.5rem !important;
+}
+
+.about-container.about-light-theme>section.about-audience h2 {
+     margin-bottom: 12px !important;
+}
+
+.about-light-theme .about-audience__heading>p {
+     color: #636367 !important;
+     font: 500 clamp(13px, 1.1vw, 16px)/1.7 "Manrope", sans-serif !important;
+     margin: 0 auto;
+     max-width: 620px;
+}
+
+.about-container.about-light-theme>section.about-audience .grid>div {
+     background: #fff !important;
+     border: 1px solid #ddd9d4 !important;
+     border-radius: 10px !important;
+     min-height: 230px;
+     padding: 34px 24px;
+     box-shadow: 0 8px 25px rgba(22, 23, 25, .035);
+}
+
+.about-container.about-light-theme>section.about-audience .grid>div:hover {
+     background: #fdfbf8 !important;
+     border-color: #aaa8a4 !important;
+     transform: translateY(-4px) !important;
+}
+
+.about-light-theme .about-audience .grid svg {
+     color: #5b5c60 !important;
+}
+
+.about-container.about-light-theme>section.about-audience .grid h3 {
+     color: #222326 !important;
+     font-weight: 800 !important;
+     font-size: 1.45rem !important;
+}
+
+.about-container.about-light-theme>section.about-audience .grid p {
+     color: #646469 !important;
+     font: 500 13px/1.7 "Manrope", sans-serif !important;
+}
+
+/* Credibility / long-term vision. Keep links and information intact. */
+.about-container.about-light-theme>section.about-credibility {
+     background: #faf9f6 !important;
+     padding-top: 6.5rem !important;
+     padding-bottom: 7rem !important;
+}
+
+.about-container.about-light-theme>section.about-credibility>div>div {
+     min-height: 0 !important;
+     background: #fff !important;
+     border: 1px solid #e0dcd6 !important;
+     border-radius: 12px !important;
+     box-shadow: none !important;
+}
+
+.about-container.about-light-theme>section.about-credibility>div>div:last-child {
+     background: #eeece8 !important;
+}
+
+.about-light-theme .about-credibility svg {
+     color: #595a5e !important;
+}
+
+.about-container.about-light-theme>section.about-credibility h3 {
+     color: #1d1e21 !important;
+     font-weight: 800 !important;
+}
+
+.about-container.about-light-theme>section.about-credibility p {
+     color: #616267 !important;
+}
+
+.about-light-theme .about-credibility a,
+.about-light-theme .about-credibility [class*="text-[#a855f7]"] {
+     color: #45464a !important;
+}
+
+/* Small screens: text must never overlap or be clipped. */
+@media (max-width: 1024px) {
+     .about-container.about-light-theme>section.expo-showcase>.expo-showcase__content {
+          padding: 58px 30px 45px !important;
+     }
+
+     .about-container.about-light-theme>section.expo-showcase h1.expo-showcase__title {
+          font-size: clamp(3.1rem, 7vw, 5.7rem) !important;
+     }
+
+     .about-container.about-light-theme>section.why-exhibit>.why-exhibit__grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+     }
+}
+
+@media (max-width: 768px) {
+     .about-container.about-light-theme>section.expo-showcase {
+          min-height: 780px !important;
+     }
+
+     .about-light-theme .expo-showcase__image {
+          object-position: 70% center !important;
+     }
+
+     .about-light-theme .expo-showcase__overlay--left {
+          background: linear-gradient(180deg, rgba(249, 247, 243, .94) 0%, rgba(249, 247, 243, .86) 50%, rgba(249, 247, 243, .34) 100%) !important;
+     }
+
+     .about-container.about-light-theme>section.expo-showcase>.expo-showcase__content {
+          min-height: 750px !important;
+          padding: 76px 20px 26px !important;
+          justify-content: flex-start;
+     }
+
+     .about-container.about-light-theme>section.expo-showcase h1.expo-showcase__title {
+          width: 100% !important;
+          max-width: none !important;
+          font-size: clamp(3.4rem, 13vw, 5.2rem) !important;
+     }
+
+     .about-container.about-light-theme>section.expo-showcase p.expo-showcase__intro {
+          width: 100% !important;
+          max-width: 540px !important;
+     }
+
+     .about-light-theme .expo-showcase__stats {
+          flex-wrap: wrap;
+          gap: 14px;
+     }
+
+     .about-light-theme .expo-showcase__stat {
+          padding: 0 15px 0 0 !important;
+     }
+
+     .about-container.about-light-theme>section.why-exhibit>.why-exhibit__grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+     }
+
+     .about-container.about-light-theme>section.why-exhibit .why-card {
+          text-align: left !important;
+     }
+
+     .about-container.about-light-theme>section.about-competition,
+     .about-container.about-light-theme>section.about-audience,
+     .about-container.about-light-theme>section.about-ecosystem,
+     .about-container.about-light-theme>section.about-credibility {
+          padding-left: 20px !important;
+          padding-right: 20px !important;
+     }
+
+     .about-container.about-light-theme>section.about-competition h2,
+     .about-container.about-light-theme>section.about-audience h2 {
+          font-size: clamp(2.5rem, 9vw, 4rem) !important;
+     }
+}
+
+@media (max-width: 390px) {
+     .about-container.about-light-theme>section.why-exhibit>.why-exhibit__grid {
+          grid-template-columns: 1fr !important;
+     }
+
+     .about-container.about-light-theme>section.expo-showcase h1.expo-showcase__title {
+          font-size: 3.1rem !important;
      }
 }

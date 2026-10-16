@@ -390,8 +390,8 @@ export default function StallBooking() {
     <div
       className="
         min-h-screen
-        bg-[#08080a]
-        text-white
+        bg-[#f5f3ef]
+        text-[#24272b]
         pt-28
         sm:pt-32
         pb-16
@@ -400,7 +400,7 @@ export default function StallBooking() {
         sm:px-6
         lg:px-10
         font-sans
-        selection:bg-[#a855f7]
+        selection:bg-[#53585c]
         selection:text-white
         relative
         overflow-hidden
@@ -417,7 +417,7 @@ export default function StallBooking() {
           left-1/4
           w-96
           h-96
-          bg-[#a855f7]/10
+          bg-[#efedeb]
           rounded-full
           blur-[120px]
           pointer-events-none
@@ -431,7 +431,7 @@ export default function StallBooking() {
           right-10
           w-80
           h-80
-          bg-purple-900/10
+          bg-[#c1bdba]/10
           rounded-full
           blur-[100px]
           pointer-events-none
@@ -450,8 +450,8 @@ export default function StallBooking() {
             rounded-[28px]
             sm:rounded-[34px]
             border
-            border-white/10
-            bg-[#0d0d11]
+            border-[#dedbd6]
+            bg-[#ffffff]
             px-5
             sm:px-8
             lg:px-12
@@ -470,7 +470,7 @@ export default function StallBooking() {
               w-96
               h-96
               rounded-full
-              bg-[#a855f7]/10
+              bg-[#efedeb]
               blur-[110px]
               pointer-events-none
             "
@@ -484,13 +484,13 @@ export default function StallBooking() {
                 gap-2
                 rounded-full
                 border
-                border-[#a855f7]/30
-                bg-[#a855f7]/10
+                border-[#cececc]
+                bg-[#efedeb]
                 px-4
                 py-2
               "
             >
-              <Sparkles size={13} className="text-[#c084fc]" />
+              <Sparkles size={13} className="text-[#55595d]" />
 
               <span
                 className="
@@ -500,7 +500,7 @@ export default function StallBooking() {
                   font-mono
                   uppercase
                   tracking-[0.22em]
-                  text-[#c084fc]
+                  text-[#55595d]
                 "
               >
                 Ink Convention 2026
@@ -516,7 +516,7 @@ export default function StallBooking() {
                 font-mono
                 uppercase
                 tracking-[0.28em]
-                text-[#a855f7]
+                text-[#585c61]
               "
             >
               Ready to exhibit?
@@ -537,7 +537,7 @@ export default function StallBooking() {
             >
               Book Your
               <br />
-              <span className="text-[#a855f7]">Stall.</span>
+              <span className="text-[#585c61]">Stall.</span>
             </h1>
 
             <p
@@ -548,7 +548,7 @@ export default function StallBooking() {
                 text-sm
                 sm:text-base
                 lg:text-lg
-                text-gray-400
+                text-[#565b5f]
                 leading-relaxed
               "
             >
@@ -569,15 +569,15 @@ export default function StallBooking() {
                 max-w-3xl
                 rounded-2xl
                 border
-                border-[#a855f7]/45
+                border-[#b9bbbc]
                 bg-gradient-to-r
-                from-[#a855f7]/10
-                via-[#a855f7]/[0.06]
+                from-[#eceae6]
+                via-[#f6f4f1]
                 to-transparent
                 p-4
                 sm:p-5
                 text-left
-                shadow-[0_0_35px_rgba(168,85,247,0.08)]
+                shadow-[0_0_35px_rgba(52,55,59,0.08)]
               "
             >
               <div
@@ -597,12 +597,12 @@ export default function StallBooking() {
                       w-11
                       h-11
                       rounded-xl
-                      bg-[#a855f7]
+                      bg-[#4d5156]
                       text-white
                       flex
                       items-center
                       justify-center
-                      shadow-[0_0_28px_rgba(168,85,247,0.28)]
+                      shadow-[0_0_28px_rgba(52,55,59,0.28)]
                     "
                   >
                     <Gift size={20} />
@@ -617,7 +617,7 @@ export default function StallBooking() {
                         font-mono
                         uppercase
                         tracking-[0.18em]
-                        text-[#c084fc]
+                        text-[#55595d]
                       "
                     >
                       Exclusive Stall Booking Offer
@@ -631,7 +631,7 @@ export default function StallBooking() {
                         font-black
                         uppercase
                         tracking-tight
-                        text-white
+                        text-[#24272b]
                       "
                     >
                       Book Your Stall & Get ₹
@@ -645,7 +645,7 @@ export default function StallBooking() {
                         text-[11px]
                         sm:text-xs
                         leading-relaxed
-                        text-gray-500
+                        text-[#62666a]
                       "
                     >
                       Once your stall booking is confirmed, you become eligible
@@ -663,8 +663,8 @@ export default function StallBooking() {
                     sm:self-center
                     rounded-full
                     border
-                    border-[#a855f7]/40
-                    bg-[#a855f7]/10
+                    border-[#c5c5c3]
+                    bg-[#efedeb]
                     px-3
                     py-2
                     text-[8px]
@@ -673,7 +673,7 @@ export default function StallBooking() {
                     font-mono
                     uppercase
                     tracking-[0.14em]
-                    text-[#c084fc]
+                    text-[#55595d]
                     whitespace-nowrap
                   "
                 >
@@ -693,7 +693,7 @@ export default function StallBooking() {
                   font-mono
                   uppercase
                   tracking-[0.20em]
-                  text-gray-600
+                  text-[#76797d]
                 "
               >
                 Start your stall enquiry below
@@ -708,16 +708,16 @@ export default function StallBooking() {
                     h-px
                     bg-gradient-to-r
                     from-transparent
-                    to-[#a855f7]/70
+                    to-[#a1a2a3]/70
                   "
                 />
 
                 <ArrowDown
                   size={23}
                   className="
-                    text-[#a855f7]
+                    text-[#585c61]
                     animate-bounce
-                    drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]
+                    drop-shadow-[0_0_10px_rgba(52,55,59,0.8)]
                   "
                 />
 
@@ -729,7 +729,7 @@ export default function StallBooking() {
                     h-px
                     bg-gradient-to-l
                     from-transparent
-                    to-[#a855f7]/70
+                    to-[#a1a2a3]/70
                   "
                 />
               </div>
@@ -757,10 +757,10 @@ export default function StallBooking() {
           <section
             className="
               lg:col-span-7
-              bg-[#121218]/80
+              bg-[#ffffff]/95
               backdrop-blur-xl
               border
-              border-[#2a2a35]
+              border-[#dedbd6]
               rounded-[26px]
               p-5
               sm:p-7
@@ -777,7 +777,7 @@ export default function StallBooking() {
                 -left-24
                 w-52
                 h-52
-                bg-[#a855f7]/10
+                bg-[#efedeb]
                 rounded-full
                 blur-[80px]
                 pointer-events-none
@@ -795,7 +795,7 @@ export default function StallBooking() {
                 mb-7
                 pb-4
                 border-b
-                border-[#2a2a35]
+                border-[#dedbd6]
               "
             >
               <div>
@@ -806,7 +806,7 @@ export default function StallBooking() {
                     font-black
                     uppercase
                     tracking-[0.18em]
-                    text-[#a855f7]
+                    text-[#585c61]
                   "
                 >
                   Stall enquiry
@@ -825,7 +825,7 @@ export default function StallBooking() {
                   Tell us about your setup
                 </h2>
 
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-[#62666a]">
                   These details are automatically added to your WhatsApp or
                   email enquiry.
                 </p>
@@ -838,12 +838,12 @@ export default function StallBooking() {
                   h-11
                   rounded-xl
                   border
-                  border-[#a855f7]/30
-                  bg-[#a855f7]/10
+                  border-[#cececc]
+                  bg-[#efedeb]
                   flex
                   items-center
                   justify-center
-                  text-[#c084fc]
+                  text-[#55595d]
                 "
               >
                 <Store size={20} />
@@ -858,8 +858,8 @@ export default function StallBooking() {
                   z-10
                   rounded-[24px]
                   border
-                  border-emerald-500/25
-                  bg-emerald-500/[0.05]
+                  border-[#b8d3c2]
+                  bg-[#f1f8f4]
                   p-6
                   sm:p-8
                   text-center
@@ -875,9 +875,9 @@ export default function StallBooking() {
                     justify-center
                     rounded-full
                     border
-                    border-emerald-500/30
-                    bg-emerald-500/10
-                    text-emerald-400
+                    border-[#b5d4bf]
+                    bg-[#e6f2eb]
+                    text-[#3f7656]
                   "
                 >
                   <CheckCircle2 size={28} />
@@ -891,7 +891,7 @@ export default function StallBooking() {
                     font-black
                     uppercase
                     tracking-[0.18em]
-                    text-emerald-400
+                    text-[#3f7656]
                   "
                 >
                   Request received
@@ -916,18 +916,18 @@ export default function StallBooking() {
     max-w-md
     rounded-xl
     border
-    border-purple-500/20
-    bg-purple-500/[0.06]
+    border-[#d4d2cf]
+    bg-[#f2f0ed]
     px-4
     py-3
     text-center
   "
                 >
-                  <p className="text-[8px] font-mono font-black uppercase tracking-[0.16em] text-purple-400">
+                  <p className="text-[8px] font-mono font-black uppercase tracking-[0.16em] text-[#585c61]">
                     Returning to your profile
                   </p>
 
-                  <p className="mt-2 text-sm font-bold text-white">
+                  <p className="mt-2 text-sm font-bold text-[#24272b]">
                     Redirecting in {redirectSeconds} second
                     {redirectSeconds === 1 ? "" : "s"}...
                   </p>
@@ -940,15 +940,15 @@ export default function StallBooking() {
                     max-w-xl
                     text-sm
                     leading-relaxed
-                    text-gray-500
+                    text-[#62666a]
                   "
                 >
                   Thank you,{" "}
-                  <span className="font-bold text-white">
+                  <span className="font-bold text-[#24272b]">
                     {formData.fullName}
                   </span>
                   . Your stall request for{" "}
-                  <span className="font-bold text-white">
+                  <span className="font-bold text-[#24272b]">
                     {selectedPackage.packageName}
                   </span>{" "}
                   has been submitted successfully. Our team will contact you
@@ -967,17 +967,17 @@ export default function StallBooking() {
                       max-w-md
                       rounded-xl
                       border
-                      border-white/10
-                      bg-black/20
+                      border-[#dedbd6]
+                      bg-[#f1efeb]
                       px-4
                       py-3
                     "
                   >
-                    <p className="text-[7px] font-mono uppercase tracking-widest text-gray-600">
+                    <p className="text-[7px] font-mono uppercase tracking-widest text-[#76797d]">
                       Request ID
                     </p>
 
-                    <p className="mt-1 break-all text-xs font-black text-white">
+                    <p className="mt-1 break-all text-xs font-black text-[#24272b]">
                       {bookingId}
                     </p>
                   </div>
@@ -1001,17 +1001,17 @@ export default function StallBooking() {
                       gap-2
                       rounded-xl
                       border
-                      border-white/10
-                      bg-white/[0.04]
+                      border-[#dedbd6]
+                      bg-[#f6f5f2]
                       px-5
                       py-4
                       text-[9px]
                       font-black
                       uppercase
                       tracking-[0.12em]
-                      text-white
+                      text-[#24272b]
                       transition
-                      hover:bg-white/10
+                      hover:bg-[#efeeeb]
                     "
                   >
                     <Phone size={14} />
@@ -1028,7 +1028,7 @@ export default function StallBooking() {
                       justify-center
                       gap-2
                       rounded-xl
-                      bg-[#a855f7]
+                      bg-[#4d5156]
                       px-5
                       py-4
                       text-[9px]
@@ -1037,7 +1037,7 @@ export default function StallBooking() {
                       tracking-[0.12em]
                       text-white
                       transition
-                      hover:bg-[#9333ea]
+                      hover:bg-[#292c30]
                     "
                   >
                     <MessageCircle size={14} />
@@ -1054,9 +1054,9 @@ export default function StallBooking() {
                     font-black
                     uppercase
                     tracking-[0.12em]
-                    text-gray-600
+                    text-[#76797d]
                     transition
-                    hover:text-white
+                    hover:text-[#17191b]
                   "
                 >
                   Submit another request
@@ -1071,8 +1071,8 @@ export default function StallBooking() {
                     className="
                       rounded-xl
                       border
-                      border-purple-500/20
-                      bg-purple-500/[0.06]
+                      border-[#d4d2cf]
+                      bg-[#f2f0ed]
                       px-4
                       py-3
                       text-[9px]
@@ -1080,7 +1080,7 @@ export default function StallBooking() {
                       font-black
                       uppercase
                       tracking-[0.12em]
-                      text-purple-300
+                      text-[#52565a]
                     "
                   >
                     Loading your verified profile details...
@@ -1090,8 +1090,8 @@ export default function StallBooking() {
                     className="
                       rounded-xl
                       border
-                      border-emerald-500/20
-                      bg-emerald-500/[0.05]
+                      border-[#c4dbca]
+                      bg-[#f1f8f4]
                       px-4
                       py-3
                       text-[9px]
@@ -1099,7 +1099,7 @@ export default function StallBooking() {
                       font-black
                       uppercase
                       tracking-[0.12em]
-                      text-emerald-300
+                      text-[#3e7656]
                     "
                   >
                     ✓ Details auto-filled from your verified profile
@@ -1182,17 +1182,17 @@ export default function StallBooking() {
                       name="duration"
                       value={formData.duration}
                       onChange={handleChange}
-                      className={`${inputClass} appearance-none cursor-pointer [color-scheme:dark]`}
+                      className={`${inputClass} appearance-none cursor-pointer [color-scheme:light]`}
                     >
-                      <option value="1" className="bg-[#0d0d12]">
+                      <option value="1" className="bg-[#fbfaf8]">
                         1 Day Stall — ₹4,999
                       </option>
 
-                      <option value="2" className="bg-[#0d0d12]">
+                      <option value="2" className="bg-[#fbfaf8]">
                         2 Days Stall — ₹8,999
                       </option>
 
-                      <option value="3" className="bg-[#0d0d12]">
+                      <option value="3" className="bg-[#fbfaf8]">
                         3 Days Stall — ₹12,499
                       </option>
                     </select>
@@ -1206,8 +1206,8 @@ export default function StallBooking() {
                   mt-2
                   rounded-2xl
                   border
-                  border-[#a855f7]/35
-                  bg-[#a855f7]/[0.07]
+                  border-[#c6c6c4]
+                  bg-[#f1efeb]
                   p-5
                   sm:p-6
                 "
@@ -1230,7 +1230,7 @@ export default function StallBooking() {
                         font-black
                         uppercase
                         tracking-[0.18em]
-                        text-[#c084fc]
+                        text-[#55595d]
                       "
                       >
                         Submit first — pay after speaking with our team
@@ -1254,7 +1254,7 @@ export default function StallBooking() {
                         max-w-xl
                         text-xs
                         sm:text-sm
-                        text-gray-500
+                        text-[#62666a]
                         leading-relaxed
                       "
                       >
@@ -1266,11 +1266,11 @@ export default function StallBooking() {
                     </div>
 
                     <div className="shrink-0 sm:text-right">
-                      <p className="text-[8px] font-mono uppercase tracking-widest text-gray-600">
+                      <p className="text-[8px] font-mono uppercase tracking-widest text-[#76797d]">
                         Advance after confirmation
                       </p>
 
-                      <p className="mt-1 text-3xl font-black text-[#c084fc]">
+                      <p className="mt-1 text-3xl font-black text-[#55595d]">
                         ₹{ADVANCE_AMOUNT.toLocaleString("en-IN")}
                       </p>
                     </div>
@@ -1282,12 +1282,12 @@ export default function StallBooking() {
                     className="
                     rounded-xl
                     border
-                    border-red-500/30
-                    bg-red-500/[0.07]
+                    border-[#e5bcb6]
+                    bg-[#f9efed]
                     px-4
                     py-3
                     text-xs
-                    text-red-300
+                    text-[#a24b44]
                   "
                   >
                     {error}
@@ -1316,8 +1316,8 @@ export default function StallBooking() {
 
                   ${
                     loading
-                      ? "cursor-not-allowed bg-[#a855f7]/40 text-white/60"
-                      : "bg-[#a855f7] hover:bg-[#9333ea] text-white hover:-translate-y-0.5 shadow-[0_0_25px_rgba(168,85,247,0.22)]"
+                      ? "cursor-not-allowed bg-[#979b9d] text-white/80"
+                      : "bg-[#4d5156] hover:bg-[#292c30] text-white hover:-translate-y-0.5 shadow-[0_0_25px_rgba(52,55,59,0.22)]"
                   }
                 `}
                 >
@@ -1329,8 +1329,8 @@ export default function StallBooking() {
                         w-4
                         rounded-full
                         border-2
-                        border-white/30
-                        border-t-white
+                        border-[#b9b9b7]
+                        border-t-[#ffffff]
                         animate-spin
                       "
                       />
@@ -1352,7 +1352,7 @@ export default function StallBooking() {
                   text-center
                   text-[9px]
                   leading-relaxed
-                  text-gray-600
+                  text-[#76797d]
                 "
                 >
                   By submitting, you&apos;re requesting a call from the Ink
@@ -1369,9 +1369,9 @@ export default function StallBooking() {
           <aside
             className="
               lg:col-span-5
-              bg-[#0d0d11]
+              bg-[#ffffff]
               border
-              border-white/10
+              border-[#dedbd6]
               rounded-[26px]
               p-5
               sm:p-7
@@ -1380,15 +1380,15 @@ export default function StallBooking() {
               h-fit
             "
           >
-            <div className="mb-6 border-b border-white/10 pb-5">
+            <div className="mb-6 border-b border-[#dedbd6] pb-5">
               <span
                 className="
                   inline-flex
                   items-center
                   rounded-full
                   border
-                  border-[#a855f7]/25
-                  bg-[#a855f7]/10
+                  border-[#d3d2cf]
+                  bg-[#efedeb]
                   px-3
                   py-1.5
                   text-[8px]
@@ -1396,7 +1396,7 @@ export default function StallBooking() {
                   font-mono
                   uppercase
                   tracking-[0.15em]
-                  text-[#c084fc]
+                  text-[#55595d]
                 "
               >
                 Exhibition Space
@@ -1419,7 +1419,7 @@ export default function StallBooking() {
                 className="
                   mt-2
                   text-xs
-                  text-gray-500
+                  text-[#62666a]
                   leading-relaxed
                 "
               >
@@ -1431,14 +1431,14 @@ export default function StallBooking() {
                   mt-4
                   rounded-xl
                   border
-                  border-[#a855f7]/30
-                  bg-[#a855f7]/[0.07]
+                  border-[#cececc]
+                  bg-[#f1efeb]
                   px-4
                   py-3
                 "
               >
                 <div className="flex items-start gap-3">
-                  <Gift size={16} className="mt-0.5 shrink-0 text-[#c084fc]" />
+                  <Gift size={16} className="mt-0.5 shrink-0 text-[#55595d]" />
 
                   <div>
                     <p
@@ -1448,7 +1448,7 @@ export default function StallBooking() {
                         font-black
                         uppercase
                         tracking-[0.15em]
-                        text-[#c084fc]
+                        text-[#55595d]
                       "
                     >
                       Stall + Gold Offer
@@ -1460,7 +1460,7 @@ export default function StallBooking() {
                         text-xs
                         font-bold
                         leading-relaxed
-                        text-white
+                        text-[#24272b]
                       "
                     >
                       Confirm your stall booking and unlock ₹
@@ -1499,15 +1499,15 @@ export default function StallBooking() {
                       ${
                         active
                           ? `
-                              border-[#a855f7]/60
-                              bg-[#a855f7]/10
-                              shadow-[0_0_25px_rgba(168,85,247,0.10)]
+                              border-[#87898c]
+                              bg-[#efedeb]
+                              shadow-[0_0_25px_rgba(52,55,59,0.10)]
                             `
                           : `
-                              border-white/10
-                              bg-white/[0.025]
-                              hover:border-white/20
-                              hover:bg-white/[0.045]
+                              border-[#dedbd6]
+                              bg-[#fbfaf8]
+                              hover:border-[#aeb0b0]
+                              hover:bg-[#f0efeb]
                             `
                       }
                     `}
@@ -1529,7 +1529,7 @@ export default function StallBooking() {
                             font-black
                             uppercase
 
-                            ${active ? "text-white" : "text-gray-300"}
+                            ${active ? "text-[#24272b]" : "text-[#33383d]"}
                           `}
                         >
                           {item.packageName}
@@ -1541,7 +1541,7 @@ export default function StallBooking() {
                             block
                             text-[10px]
                             sm:text-xs
-                            text-gray-600
+                            text-[#76797d]
                           "
                         >
                           {item.description}
@@ -1555,7 +1555,7 @@ export default function StallBooking() {
                           sm:text-xl
                           font-black
 
-                          ${active ? "text-[#c084fc]" : "text-gray-400"}
+                          ${active ? "text-[#55595d]" : "text-[#565b5f]"}
                         `}
                       >
                         ₹{item.packagePrice.toLocaleString("en-IN")}
@@ -1571,8 +1571,8 @@ export default function StallBooking() {
                 mt-6
                 rounded-2xl
                 border
-                border-white/10
-                bg-black/20
+                border-[#dedbd6]
+                bg-[#f1efeb]
                 p-5
               "
             >
@@ -1583,7 +1583,7 @@ export default function StallBooking() {
                   font-black
                   uppercase
                   tracking-[0.18em]
-                  text-gray-600
+                  text-[#76797d]
                 "
               >
                 Selected
@@ -1599,16 +1599,16 @@ export default function StallBooking() {
                 "
               >
                 <div>
-                  <p className="text-sm font-black uppercase text-white">
+                  <p className="text-sm font-black uppercase text-[#24272b]">
                     {selectedPackage.packageName}
                   </p>
 
-                  <p className="mt-1 text-[10px] text-gray-600">
+                  <p className="mt-1 text-[10px] text-[#76797d]">
                     Final availability confirmed by our team.
                   </p>
                 </div>
 
-                <p className="text-2xl font-black text-[#c084fc]">
+                <p className="text-2xl font-black text-[#55595d]">
                   ₹{selectedPackage.packagePrice.toLocaleString("en-IN")}
                 </p>
               </div>
@@ -1628,8 +1628,8 @@ export default function StallBooking() {
             rounded-[28px]
             sm:rounded-[32px]
             border
-            border-[#a855f7]/25
-            bg-[#0d0d11]
+            border-[#d3d2cf]
+            bg-[#ffffff]
             p-5
             sm:p-8
             lg:p-10
@@ -1644,7 +1644,7 @@ export default function StallBooking() {
               w-72
               h-72
               rounded-full
-              bg-[#a855f7]/10
+              bg-[#efedeb]
               blur-[90px]
               pointer-events-none
             "
@@ -1659,7 +1659,7 @@ export default function StallBooking() {
                 font-mono
                 uppercase
                 tracking-[0.25em]
-                text-[#a855f7]
+                text-[#585c61]
               "
             >
               Ready to book?
@@ -1686,7 +1686,7 @@ export default function StallBooking() {
                 max-w-2xl
                 text-sm
                 sm:text-base
-                text-gray-500
+                text-[#62666a]
                 leading-relaxed
               "
             >
@@ -1705,11 +1705,11 @@ export default function StallBooking() {
                   gap-3
                   rounded-full
                   border
-                  border-[#a855f7]/20
-                  bg-[#a855f7]/[0.06]
+                  border-[#d8d7d4]
+                  bg-[#f2f0ed]
                   px-4
                   py-2
-                  text-[#a855f7]
+                  text-[#585c61]
                 "
               >
                 <ArrowDown size={16} className="animate-bounce" />
@@ -1750,12 +1750,12 @@ export default function StallBooking() {
                   w-12
                   h-12
                   rounded-2xl
-                  bg-[#a855f7]
+                  bg-[#4d5156]
                   flex
                   items-center
                   justify-center
                   text-white
-                  shadow-[0_0_30px_rgba(168,85,247,0.22)]
+                  shadow-[0_0_30px_rgba(52,55,59,0.22)]
                 "
               >
                 <Phone size={20} />
@@ -1785,10 +1785,10 @@ export default function StallBooking() {
               rel="noopener noreferrer"
               className={`
                 ${contactCardClass}
-                border-[#a855f7]/40
+                border-[#c5c5c3]
                 bg-gradient-to-b
-                from-[#a855f7]/10
-                to-[#08080a]
+                from-[#eceae6]
+                to-[#faf9f6]
               `}
             >
               <div
@@ -1796,18 +1796,18 @@ export default function StallBooking() {
                   w-12
                   h-12
                   rounded-2xl
-                  bg-[#a855f7]
+                  bg-[#4d5156]
                   flex
                   items-center
                   justify-center
                   text-white
-                  shadow-[0_0_30px_rgba(168,85,247,0.26)]
+                  shadow-[0_0_30px_rgba(52,55,59,0.26)]
                 "
               >
                 <MessageCircle size={21} />
               </div>
 
-              <p className={`${contactLabelClass} text-[#c084fc]`}>
+              <p className={`${contactLabelClass} text-[#55595d]`}>
                 Fastest option
               </p>
 
@@ -1835,12 +1835,12 @@ export default function StallBooking() {
                   h-12
                   rounded-2xl
                   border
-                  border-[#a855f7]/30
-                  bg-[#a855f7]/10
+                  border-[#cececc]
+                  bg-[#efedeb]
                   flex
                   items-center
                   justify-center
-                  text-[#c084fc]
+                  text-[#55595d]
                 "
               >
                 <Mail size={20} />
@@ -1892,8 +1892,8 @@ export default function StallBooking() {
             className="
               rounded-[26px]
               border
-              border-white/10
-              bg-[#0d0d11]
+              border-[#dedbd6]
+              bg-[#ffffff]
               p-6
               sm:p-8
             "
@@ -1905,7 +1905,7 @@ export default function StallBooking() {
                 font-black
                 uppercase
                 tracking-[0.20em]
-                text-[#a855f7]
+                text-[#585c61]
               "
             >
               About stall booking
@@ -1928,7 +1928,7 @@ export default function StallBooking() {
               className="
                 mt-4
                 text-sm
-                text-gray-500
+                text-[#62666a]
                 leading-relaxed
               "
             >
@@ -1952,8 +1952,8 @@ export default function StallBooking() {
             className="
               rounded-[26px]
               border
-              border-white/10
-              bg-[#0d0d11]
+              border-[#dedbd6]
+              bg-[#ffffff]
               p-6
               sm:p-8
             "
@@ -1965,7 +1965,7 @@ export default function StallBooking() {
                 font-black
                 uppercase
                 tracking-[0.20em]
-                text-[#a855f7]
+                text-[#585c61]
               "
             >
               What happens next
@@ -2026,10 +2026,10 @@ function InputField({ icon, label, children }) {
           font-black
           uppercase
           tracking-[0.14em]
-          text-gray-500
+          text-[#62666a]
         "
       >
-        <span className="text-[#a855f7]">{icon}</span>
+        <span className="text-[#585c61]">{icon}</span>
         {label}
       </label>
 
@@ -2047,8 +2047,8 @@ function InfoBadge({ icon, text }) {
         gap-2
         rounded-full
         border
-        border-white/10
-        bg-black/20
+        border-[#dedbd6]
+        bg-[#f1efeb]
         px-3
         py-2
         text-[8px]
@@ -2056,10 +2056,10 @@ function InfoBadge({ icon, text }) {
         font-black
         uppercase
         tracking-wider
-        text-gray-400
+        text-[#565b5f]
       "
     >
-      <span className="text-[#a855f7]">{icon}</span>
+      <span className="text-[#585c61]">{icon}</span>
       {text}
     </div>
   );
@@ -2071,8 +2071,8 @@ function BookingStep({ number, icon, title, text }) {
       className="
         rounded-2xl
         border
-        border-white/10
-        bg-black/20
+        border-[#dedbd6]
+        bg-[#f1efeb]
         p-4
       "
     >
@@ -2082,11 +2082,11 @@ function BookingStep({ number, icon, title, text }) {
             w-9
             h-9
             rounded-xl
-            bg-[#a855f7]/10
+            bg-[#efedeb]
             flex
             items-center
             justify-center
-            text-[#c084fc]
+            text-[#55595d]
           "
         >
           {icon}
@@ -2098,7 +2098,7 @@ function BookingStep({ number, icon, title, text }) {
             font-mono
             font-black
             tracking-[0.16em]
-            text-gray-700
+            text-[#898b8d]
           "
         >
           {number}
@@ -2107,7 +2107,7 @@ function BookingStep({ number, icon, title, text }) {
 
       <h3 className="mt-4 text-sm font-black uppercase">{title}</h3>
 
-      <p className="mt-2 text-xs text-gray-500 leading-relaxed">{text}</p>
+      <p className="mt-2 text-xs text-[#62666a] leading-relaxed">{text}</p>
     </div>
   );
 }
@@ -2118,18 +2118,18 @@ function BookingStep({ number, icon, title, text }) {
 
 const inputClass = `
   w-full
-  bg-[#0d0d12]
+  bg-[#fbfaf8]
   border
-  border-[#2a2a35]
+  border-[#dedbd6]
   rounded-xl
   py-3.5
   px-4
   text-sm
-  text-white
-  placeholder:text-gray-700
-  focus:border-[#a855f7]
+  text-[#24272b]
+  placeholder:text-[#898b8d]
+  focus:border-[#5c5f63]
   focus:ring-2
-  focus:ring-[#a855f7]/20
+  focus:ring-[#5c5f63]/20
   outline-none
   transition-all
 `;
@@ -2138,16 +2138,16 @@ const contactCardClass = `
   group
   rounded-[22px]
   border
-  border-white/10
-  bg-[#08080a]
+  border-[#dedbd6]
+  bg-[#f5f3ef]
   p-5
   sm:p-6
   text-left
   transition-all
   duration-300
   hover:-translate-y-1
-  hover:border-[#a855f7]/50
-  hover:bg-[#a855f7]/[0.04]
+  hover:border-[#777a7d]
+  hover:bg-[#f0eeeb]
 `;
 
 const contactLabelClass = `
@@ -2157,14 +2157,14 @@ const contactLabelClass = `
   font-black
   uppercase
   tracking-[0.18em]
-  text-gray-600
+  text-[#76797d]
 `;
 
 const contactDescriptionClass = `
   mt-3
   text-xs
   sm:text-sm
-  text-gray-500
+  text-[#62666a]
   leading-relaxed
 `;
 
@@ -2177,7 +2177,7 @@ const contactActionClass = `
   font-black
   uppercase
   tracking-[0.14em]
-  text-[#c084fc]
+  text-[#55595d]
   transition
   group-hover:gap-3
 `;

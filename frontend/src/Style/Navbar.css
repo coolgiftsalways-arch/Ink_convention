@@ -1,57 +1,820 @@
-@import url('https://fonts.googleapis.com/css2?family=Sekuya&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap");
 
 /* =====================================================
-   NAVBAR BASE
+   INK CONVENTION — PREMIUM LIGHT NAVBAR
+   CREAM / WHITE / CHARCOAL / GREY
 ===================================================== */
 
-.navbar-glow {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: "Sekuya", system-ui;
-}
+.inkNav {
+  --nav-bg: #faf8f5;
+  --nav-text: #171719;
+  --nav-muted: #656466;
+  --nav-line: #dedbd7;
+  --nav-accent: #555558;
+  --nav-white: #ffffff;
 
-.glass-nav {
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  font-family: "Sekuya", system-ui;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  z-index: 1000;
+
+  width: 100%;
+  height: 82px;
+
+  background: rgba(250, 248, 245, 0.91);
+
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+
+  border-bottom: 1px solid rgba(30, 30, 30, 0.07);
+
+  font-family: "Manrope", sans-serif;
+  color: var(--nav-text);
+
+  transition:
+    background 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
 }
 
 /* =====================================================
-   NAVIGATION LINKS
+   SCROLLED NAVBAR
 ===================================================== */
 
-.nav-link-hover {
+.inkNav--scrolled {
+  background: rgba(250, 248, 245, 0.98);
+
+  border-bottom: 1px solid var(--nav-line);
+
+  box-shadow:
+    0 8px 28px rgba(20, 20, 20, 0.045);
+}
+
+/* =====================================================
+   NAVBAR CONTAINER
+===================================================== */
+
+.inkNav-container {
+  width: 100%;
+  max-width: 1600px;
+  height: 100%;
+
+  margin: 0 auto;
+  padding: 0 clamp(18px, 3.2vw, 56px);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: clamp(18px, 2.5vw, 42px);
+}
+
+/* =====================================================
+   LOGO
+===================================================== */
+
+.inkNav-logo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  gap: 5px;
+
+  color: var(--nav-text);
+
+  text-decoration: none;
+
+  transition: opacity 0.25s ease;
+}
+
+.inkNav-logo:hover {
+  opacity: 0.7;
+}
+
+.inkNav-logoMain {
+  display: block;
+
+  font-family: "Manrope", sans-serif;
+
+  font-size: clamp(18px, 1.55vw, 24px);
+  font-weight: 800;
+
+  line-height: 1;
+
+  letter-spacing: -1.5px;
+
+  white-space: nowrap;
+}
+
+.inkNav-logoMain span {
+  color: #626267;
+}
+
+.inkNav-logoSub {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  font-size: 7px;
+  font-weight: 800;
+
+  letter-spacing: 1.15px;
+
+  color: #5c5b5c;
+
+  white-space: nowrap;
+}
+
+.inkNav-logoSub i {
+  width: 2px;
+  height: 9px;
+
+  background: #777579;
+
+  transform: rotate(17deg);
+}
+
+/* =====================================================
+   DESKTOP LINKS
+===================================================== */
+
+.inkNav-desktopLinks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 1;
+  min-width: 0;
+
+  gap: clamp(11px, 1.65vw, 26px);
+}
+
+.inkNav-link {
   position: relative;
-  font-family: "Sekuya", system-ui;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
+
+  display: inline-flex;
+  align-items: center;
+
+  height: 42px;
+
+  flex-shrink: 0;
+
+  font-family: "Manrope", sans-serif;
+
+  font-size: clamp(9px, 0.72vw, 11px);
+  font-weight: 800;
+
+  letter-spacing: 0.02em;
+
+  color: #57565a;
+
+  text-decoration: none;
   text-transform: uppercase;
+
+  white-space: nowrap;
+
+  transition: color 0.25s ease;
 }
 
-/* Animated underline */
+/* =====================================================
+   HOVER UNDERLINE
+===================================================== */
 
-.nav-link-hover::after {
+.inkNav-link::after {
   content: "";
+
   position: absolute;
+
+  left: 0;
+  bottom: 3px;
+
   width: 0;
   height: 2px;
-  bottom: -4px;
-  left: 0;
-  background-color: #ffffff;
-  transition: width 0.3s ease-in-out;
+
+  background: #47474a;
+
+  transition: width 0.3s ease;
 }
 
-/* IMPORTANT: this is :hover, not \:hover */
+.inkNav-link:hover {
+  color: #151515;
+}
 
-.nav-link-hover:hover::after {
+.inkNav-link:hover::after {
   width: 100%;
 }
 
-/* Purple hover */
+/* =====================================================
+   ACTIVE LINK
+===================================================== */
 
-.nav-link-hover:hover {
+.inkNav-link--active {
+  color: #111114;
+}
+
+.inkNav-link--active::after {
+  width: 100%;
+}
+
+/* =====================================================
+   RIGHT ACTIONS
+===================================================== */
+
+.inkNav-actions {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  flex-shrink: 0;
+}
+
+/* =====================================================
+   SOCIAL ICONS
+===================================================== */
+
+.inkNav-socials {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+.inkNav-socialBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+
+  border: 1px solid #dedbd7;
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.58);
+
+  color: #353437;
+
+  text-decoration: none;
+
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.inkNav-socialBtn:hover {
+  transform: translateY(-2px);
+
+  background: #555558;
+
+  border-color: #555558;
+
   color: #ffffff;
+}
+
+/* =====================================================
+   JOIN FREE BUTTON
+===================================================== */
+
+.inkNav-joinBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 15px;
+
+  min-width: 130px;
+  height: 43px;
+
+  padding: 0 18px;
+
+  background: #555558;
+
+  border: 1px solid #555558;
+  border-radius: 5px;
+
+  color: white;
+
+  font-family: "Manrope", sans-serif;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.09em;
+
+  text-decoration: none;
+
+  white-space: nowrap;
+
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.3s ease;
+}
+
+.inkNav-joinBtn:hover {
+  transform: translateY(-2px);
+
+  background: #252528;
+
+  border-color: #252528;
+}
+
+.inkNav-joinBtn svg {
+  transition: transform 0.25s ease;
+}
+
+.inkNav-joinBtn:hover svg {
+  transform: translate(2px, -2px);
+}
+
+/* =====================================================
+   MOBILE MENU BUTTON
+===================================================== */
+
+.inkNav-menuBtn {
+  display: none;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 43px;
+  height: 43px;
+
+  flex-shrink: 0;
+
+  padding: 0;
+
+  background: #ffffff;
+
+  border: 1px solid #dedbd7;
+  border-radius: 50%;
+
+  color: #202023;
+
+  cursor: pointer;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+
+.inkNav-menuBtn:hover,
+.inkNav-menuBtn--active {
+  background: #555558;
+  color: white;
+}
+
+/* =====================================================
+   MOBILE DROPDOWN
+===================================================== */
+
+.inkNav-mobileMenu {
+  position: absolute;
+
+  top: 100%;
+  left: 0;
+
+  width: 100%;
+
+  max-height: calc(100dvh - 70px);
+
+  overflow-y: auto;
+
+  background: #faf8f5;
+
+  border-bottom: 1px solid #dedbd7;
+
+  box-shadow:
+    0 22px 45px rgba(0, 0, 0, 0.11);
+
+  z-index: 1002;
+}
+
+.inkNav-mobileInner {
+  max-width: 760px;
+
+  margin: 0 auto;
+
+  padding: 22px 24px 27px;
+}
+
+/* =====================================================
+   MOBILE HEADING
+===================================================== */
+
+.inkNav-mobileHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  margin-bottom: 15px;
+
+  color: #858184;
+
+  font-family: "Manrope", sans-serif;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.1em;
+}
+
+/* =====================================================
+   MOBILE LINKS
+===================================================== */
+
+.inkNav-mobileLinks {
+  display: flex;
+  flex-direction: column;
+}
+
+.inkNav-mobileLink {
+  display: flex;
+  align-items: center;
+
+  gap: 17px;
+
+  min-height: 59px;
+
+  padding: 8px 3px;
+
+  border-bottom: 1px solid #e6e2de;
+
+  color: #454448;
+
+  text-decoration: none;
+
+  transition:
+    color 0.25s ease,
+    padding-left 0.25s ease;
+}
+
+.inkNav-mobileLink:hover {
+  color: #111111;
+  padding-left: 8px;
+}
+
+.inkNav-mobileLinkIndex {
+  width: 22px;
+
+  flex-shrink: 0;
+
+  color: #aaa5a5;
+
+  font-family: "Manrope", sans-serif;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.inkNav-mobileLinkName {
+  flex: 1;
+
+  font-family: "Barlow Condensed", sans-serif;
+
+  font-size: 26px;
+  font-weight: 700;
+
+  letter-spacing: 0.025em;
+
+  text-transform: uppercase;
+}
+
+.inkNav-mobileLink svg {
+  flex-shrink: 0;
+}
+
+/* =====================================================
+   ACTIVE MOBILE LINK
+===================================================== */
+
+.inkNav-mobileLink--active {
+  color: #111111;
+}
+
+.inkNav-mobileLink--active .inkNav-mobileLinkIndex {
+  color: #555558;
+}
+
+.inkNav-mobileLink--active .inkNav-mobileLinkName {
+  text-decoration: underline;
+  text-decoration-color: #66666a;
+
+  text-underline-offset: 5px;
+}
+
+/* =====================================================
+   MOBILE JOIN BUTTON
+===================================================== */
+
+.inkNav-mobileJoin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  width: 100%;
+  min-height: 55px;
+
+  margin-top: 24px;
+  padding: 0 20px;
+
+  background: #555558;
+
+  border-radius: 5px;
+
+  color: #ffffff;
+
+  font-family: "Manrope", sans-serif;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 0.07em;
+
+  text-decoration: none;
+
+  transition: background 0.25s ease;
+}
+
+.inkNav-mobileJoin:hover {
+  background: #29292c;
+}
+
+/* =====================================================
+   MOBILE FOOTER
+===================================================== */
+
+.inkNav-mobileFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 18px;
+
+  margin-top: 28px;
+  padding-top: 21px;
+
+  border-top: 1px solid #dfdbd7;
+}
+
+.inkNav-mobileFooterText {
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+}
+
+.inkNav-mobileFooterText strong {
+  color: #161619;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.inkNav-mobileFooterText span {
+  color: #767276;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+}
+
+.inkNav-mobileSocials {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+}
+
+.inkNav-mobileSocials a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 39px;
+  height: 39px;
+
+  border: 1px solid #d9d5d1;
+  border-radius: 50%;
+
+  background: #ffffff;
+
+  color: #29292b;
+
+  text-decoration: none;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+
+.inkNav-mobileSocials a:hover {
+  background: #555558;
+  color: #ffffff;
+}
+
+/* =====================================================
+   BACKGROUND OVERLAY
+===================================================== */
+
+.inkNav-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  border: 0;
+  padding: 0;
+
+  background: rgba(25, 25, 25, 0.28);
+
+  backdrop-filter: blur(3px);
+
+  z-index: 999;
+
+  cursor: pointer;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1250px) {
+  .inkNav-container {
+    gap: 20px;
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+
+  .inkNav-desktopLinks {
+    gap: 12px;
+  }
+
+  .inkNav-logoMain {
+    font-size: 19px;
+  }
+
+  .inkNav-logoSub {
+    font-size: 6px;
+  }
+
+  .inkNav-socials {
+    display: none;
+  }
+
+  .inkNav-joinBtn {
+    min-width: 112px;
+    padding: 0 12px;
+  }
+}
+
+/* =====================================================
+   TABLET / MOBILE NAVBAR
+===================================================== */
+
+@media (max-width: 1100px) {
+  .inkNav {
+    height: 73px;
+  }
+
+  .inkNav-container {
+    padding: 0 25px;
+  }
+
+  .inkNav-desktopLinks {
+    display: none;
+  }
+
+  .inkNav-menuBtn {
+    display: flex;
+  }
+
+  .inkNav-socials {
+    display: none;
+  }
+
+  .inkNav-joinBtn {
+    height: 39px;
+    min-width: 110px;
+  }
+}
+
+/* =====================================================
+   SMALL MOBILE
+===================================================== */
+
+@media (max-width: 600px) {
+  .inkNav {
+    height: 68px;
+  }
+
+  .inkNav-container {
+    padding: 0 16px;
+    gap: 10px;
+  }
+
+  .inkNav-logoMain {
+    font-size: 18px;
+    letter-spacing: -1.3px;
+  }
+
+  .inkNav-logoSub {
+    font-size: 5.7px;
+    letter-spacing: 0.55px;
+    gap: 5px;
+  }
+
+  .inkNav-logoSub i {
+    height: 7px;
+    width: 1px;
+  }
+
+  .inkNav-actions {
+    gap: 7px;
+  }
+
+  /* JOIN BUTTON ONLY IN MOBILE MENU */
+
+  .inkNav-joinBtn {
+    display: none;
+  }
+
+  .inkNav-menuBtn {
+    width: 39px;
+    height: 39px;
+  }
+
+  .inkNav-mobileInner {
+    padding: 20px 20px 25px;
+  }
+
+  .inkNav-mobileLink {
+    min-height: 56px;
+  }
+
+  .inkNav-mobileLinkName {
+    font-size: 25px;
+  }
+}
+
+/* =====================================================
+   EXTRA SMALL MOBILE
+===================================================== */
+
+@media (max-width: 360px) {
+  .inkNav-container {
+    padding: 0 12px;
+  }
+
+  .inkNav-logoMain {
+    font-size: 16px;
+  }
+
+  .inkNav-logoSub {
+    font-size: 5px;
+    letter-spacing: 0.4px;
+  }
+
+  .inkNav-mobileInner {
+    padding: 18px 14px 24px;
+  }
+
+  .inkNav-mobileLinkName {
+    font-size: 23px;
+  }
+}
+
+/* =====================================================
+   ACCESSIBILITY
+===================================================== */
+
+.inkNav a:focus-visible,
+.inkNav button:focus-visible {
+  outline: 2px solid #535357;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .inkNav,
+  .inkNav *,
+  .inkNav-overlay {
+    transition: none !important;
+    animation: none !important;
+  }
 }

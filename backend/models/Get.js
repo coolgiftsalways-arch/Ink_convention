@@ -1,74 +1,94 @@
 const mongoose = require("mongoose");
 
 /* =====================================================
-   MULTI-CITY BOOKING SCHEMA
+   INKCONVENTION — ENTRY BOOKINGS
+
+   Supports:
+   - Five-city 2026 tour
+   - NORMAL and VIP passes
+   - Existing Rajasthan booking records
+   - Existing admin dashboard fields
+===================================================== */
+
+const ALL_EVENT_CITIES = [
+  // Historical cities
+  "jaipur",
+  "udaipur",
+  "kota",
+
+  // New 2026 tour cities
+  "gorakhpur",
+  "noida",
+  "varanasi",
+  "agra",
+  "lucknow",
+];
+
+const ALL_PASS_TYPES = [
+  // Historical passes
+  "1-Day",
+  "2-Day",
+  "3-Day",
+
+  // New passes
+  "normal",
+  "vip",
+];
+
+/* =====================================================
+   BOOKING SCHEMA
 ===================================================== */
 
 const bookingSchema = new mongoose.Schema(
   {
     eventCity: {
       type: String,
-
       required: true,
-
-      enum: ["jaipur", "udaipur", "kota"],
+      enum: ALL_EVENT_CITIES,
+      lowercase: true,
+      trim: true,
     },
 
     passDays: {
       type: Number,
-
       required: true,
-
       enum: [1, 2, 3],
     },
 
     passType: {
       type: String,
-
       required: true,
-
-      enum: ["1-Day", "2-Day", "3-Day"],
+      enum: ALL_PASS_TYPES,
     },
 
     selectedDates: {
       type: [String],
-
       required: true,
-
       default: [],
     },
 
     tickets: {
       type: Number,
-
       required: true,
-
       min: 1,
-
       max: 10,
     },
 
     firstPersonPrice: {
       type: Number,
-
       required: true,
-
       min: 0,
     },
 
     additionalAmount: {
       type: Number,
-
       required: true,
-
       min: 0,
     },
 
     totalAmount: {
       type: Number,
-
       required: true,
-
       min: 0,
     },
   },
@@ -84,16 +104,12 @@ const bookingSchema = new mongoose.Schema(
 const getSchema = new mongoose.Schema(
   {
     /* ===============================================
-       ARTIST PROFILE
-
-       OPTIONAL FOR PUBLIC VISITORS
+       ARTIST PROFILE — OPTIONAL
     =============================================== */
 
     artistProfile: {
       type: mongoose.Schema.Types.ObjectId,
-
       ref: "TattooStudio",
-
       default: null,
     },
 
@@ -103,109 +119,100 @@ const getSchema = new mongoose.Schema(
 
     fullName: {
       type: String,
-
       required: true,
-
       trim: true,
     },
 
     email: {
       type: String,
-
       required: true,
-
       trim: true,
-
       lowercase: true,
     },
 
     mobile: {
       type: String,
-
       required: true,
-
       trim: true,
     },
 
     state: {
       type: String,
-
       required: true,
-
       trim: true,
     },
 
     /* ===============================================
-       LEGACY EVENT DATA
+       EVENT DETAILS
 
-       SUPPORT EXISTING ADMIN RECORDS
+       Retained for existing admin compatibility
     =============================================== */
 
     eventCity: {
       type: String,
-
       required: true,
-
-      enum: ["jaipur", "udaipur", "kota"],
+      enum: ALL_EVENT_CITIES,
+      lowercase: true,
+      trim: true,
     },
 
     eventDate: {
       type: String,
-
       required: true,
     },
 
     /* ===============================================
-       TICKETS / PEOPLE
+       NUMBER OF PEOPLE
     =============================================== */
 
     tickets: {
       type: Number,
-
       required: true,
-
       min: 1,
-
       max: 10,
-
       default: 1,
     },
 
     /* ===============================================
-       PRICES
+       TICKET PRICES
     =============================================== */
 
     ticketPrice: {
       type: Number,
-
       required: true,
-
+      min: 0,
       default: 2999,
     },
 
     additionalTicketPrice: {
       type: Number,
-
       required: true,
-
+      min: 0,
       default: 1499,
     },
 
     totalAmount: {
       type: Number,
-
       required: true,
-
       min: 0,
     },
 
     /* ===============================================
-       ALL SELECTED CITIES
+       NORMAL / VIP PASS
+    =============================================== */
+
+    passType: {
+      type: String,
+      enum: ALL_PASS_TYPES,
+      default: undefined,
+    },
+
+    /* ===============================================
+       SELECTED BOOKINGS
     =============================================== */
 
     bookings: {
       type: [bookingSchema],
-
       default: [],
     },
 
@@ -215,27 +222,22 @@ const getSchema = new mongoose.Schema(
 
     source: {
       type: String,
-
-      enum: ["legacy-entry", "rajasthan-entry"],
-
+      enum: ["legacy-entry", "rajasthan-entry", "lucknow-entry", "tour-entry"],
       default: "legacy-entry",
     },
 
     /* ===============================================
-       STATUS
+       BOOKING STATUS
     =============================================== */
 
     status: {
       type: String,
-
       enum: ["New", "Contacted", "Confirmed", "Cancelled"],
-
       default: "New",
     },
 
     contactedAt: {
       type: Date,
-
       default: null,
     },
   },

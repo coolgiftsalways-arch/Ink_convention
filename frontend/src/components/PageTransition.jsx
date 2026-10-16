@@ -1,82 +1,149 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import "../Style/BarbaTransitions.css";
 
+/**
+ * INK CONVENTION — premium 3D page reveal.
+ * Visual transition only: does not touch routes, APIs or backend logic.
+ */
 export default function PageTransition({ children }) {
-  const containerRef = useRef(null);
+  const overlayRef = useRef(null);
   const topColRef = useRef(null);
   const bottomColRef = useRef(null);
   const logoRef = useRef(null);
+  const subtitleRef = useRef(null);
+  const lineRef = useRef(null);
+  const containerRef = useRef(null);
 
-  useEffect(() => {
-    const tl = gsap.timeline();
+  useLayoutEffect(() => {
+    const context = gsap.context(() => {
+      const overlay = overlayRef.current;
+      const top = topColRef.current;
+      const bottom = bottomColRef.current;
+      const logo = logoRef.current;
+      const subtitle = subtitleRef.current;
+      const line = lineRef.current;
+      const page = containerRef.current;
 
-    // Initialize: Panels start flat covering the screen with 3D transform origins
-    tl.set(topColRef.current, { rotationX: 0, transformOrigin: "top center" })
-      .set(bottomColRef.current, {
+      if (!overlay || !top || !bottom || !logo || !subtitle || !line || !page) {
+        return;
+      }
+
+      // Respect visitors who prefer little or no animation.
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(overlay, { autoAlpha: 0 });
+        gsap.set(logo, { autoAlpha: 0 });
+        gsap.set(page, { clearProps: "all", autoAlpha: 1 });
+        return;
+      }
+
+      gsap.set(overlay, { autoAlpha: 1 });
+      gsap.set(top, {
         rotationX: 0,
+        yPercent: 0,
+        autoAlpha: 1,
+        transformOrigin: "top center",
+        force3D: true,
+      });
+      gsap.set(bottom, {
+        rotationX: 0,
+        yPercent: 0,
+        autoAlpha: 1,
         transformOrigin: "bottom center",
-      })
-      .set(logoRef.current, {
-        opacity: 0,
-        scale: 0.8,
-        z: -100,
-        filter: "blur(12px)",
-      })
-      .set(containerRef.current, { opacity: 0 })
+        force3D: true,
+      });
+      gsap.set(logo, {
+        autoAlpha: 0,
+        y: 24,
+        scale: 0.94,
+        filter: "blur(8px)",
+      });
+      gsap.set(subtitle, { autoAlpha: 0, y: 10 });
+      gsap.set(line, { scaleX: 0, transformOrigin: "left center" });
+      gsap.set(page, { autoAlpha: 0, y: 20 });
 
-      // 3D pop-in for the center logo
-      .to(logoRef.current, {
-        opacity: 1,
-        scale: 1,
-        z: 0,
-        filter: "blur(0px)",
-        duration: 0.35,
-        ease: "power3.out",
-      })
-      .to(logoRef.current, { opacity: 1, duration: 0.15 })
+      const timeline = gsap.timeline({
+        defaults: { ease: "power3.out" },
+      });
 
-      // Fade out logo and reveal page
-      .to(logoRef.current, { opacity: 0, scale: 1.1, duration: 0.15 }, "+=0.02")
-      .to(containerRef.current, { opacity: 1, duration: 0.25 }, "-=0.1")
+      timeline
+        // The identity arrives cleanly, without neon/glow effects.
+        .to(logo, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          filter: "blur(0px)",
+          duration: 0.52,
+        })
+        .to(line, { scaleX: 1, duration: 0.43 }, "-=0.33")
+        .to(subtitle, { autoAlpha: 1, y: 0, duration: 0.35 }, "-=0.35")
+        // The panels fold away simultaneously to show the next page.
+        .to(logo, { autoAlpha: 0, y: -12, duration: 0.24 }, "+=0.18")
+        .to(subtitle, { autoAlpha: 0, y: -8, duration: 0.2 }, "<")
+        .to(
+          top,
+          {
+            rotationX: -98,
+            yPercent: -6,
+            autoAlpha: 0,
+            duration: 0.82,
+            ease: "power4.inOut",
+          },
+          "-=0.04",
+        )
+        .to(
+          bottom,
+          {
+            rotationX: 98,
+            yPercent: 6,
+            autoAlpha: 0,
+            duration: 0.82,
+            ease: "power4.inOut",
+          },
+          "<",
+        )
+        .to(
+          page,
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.7,
+            ease: "power2.out",
+          },
+          "<+=0.17",
+        )
+        .set(overlay, { autoAlpha: 0 })
+        .set(page, { clearProps: "transform,visibility", opacity: 1 });
+    });
 
-      // 3D Flip open: Top panel rotates backwards/up, Bottom panel rotates forwards/down
-      .to(topColRef.current, {
-        rotationX: -90,
-        opacity: 0,
-        duration: 0.55,
-        ease: "power4.inOut",
-      })
-      .to(
-        bottomColRef.current,
-        {
-          rotationX: 90,
-          opacity: 0,
-          duration: 0.55,
-          ease: "power4.inOut",
-        },
-        "<", // Runs simultaneously with the top panel flip
-      );
-
-    return () => {
-      tl.kill();
-    };
+    return () => context.revert();
   }, []);
 
   return (
     <>
-      {/* 3D Perspective Wrapper */}
-      <div className="barba-transition-overlay">
+      <div
+        ref={overlayRef}
+        className="barba-transition-overlay"
+        aria-hidden="true"
+      >
         <div ref={topColRef} className="barba-col barba-col-top" />
         <div ref={bottomColRef} className="barba-col barba-col-bottom" />
+
+        <div ref={logoRef} className="transition-center-logo">
+          <div className="transition-brand-label">INK CONVENTION</div>
+          <div className="transition-brand-name">
+            EXPO<span>2026.</span>
+          </div>
+          <div ref={lineRef} className="transition-brand-line" />
+          <div ref={subtitleRef} className="transition-brand-subtitle">
+            TATTOO / ART / CULTURE
+          </div>
+        </div>
       </div>
 
-      {/* Centered Logo */}
-      <div ref={logoRef} className="transition-center-logo">
-        EXPO2026<span className="text-[#06b6d4]">.</span>
+      <div ref={containerRef} className="page-transition-content">
+        {children}
       </div>
-
-      <div ref={containerRef}>{children}</div>
     </>
   );
 }

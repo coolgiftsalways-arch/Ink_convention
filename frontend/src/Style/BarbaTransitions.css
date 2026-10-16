@@ -1,56 +1,133 @@
-/* 3D Perspective Transition Overlay */
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Manrope:wght@500;600;700;800&display=swap");
+
+/* INK CONVENTION — premium cream / stone-grey 3D transition */
+
 .barba-transition-overlay {
      position: fixed;
      inset: 0;
      z-index: 99999;
-     pointer-events: none;
      display: flex;
      flex-direction: column;
-     width: 100vw;
+     width: 100%;
      height: 100vh;
+     height: 100dvh;
      overflow: hidden;
-     perspective: 1200px;
-     /* Enables 3D depth perception */
+     pointer-events: none;
      touch-action: none;
-     -webkit-transform: translateZ(0);
-     transform: translateZ(0);
+     perspective: 1300px;
+     perspective-origin: center center;
+     transform-style: preserve-3d;
 }
 
 .barba-col {
-     flex: 1;
+     position: relative;
+     flex: 1 1 50%;
      width: 100%;
-     height: 50vh;
+     min-height: 0;
      will-change: transform, opacity;
      backface-visibility: hidden;
+     -webkit-backface-visibility: hidden;
+     transform-style: preserve-3d;
 }
 
-/* Top half color: Deep Electric Violet */
 .barba-col-top {
-     background-color: #7c3aed;
-     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+     background: #f4f2ed;
+     border-bottom: 1px solid rgba(49, 51, 52, 0.14);
+     box-shadow: inset 0 -20px 40px rgba(40, 42, 43, 0.025);
 }
 
-/* Bottom half color: Deep Dark Obsidian */
 .barba-col-bottom {
-     background-color: #050507;
-     border-top: 1px solid rgba(255, 255, 255, 0.1);
+     background: #d5d4d0;
+     border-top: 1px solid rgba(49, 51, 52, 0.1);
+     box-shadow: inset 0 20px 40px rgba(40, 42, 43, 0.025);
 }
 
-/* Centered Transition Logo with 3D depth */
 .transition-center-logo {
-     position: fixed;
+     position: absolute;
+     z-index: 1;
      top: 50%;
      left: 50%;
+     width: max-content;
+     max-width: calc(100% - 28px);
      transform: translate(-50%, -50%);
-     z-index: 100000;
-     pointer-events: none;
-     font-weight: 900;
-     letter-spacing: -0.04em;
-     font-size: clamp(2.2rem, 8vw, 4.8rem);
-     mix-blend-mode: difference;
-     color: #ffffff;
+     text-align: center;
+     color: #303235;
      opacity: 0;
+     user-select: none;
      will-change: opacity, transform, filter;
+     -webkit-font-smoothing: antialiased;
+}
+
+.transition-brand-label {
+     margin-bottom: 10px;
+     font-family: "Manrope", sans-serif;
+     font-size: clamp(8px, 1.3vw, 11px);
+     font-weight: 800;
+     letter-spacing: 0.4em;
+     line-height: 1.5;
+}
+
+.transition-brand-name {
+     font-family: "Barlow Condensed", Impact, sans-serif;
+     font-size: clamp(3.5rem, 11vw, 9rem);
+     font-weight: 900;
+     line-height: 0.9;
+     letter-spacing: -0.035em;
      white-space: nowrap;
-     font-family: monospace;
+}
+
+.transition-brand-name span {
+     color: #73767a;
+}
+
+.transition-brand-line {
+     width: min(100%, 330px);
+     height: 1px;
+     margin: 19px auto 13px;
+     background: #73767a;
+     transform: scaleX(0);
+     transform-origin: left center;
+}
+
+.transition-brand-subtitle {
+     font-family: "Manrope", sans-serif;
+     font-size: clamp(8px, 1.2vw, 10px);
+     font-weight: 700;
+     letter-spacing: 0.25em;
+     line-height: 1.6;
+     opacity: 0;
+}
+
+.page-transition-content {
+     position: relative;
+     min-height: 100vh;
+     opacity: 0;
+}
+
+@media (max-width: 600px) {
+     .transition-brand-label {
+          letter-spacing: 0.28em;
+     }
+
+     .transition-brand-name {
+          font-size: clamp(3.3rem, 14vw, 5.4rem);
+     }
+
+     .transition-brand-line {
+          width: 74%;
+     }
+
+     .transition-brand-subtitle {
+          letter-spacing: 0.16em;
+     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+     .barba-transition-overlay {
+          display: none;
+     }
+
+     .page-transition-content {
+          opacity: 1;
+     }
 }

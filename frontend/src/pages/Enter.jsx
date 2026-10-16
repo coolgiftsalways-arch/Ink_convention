@@ -2287,7 +2287,7 @@ export default function Enter() {
             <br />
             <span
               className="
-                text-purple-500
+                text-[#3F4449]
               "
             >
               CARD.
@@ -2299,7 +2299,7 @@ export default function Enter() {
               mt-6
               max-w-2xl
               text-sm
-              text-gray-500
+              text-[#6A6D72]
               leading-relaxed
             "
           >
@@ -2331,7 +2331,7 @@ export default function Enter() {
                   left-4
                   top-1/2
                   -translate-y-1/2
-                  text-gray-600
+                  text-[#777A7E]
                 "
               />
 
@@ -2342,10 +2342,10 @@ export default function Enter() {
                 placeholder="ARTIST OR STUDIO NAME..."
                 className="
                   w-full
-                  bg-[#0d0d11]
+                  bg-white
                   border
-                  border-white/10
-                  focus:border-purple-500
+                  border-[#DDDBD6]
+                  focus:border-[#65696E]
                   rounded-xl
                   pl-11
                   pr-4
@@ -2360,8 +2360,8 @@ export default function Enter() {
               type="submit"
               disabled={searching}
               className="
-                bg-purple-600
-                hover:bg-purple-500
+                bg-[#4B4E52] text-white
+                hover:bg-[#292C30]
                 disabled:opacity-50
                 rounded-xl
                 px-7
@@ -2394,10 +2394,10 @@ export default function Enter() {
                 onClick={() => chooseArtist(artist)}
                 className="
                     text-left
-                    bg-[#0d0d11]
+                    bg-white
                     border
-                    border-white/10
-                    hover:border-purple-500/60
+                    border-[#DDDBD6]
+                    hover:border-[#515458]/60
                     rounded-2xl
                     p-5
                     transition
@@ -2408,7 +2408,7 @@ export default function Enter() {
                       text-[8px]
                       font-mono
                       tracking-[0.14em]
-                      text-purple-400
+                      text-[#60646A]
                     "
                 >
                   DIRECTORY PROFILE
@@ -2429,7 +2429,7 @@ export default function Enter() {
                   className="
                       mt-1
                       text-sm
-                      text-gray-500
+                      text-[#6A6D72]
                     "
                 >
                   {artist.studio || "Tattoo Artist / Studio"}
@@ -2442,13 +2442,13 @@ export default function Enter() {
                       items-center
                       gap-2
                       text-xs
-                      text-gray-500
+                      text-[#6A6D72]
                     "
                 >
                   <MapPin
                     size={13}
                     className="
-                        text-purple-500
+                        text-[#3F4449]
                       "
                   />
 
@@ -2469,7 +2469,7 @@ export default function Enter() {
                     className="
                         text-[9px]
                         font-mono
-                        text-gray-600
+                        text-[#777A7E]
                       "
                   >
                     {artist.maskedPhone || "REGISTERED MOBILE"}
@@ -2479,7 +2479,7 @@ export default function Enter() {
                     className="
                         text-[9px]
                         font-black
-                        text-purple-400
+                        text-[#60646A]
                       "
                   >
                     UPDATE YOUR CARD →
@@ -2513,8 +2513,8 @@ export default function Enter() {
             className="
               text-[9px]
               font-mono
-              text-gray-500
-              hover:text-white
+              text-[#6A6D72]
+              hover:text-[#232427]
               transition
               mb-8
             "
@@ -2524,9 +2524,9 @@ export default function Enter() {
 
           <div
             className="
-              bg-[#0d0d11]
+              bg-white
               border
-              border-white/10
+              border-[#DDDBD6]
               rounded-[28px]
               p-6
               sm:p-9
@@ -2537,9 +2537,9 @@ export default function Enter() {
                 w-14
                 h-14
                 rounded-full
-                bg-purple-500/10
+                bg-[#777A7E]/10
                 border
-                border-purple-500/20
+                border-[#7A7E83]/20
                 flex
                 items-center
                 justify-center
@@ -2548,7 +2548,7 @@ export default function Enter() {
               <ShieldCheck
                 size={25}
                 className="
-                  text-purple-400
+                  text-[#60646A]
                 "
               />
             </div>
@@ -2559,7 +2559,7 @@ export default function Enter() {
                 text-[9px]
                 font-mono
                 tracking-[0.16em]
-                text-purple-400
+                text-[#60646A]
               "
             >
               OWNERSHIP VERIFICATION
@@ -2584,7 +2584,7 @@ export default function Enter() {
               className="
                 mt-7
                 border
-                border-white/10
+                border-[#DDDBD6]
                 rounded-2xl
                 p-5
               "
@@ -2603,7 +2603,7 @@ export default function Enter() {
                 className="
                   mt-1
                   text-sm
-                  text-gray-500
+                  text-[#6A6D72]
                 "
               >
                 {selectedArtist?.studio || "Tattoo Artist / Studio"}
@@ -2613,7 +2613,7 @@ export default function Enter() {
                 className="
                   mt-3
                   text-xs
-                  text-gray-500
+                  text-[#6A6D72]
                 "
               >
                 OTP goes only to: {maskedPhone || "the saved mobile number"}
@@ -2637,8 +2637,8 @@ export default function Enter() {
                 className="
                   mt-6
                   w-full
-                  bg-purple-600
-                  hover:bg-purple-500
+                  bg-[#4B4E52] text-white
+                  hover:bg-[#292C30]
                   disabled:opacity-50
                   rounded-xl
                   p-4
@@ -2662,7 +2662,7 @@ export default function Enter() {
                     block
                     text-[9px]
                     font-mono
-                    text-gray-500
+                    text-[#6A6D72]
                     mb-2
                   "
                 >
@@ -2694,10 +2694,10 @@ export default function Enter() {
                     w-full
                     text-center
                     tracking-[0.55em]
-                    bg-black/40
+                    bg-[#F3F1ED]
                     border
-                    border-white/10
-                    focus:border-purple-500
+                    border-[#DDDBD6]
+                    focus:border-[#65696E]
                     rounded-xl
                     px-5
                     py-5
@@ -2737,7 +2737,7 @@ export default function Enter() {
                     w-full
                     text-[9px]
                     font-mono
-                    text-purple-400
+                    text-[#60646A]
                     disabled:text-gray-700
                   "
                 >
@@ -2778,7 +2778,7 @@ export default function Enter() {
               justify-between
               gap-6
               border-b
-              border-white/10
+              border-[#DDDBD6]
               pb-8
             "
           >
@@ -2800,7 +2800,7 @@ export default function Enter() {
                 <br />
                 <span
                   className="
-                    text-purple-500
+                    text-[#3F4449]
                   "
                 >
                   PROFILE.
@@ -2838,8 +2838,8 @@ export default function Enter() {
                 className="
                   text-[9px]
                   font-mono
-                  text-purple-400
-                  hover:text-purple-300
+                  text-[#60646A]
+                  hover:text-[#34383D]
                   transition
                 "
               >
@@ -2856,8 +2856,8 @@ export default function Enter() {
                 className="
                   text-[9px]
                   font-mono
-                  text-gray-500
-                  hover:text-white
+                  text-[#6A6D72]
+                  hover:text-[#232427]
                   transition
                 "
               >
@@ -2886,7 +2886,7 @@ export default function Enter() {
                 className="
                   text-[9px]
                   font-mono
-                  text-gray-500
+                  text-[#6A6D72]
                   mb-3
                 "
               >
@@ -2899,10 +2899,10 @@ export default function Enter() {
                   block
                   aspect-square
                   overflow-hidden
-                  bg-[#0d0d11]
+                  bg-white
                   border
-                  border-white/10
-                  hover:border-purple-500/50
+                  border-[#DDDBD6]
+                  hover:border-[#515458]/50
                   rounded-[26px]
                   cursor-pointer
                   transition
@@ -2933,7 +2933,7 @@ export default function Enter() {
                     <Users
                       size={32}
                       className="
-                        text-purple-500
+                        text-[#3F4449]
                       "
                     />
 
@@ -2950,7 +2950,7 @@ export default function Enter() {
                       className="
                         mt-1
                         text-xs
-                        text-gray-600
+                        text-[#777A7E]
                       "
                     >
                       Click to select
@@ -2971,9 +2971,9 @@ export default function Enter() {
               <div
                 className="
                   mt-5
-                  bg-[#0d0d11]
+                  bg-white
                   border
-                  border-white/10
+                  border-[#DDDBD6]
                   rounded-2xl
                   p-5
                 "
@@ -2983,7 +2983,7 @@ export default function Enter() {
                     flex
                     items-center
                     gap-2
-                    text-purple-400
+                    text-[#60646A]
                   "
                 >
                   <Lock size={13} />
@@ -3013,7 +3013,7 @@ export default function Enter() {
                   className="
                     mt-2
                     text-xs
-                    text-gray-600
+                    text-[#777A7E]
                     leading-relaxed
                   "
                 >
@@ -3038,8 +3038,8 @@ export default function Enter() {
                     mt-4
                     text-[9px]
                     font-black
-                    text-purple-400
-                    hover:text-purple-300
+                    text-[#60646A]
+                    hover:text-[#34383D]
                   "
                 >
                   {changePhoneOpen
@@ -3053,13 +3053,13 @@ export default function Enter() {
                       mt-5
                       pt-5
                       border-t
-                      border-white/10
+                      border-[#DDDBD6]
                     "
                   >
                     <p
                       className="
                         text-xs
-                        text-gray-500
+                        text-[#6A6D72]
                         leading-relaxed
                       "
                     >
@@ -3076,10 +3076,10 @@ export default function Enter() {
                       className="
                         mt-4
                         w-full
-                        bg-black/40
+                        bg-[#F3F1ED]
                         border
-                        border-white/10
-                        focus:border-purple-500
+                        border-[#DDDBD6]
+                        focus:border-[#65696E]
                         rounded-xl
                         px-4
                         py-3
@@ -3138,10 +3138,10 @@ export default function Enter() {
                             w-full
                             text-center
                             tracking-[0.45em]
-                            bg-black/40
+                            bg-[#F3F1ED]
                             border
-                            border-white/10
-                            focus:border-purple-500
+                            border-[#DDDBD6]
+                            focus:border-[#65696E]
                             rounded-xl
                             px-4
                             py-3
@@ -3157,8 +3157,8 @@ export default function Enter() {
                           className="
                             mt-3
                             w-full
-                            bg-purple-600
-                            hover:bg-purple-500
+                            bg-[#4B4E52] text-white
+                            hover:bg-[#292C30]
                             disabled:opacity-50
                             rounded-xl
                             py-3
@@ -3189,8 +3189,8 @@ export default function Enter() {
                   w-full
                   rounded-2xl
                   border
-                  border-purple-500/30
-                  bg-purple-500/10
+                  border-[#85888D]/30
+                  bg-[#777A7E]/10
                   px-5
                   py-4
                   text-[10px]
@@ -3198,14 +3198,14 @@ export default function Enter() {
                   font-mono
                   uppercase
                   tracking-[0.14em]
-                  text-purple-400
+                  text-[#60646A]
                   transition-all
                   duration-300
-                  hover:bg-purple-500
+                  hover:bg-[#292C30]
                   hover:text-white
-                  hover:border-purple-500
+                  hover:border-[#515458]
                   hover:-translate-y-0.5
-                  hover:shadow-[0_0_25px_rgba(168,85,247,0.18)]
+                  hover:shadow-[0_0_25px_rgba(72,76,80,0.12)]
                 "
               >
                 BOOK YOUR STALL →
@@ -3293,7 +3293,7 @@ export default function Enter() {
                       className="
                         text-[9px]
                         font-mono
-                        text-gray-500
+                        text-[#6A6D72]
                       "
                     >
                       TATTOO SPECIALITIES *
@@ -3303,7 +3303,7 @@ export default function Enter() {
                       className="
                         mt-1
                         text-[10px]
-                        text-gray-700
+                        text-[#989A9C]
                       "
                     >
                       Select every tattoo style you specialise in. These styles
@@ -3316,7 +3316,7 @@ export default function Enter() {
                       shrink-0
                       text-[8px]
                       font-mono
-                      text-purple-400
+                      text-[#60646A]
                     "
                   >
                     {formData.tattooStyles?.length || 0} SELECTED
@@ -3326,8 +3326,8 @@ export default function Enter() {
                 <div
                   className="
                     border
-                    border-white/10
-                    bg-[#0d0d11]
+                    border-[#DDDBD6]
+                    bg-white
                     rounded-2xl
                     p-4
                     sm:p-5
@@ -3366,17 +3366,17 @@ export default function Enter() {
                               ${
                                 selected
                                   ? `
-                                    border-purple-400
-                                    bg-purple-600
+                                    border-[#61656A]
+                                    bg-[#4B4E52] text-white
                                     text-white
-                                    shadow-[0_0_18px_rgba(168,85,247,0.25)]
+                                    shadow-[0_0_18px_rgba(72,76,80,0.12)]
                                   `
                                   : `
-                                    border-white/10
-                                    bg-black/30
-                                    text-gray-500
-                                    hover:border-purple-500/40
-                                    hover:text-purple-300
+                                    border-[#DDDBD6]
+                                    bg-[#F3F1ED]
+                                    text-[#6A6D72]
+                                    hover:border-[#515458]/40
+                                    hover:text-[#34383D]
                                   `
                               }
                             `}
@@ -3408,13 +3408,13 @@ export default function Enter() {
                             gap-2
                             rounded-lg
                             border
-                            border-purple-500/20
-                            bg-purple-500/[0.06]
+                            border-[#7A7E83]/20
+                            bg-[#777A7E]/[0.06]
                             px-3
                             py-2
                             text-[8px]
                             font-black
-                            text-purple-300
+                            text-[#60646A]
                           "
                       >
                         {style}
@@ -3424,8 +3424,8 @@ export default function Enter() {
                           onClick={() => toggleTattooStyle(style)}
                           aria-label={`Remove ${style}`}
                           className="
-                              text-purple-500
-                              hover:text-white
+                              text-[#3F4449]
+                              hover:text-[#232427]
                               transition
                             "
                         >
@@ -3484,14 +3484,14 @@ export default function Enter() {
                 className="
     rounded-2xl
     border
-    border-white/10
-    bg-[#0d0d11]
+    border-[#DDDBD6]
+    bg-white
     p-5
     space-y-4
   "
               >
                 <div>
-                  <p className="text-[9px] font-mono tracking-[0.14em] text-purple-400">
+                  <p className="text-[9px] font-mono tracking-[0.14em] text-[#60646A]">
                     PROFILE LINKS
                   </p>
 
@@ -3499,7 +3499,7 @@ export default function Enter() {
                     Add Your Links
                   </h3>
 
-                  <p className="mt-2 text-xs text-gray-500 leading-relaxed">
+                  <p className="mt-2 text-xs text-[#6A6D72] leading-relaxed">
                     Add up to 3 links. Your links stay saved with your profile.
                     They are publicly visible only with an active Gold
                     membership.
@@ -3546,13 +3546,13 @@ export default function Enter() {
                     className="
         rounded-xl
         border
-        border-yellow-400/20
-        bg-yellow-400/[0.04]
+        border-[#C6AD79]/30
+        bg-[#FAF4E8]
         px-4
         py-3
       "
                   >
-                    <p className="text-[10px] text-yellow-400 leading-relaxed">
+                    <p className="text-[10px] text-[#806A42] leading-relaxed">
                       Your links are saved privately. Upgrade to Gold to display
                       them publicly on your artist profile.
                     </p>
@@ -3560,7 +3560,7 @@ export default function Enter() {
                 )}
 
                 {currentPlan === "verified" && (
-                  <p className="text-[10px] text-green-400">
+                  <p className="text-[10px] text-[#34745D]">
                     ✓ Your links are visible on your public Gold profile.
                   </p>
                 )}
@@ -3574,8 +3574,8 @@ export default function Enter() {
                 className="
                   rounded-2xl
                   border
-                  border-white/10
-                  bg-[#0d0d11]
+                  border-[#DDDBD6]
+                  bg-white
                   p-5
                 "
               >
@@ -3595,7 +3595,7 @@ export default function Enter() {
                         text-[9px]
                         font-mono
                         tracking-[0.14em]
-                        text-gray-500
+                        text-[#6A6D72]
                       "
                     >
                       PORTFOLIO IMAGES
@@ -3605,7 +3605,7 @@ export default function Enter() {
                       className="
                         mt-1
                         text-xs
-                        text-gray-600
+                        text-[#777A7E]
                       "
                     >
                       Upload up to 10 images. You can add more later or remove
@@ -3619,14 +3619,14 @@ export default function Enter() {
                       cursor-pointer
                       rounded-xl
                       border
-                      border-white/10
-                      bg-white/5
+                      border-[#DDDBD6]
+                      bg-[#F3F2EF]
                       px-4
                       py-3
                       text-[9px]
                       font-black
                       tracking-widest
-                      hover:border-purple-500/50
+                      hover:border-[#515458]/50
                     "
                   >
                     ADD IMAGES ({portfolioImages.length}/10)
@@ -3667,7 +3667,7 @@ export default function Enter() {
                             overflow-hidden
                             rounded-xl
                             border
-                            border-white/10
+                            border-[#DDDBD6]
                             bg-black
                           "
                         >
@@ -3762,8 +3762,8 @@ export default function Enter() {
                       w-full
                       rounded-xl
                       border
-                      border-[#f5c451]/50
-                      bg-[#f5c451]
+                      border-[#C2A065]/50
+                      bg-[#D2B878]
                       p-5
                       text-black
                       disabled:opacity-50
@@ -3774,7 +3774,7 @@ export default function Enter() {
                       font-black
                       tracking-[0.14em]
                       transition
-                      hover:bg-[#ffe58d]
+                      hover:bg-[#BAA067]
                     "
                   >
                     <span>SAVE & GO GOLD</span>
@@ -3793,8 +3793,8 @@ export default function Enter() {
                   className="
                     group
                     w-full
-                    bg-purple-600
-                    hover:bg-purple-500
+                    bg-[#4B4E52] text-white
+                    hover:bg-[#292C30]
                     disabled:opacity-50
                     rounded-xl
                     p-5
@@ -3864,7 +3864,7 @@ export default function Enter() {
             <br />
             <span
               className="
-                text-purple-500
+                text-[#3F4449]
               "
             >
               VISIBILITY.
@@ -3875,7 +3875,7 @@ export default function Enter() {
             className="
               mt-6
               text-sm
-              text-gray-500
+              text-[#6A6D72]
               leading-relaxed
             "
           >
@@ -3897,14 +3897,14 @@ export default function Enter() {
               mx-auto
               rounded-[26px]
               border
-              border-emerald-500/30
-              bg-emerald-500/[0.06]
+              border-[#79A992]/35
+              bg-[#EAF6F1]
               p-6
               sm:p-8
               text-center
             "
           >
-            <CheckCircle2 size={38} className="mx-auto text-emerald-400" />
+            <CheckCircle2 size={38} className="mx-auto text-[#267154]" />
 
             <p
               className="
@@ -3913,7 +3913,7 @@ export default function Enter() {
                 font-mono
                 font-black
                 tracking-[0.18em]
-                text-emerald-400
+                text-[#267154]
               "
             >
               MEMBERSHIP REQUEST RECEIVED
@@ -3930,7 +3930,7 @@ export default function Enter() {
             >
               OUR TEAM WILL CONTACT YOU
               <br />
-              <span className="text-emerald-400">WITHIN 24 HOURS</span>
+              <span className="text-[#267154]">WITHIN 24 HOURS</span>
             </h2>
 
             <p
@@ -3939,7 +3939,7 @@ export default function Enter() {
                 mt-4
                 max-w-2xl
                 text-sm
-                text-gray-500
+                text-[#6A6D72]
                 leading-relaxed
               "
             >
@@ -3955,32 +3955,32 @@ export default function Enter() {
                 max-w-md
                 rounded-xl
                 border
-                border-white/10
-                bg-black/20
+                border-[#DDDBD6]
+                bg-[#F1EFEB]
                 px-4
                 py-4
               "
             >
-              <p className="text-[8px] font-mono text-gray-600">
+              <p className="text-[8px] font-mono text-[#777A7E]">
                 REQUESTED MEMBERSHIP
               </p>
 
-              <p className="mt-2 text-lg font-black text-white">
+              <p className="mt-2 text-lg font-black text-[#232427]">
                 {membershipRequest.planName}
               </p>
 
-              <p className="mt-1 text-xl font-black text-emerald-400">
+              <p className="mt-1 text-xl font-black text-[#267154]">
                 ₹{Number(membershipRequest.amount || 0).toLocaleString("en-IN")}
               </p>
 
               {membershipRequest.id && (
-                <p className="mt-3 text-[8px] font-mono text-gray-600 break-all">
+                <p className="mt-3 text-[8px] font-mono text-[#777A7E] break-all">
                   REQUEST ID: {membershipRequest.id}
                 </p>
               )}
             </div>
 
-            <p className="mt-5 text-[10px] text-gray-600">
+            <p className="mt-5 text-[10px] text-[#777A7E]">
               Your current membership remains unchanged until our team confirms
               your request.
             </p>
@@ -4071,8 +4071,8 @@ function PageShell({ children }) {
     <main
       className="
         min-h-screen
-        bg-[#08080a]
-        text-white
+        bg-[#F7F6F3]
+        text-[#212326]
         pt-32
         pb-24
         px-4
@@ -4096,7 +4096,7 @@ function Eyebrow({ icon, children }) {
         inline-flex
         items-center
         gap-2
-        text-purple-400
+        text-[#60646A]
         text-[10px]
         font-mono
         tracking-[0.2em]
@@ -4134,7 +4134,7 @@ function InputField({
           block
           text-[9px]
           font-mono
-          text-gray-500
+          text-[#6A6D72]
           mb-2
         "
       >
@@ -4149,16 +4149,16 @@ function InputField({
         required={required}
         className="
           w-full
-          bg-[#0d0d11]
+          bg-white
           border
-          border-white/10
-          focus:border-purple-500
+          border-[#DDDBD6]
+          focus:border-[#65696E]
           rounded-xl
           px-5
           py-4
           outline-none
-          text-white
-          placeholder:text-gray-700
+          text-[#232427]
+          placeholder:text-[#93969A]
           transition
         "
       />
@@ -4188,7 +4188,7 @@ function TextareaField({
           block
           text-[9px]
           font-mono
-          text-gray-500
+          text-[#6A6D72]
           mb-2
         "
       >
@@ -4204,16 +4204,16 @@ function TextareaField({
         className="
           w-full
           resize-y
-          bg-[#0d0d11]
+          bg-white
           border
-          border-white/10
-          focus:border-purple-500
+          border-[#DDDBD6]
+          focus:border-[#65696E]
           rounded-xl
           px-5
           py-4
           outline-none
-          text-white
-          placeholder:text-gray-700
+          text-[#232427]
+          placeholder:text-[#93969A]
           transition
         "
       />
@@ -4247,14 +4247,14 @@ function Message({
         ${
           error
             ? `
-              border-red-500/30
-              bg-red-500/[0.05]
-              text-red-400
+              border-[#D59A93]/35
+              bg-[#FEF0ED]
+              text-[#A3443B]
             `
             : `
-              border-emerald-500/30
-              bg-emerald-500/[0.05]
-              text-emerald-400
+              border-[#79A992]/35
+              bg-[#EFF8F4]
+              text-[#267154]
             `
         }
       `}
@@ -4281,45 +4281,45 @@ function PlanCard({
 
   const theme = isBasic
     ? {
-        card: "border-purple-500/30 bg-[#0d0d11]",
+        card: "border-[#85888D]/30 bg-white",
 
-        badge: "border-purple-500/30 bg-purple-500/10 text-purple-300",
+        badge: "border-[#85888D]/30 bg-[#777A7E]/10 text-[#60646A]",
 
-        title: "text-white",
+        title: "text-[#26292C]",
 
-        price: "text-purple-400",
+        price: "text-[#60646A]",
 
         button:
-          "border-purple-500/40 bg-purple-600 text-white hover:bg-purple-500",
+          "border-[#65696E]/40 bg-[#4B4E52] text-white hover:bg-[#292C30]",
 
         buttonText: "GO FREE",
       }
     : isVerified
       ? {
-          card: "border-[#d6aa3a] bg-gradient-to-br from-[#d6aa3a]/[0.10] via-[#141108] to-[#0b0b0d] shadow-[0_0_34px_rgba(214,170,58,0.14)]",
+          card: "border-[#C7AE79] bg-gradient-to-br from-[#FFF7E5] via-[#FFFCF6] to-[#F8F4EB] shadow-[0_0_34px_rgba(147,119,65,0.08)]",
 
-          badge: "border-[#e7c45b]/40 bg-[#d6aa3a]/10 text-[#ffe59a]",
+          badge: "border-[#B89B61]/40 bg-[#EAD8AA]/30 text-[#69511F]",
 
-          title: "text-[#ffe9a8]",
+          title: "text-[#55411C]",
 
-          price: "text-[#ffe59a]",
+          price: "text-[#69511F]",
 
           button:
-            "border-[#ffe59a]/60 bg-gradient-to-r from-[#b77b15] via-[#f2cf65] to-[#b77b15] text-[#211600]",
+            "border-[#BFA061]/60 bg-gradient-to-r from-[#D0AD61] via-[#EDD8A1] to-[#D0AD61] text-[#302817]",
 
           buttonText: "TAKE GOLD",
         }
       : {
-          card: "border-slate-300/80 bg-gradient-to-br from-white/[0.07] via-[#111318] to-[#0b0b0d] shadow-[0_0_28px_rgba(226,232,240,0.10)]",
+          card: "border-[#C9CDD1] bg-gradient-to-br from-[#FDFDFC] via-[#F2F3F4] to-[#F8F4EB] shadow-[0_0_28px_rgba(226,232,240,0.10)]",
 
-          badge: "border-white/20 bg-white/[0.06] text-slate-200",
+          badge: "border-[#CFCFC9] bg-[#EEECE7] text-[#666A6F]",
 
-          title: "text-white",
+          title: "text-[#26292C]",
 
-          price: "text-slate-100",
+          price: "text-[#454B50]",
 
           button:
-            "border-white/60 bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black",
+            "border-[#ABB0B3] bg-gradient-to-r from-slate-300 via-white to-slate-300 text-black",
 
           buttonText: "SEND SILVER REQUEST",
         };
@@ -4370,7 +4370,7 @@ function PlanCard({
           text-[8px]
           font-mono
           tracking-[0.14em]
-          text-gray-500
+          text-[#6A6D72]
         "
       >
         DIRECTORY MEMBERSHIP
@@ -4416,7 +4416,7 @@ function PlanCard({
                 text-sm
                 sm:text-base
                 font-bold
-                text-gray-500
+                text-[#6A6D72]
                 line-through
                 decoration-2
               "
@@ -4429,14 +4429,14 @@ function PlanCard({
                 className="
                   rounded-full
                   border
-                  border-[#f5c451]/40
-                  bg-[#f5c451]/10
+                  border-[#C2A065]/40
+                  bg-[#E9D8AB]/25
                   px-2.5
                   py-1
                   text-[7px]
                   font-black
                   tracking-widest
-                  text-[#ffe59a]
+                  text-[#69511F]
                 "
               >
                 {plan.offerText}
@@ -4469,7 +4469,7 @@ function PlanCard({
               pb-1
               text-[7px]
               font-mono
-              text-gray-500
+              text-[#6A6D72]
             "
           >
             {plan.billing}
@@ -4483,12 +4483,12 @@ function PlanCard({
           z-10
           mt-3
           border-b
-          border-white/10
+          border-[#DDDBD6]
           pb-3
           text-[10px]
           sm:text-[11px]
           leading-relaxed
-          text-gray-500
+          text-[#6A6D72]
         "
       >
         {plan.description}
@@ -4525,11 +4525,11 @@ function PlanCard({
                     ? `
                       rounded-lg
                       border
-                      border-[#f5c451]/25
-                      bg-[#f5c451]/[0.07]
+                      border-[#C2A065]/25
+                      bg-[#E9D8AB]/[0.18]
                       px-2
                       py-1.5
-                      shadow-[0_0_18px_rgba(245,196,81,0.10)]
+                      shadow-[0_0_18px_rgba(136,111,71,0.06)]
                     `
                     : ""
                 }
@@ -4550,14 +4550,14 @@ function PlanCard({
                   ${
                     isClientLeadBenefit
                       ? `
-                        border-[#f5c451]/50
-                        bg-[#f5c451]/15
-                        text-[#f5c451]
-                        shadow-[0_0_10px_rgba(245,196,81,0.25)]
+                        border-[#C2A065]/50
+                        bg-[#E9D8AB]/30
+                        text-[#775B24]
+                        shadow-[0_0_10px_rgba(136,111,71,0.08)]
                       `
                       : `
-                        border-white/15
-                        bg-white/[0.06]
+                        border-[#D6D4CE]
+                        bg-[#EEECE7]
                       `
                   }
                 `}
@@ -4570,10 +4570,10 @@ function PlanCard({
                   isClientLeadBenefit
                     ? `
                       font-semibold
-                      text-[#ffe4a0]
-                      drop-shadow-[0_0_6px_rgba(245,196,81,0.25)]
+                      text-[#6A532C]
+                      drop-shadow-[0_0_6px_rgba(136,111,71,0.08)]
                     `
-                    : "text-gray-300"
+                    : "text-[#52565B]"
                 }
               >
                 {benefit}

@@ -1,1665 +1,670 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  ArrowLeft,
   ArrowRight,
-  Calendar,
+  ArrowUpRight,
+  CalendarDays,
   Check,
+  Clock3,
+  Copy,
+  Crown,
   MapPin,
-  Mic,
+  MessageCircle,
+  Mic2,
   PenTool,
-  Store,
+  Share2,
   Trophy,
   Users,
-  Share2,
-  MessageCircle,
 } from "lucide-react";
-
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
-
-import mumbai from "../assets/mumbai.png";
-import pune from "../assets/pune.png";
-import expoPageBg from "../assets/expo-page-bg.png";
+import "../Style/Upcomeing.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const PUBLIC_SITE_URL = "https://inkconvention.com";
+/* ==============================================================
+   INKCONVENTION / INDIA TOUR 2026 — FIVE CITIES
+   Existing file: frontend/src/pages/Upcomeing.jsx
+   Navbar and Footer are provided by your app (not duplicated).
+   City photographs are of the cities, not event photographs.
+   Non-Lucknow venues are proposed and must be confirmed.
+   ============================================================== */
 
-/* =========================================================
-   INK CONVENTION — UPCOMING / PAST EVENTS
-   Mumbai + Pune = completed (date hidden)
-   Jaipur + Udaipur + Kota = confirmed upcoming (date TBA)
-========================================================= */
-
-const completedEvents = [
+const EVENTS = [
   {
-    id: "mumbai",
-    city: "MUMBAI",
-    state: "Maharashtra",
-    date: "",
-    image: mumbai,
-  },
-  {
-    id: "pune",
-    city: "PUNE",
-    state: "Maharashtra",
-    date: "",
-    image: pune,
-  },
-];
-
-const upcomingEvents = [
-  {
-    id: "jaipur",
-    city: "JAIPUR",
-    state: "Rajasthan",
-    eventStatus: "upcoming",
-    date: "30 / 31 October / 1 November",
-    venue: "Venue to be announced",
-    desc: "Ink Convention is coming to Jaipur on 30 / 31 October / 1 November. Venue, artist registrations and stall booking details will be announced soon.",
+    id: "gorakhpur",
+    city: "GORAKHPUR",
+    stop: "01",
+    date: "Sunday, 22 November 2026",
+    shortDate: "22 NOV 2026",
+    time: "11:00 AM – 6:00 PM",
+    venue: "COURTYARD BY MARRIOTT GORAKHPUR",
+    address: "RAMGARH TAL, NAUKA VIHAR ROAD, GORAKHPUR",
+    confirmed: false,
+    landmark: "RAMGARH TAL",
     image:
-      "https://images.unsplash.com/photo-1636788988342-bc124fcfd953?auto=format&fit=crop&q=88&w=1400",
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Ramgarh_Tal_Lake%2C_Gorakhpur%2C_8_Apr_2019.jpg?width=1400",
+    photoSource:
+      "https://commons.wikimedia.org/wiki/File:Ramgarh_Tal_Lake,_Gorakhpur,_8_Apr_2019.jpg",
+    photoCredit: "Alexey Komarov (CC BY-SA 4.0)",
   },
   {
-    id: "udaipur",
-    city: "UDAIPUR",
-    state: "Rajasthan",
-    eventStatus: "upcoming",
-    date: "13 / 14 / 15 November",
-    venue: "Venue to be announced",
-    desc: "Ink Convention is coming to Udaipur on 6 / 7 / 8 November. Venue, artist registrations and stall booking details will be announced soon.",
+    id: "noida",
+    city: "NOIDA",
+    stop: "02",
+    date: "Sunday, 29 November 2026",
+    shortDate: "29 NOV 2026",
+    time: "11:00 AM – 6:00 PM",
+    venue: "RADISSON BLU MBD HOTEL, NOIDA",
+    address: "L-2, SECTOR 18, NOIDA",
+    confirmed: false,
+    landmark: "NOIDA SKYLINE",
     image:
-      "https://images.unsplash.com/photo-1742924400583-8937604db85a?auto=format&fit=crop&q=88&w=1400",
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Noida_Sector_7X_Skyline.jpg?width=1400",
+    photoSource:
+      "https://commons.wikimedia.org/wiki/File:Noida_Sector_7X_Skyline.jpg",
+    photoCredit: "SeekeroftheCosmos (CC0)",
   },
   {
-    id: "kota",
-    city: "KOTA",
-    state: "Rajasthan",
-    eventStatus: "upcoming",
-    date: "20 / 21 / 22 November",
-    venue: "Venue to be announced",
-    desc: "Ink Convention is coming to Kota on 13 / 14 / 15 November. Venue, artist registrations and stall booking details will be announced soon.",
+    id: "varanasi",
+    city: "VARANASI",
+    stop: "03",
+    date: "Sunday, 6 December 2026",
+    shortDate: "06 DEC 2026",
+    time: "11:00 AM – 6:00 PM",
+    venue: "TAJ GANGES, VARANASI",
+    address: "NADESAR GROUNDS, VARANASI",
+    confirmed: false,
+    landmark: "GANGA GHATS",
     image:
-      "https://images.unsplash.com/photo-1634673203448-367b0c78f4ab?auto=format&fit=crop&q=88&w=1400",
+      "https://commons.wikimedia.org/wiki/Special:FilePath/View_of_the_ghats_at_Varanasi.jpg?width=1400",
+    photoSource:
+      "https://commons.wikimedia.org/wiki/File:View_of_the_ghats_at_Varanasi.jpg",
+    photoCredit: "Vimalinarc (CC BY 4.0)",
   },
   {
-    id: "hyderabad",
-    eventStatus: "planned",
-    city: "HYDERABAD",
-    state: "Telangana",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Ink Convention is coming to Hyderabad. Event dates, venue, registrations and stall availability will be announced soon.",
+    id: "agra",
+    city: "AGRA",
+    stop: "04",
+    date: "Sunday, 13 December 2026",
+    shortDate: "13 DEC 2026",
+    time: "11:00 AM – 6:00 PM",
+    venue: "JAYPEE PALACE HOTEL & CONVENTION CENTRE",
+    address: "FATEHABAD ROAD, AGRA",
+    confirmed: false,
+    landmark: "TAJ MAHAL",
     image:
-      "https://images.unsplash.com/photo-1575994532957-773da2f83eb1?auto=format&fit=crop&q=85&w=900",
-  },
-  {
-    id: "ahmedabad",
-    eventStatus: "planned",
-    city: "AHMEDABAD",
-    state: "Gujarat",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Ahmedabad is part of the Ink Convention expansion plan. Official dates and venue details will be announced soon.",
-    image: expoPageBg,
-  },
-  {
-    id: "chennai",
-    eventStatus: "planned",
-    city: "CHENNAI",
-    state: "Tamil Nadu",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Chennai is on our upcoming-city list. More details about the event will be announced soon.",
-    image: expoPageBg,
-  },
-  {
-    id: "kolkata",
-    eventStatus: "planned",
-    city: "KOLKATA",
-    state: "West Bengal",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Ink Convention plans to bring its tattoo, art and culture experience to Kolkata. Stay tuned for updates.",
-    image: expoPageBg,
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Taj_Mahal%2C_Agra..JPG?width=1400",
+    photoSource: "https://commons.wikimedia.org/wiki/File:Taj_Mahal,_Agra..JPG",
+    photoCredit: "Dr. Suchet Chaudhary (CC BY-SA 3.0)",
   },
   {
     id: "lucknow",
-    eventStatus: "planned",
     city: "LUCKNOW",
-    state: "Uttar Pradesh",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Lucknow is part of the upcoming Ink Convention city list. Dates and venue details will be shared when confirmed.",
-    image: expoPageBg,
-  },
-  {
-    id: "indore",
-    eventStatus: "planned",
-    city: "INDORE",
-    state: "Madhya Pradesh",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Indore is on the Ink Convention roadmap. Follow the event page for confirmed dates and registration details.",
-    image: expoPageBg,
-  },
-  {
-    id: "surat",
-    eventStatus: "planned",
-    city: "SURAT",
-    state: "Gujarat",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Ink Convention is planning to reach Surat. Event dates, venue and stall information will be announced soon.",
-    image: expoPageBg,
-  },
-  {
-    id: "chandigarh",
-    eventStatus: "planned",
-    city: "CHANDIGARH",
-    state: "Chandigarh",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Chandigarh is included in our upcoming-city expansion. Stay tuned for official details.",
-    image: expoPageBg,
-  },
-  {
-    id: "kochi",
-    eventStatus: "planned",
-    city: "KOCHI",
-    state: "Kerala",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Kochi is on our list of future Ink Convention destinations. More information will be announced soon.",
-    image: expoPageBg,
-  },
-  {
-    id: "nagpur",
-    eventStatus: "planned",
-    city: "NAGPUR",
-    state: "Maharashtra",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Nagpur is planned as an upcoming Ink Convention destination. Follow us for dates, venue and booking details.",
-    image: expoPageBg,
-  },
-  {
-    id: "vadodara",
-    eventStatus: "planned",
-    city: "VADODARA",
-    state: "Gujarat",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Vadodara is on the Ink Convention future-city list. Official dates and venue details will be announced later.",
-    image: expoPageBg,
-  },
-  {
-    id: "nashik",
-    eventStatus: "planned",
-    city: "NASHIK",
-    state: "Maharashtra",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Ink Convention is planning to reach Nashik. More event information will be announced soon.",
-    image: expoPageBg,
-  },
-  {
-    id: "bhopal",
-    eventStatus: "planned",
-    city: "BHOPAL",
-    state: "Madhya Pradesh",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Bhopal is part of the Ink Convention expansion plan. Dates, venue and booking details will be shared later.",
-    image: expoPageBg,
-  },
-  {
-    id: "raipur",
-    eventStatus: "planned",
-    city: "RAIPUR",
-    state: "Chhattisgarh",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Raipur is on our future destination list. Stay tuned for official Ink Convention announcements.",
-    image: expoPageBg,
-  },
-  {
-    id: "guwahati",
-    eventStatus: "planned",
-    city: "GUWAHATI",
-    state: "Assam",
-    date: "COMING SOON",
-    venue: "Venue to be announced",
-    desc: "Ink Convention is planning to bring the experience to Guwahati. Event details will be announced soon.",
-    image: expoPageBg,
+    stop: "05",
+    date: "Sunday, 20 December 2026",
+    shortDate: "20 DEC 2026",
+    time: "11:00 AM – 6:00 PM",
+    venue: "RADIANCE EXHIBITION CENTRE",
+    address: "BHOOTNATH MARKET, LUCKNOW",
+    confirmed: true,
+    landmark: "RUMI DARWAZA",
+    image:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Rumi_Darwaja_%28Rumi_Gate%29.jpg?width=1400",
+    photoSource:
+      "https://commons.wikimedia.org/wiki/File:Rumi_Darwaja_(Rumi_Gate).jpg",
+    photoCredit: "Aryanmathurphotography (CC BY-SA 4.0)",
   },
 ];
 
-const eventHighlights = [
-  { icon: Trophy, label: "Tattoo\nCompetitions" },
-  { icon: Mic, label: "Live\nPerformances" },
-  { icon: Users, label: "100+\nArtists" },
-  { icon: Store, label: "Exhibitors\n& Vendors" },
-  { icon: PenTool, label: "Artist\nWorkshops" },
+const HIGHLIGHTS = [
+  { Icon: PenTool, title: "TATTOO ART", detail: "ARTISTS & LIVE DEMOS" },
+  { Icon: Trophy, title: "COMPETITIONS", detail: "CREATIVITY & SKILL" },
+  { Icon: Users, title: "ARTIST COMMUNITY", detail: "MEET & CONNECT" },
+  { Icon: Mic2, title: "MUSIC & CULTURE", detail: "SHARED EXPERIENCES" },
 ];
+
+const NORMAL_FEATURES = [
+  "Full exhibition floor & main stage access",
+  "1 FREE entry into 1 competition category",
+  "Unlimited complimentary beverages",
+  "Main-floor artist, brand & industry networking",
+  "Standard exhibition entry",
+];
+
+const VIP_FEATURES = [
+  "ALL Standard Pass access & networking",
+  "3 FREE competition entries in 3 DIFFERENT categories",
+  "20% OFF any product purchased at the expo",
+  "Private VIP lounge & premium vendor meetings",
+  "Unlimited complimentary meals & beverages",
+  "Dedicated express VIP check-in lane",
+  "VIP swag bag & reserved front-row stage seats",
+];
+
+function InstagramIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function money(amount) {
+  return `₹${amount.toLocaleString("en-IN")}`;
+}
+
+function CityPhoto({ event, className, eager = false }) {
+  return (
+    <img
+      className={className}
+      src={event.image}
+      alt={`${event.landmark}, ${event.city}`}
+      loading={eager ? "eager" : "lazy"}
+      fetchPriority={eager ? "high" : undefined}
+      onError={(e) => {
+        e.currentTarget.style.opacity = "0";
+      }}
+    />
+  );
+}
 
 export default function Upcomeing() {
-  const [selectedEvent, setSelectedEvent] = useState(upcomingEvents[0]);
-  const [citySearch, setCitySearch] = useState("");
+  const pageRef = useRef(null);
+  const toastTimer = useRef(null);
+  const [selected, setSelected] = useState(() => {
+    if (typeof window === "undefined") return 4;
+    const requested = new URLSearchParams(window.location.search).get("city");
+    const index = EVENTS.findIndex((item) => item.id === requested);
+    return index >= 0 ? index : 4; // 05 / 05 = Lucknow by default
+  });
+  const [paused, setPaused] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [toast, setToast] = useState("");
+  const event = EVENTS[selected];
 
-  const eventDetailsRef = useRef(null);
-
-  const handleSelectEvent = (event) => {
-    setSelectedEvent(event);
-    setShareOpen(false);
-
-    // On mobile the details card sits below the city cards.
-    // After selecting a city, move the user directly to that card.
-    if (typeof window !== "undefined" && window.innerWidth < 768) {
-      window.setTimeout(() => {
-        eventDetailsRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 80);
+  // Tour slideshow: one city every five seconds; pauses during interaction.
+  useEffect(() => {
+    if (
+      paused ||
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return undefined;
     }
-  };
-
-  const isRealUpcomingEvent = selectedEvent?.eventStatus === "upcoming";
-
-  const confirmedUpcomingEvents = upcomingEvents.filter(
-    (event) => event.eventStatus === "upcoming",
-  );
-
-  const plannedUpcomingEvents = upcomingEvents.filter(
-    (event) => event.eventStatus !== "upcoming",
-  );
+    const timer = window.setInterval(() => {
+      setSelected((current) => (current + 1) % EVENTS.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [paused]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-    const sharedCityId = params.get("city");
-
-    if (!sharedCityId) return;
-
-    const sharedEvent = upcomingEvents.find(
-      (event) => event.id === sharedCityId,
-    );
-
-    if (sharedEvent) {
-      setSelectedEvent(sharedEvent);
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      return undefined;
     }
-  }, []);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
+    const context = gsap.context(() => {
       gsap.fromTo(
-        ".expo-reveal",
-        { opacity: 0, y: 28 },
+        ".tour26-reveal",
+        { opacity: 0, y: 26 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.75,
-          stagger: 0.08,
+          duration: 0.85,
+          stagger: 0.1,
           ease: "power3.out",
+          clearProps: "all",
         },
       );
-
-      gsap.utils.toArray(".event-card").forEach((card, index) => {
+      gsap.utils.toArray(".tour26-scrollReveal").forEach((element) => {
         gsap.fromTo(
-          card,
+          element,
           { opacity: 0, y: 30 },
           {
             opacity: 1,
             y: 0,
-            duration: 0.6,
-            delay: index * 0.04,
+            duration: 0.8,
             ease: "power3.out",
-            scrollTrigger: {
-              trigger: card,
-              start: "top bottom-=40",
-            },
+            clearProps: "all",
+            scrollTrigger: { trigger: element, start: "top 90%", once: true },
           },
         );
       });
-    });
-
-    return () => ctx.revert();
+    }, pageRef);
+    return () => context.revert();
   }, []);
 
-  const getShareUrl = () => {
-    const path = `/upcoming?city=${selectedEvent.id}`;
+  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
-    if (typeof window === "undefined") {
-      return `${PUBLIC_SITE_URL}${path}`;
-    }
+  function notify(message) {
+    setToast(message);
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(""), 3500);
+  }
 
-    const host = window.location.hostname;
+  function chooseCity(index) {
+    setSelected((index + EVENTS.length) % EVENTS.length);
+  }
 
-    const isLocalDevelopment =
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host.startsWith("192.168.") ||
-      host.startsWith("10.") ||
-      host.endsWith(".local");
+  function eventUrl() {
+    const pathname = "/upcoming";
+    if (typeof window === "undefined") return `${pathname}?city=${event.id}`;
+    return `${window.location.origin}${pathname}?city=${event.id}`;
+  }
 
-    // Never send localhost / LAN IP links through WhatsApp.
-    // Those links only work on your own computer/network.
-    const baseUrl = isLocalDevelopment
-      ? PUBLIC_SITE_URL
-      : window.location.origin;
-
-    return `${baseUrl}${path}`;
-  };
-
-  const getShareText = () => {
-    const dateText =
-      selectedEvent.date && selectedEvent.date !== "DATE TO BE ANNOUNCED"
-        ? `Date: ${selectedEvent.date}`
-        : "Date: To be announced";
-
-    return `Ink Convention is coming to ${selectedEvent.city}, ${selectedEvent.state}! ${dateText}. Check event details here:`;
-  };
-
-  const handleWhatsAppShare = () => {
-    const url = getShareUrl();
-    const text = `${getShareText()} ${url}`;
-
+  function shareWhatsApp() {
+    const message = `INKCONVENTION India Tour 2026 — ${event.city}, ${event.date}. ${event.time}. ${event.confirmed ? event.venue : "Venue proposed; pending confirmation"}. ${eventUrl()}`;
     window.open(
-      `https://wa.me/?text=${encodeURIComponent(text)}`,
+      `https://wa.me/?text=${encodeURIComponent(message)}`,
       "_blank",
       "noopener,noreferrer",
     );
-
     setShareOpen(false);
-  };
+  }
 
-  const handleInstagramShare = async () => {
-    const url = getShareUrl();
-    const text = getShareText();
-
+  async function shareInstagram() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `Ink Convention — ${selectedEvent.city}`,
-          text,
-          url,
+          title: `INKCONVENTION — ${event.city}`,
+          text: `India Tour 2026 · ${event.date}`,
+          url: eventUrl(),
         });
-
-        setShareOpen(false);
-        return;
+      } else {
+        await copyLink();
+        window.open(
+          "https://www.instagram.com/",
+          "_blank",
+          "noopener,noreferrer",
+        );
       }
-
-      await navigator.clipboard.writeText(`${text} ${url}`);
-
-      window.open(
-        "https://www.instagram.com/",
-        "_blank",
-        "noopener,noreferrer",
-      );
-
-      alert(
-        "Event link copied. Open Instagram and paste it into your Story, DM or post.",
-      );
-
       setShareOpen(false);
     } catch (error) {
-      if (error?.name !== "AbortError") {
-        console.error("Instagram share failed:", error);
-      }
+      if (error?.name !== "AbortError")
+        notify("Sharing is unavailable. Use Copy Link.");
     }
-  };
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(eventUrl());
+      notify("Event link copied");
+    } catch {
+      notify("Could not copy. Please copy the page URL.");
+    }
+    setShareOpen(false);
+  }
 
   return (
-    <main
-      className="
-        relative
-        min-h-screen
-        overflow-x-hidden
-        bg-[#060608]
-        text-white
-        selection:bg-[#a855f7]/30
-      "
-    >
-      {/* =====================================================
-          PAGE BACKGROUND
-      ===================================================== */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <img
-          src={expoPageBg}
-          alt=""
-          aria-hidden="true"
-          className="
-            h-full
-            w-full
-            object-cover
-            object-center
-            opacity-45
-            scale-[1.03]
-          "
-        />
-
-        <div className="absolute inset-0 bg-black/50" />
-
-        <div
-          className="
-            absolute
-            inset-0
-            bg-gradient-to-r
-            from-[#050507]/95
-            via-[#08080a]/62
-            to-[#08080a]/78
-          "
-        />
-
-        <div
-          className="
-            absolute
-            inset-0
-            bg-gradient-to-b
-            from-black/20
-            via-transparent
-            to-[#050507]/92
-          "
-        />
-      </div>
-
-      {/* =====================================================
-          MAIN DESKTOP / TABLET CONTENT
-      ===================================================== */}
-      <section
-        className="
-          relative
-          z-10
-          mx-auto
-          w-full
-          max-w-[1700px]
-          px-4
-          sm:px-6
-          lg:px-8
-          xl:px-12
-          pt-28
-          lg:pt-32
-          pb-6
-        "
-      >
-        <div
-          className="
-            grid
-            grid-cols-1
-            xl:grid-cols-[minmax(0,1fr)_500px]
-            gap-7
-            xl:gap-10
-            items-start
-          "
-        >
-          {/* =================================================
-              LEFT SIDE
-          ================================================= */}
-          <div className="min-w-0">
-            {/* HERO COPY */}
-            <div className="expo-reveal">
-              <p
-                className="
-                  mb-4
-                  text-xs
-                  sm:text-sm
-                  font-black
-                  tracking-[0.16em]
-                  uppercase
-                  text-[#b24cff]
-                "
-              >
-                // EVENTS
-              </p>
-
-              <h1
-                className="
-                  max-w-[1030px]
-                  text-[2.45rem]
-                  sm:text-[3.2rem]
-                  lg:text-[4rem]
-                  2xl:text-[4.45rem]
-                  font-black
-                  uppercase
-                  leading-[0.98]
-                  tracking-[-0.035em]
-                "
-              >
-                See where Ink Convention
-                <br className="hidden sm:block" />
-                <span className="sm:ml-0"> has been and where it&apos;s </span>
-                <span
-                  className="
-                    text-[#a855f7]
-                    drop-shadow-[0_0_24px_rgba(168,85,247,0.34)]
-                  "
-                >
-                  going next.
-                </span>
-              </h1>
-
-              <p
-                className="
-                  mt-4
-                  text-[10px]
-                  sm:text-xs
-                  tracking-[0.24em]
-                  uppercase
-                  text-gray-400
-                "
-              >
-                Past cities. Upcoming cities. A bigger community.
-              </p>
-            </div>
-
-            {/* =================================================
-                COMPLETED
-            ================================================= */}
-            <div className="expo-reveal mt-6 lg:mt-5">
-              <div
-                className="
-                  grid
-                  grid-cols-1
-                  md:grid-cols-2
-                  gap-4
-                "
-              >
-                {completedEvents.map((event) => (
-                  <Link
-                    key={event.id}
-                    to="/gallery"
-                    aria-label={`Open ${event.city} event gallery`}
-                    className="
-                      event-card
-                      group
-                      relative
-                      block
-                      min-h-[155px]
-                      overflow-hidden
-                      rounded-2xl
-                      border
-                      border-[#a855f7]/45
-                      bg-[#151218]/85
-                      shadow-[0_18px_50px_rgba(0,0,0,0.28)]
-                      transition-all
-                      duration-300
-                      hover:-translate-y-0.5
-                      hover:border-[#a855f7]
-                    "
-                  >
-                    <img
-                      src={event.image}
-                      alt={event.city}
-                      className="
-                        absolute
-                        inset-0
-                        h-full
-                        w-full
-                        object-cover
-                        object-center
-                        opacity-42
-                        grayscale
-                        transition-transform
-                        duration-700
-                        group-hover:scale-105
-                      "
-                    />
-
-                    <div
-                      className="
-                        absolute
-                        inset-0
-                        bg-gradient-to-r
-                        from-[#17121c]/95
-                        via-[#17121c]/70
-                        to-[#17121c]/35
-                      "
-                    />
-
-                    <div className="relative z-10 flex h-full min-h-[155px] flex-col justify-between p-5">
-                      <div
-                        className="
-                          inline-flex
-                          w-fit
-                          items-center
-                          gap-2
-                          text-[10px]
-                          sm:text-xs
-                          font-bold
-                          uppercase
-                          tracking-[0.16em]
-                          text-gray-200
-                        "
-                      >
-                        <span
-                          className="
-                            flex
-                            h-6
-                            w-6
-                            items-center
-                            justify-center
-                            rounded-full
-                            bg-[#a855f7]
-                            shadow-[0_0_18px_rgba(168,85,247,0.55)]
-                          "
-                        >
-                          <Check size={15} strokeWidth={3} />
-                        </span>
-                        Completed
-                      </div>
-
-                      <div>
-                        <h2 className="text-2xl sm:text-3xl font-black uppercase">
-                          {event.city}
-                        </h2>
-
-                        <p className="mt-1 text-xs uppercase tracking-[0.08em] text-gray-400">
-                          {event.state}
-                        </p>
-
-                        {event.date && (
-                          <p className="mt-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-200">
-                            {event.date}
-                          </p>
-                        )}
-                      </div>
-
-                      <div
-                        className="
-                          absolute
-                          right-4
-                          bottom-4
-                          flex
-                          h-10
-                          w-10
-                          items-center
-                          justify-center
-                          rounded-full
-                          border
-                          border-white/50
-                          bg-black/35
-                          transition
-                          group-hover:border-[#a855f7]
-                          group-hover:bg-[#a855f7]/15
-                        "
-                      >
-                        <ArrowRight size={20} />
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* =================================================
-                UPCOMING CITIES
-                TOP ROW = ONLY 3 CONFIRMED CITIES
-            ================================================= */}
-            <div className="expo-reveal mt-6">
-              <div className="mb-4 flex items-center gap-3">
-                <span
-                  className="
-                    h-2.5
-                    w-2.5
-                    rounded-full
-                    bg-[#d4af37]
-                    shadow-[0_0_14px_rgba(212,175,55,0.75)]
-                  "
-                />
-
-                <h3
-                  className="
-                    text-xs
-                    sm:text-sm
-                    font-black
-                    uppercase
-                    tracking-[0.18em]
-                    text-[#f4dc8a]
-                  "
-                >
-                  Confirmed Upcoming Cities
-                </h3>
-
-                <span
-                  className="
-                    hidden
-                    sm:block
-                    h-px
-                    flex-1
-                    bg-gradient-to-r
-                    from-[#d4af37]/45
-                    to-transparent
-                  "
-                />
-              </div>
-
-              {/* =================================================
-                  BIG TOP ROW — JAIPUR / UDAIPUR / KOTA ONLY
-              ================================================= */}
-              <div
-                className="
-                  grid
-                  grid-cols-1
-                  md:grid-cols-3
-                  gap-4
-                  lg:gap-5
-                "
-              >
-                {confirmedUpcomingEvents.map((event, index) => {
-                  const isSelected = selectedEvent.id === event.id;
-
-                  return (
-                    <button
-                      key={event.id}
-                      type="button"
-                      onClick={() => handleSelectEvent(event)}
-                      className={`
-                        event-card
-                        group
-                        relative
-                        min-h-[210px]
-                        sm:min-h-[225px]
-                        lg:min-h-[245px]
-                        overflow-hidden
-                        rounded-[20px]
-                        border
-                        text-left
-                        transition-all
-                        duration-300
-
-                        ${
-                          isSelected
-                            ? "border-[#f0d36f] ring-1 ring-[#d4af37]/35 shadow-[0_20px_55px_rgba(212,175,55,0.18)]"
-                            : "border-[#d4af37]/65 hover:border-[#f4dc8a] hover:-translate-y-1 hover:shadow-[0_18px_48px_rgba(212,175,55,0.12)]"
-                        }
-                      `}
-                    >
-                      {/* CITY IMAGE */}
-                      <img
-                        src={event.image}
-                        alt={event.city}
-                        className={`
-                          absolute
-                          inset-0
-                          h-full
-                          w-full
-                          object-cover
-                          ${
-                            event.id === "jaipur"
-                              ? "object-[center_44%]"
-                              : event.id === "udaipur"
-                                ? "object-[center_48%]"
-                                : event.id === "kota"
-                                  ? "object-[center_52%]"
-                                  : "object-center"
-                          }
-                          opacity-90
-                          grayscale-0
-                          brightness-90
-                          contrast-105
-                          saturate-110
-                          transition-transform
-                          duration-700
-                          group-hover:scale-105
-                        `}
-                      />
-
-                      {/* GOLD/PURPLE OVERLAY */}
-                      <div
-                        className="
-                          absolute
-                          inset-0
-                          bg-gradient-to-t
-                          from-[#08070a]/82
-                          via-[#120d16]/35
-                          to-transparent
-                        "
-                      />
-
-                      {/* SOFT GOLD GLOW */}
-                      <div
-                        className="
-                          absolute
-                          -right-10
-                          -top-10
-                          h-36
-                          w-36
-                          rounded-full
-                          bg-[#d4af37]/7
-                          blur-[55px]
-                          pointer-events-none
-                        "
-                      />
-
-                      {/* TEXT READABILITY — keeps image visible */}
-                      <div
-                        className="
-                          absolute
-                          inset-x-0
-                          bottom-0
-                          h-[48%]
-                          bg-gradient-to-t
-                          from-black/60
-                          via-black/20
-                          to-transparent
-                          pointer-events-none
-                        "
-                      />
-
-                      {/* CARD NUMBER */}
-                      <div
-                        className="
-                          absolute
-                          right-4
-                          top-4
-                          text-[10px]
-                          font-mono
-                          font-black
-                          tracking-[0.18em]
-                          text-[#f4dc8a]/70
-                        "
-                      >
-                        0{index + 1}
-                      </div>
-
-                      <div
-                        className="
-                          relative
-                          z-10
-                          flex
-                          min-h-[210px]
-                          sm:min-h-[225px]
-                          lg:min-h-[245px]
-                          flex-col
-                          justify-between
-                          p-5
-                          sm:p-6
-                        "
-                      >
-                        {/* CONFIRMED CHIP */}
-                        <div>
-                          <span
-                            className="
-                              inline-flex
-                              items-center
-                              gap-2
-                              rounded-full
-                              border
-                              border-[#d4af37]/45
-                              bg-black/35
-                              px-3
-                              py-1.5
-                              text-[8px]
-                              sm:text-[9px]
-                              font-black
-                              uppercase
-                              tracking-[0.16em]
-                              text-[#f4dc8a]
-                              backdrop-blur-md
-                            "
-                          >
-                            <span
-                              className="
-                                h-1.5
-                                w-1.5
-                                rounded-full
-                                bg-[#d4af37]
-                                shadow-[0_0_10px_rgba(212,175,55,0.9)]
-                              "
-                            />
-                            Confirmed
-                          </span>
-                        </div>
-
-                        {/* CITY INFO */}
-                        <div className="pr-14">
-                          <h4
-                            className="
-                              text-2xl
-                              sm:text-3xl
-                              lg:text-[2rem]
-                              xl:text-[2.25rem]
-                              font-black
-                              uppercase
-                              leading-none
-                              tracking-[-0.03em]
-                              text-white
-                            "
-                          >
-                            {event.city}
-                          </h4>
-
-                          <p
-                            className="
-                              mt-2
-                              text-[10px]
-                              sm:text-xs
-                              uppercase
-                              tracking-[0.14em]
-                              text-[#d6c99a]
-                            "
-                          >
-                            {event.state}
-                          </p>
-
-                          {event.date !== "DATE TO BE ANNOUNCED" && (
-                            <p
-                              className="
-                                mt-3
-                                text-[11px]
-                                sm:text-xs
-                                font-black
-                                uppercase
-                                tracking-[0.08em]
-                                text-[#f4dc8a]
-                              "
-                            >
-                              {event.date}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* ARROW */}
-                        <span
-                          className="
-                            absolute
-                            right-5
-                            bottom-5
-                            flex
-                            h-11
-                            w-11
-                            items-center
-                            justify-center
-                            rounded-full
-                            border
-                            border-[#d4af37]/55
-                            bg-[#d4af37]/10
-                            text-[#f4dc8a]
-                            backdrop-blur-md
-                            transition-all
-                            duration-300
-                            group-hover:bg-[#d4af37]
-                            group-hover:text-black
-                            group-hover:scale-105
-                          "
-                        >
-                          <ArrowRight size={20} />
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* =================================================
-                  OTHER FUTURE CITIES
-              ================================================= */}
-              <div className="mt-7">
-                <div className="mb-3 flex items-center gap-3">
-                  <span className="h-1.5 w-1.5 rounded-full bg-gray-600" />
-
-                  <h3
-                    className="
-                      text-[10px]
-                      sm:text-xs
-                      font-black
-                      uppercase
-                      tracking-[0.16em]
-                      text-gray-400
-                    "
-                  >
-                    More Cities Coming Soon
-                  </h3>
-                </div>
-
-                <div
-                  className="
-                    grid
-                    grid-cols-2
-                    sm:grid-cols-3
-                    lg:grid-cols-4
-                    xl:grid-cols-5
-                    gap-3
-                  "
-                >
-                  {plannedUpcomingEvents.map((event) => {
-                    const isSelected = selectedEvent.id === event.id;
-
-                    return (
-                      <button
-                        key={event.id}
-                        type="button"
-                        onClick={() => handleSelectEvent(event)}
-                        className={`
-                          event-card
-                          group
-                          relative
-                          min-h-[112px]
-                          overflow-hidden
-                          rounded-xl
-                          border
-                          text-left
-                          transition-all
-                          duration-300
-
-                          ${
-                            isSelected
-                              ? "border-white/25 bg-[#101014] ring-1 ring-white/10"
-                              : "border-white/10 bg-[#0d0d11] hover:border-white/20"
-                          }
-                        `}
-                      >
-                        <img
-                          src={event.image}
-                          alt=""
-                          className="
-                            absolute
-                            inset-0
-                            h-full
-                            w-full
-                            object-cover
-                            opacity-20
-                            grayscale
-                            contrast-125
-                            transition-transform
-                            duration-500
-                            group-hover:scale-105
-                          "
-                        />
-
-                        <div
-                          className="
-                            absolute
-                            inset-0
-                            bg-gradient-to-t
-                            from-[#0b0b0e]
-                            via-[#0d0d11]/90
-                            to-black/50
-                          "
-                        />
-
-                        <div
-                          className="
-                            relative
-                            z-10
-                            flex
-                            min-h-[112px]
-                            flex-col
-                            justify-end
-                            p-3.5
-                          "
-                        >
-                          <span
-                            className="
-                              absolute
-                              left-3.5
-                              top-3.5
-                              inline-flex
-                              items-center
-                              gap-1.5
-                              rounded-full
-                              border
-                              border-white/10
-                              bg-black/25
-                              px-2
-                              py-1
-                              text-[6px]
-                              font-bold
-                              uppercase
-                              tracking-[0.14em]
-                              text-gray-500
-                            "
-                          >
-                            <span className="h-1 w-1 rounded-full bg-gray-600" />
-                            Coming Soon
-                          </span>
-
-                          <h4
-                            className="
-                              pr-10
-                              text-sm
-                              sm:text-base
-                              font-black
-                              uppercase
-                              text-gray-300
-                            "
-                          >
-                            {event.city}
-                          </h4>
-
-                          <p
-                            className="
-                              mt-1
-                              text-[8px]
-                              uppercase
-                              tracking-[0.10em]
-                              text-gray-500
-                            "
-                          >
-                            {event.state}
-                          </p>
-
-                          <span
-                            className="
-                              absolute
-                              right-3
-                              bottom-3
-                              flex
-                              h-8
-                              w-8
-                              items-center
-                              justify-center
-                              rounded-full
-                              border
-                              border-white/15
-                              bg-black/30
-                              text-gray-500
-                              transition
-                              group-hover:border-white/30
-                              group-hover:text-gray-300
-                            "
-                          >
-                            <ArrowRight size={15} />
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+    <main className="tour26" ref={pageRef}>
+      {/* ==================== HERO ==================== */}
+      <section className="tour26-hero" aria-label="India Tour 2026">
+        <div className="tour26-heroPhotos" aria-hidden="true">
+          {EVENTS.map((city, index) => (
+            <CityPhoto
+              key={city.id}
+              event={city}
+              eager={index === 4}
+              className={`tour26-heroPhoto ${selected === index ? "is-active" : ""}`}
+            />
+          ))}
+        </div>
+        <div className="tour26-heroWash" />
+        <div className="tour26-container tour26-heroInner">
+          <div className="tour26-heroCopy tour26-reveal">
+            <p className="tour26-overline">
+              INDIA TOUR <span>2026</span>
+            </p>
+            <h1>
+              <span>5 CITIES.</span>
+              <em>ONE PASSION.</em>
+            </h1>
+            <h2>TATTOO. ART. CULTURE. MUSIC.</h2>
+            <p className="tour26-heroDescription">
+              Five iconic cities. A growing tattoo-art community. Meet artists,
+              discover creative work and experience the culture behind the ink.
+            </p>
+            <div className="tour26-heroButtons">
+              <Link className="tour26-btn tour26-btnDark" to="/entry">
+                GET ENTRY PASS <ArrowUpRight size={18} />
+              </Link>
+              <a className="tour26-textBtn" href="#tour26-cities">
+                EXPLORE CITIES <ArrowRight size={17} />
+              </a>
             </div>
           </div>
 
-          {/* =================================================
-              RIGHT SIDE — NEXT EVENT
-          ================================================= */}
-          <aside
-            ref={eventDetailsRef}
-            className="
-              expo-reveal
-              scroll-mt-24
-              xl:sticky
-              xl:top-28
-              rounded-[26px]
-              border
-              border-white/10
-              bg-[#100d14]/90
-              backdrop-blur-xl
-              shadow-[0_25px_90px_rgba(0,0,0,0.42)]
-              overflow-hidden
-            "
-          >
-            <div className="relative p-5 sm:p-6">
-              <div
-                className="
-                  absolute
-                  -right-24
-                  -top-24
-                  h-72
-                  w-72
-                  rounded-full
-                  bg-[#a855f7]/10
-                  blur-[90px]
-                  pointer-events-none
-                "
-              />
-
-              <div
-                className="
-                  relative
-                  z-10
-                  flex
-                  items-center
-                  gap-3
-                  text-xs
-                  font-black
-                  uppercase
-                  tracking-[0.16em]
-                  text-[#b24cff]
-                "
-              >
-                <span
-                  className="
-                    h-3
-                    w-3
-                    rounded-full
-                    bg-[#a855f7]
-                    shadow-[0_0_16px_rgba(168,85,247,0.8)]
-                  "
-                />
-                {isRealUpcomingEvent ? "Next Event" : "Coming Soon"}
-              </div>
-
-              {isRealUpcomingEvent ? (
-                <>
-                  <div className="relative z-10 mt-5 flex flex-col sm:flex-row gap-5">
-                    <div
-                      className="
-                        h-44
-                        w-full
-                        sm:h-44
-                        sm:w-36
-                        shrink-0
-                        overflow-hidden
-                        rounded-2xl
-                        border
-                        border-white/10
-                        bg-black
-                      "
-                    >
-                      <img
-                        src={selectedEvent.image}
-                        alt={selectedEvent.city}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-
-                    <div className="min-w-0 pt-1">
-                      <h2 className="text-3xl font-black uppercase">
-                        {selectedEvent.city}
-                      </h2>
-
-                      <p className="mt-1 text-sm text-gray-400">
-                        {selectedEvent.state}
-                      </p>
-
-                      {selectedEvent.date !== "DATE TO BE ANNOUNCED" && (
-                        <div className="mt-5 flex items-start gap-3">
-                          <Calendar
-                            size={18}
-                            className="mt-0.5 shrink-0 text-gray-300"
-                          />
-
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wider text-gray-500">
-                              Date
-                            </p>
-
-                            <p className="mt-1 text-xs sm:text-sm">
-                              {selectedEvent.date}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="mt-4 flex items-start gap-3">
-                        <MapPin
-                          size={18}
-                          className="mt-0.5 shrink-0 text-gray-300"
-                        />
-
-                        <div>
-                          <p className="text-[10px] uppercase tracking-wider text-gray-500">
-                            Venue
-                          </p>
-
-                          <p className="mt-1 whitespace-pre-line text-xs sm:text-sm leading-relaxed">
-                            {selectedEvent.venue}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative z-10 mt-6 border-t border-white/10 pt-5">
-                    <h3
-                      className="
-                        text-xs
-                        font-black
-                        uppercase
-                        tracking-[0.14em]
-                        text-[#b24cff]
-                      "
-                    >
-                      About The Event
-                    </h3>
-
-                    <p className="mt-3 text-sm leading-relaxed text-gray-400">
-                      {selectedEvent.desc}
-                    </p>
-                  </div>
-
-                  <div className="relative z-10 mt-6">
-                    <h3
-                      className="
-                        text-xs
-                        font-black
-                        uppercase
-                        tracking-[0.14em]
-                        text-[#b24cff]
-                      "
-                    >
-                      Event Highlights
-                    </h3>
-
-                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      {eventHighlights.map((item) => (
-                        <div
-                          key={item.label}
-                          className="
-                            min-h-[76px]
-                            rounded-xl
-                            border
-                            border-white/10
-                            bg-black/25
-                            px-2
-                            py-3
-                            text-center
-                          "
-                        >
-                          <item.icon
-                            size={18}
-                            className="mx-auto mb-2 text-[#a855f7]"
-                          />
-
-                          <p className="whitespace-pre-line text-[9px] leading-tight text-gray-400">
-                            {item.label}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* BOOK YOUR STALL — directly below event highlights */}
-                    <Link
-                      to="/stall-booking"
-                      className="
-                        mt-5
-                        w-full
-                        min-h-[58px]
-                        rounded-xl
-                        bg-gradient-to-r
-                        from-[#8b2be2]
-                        via-[#9d36ef]
-                        to-[#b24cff]
-                        px-5
-                        flex
-                        items-center
-                        justify-center
-                        gap-3
-                        text-center
-                        text-xs
-                        sm:text-sm
-                        font-black
-                        uppercase
-                        tracking-[0.13em]
-                        text-white
-                        shadow-[0_14px_36px_rgba(168,85,247,0.24)]
-                        transition
-                        duration-300
-                        hover:-translate-y-0.5
-                        hover:brightness-110
-                      "
-                    >
-                      <Store size={18} />
-                      Book Your Stall Now
-                      <ArrowRight size={18} />
-                    </Link>
-
-                    {/* SHARE EVENT */}
-                    <div className="relative mt-3">
-                      <button
-                        type="button"
-                        onClick={() => setShareOpen((open) => !open)}
-                        className="
-                          w-full
-                          min-h-[52px]
-                          rounded-xl
-                          border
-                          border-[#a855f7]/40
-                          bg-[#a855f7]/[0.07]
-                          px-5
-                          flex
-                          items-center
-                          justify-center
-                          gap-3
-                          text-xs
-                          font-black
-                          uppercase
-                          tracking-[0.13em]
-                          text-white
-                          transition-all
-                          duration-300
-                          hover:bg-[#a855f7]/15
-                          hover:border-[#a855f7]/70
-                        "
-                      >
-                        <Share2 size={17} />
-                        Share This Event
-                      </button>
-
-                      {shareOpen && (
-                        <div
-                          className="
-                            mt-3
-                            grid
-                            grid-cols-2
-                            gap-3
-                            rounded-2xl
-                            border
-                            border-white/10
-                            bg-[#09090d]/95
-                            p-3
-                            shadow-[0_18px_55px_rgba(0,0,0,0.45)]
-                            backdrop-blur-xl
-                          "
-                        >
-                          <button
-                            type="button"
-                            onClick={handleWhatsAppShare}
-                            className="
-                              min-h-[48px]
-                              rounded-xl
-                              border
-                              border-white/10
-                              bg-white/[0.04]
-                              px-3
-                              flex
-                              items-center
-                              justify-center
-                              gap-2
-                              text-[10px]
-                              sm:text-xs
-                              font-bold
-                              uppercase
-                              tracking-[0.10em]
-                              text-white
-                              transition
-                              hover:border-[#25D366]/45
-                              hover:bg-[#25D366]/10
-                            "
-                          >
-                            <MessageCircle size={17} />
-                            WhatsApp
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={handleInstagramShare}
-                            className="
-                              min-h-[48px]
-                              rounded-xl
-                              border
-                              border-white/10
-                              bg-white/[0.04]
-                              px-3
-                              flex
-                              items-center
-                              justify-center
-                              gap-2
-                              text-[10px]
-                              sm:text-xs
-                              font-bold
-                              uppercase
-                              tracking-[0.10em]
-                              text-white
-                              transition
-                              hover:border-[#c084fc]/55
-                              hover:bg-[#a855f7]/10
-                            "
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="17"
-                              height="17"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              aria-hidden="true"
-                            >
-                              <rect
-                                x="3"
-                                y="3"
-                                width="18"
-                                height="18"
-                                rx="5"
-                                ry="5"
-                              />
-                              <circle cx="12" cy="12" r="4" />
-                              <circle
-                                cx="17.5"
-                                cy="6.5"
-                                r="1"
-                                fill="currentColor"
-                                stroke="none"
-                              />
-                            </svg>
-                            Instagram
-                          </button>
-
-                          <p
-                            className="
-                              col-span-2
-                              px-1
-                              text-center
-                              text-[9px]
-                              leading-relaxed
-                              text-gray-500
-                            "
-                          >
-                            On mobile, Instagram can appear in your phone&apos;s
-                            share sheet. On desktop, the event link is copied so
-                            you can paste it into Instagram.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div
-                  className="
-                    relative
-                    z-10
-                    min-h-[500px]
-                    flex
-                    flex-col
-                    items-center
-                    justify-center
-                    text-center
-                    px-3
-                  "
-                >
-                  <div
-                    className="
-                      flex
-                      h-20
-                      w-20
-                      items-center
-                      justify-center
-                      rounded-full
-                      border
-                      border-[#a855f7]/30
-                      bg-[#a855f7]/10
-                      shadow-[0_0_40px_rgba(168,85,247,0.12)]
-                    "
-                  >
-                    <MapPin size={34} className="text-[#a855f7]" />
-                  </div>
-
-                  <p
-                    className="
-                      mt-6
-                      text-[10px]
-                      font-black
-                      uppercase
-                      tracking-[0.22em]
-                      text-[#b24cff]
-                    "
-                  >
-                    Future Location
-                  </p>
-
-                  <h2 className="mt-2 text-4xl font-black uppercase">
-                    {selectedEvent.city}
-                  </h2>
-
-                  <p className="mt-1 text-sm text-gray-500">
-                    {selectedEvent.state}
-                  </p>
-
-                  <div
-                    className="
-                      mt-6
-                      rounded-full
-                      border
-                      border-[#a855f7]/35
-                      bg-[#a855f7]/10
-                      px-5
-                      py-2
-                      text-[10px]
-                      font-black
-                      uppercase
-                      tracking-[0.18em]
-                      text-[#c084fc]
-                    "
-                  >
-                    Coming Soon
-                  </div>
-
-                  <p className="mt-6 max-w-[330px] text-sm leading-relaxed text-gray-400">
-                    Ink Convention is planning to come to{" "}
-                    <span className="font-semibold text-white">
-                      {selectedEvent.city}
-                    </span>
-                    , but the event is not confirmed yet. Date, venue, artist
-                    registrations and stall bookings will be announced later.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => setCitySearch(selectedEvent.city)}
-                    className="
-                      mt-8
-                      w-full
-                      rounded-xl
-                      border
-                      border-[#a855f7]/45
-                      bg-[#a855f7]/10
-                      px-5
-                      py-3
-                      text-xs
-                      font-black
-                      uppercase
-                      tracking-[0.14em]
-                      text-white
-                      transition
-                      hover:bg-[#a855f7]/20
-                    "
-                  >
-                    Notify Me For {selectedEvent.city}
-                  </button>
-                </div>
-              )}
-            </div>
-          </aside>
+          <div className="tour26-nextStop tour26-reveal" aria-live="polite">
+            <span className="tour26-nextStopLabel">
+              NEXT STOP {event.stop} / 05
+            </span>
+            <h2 key={event.id}>{event.city}</h2>
+            <p>
+              <CalendarDays size={18} /> {event.date}
+            </p>
+            <p>
+              <Clock3 size={18} /> {event.time}
+            </p>
+            <p>
+              <MapPin size={18} />
+              <span>
+                <strong>{event.venue}</strong>
+                <small>{event.address}</small>
+                {!event.confirmed && (
+                  <small className="tour26-notFinal">
+                    Proposed venue · not confirmed
+                  </small>
+                )}
+              </span>
+            </p>
+            <Link to="/entry" className="tour26-nextCta">
+              <span className="tour26-nextCircle">
+                <ArrowUpRight size={20} />
+              </span>
+              GET ENTRY PASS
+            </Link>
+          </div>
+        </div>
+        <div className="tour26-heroBottom">
+          <span>REAL ART / REAL ARTISTS / ONE COMMUNITY</span>
+          <span>01 — 05 / 2026</span>
         </div>
       </section>
+
+      {/* ==================== FIVE CITY CARDS ==================== */}
+      <section
+        id="tour26-cities"
+        className="tour26-section tour26-citiesSection"
+      >
+        <div className="tour26-container">
+          <div className="tour26-sectionHeader tour26-scrollReveal">
+            <div>
+              <p className="tour26-overline">THE 2026 INDIA TOUR</p>
+              <h2>
+                FIVE CITIES. <span>FIVE EXPERIENCES.</span>
+              </h2>
+            </div>
+            <p>
+              FIVE STOPS.
+              <br />
+              ONE COMMUNITY.
+              <br />A MOVEMENT FOR ART.
+            </p>
+          </div>
+          <div
+            className="tour26-cityTrack"
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+            onFocusCapture={() => setPaused(true)}
+            onBlurCapture={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) setPaused(false);
+            }}
+          >
+            {EVENTS.map((city, index) => (
+              <button
+                type="button"
+                key={city.id}
+                className={`tour26-cityCard ${selected === index ? "is-active" : ""}`}
+                onClick={() => chooseCity(index)}
+                aria-label={`View ${city.city} event, ${city.date}`}
+                aria-pressed={selected === index}
+              >
+                <CityPhoto event={city} className="tour26-cityImg" />
+                <span className="tour26-cityShade" />
+                <span className="tour26-cityTop">{city.stop} / 05</span>
+                <span className="tour26-cityCopy">
+                  <small>{city.landmark}</small>
+                  <strong>{city.city}</strong>
+                  <span>{city.date}</span>
+                </span>
+                <span className="tour26-cityArrow">
+                  <ArrowUpRight size={16} />
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="tour26-cityTools">
+            <div
+              className="tour26-pagination"
+              aria-label="City slideshow position"
+            >
+              {EVENTS.map((city, index) => (
+                <button
+                  type="button"
+                  key={city.id}
+                  aria-label={`Select ${city.city}`}
+                  aria-current={index === selected ? "true" : undefined}
+                  className={index === selected ? "is-active" : ""}
+                  onClick={() => chooseCity(index)}
+                />
+              ))}
+            </div>
+            <div className="tour26-cityNav">
+              <button
+                type="button"
+                aria-label="Previous city"
+                onClick={() => chooseCity(selected - 1)}
+              >
+                <ArrowLeft size={19} />
+              </button>
+              <span>{event.stop} / 05</span>
+              <button
+                type="button"
+                aria-label="Next city"
+                onClick={() => chooseCity(selected + 1)}
+              >
+                <ArrowRight size={19} />
+              </button>
+            </div>
+          </div>
+          <div className="tour26-cityVenue tour26-scrollReveal">
+            <div>
+              <span>SELECTED DESTINATION</span>
+              <strong>{event.city}</strong>
+              <small>
+                {event.date} · {event.time}
+              </small>
+            </div>
+            <p>
+              {event.venue} — {event.address}
+              {!event.confirmed && (
+                <em> • Proposed location; final venue pending confirmation.</em>
+              )}
+            </p>
+            <div className="tour26-cityVenueActions">
+              <button type="button" onClick={() => setShareOpen((v) => !v)}>
+                <Share2 size={16} /> SHARE
+              </button>
+              <Link to="/stall-booking">
+                STALL ENQUIRIES <ArrowUpRight size={17} />
+              </Link>
+              <Link to="/entry">
+                VIEW PASSES <ArrowUpRight size={17} />
+              </Link>
+            </div>
+            {shareOpen && (
+              <div className="tour26-sharePanel">
+                <button type="button" onClick={shareWhatsApp}>
+                  <MessageCircle size={16} /> WhatsApp
+                </button>
+                <button type="button" onClick={copyLink}>
+                  <Copy size={16} /> Copy Link
+                </button>
+                <button type="button" onClick={shareInstagram}>
+                  <InstagramIcon /> Instagram
+                </button>
+              </div>
+            )}
+            {toast && (
+              <span className="tour26-toast" role="status">
+                {toast}
+              </span>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== COMMUNITY ==================== */}
+      <section className="tour26-section tour26-experience">
+        <div className="tour26-container">
+          <div className="tour26-sectionHeader tour26-scrollReveal">
+            <div>
+              <p className="tour26-overline">MORE THAN AN EVENT</p>
+              <h2>
+                BUILT FOR THE PEOPLE
+                <br />
+                <span>BEHIND THE INK.</span>
+              </h2>
+            </div>
+            <p>
+              Authentic tattoo art, competitions, creative experiences, and the
+              artists who bring them to life.
+            </p>
+          </div>
+          <div className="tour26-highlights tour26-scrollReveal">
+            {HIGHLIGHTS.map(({ Icon, title, detail }, index) => (
+              <article className="tour26-highlight" key={title}>
+                <Icon size={28} strokeWidth={1.5} />
+                <span className="tour26-highlightNumber">0{index + 1}</span>
+                <strong>{title}</strong>
+                <small>{detail}</small>
+              </article>
+            ))}
+          </div>
+          <Link to="/artists" className="tour26-artistsLink">
+            EXPLORE ARTISTS <ArrowUpRight size={18} />
+          </Link>
+        </div>
+      </section>
+
+      {/* ==================== ENTRY PASSES ==================== */}
+      <section className="tour26-section tour26-passes" id="tour26-passes">
+        <div className="tour26-container">
+          <div className="tour26-sectionHeader tour26-scrollReveal">
+            <div>
+              <p className="tour26-overline">GET ENTRY PASS</p>
+              <h2>
+                CHOOSE YOUR <span>PASS.</span>
+              </h2>
+            </div>
+            <p>
+              SAME COMMUNITY.
+              <br />
+              TWO TICKET CATEGORIES.
+            </p>
+          </div>
+          <div className="tour26-passGrid tour26-scrollReveal">
+            <article className="tour26-pass tour26-passNormal">
+              <div className="tour26-passHead">
+                <p>NORMAL PASS</p>
+                <span>01 / STANDARD</span>
+              </div>
+              <h3>{money(999)}</h3>
+              <p className="tour26-passCaption">
+                Per person · each additional person {money(999)}
+              </p>
+              <div className="tour26-passTicket" aria-hidden="true">
+                <span>INKCONVENTION</span>
+                <b>NORMAL</b>
+              </div>
+              <ul>
+                {NORMAL_FEATURES.map((item) => (
+                  <li key={item}>
+                    <Check size={16} /> {item}
+                  </li>
+                ))}
+              </ul>
+              <Link className="tour26-passButton" to="/entry">
+                CHOOSE NORMAL PASS <ArrowRight size={19} />
+              </Link>
+            </article>
+            <article className="tour26-pass tour26-passVip">
+              <div className="tour26-passHead">
+                <p>
+                  VIP PASS <Crown size={20} />
+                </p>
+                <span>02 / PREMIUM</span>
+              </div>
+              <h3>{money(2999)}</h3>
+              <p className="tour26-passCaption">
+                Per person · each additional person {money(2999)}
+              </p>
+              <div className="tour26-passTicket" aria-hidden="true">
+                <span>INKCONVENTION</span>
+                <b>VIP</b>
+              </div>
+              <ul>
+                {VIP_FEATURES.map((item) => (
+                  <li key={item}>
+                    <Check size={16} /> {item}
+                  </li>
+                ))}
+              </ul>
+              <Link className="tour26-passButton" to="/entry">
+                CHOOSE VIP PASS <ArrowRight size={19} />
+              </Link>
+            </article>
+          </div>
+          <p className="tour26-passNotice">
+            Prices shown are booking-request estimates. No payment is taken on
+            this page. Venues marked as proposed are not confirmed. Passes are
+            requests until confirmed.
+          </p>
+        </div>
+      </section>
+
+      {/* ==================== CLOSING CTA ==================== */}
+      <section className="tour26-final">
+        <div className="tour26-container tour26-finalInner tour26-scrollReveal">
+          <div>
+            <p className="tour26-overline">BE PART OF SOMETHING BIG</p>
+            <h2>
+              MORE THAN INK.
+              <br />
+              <span>MORE THAN A MOMENT.</span>
+            </h2>
+          </div>
+          <div>
+            <p>
+              Five cities. One growing community. Join the movement and become
+              part of the culture.
+            </p>
+            <Link to="/Enter" className="tour26-btn tour26-btnDark">
+              JOIN DIRECTORY FREE <ArrowUpRight size={18} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <div className="tour26-credits">
+        <div className="tour26-container">
+          City photography:
+          {EVENTS.map((city) => (
+            <span key={city.id}>
+              {" · "}
+              <a
+                href={city.photoSource}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {city.city.toLowerCase()} — {city.photoCredit}
+              </a>
+            </span>
+          ))}
+          . Images show landmarks, not Ink Convention events.
+        </div>
+      </div>
     </main>
   );
 }

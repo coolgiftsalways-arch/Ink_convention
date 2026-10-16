@@ -1,0 +1,571 @@
+/* =============================================================
+   INK CONVENTION • ARTISTS PAGE • COLORS ONLY
+   Keep original fonts, India map, all cities, counters, cards,
+   Gold/Silver/Free plans, API calls, searching, sharing and routing.
+   This stylesheet intentionally changes ONLY color / background /
+   border / shadow values. No dimensions, grids, or typography changes.
+   All selectors are scoped to the Artists page and its portaled modal.
+   ============================================================= */
+
+.inkArtistsLight,
+.inkArtistsLightModal {
+     --ink-paper: #faf9f6;
+     --ink-panel: #ffffff;
+     --ink-panel-alt: #f4f2ef;
+     --ink-primary: #1e1e20;
+     --ink-secondary: #55565a;
+     --ink-muted: #737478;
+     --ink-border: #dedbd7;
+     --ink-accent: #555558;
+     --ink-accent-dark: #29292b;
+}
+
+.inkArtistsLight {
+     color: var(--ink-primary) !important;
+     background: var(--ink-paper) !important;
+     color-scheme: light;
+}
+
+.inkArtistsLightModal>div {
+     color: var(--ink-primary) !important;
+     background: var(--ink-panel) !important;
+     color-scheme: light;
+}
+
+.inkArtistsLightModal {
+     background-color: rgba(24, 24, 27, .62) !important;
+}
+
+/* BACKGROUND COLORS */
+.inkArtistsLight .bg-\[\#08080a\],
+.inkArtistsLightModal .bg-\[\#08080a\] {
+     background-color: #faf9f6 !important;
+}
+
+.inkArtistsLight .bg-\[\#0d0d11\],
+.inkArtistsLightModal .bg-\[\#0d0d11\] {
+     background-color: #ffffff !important;
+}
+
+.inkArtistsLight .bg-\[\#0b0b0f\],
+.inkArtistsLightModal .bg-\[\#0b0b0f\] {
+     background-color: #ffffff !important;
+}
+
+.inkArtistsLight .bg-\[\#09090d\],
+.inkArtistsLightModal .bg-\[\#09090d\] {
+     background-color: #f4f2ef !important;
+}
+
+.inkArtistsLight .bg-\[\#09090d\]\/95,
+.inkArtistsLightModal .bg-\[\#09090d\]\/95 {
+     background-color: rgba(244, 242, 239, .96) !important;
+}
+
+.inkArtistsLight .bg-\[\#101014\],
+.inkArtistsLightModal .bg-\[\#101014\] {
+     background-color: #f7f5f2 !important;
+}
+
+.inkArtistsLight .bg-black\/40,
+.inkArtistsLightModal .bg-black\/40 {
+     background-color: rgba(232, 230, 226, .92) !important;
+}
+
+.inkArtistsLight .bg-black\/30,
+.inkArtistsLightModal .bg-black\/30 {
+     background-color: #f4f2ef !important;
+}
+
+.inkArtistsLight .bg-black\/25,
+.inkArtistsLightModal .bg-black\/25 {
+     background-color: #f0eeea !important;
+}
+
+.inkArtistsLight .bg-black,
+.inkArtistsLightModal .bg-black {
+     background-color: #f1efec !important;
+}
+
+.inkArtistsLight .bg-white\/\[0\.02\],
+.inkArtistsLightModal .bg-white\/\[0\.02\] {
+     background-color: #ffffff !important;
+}
+
+.inkArtistsLight .bg-white\/\[0\.03\],
+.inkArtistsLightModal .bg-white\/\[0\.03\] {
+     background-color: #ffffff !important;
+}
+
+.inkArtistsLight .bg-white\/\[0\.04\],
+.inkArtistsLightModal .bg-white\/\[0\.04\] {
+     background-color: #ffffff !important;
+}
+
+.inkArtistsLight .bg-white\/\[0\.08\],
+.inkArtistsLightModal .bg-white\/\[0\.08\] {
+     background-color: #ffffff !important;
+}
+
+.inkArtistsLight .bg-white\/5,
+.inkArtistsLightModal .bg-white\/5 {
+     background-color: #f5f3f0 !important;
+}
+
+.inkArtistsLight .bg-white\/10,
+.inkArtistsLightModal .bg-white\/10 {
+     background-color: #f0eeea !important;
+}
+
+.inkArtistsLight .bg-purple-600,
+.inkArtistsLightModal .bg-purple-600 {
+     background-color: #555558 !important;
+}
+
+.inkArtistsLight .bg-purple-500,
+.inkArtistsLightModal .bg-purple-500 {
+     background-color: #636367 !important;
+}
+
+.inkArtistsLight .bg-purple-400,
+.inkArtistsLightModal .bg-purple-400 {
+     background-color: #88888a !important;
+}
+
+.inkArtistsLight .bg-purple-500\/15,
+.inkArtistsLightModal .bg-purple-500\/15 {
+     background-color: #ededeb !important;
+}
+
+.inkArtistsLight .bg-purple-500\/\[0\.05\],
+.inkArtistsLightModal .bg-purple-500\/\[0\.05\] {
+     background-color: #f4f2ef !important;
+}
+
+.inkArtistsLight .bg-purple-500\/\[0\.07\],
+.inkArtistsLightModal .bg-purple-500\/\[0\.07\] {
+     background-color: #f2f0ed !important;
+}
+
+.inkArtistsLight .bg-purple-500\/\[0\.04\],
+.inkArtistsLightModal .bg-purple-500\/\[0\.04\] {
+     background-color: #f5f3f0 !important;
+}
+
+.inkArtistsLight .bg-purple-600\/\[0\.10\],
+.inkArtistsLightModal .bg-purple-600\/\[0\.10\] {
+     background-color: rgba(111, 112, 115, .05) !important;
+}
+
+.inkArtistsLight .bg-emerald-500\/\[0\.05\],
+.inkArtistsLightModal .bg-emerald-500\/\[0\.05\] {
+     background-color: #f0f5f1 !important;
+}
+
+.inkArtistsLight .bg-emerald-500\/\[0\.08\],
+.inkArtistsLightModal .bg-emerald-500\/\[0\.08\] {
+     background-color: #f0f5f1 !important;
+}
+
+.inkArtistsLight .bg-red-500\/\[0\.06\],
+.inkArtistsLightModal .bg-red-500\/\[0\.06\] {
+     background-color: #fff2f0 !important;
+}
+
+.inkArtistsLight .bg-red-500\/\[0\.08\],
+.inkArtistsLightModal .bg-red-500\/\[0\.08\] {
+     background-color: #fff2f0 !important;
+}
+
+.inkArtistsLight .bg-red-500\/10,
+.inkArtistsLightModal .bg-red-500\/10 {
+     background-color: #fff2f0 !important;
+}
+
+.inkArtistsLight .bg-slate-300\/\[0\.07\],
+.inkArtistsLightModal .bg-slate-300\/\[0\.07\] {
+     background-color: #f3f4f6 !important;
+}
+
+.inkArtistsLight .bg-\[\#f5c451\]\/\[0\.06\],
+.inkArtistsLightModal .bg-\[\#f5c451\]\/\[0\.06\] {
+     background-color: #fff9e8 !important;
+}
+
+.inkArtistsLight .bg-\[\#f5c451\]\/\[0\.08\],
+.inkArtistsLightModal .bg-\[\#f5c451\]\/\[0\.08\] {
+     background-color: #fff8e6 !important;
+}
+
+/* TEXT COLORS */
+.inkArtistsLight .text-white,
+.inkArtistsLightModal .text-white {
+     color: #222225 !important;
+}
+
+.inkArtistsLight .text-purple-400,
+.inkArtistsLightModal .text-purple-400 {
+     color: #616166 !important;
+}
+
+.inkArtistsLight .text-purple-500,
+.inkArtistsLightModal .text-purple-500 {
+     color: #555558 !important;
+}
+
+.inkArtistsLight .text-purple-300,
+.inkArtistsLightModal .text-purple-300 {
+     color: #65656b !important;
+}
+
+.inkArtistsLight .text-gray-400,
+.inkArtistsLightModal .text-gray-400 {
+     color: #65666a !important;
+}
+
+.inkArtistsLight .text-gray-500,
+.inkArtistsLightModal .text-gray-500 {
+     color: #707176 !important;
+}
+
+.inkArtistsLight .text-gray-600,
+.inkArtistsLightModal .text-gray-600 {
+     color: #77787c !important;
+}
+
+.inkArtistsLight .text-gray-700,
+.inkArtistsLightModal .text-gray-700 {
+     color: #7c7d81 !important;
+}
+
+.inkArtistsLight .text-white-600,
+.inkArtistsLightModal .text-white-600 {
+     color: #757579 !important;
+}
+
+.inkArtistsLight .text-slate-100,
+.inkArtistsLightModal .text-slate-100 {
+     color: #43464b !important;
+}
+
+.inkArtistsLight .text-slate-200,
+.inkArtistsLightModal .text-slate-200 {
+     color: #51555b !important;
+}
+
+.inkArtistsLight .text-slate-300,
+.inkArtistsLightModal .text-slate-300 {
+     color: #6d7278 !important;
+}
+
+.inkArtistsLight .text-emerald-300,
+.inkArtistsLightModal .text-emerald-300 {
+     color: #3e7555 !important;
+}
+
+.inkArtistsLight .text-red-300,
+.inkArtistsLightModal .text-red-300 {
+     color: #ac524d !important;
+}
+
+.inkArtistsLight .text-red-400,
+.inkArtistsLightModal .text-red-400 {
+     color: #ab554f !important;
+}
+
+.inkArtistsLight .text-\[\#f5c451\],
+.inkArtistsLightModal .text-\[\#f5c451\] {
+     color: #8d6719 !important;
+}
+
+.inkArtistsLight .text-\[\#ffd866\],
+.inkArtistsLightModal .text-\[\#ffd866\] {
+     color: #856017 !important;
+}
+
+.inkArtistsLight .text-\[\#e7c86c\],
+.inkArtistsLightModal .text-\[\#e7c86c\] {
+     color: #876e39 !important;
+}
+
+/* BORDER COLORS */
+.inkArtistsLight .border-white\/10,
+.inkArtistsLightModal .border-white\/10 {
+     border-color: #dedbd7 !important;
+}
+
+.inkArtistsLight .border-white\/\[0\.07\],
+.inkArtistsLightModal .border-white\/\[0\.07\] {
+     border-color: #e1dfdb !important;
+}
+
+.inkArtistsLight .border-white\/\[0\.08\],
+.inkArtistsLightModal .border-white\/\[0\.08\] {
+     border-color: #e1dfdb !important;
+}
+
+.inkArtistsLight .border-white\/80,
+.inkArtistsLightModal .border-white\/80 {
+     border-color: #ccd0d3 !important;
+}
+
+.inkArtistsLight .border-purple-500,
+.inkArtistsLightModal .border-purple-500 {
+     border-color: #65656a !important;
+}
+
+.inkArtistsLight .border-purple-400,
+.inkArtistsLightModal .border-purple-400 {
+     border-color: #68686d !important;
+}
+
+.inkArtistsLight .border-purple-300,
+.inkArtistsLightModal .border-purple-300 {
+     border-color: #99999d !important;
+}
+
+.inkArtistsLight .border-purple-500\/20,
+.inkArtistsLightModal .border-purple-500\/20 {
+     border-color: #d5d3d0 !important;
+}
+
+.inkArtistsLight .border-purple-500\/25,
+.inkArtistsLightModal .border-purple-500\/25 {
+     border-color: #d7d4d0 !important;
+}
+
+.inkArtistsLight .border-purple-500\/35,
+.inkArtistsLightModal .border-purple-500\/35 {
+     border-color: #c9c7c4 !important;
+}
+
+.inkArtistsLight .border-purple-500\/40,
+.inkArtistsLightModal .border-purple-500\/40 {
+     border-color: #c5c3c0 !important;
+}
+
+.inkArtistsLight .border-emerald-500\/20,
+.inkArtistsLightModal .border-emerald-500\/20 {
+     border-color: #bed6c5 !important;
+}
+
+.inkArtistsLight .border-emerald-500\/25,
+.inkArtistsLightModal .border-emerald-500\/25 {
+     border-color: #bed6c5 !important;
+}
+
+.inkArtistsLight .border-emerald-400\/20,
+.inkArtistsLightModal .border-emerald-400\/20 {
+     border-color: #c8dccd !important;
+}
+
+.inkArtistsLight .border-emerald-400\/50,
+.inkArtistsLightModal .border-emerald-400\/50 {
+     border-color: #90b79c !important;
+}
+
+.inkArtistsLight .border-red-500\/25,
+.inkArtistsLightModal .border-red-500\/25 {
+     border-color: #e7c8c5 !important;
+}
+
+.inkArtistsLight .border-red-400\/20,
+.inkArtistsLightModal .border-red-400\/20 {
+     border-color: #e7c8c5 !important;
+}
+
+.inkArtistsLight .border-red-400\/40,
+.inkArtistsLightModal .border-red-400\/40 {
+     border-color: #e2b3ad !important;
+}
+
+.inkArtistsLight .border-slate-200\/30,
+.inkArtistsLightModal .border-slate-200\/30 {
+     border-color: #d6d8db !important;
+}
+
+.inkArtistsLight .border-slate-300\/40,
+.inkArtistsLightModal .border-slate-300\/40 {
+     border-color: #cfd3d7 !important;
+}
+
+.inkArtistsLight .border-slate-100\/40,
+.inkArtistsLightModal .border-slate-100\/40 {
+     border-color: #cfd3d7 !important;
+}
+
+.inkArtistsLight .border-slate-100\/85,
+.inkArtistsLightModal .border-slate-100\/85 {
+     border-color: #b8bdc4 !important;
+}
+
+.inkArtistsLight .border-\[\#f5c451\]\/35,
+.inkArtistsLightModal .border-\[\#f5c451\]\/35 {
+     border-color: #e3cca2 !important;
+}
+
+.inkArtistsLight .border-\[\#f5c451\]\/30,
+.inkArtistsLightModal .border-\[\#f5c451\]\/30 {
+     border-color: #e3cca2 !important;
+}
+
+.inkArtistsLight .border-\[\#f5c451\]\/55,
+.inkArtistsLightModal .border-\[\#f5c451\]\/55 {
+     border-color: #ceb478 !important;
+}
+
+.inkArtistsLight .border-\[\#ffd866\]\/45,
+.inkArtistsLightModal .border-\[\#ffd866\]\/45 {
+     border-color: #d9bd7e !important;
+}
+
+.inkArtistsLight .border-\[\#ffd866\]\/90,
+.inkArtistsLightModal .border-\[\#ffd866\]\/90 {
+     border-color: #c4a55d !important;
+}
+
+/* BUTTONS: dark graphite backgrounds keep legible white labels. */
+.inkArtistsLight .bg-purple-600,
+.inkArtistsLight .bg-purple-600.text-white,
+.inkArtistsLightModal .bg-purple-600,
+.inkArtistsLightModal .bg-purple-600.text-white {
+     background-color: #555558 !important;
+     color: #fff !important;
+}
+
+.inkArtistsLight .hover\:bg-purple-500:hover,
+.inkArtistsLightModal .hover\:bg-purple-500:hover {
+     background-color: #303034 !important;
+     color: #fff !important;
+}
+
+.inkArtistsLight .hover\:text-white:hover,
+.inkArtistsLightModal .hover\:text-white:hover {
+     color: #222225 !important;
+}
+
+.inkArtistsLight .bg-purple-600.hover\:bg-purple-500:hover,
+.inkArtistsLightModal .bg-purple-600.hover\:bg-purple-500:hover,
+.inkArtistsLight .bg-white.hover\:bg-purple-500:hover,
+.inkArtistsLightModal .bg-white.hover\:bg-purple-500:hover {
+     color: #fff !important;
+}
+
+/* Search and city controls. Input contents, select list, and placeholder stay dark on white. */
+.inkArtistsLight input,
+.inkArtistsLight select {
+     color: #222225 !important;
+     background-color: #fff !important;
+     border-color: #dedbd7 !important;
+     color-scheme: light;
+}
+
+.inkArtistsLight input::placeholder {
+     color: #8e8d90 !important;
+}
+
+.inkArtistsLight input:focus,
+.inkArtistsLight select:focus {
+     border-color: #636367 !important;
+}
+
+.inkArtistsLight select option {
+     color: #222225;
+     background: #fff;
+}
+
+.inkArtistsLight .focus\:border-purple-500:focus,
+.inkArtistsLightModal .focus\:border-purple-500:focus {
+     border-color: #636367 !important;
+}
+
+/* All original India cities and interactive markers remain untouched. */
+.inkArtistsLight .inkArtistIndiaMap path {
+     fill: rgba(110, 111, 114, .055) !important;
+     stroke: rgba(65, 66, 69, .72) !important;
+}
+
+.inkArtistsLight .inkArtistIndiaMap circle[stroke="#a855f7"] {
+     stroke: #5e5e63 !important;
+}
+
+.inkArtistsLight .inkArtistIndiaMap circle[fill="#a855f7"] {
+     fill: #58585d !important;
+}
+
+.inkArtistsLight .inkArtistIndiaMap circle[fill="rgba(255,255,255,0.52)"] {
+     fill: #77787b !important;
+}
+
+.inkArtistsLight .inkArtistIndiaMap circle[stroke="rgba(255,255,255,0.30)"] {
+     stroke: #fff !important;
+}
+
+.inkArtistsLight .inkArtistIndiaMap circle[stroke="#ffffff"] {
+     stroke: #fff !important;
+}
+
+/* Preserve existing Gold / Silver membership animation and functionality;
+   replace only the dark gradient with tasteful, light membership panels. */
+.inkArtistsLight .ink-gold-card-pulse {
+     background: linear-gradient(105deg, #f7edda 0%, #fff8e9 31%, #fff 77%) !important;
+     border-color: #e0cc9f !important;
+}
+
+.inkArtistsLight .ink-silver-card-pulse {
+     background: linear-gradient(105deg, #e9edf0 0%, #f6f7f8 35%, #fff 77%) !important;
+     border-color: #cfd4d9 !important;
+}
+
+.inkArtistsLight .ink-gold-card-pulse:hover {
+     background: linear-gradient(105deg, #f1e0bf 0%, #fff5df 31%, #fff 77%) !important;
+}
+
+.inkArtistsLight .ink-silver-card-pulse:hover {
+     background: linear-gradient(105deg, #dfe5e9 0%, #f1f3f5 35%, #fff 77%) !important;
+}
+
+/* New profile rings and premium badges retain their original animations. */
+.inkArtistsLight .ring-purple-500 {
+     --tw-ring-color: #8f8f92 !important;
+}
+
+.inkArtistsLight .bg-purple-500\/15 {
+     background-color: #ededeb !important;
+}
+
+/* Modal is created via React portal and therefore requires its own scope. */
+.inkArtistsLightModal>div {
+     box-shadow: 0 28px 90px rgba(24, 24, 27, .18) !important;
+}
+
+.inkArtistsLightModal button:hover {
+     transition: background-color .2s ease, color .2s ease;
+}
+
+.inkArtistsLightModal a:focus-visible,
+.inkArtistsLightModal button:focus-visible,
+.inkArtistsLight a:focus-visible,
+.inkArtistsLight button:focus-visible {
+     outline: 2px solid #5d5d61;
+     outline-offset: 2px;
+}
+
+/* Neutralize the last purple hover/gradient hints, without changing animations. */
+.inkArtistsLight .hover\:border-purple-400:hover,
+.inkArtistsLightModal .hover\:border-purple-400:hover {
+     border-color: #66666a !important;
+}
+
+.inkArtistsLightModal .hover\:bg-purple-500\/\[0\.14\]:hover,
+.inkArtistsLight .hover\:bg-purple-500\/\[0\.14\]:hover {
+     background: #e8e6e3 !important;
+}
+
+.inkArtistsLight .to-purple-500\/\[0\.08\],
+.inkArtistsLightModal .to-purple-500\/\[0\.08\] {
+     --tw-gradient-to: rgba(100, 100, 105, 0.08) !important;
+}
+
+/* Important: we did not modify the layout, responsive breakpoints, fonts,
+   photo list, India map functionality, Mongo API, locks, or share routes. */

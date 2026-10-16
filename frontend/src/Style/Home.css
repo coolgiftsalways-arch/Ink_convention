@@ -1,1951 +1,1615 @@
-/* =========================================================
-   INK CONVENTION — FINAL CINEMATIC HERO
-   This CSS styles ONLY the Home hero.
-   Your Navbar remains separate and untouched.
-========================================================= */
+@import url("https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,800;1,900&family=Manrope:wght@400;500;600;700;800&display=swap");
 
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap");
-
-
-/* =========================================================
-   GLOBAL HELPERS
-========================================================= */
-
-.select-none {
-     user-select: none;
+/* =======================================================
+   INKCONVENTION — COMPLETE HOME.CSS
+   Only the existing Home.css file needs replacing.
+   The current Home.jsx and HomeImages.css remain unchanged.
+   Fixes cropped INK title and changes both headline fonts.
+   ======================================================= */
+.inkHomeEditorial {
+     --ic-paper: #f7f5f0;
+     --ic-ink: #191919;
+     --ic-muted: #67696c;
+     --ic-line: #dcdad5;
+     --ic-body: "Manrope", Arial, sans-serif;
+     --ic-display: "Barlow Condensed", Impact, sans-serif;
+     width: 100%;
+     overflow: clip;
+     background: var(--ic-paper);
+     color: var(--ic-ink);
+     font-family: var(--ic-body);
+     -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2,
-h3,
-h4,
-.hero-font {
-     text-rendering: optimizeLegibility;
+.inkHomeEditorial *,
+.inkHomeEditorial *::before,
+.inkHomeEditorial *::after {
+     box-sizing: border-box;
 }
 
+.inkHomeEditorial a {
+     text-decoration: none;
+}
 
-/* =========================================================
-   HERO WRAPPER
-   5rem = your existing navbar height.
-========================================================= */
+.inkHomeEditorial button {
+     font-family: inherit;
+}
 
-.inkHero {
-     --hero-navbar-safe: 88px;
+.inkHomeEditorial img {
+     display: block;
+}
 
+.inkHomeEditorial h1,
+.inkHomeEditorial h2,
+.inkHomeEditorial h3,
+.inkHomeEditorial h4 {
+     color: var(--ic-ink);
+}
+
+.inkHomeEditorial p {
+     color: var(--ic-muted);
+}
+
+.inkHomeEditorial :is(a, button):focus-visible {
+     outline: 2px solid #ac845d;
+     outline-offset: 3px;
+}
+
+/* ================== CINEMATIC HERO ================== */
+.ic26 {
      position: relative;
-
-     width: 100%;
-     height: calc(100svh - 5rem);
-     min-height: 720px;
-
-     overflow: hidden;
-
-     background: #020203;
-
      isolation: isolate;
-}
-
-
-/* =========================================================
-   TATTOO WALL / EXPO BOOTH BACKGROUND
-========================================================= */
-
-.inkHero__wall {
-     position: absolute;
-
-     inset: 0;
-
-     z-index: 1;
-
-     opacity: 0.50;
-
-     overflow: hidden;
-
-     pointer-events: none;
-
-     -webkit-mask-image:
-          linear-gradient(to bottom,
-               rgba(0, 0, 0, 0.18) 0%,
-               rgba(0, 0, 0, 0.48) 22%,
-               black 50%,
-               black 100%);
-
-     mask-image:
-          linear-gradient(to bottom,
-               rgba(0, 0, 0, 0.18) 0%,
-               rgba(0, 0, 0, 0.48) 22%,
-               black 50%,
-               black 100%);
-}
-
-
-.inkHero__wall img {
+     display: block;
      width: 100%;
-     height: 100%;
-
-     object-fit: cover;
-     object-position: center 54%;
-
-     transform: scale(1.04);
-
-     filter:
-          brightness(0.48) contrast(1.16) saturate(0.94);
-}
-
-
-/* =========================================================
-   EXPO CROWD / STAGE — MAKE THIS MUCH MORE VISIBLE
-========================================================= */
-
-.inkHero__expo {
-     position: absolute;
-
-     left: -1%;
-     right: -1%;
-     bottom: -1%;
-
-     height: 57%;
-
-     z-index: 4;
-
+     min-height: 775px;
+     height: clamp(775px, calc(100svh - 90px), 860px);
      overflow: hidden;
-
-     pointer-events: none;
-
-     -webkit-mask-image:
-          linear-gradient(to bottom,
-               transparent 0%,
-               rgba(0, 0, 0, 0.24) 8%,
-               rgba(0, 0, 0, 0.72) 22%,
-               black 40%,
-               black 100%);
-
-     mask-image:
-          linear-gradient(to bottom,
-               transparent 0%,
-               rgba(0, 0, 0, 0.24) 8%,
-               rgba(0, 0, 0, 0.72) 22%,
-               black 40%,
-               black 100%);
+     scroll-margin-top: 90px;
+     background: radial-gradient(ellipse at 8% 35%, #fff 0%, #f9f8f5 48%, #eeeae3 100%);
+     color: #111;
 }
 
-
-.inkHero__expo img {
-     width: 102%;
-     height: 105%;
-
-     object-fit: cover;
-     object-position: center 44%;
-
-     transform:
-          translateX(-1%) scale(1.04);
-
-     transform-origin: center bottom;
-
-     filter:
-          brightness(0.76) contrast(1.14) saturate(1.16);
-}
-
-
-/* =========================================================
-   PURPLE / BLACK GRUNGE
-========================================================= */
-
-.inkHero__grunge {
+.ic26::before {
+     content: "";
      position: absolute;
-
-     left: -7%;
-     top: -9%;
-
-     width: 78%;
-     height: 88%;
-
      z-index: 5;
-
-     opacity: 0.16;
-
-     pointer-events: none;
-
-     mix-blend-mode: screen;
+     left: 2.65%;
+     top: 35px;
+     bottom: 42px;
+     width: 1px;
+     background: #a5a09b;
 }
 
-
-.inkHero__grunge img {
-     width: 100%;
-     height: 100%;
-
-     object-fit: cover;
-
-     filter:
-          brightness(0.75) saturate(0.88);
-}
-
-
-/* =========================================================
-   PURPLE AMBIENT GLOW
-========================================================= */
-
-.inkHero__purpleGlow {
+.ic26__verticalBrand {
      position: absolute;
-
-     z-index: 2;
-
-     left: 34%;
-     top: -31%;
-
-     width: 900px;
-     height: 900px;
-
-     border-radius: 50%;
-
-     pointer-events: none;
-
-     background:
-          radial-gradient(circle,
-               rgba(174, 71, 255, 0.23) 0%,
-               rgba(126, 34, 206, 0.10) 34%,
-               transparent 69%);
-
-     filter: blur(44px);
+     z-index: 7;
+     bottom: 38px;
+     left: 2.1%;
+     writing-mode: vertical-rl;
+     transform: rotate(180deg);
+     font-size: 9px;
+     font-weight: 800;
+     letter-spacing: .39em;
+     color: #262626;
 }
 
-
-/* strong lower-purple stage glow, like the reference */
-
-.inkHero__stageGlow {
+/* More space from the navbar: eyebrow and INK stay fully visible. */
+.ic26__content {
      position: absolute;
-
      z-index: 6;
-
-     left: 23%;
-     right: 16%;
-     bottom: -14%;
-
-     height: 56%;
-
-     pointer-events: none;
-
-     background:
-          radial-gradient(ellipse at center,
-               rgba(171, 43, 255, 0.24) 0%,
-               rgba(108, 25, 180, 0.12) 32%,
-               transparent 72%);
-
-     filter: blur(26px);
+     top: 68px;
+     left: clamp(75px, 6.15vw, 120px);
+     display: flex;
+     flex-direction: column;
+     align-items: flex-start;
+     width: min(750px, 49vw);
+     height: auto;
+     padding: 0;
 }
 
+.ic26__eyebrow {
+     display: flex;
+     align-items: center;
+     flex-wrap: wrap;
+     gap: 15px;
+     margin: 0 0 19px;
+     font-size: clamp(9px, .75vw, 12px);
+     line-height: 1.5;
+     font-weight: 800;
+     letter-spacing: .17em;
+     color: #191919 !important;
+}
 
-/* =========================================================
-   DARK CINEMATIC OVERLAY
-   Lighter than before so expo/tattoo artist stay visible.
-========================================================= */
+.ic26__eyebrow b,
+.ic26__categories b {
+     color: #ada8a1;
+     font-weight: 400;
+}
 
-.inkHero__darkOverlay {
+.ic26__titleArea {
+     position: relative;
+     width: 100%;
+     overflow: visible;
+}
+
+.ic26__title {
+     position: relative;
+     z-index: 2;
+     display: flex;
+     flex-direction: column;
+     align-items: flex-start;
+     overflow: visible;
+     width: max-content;
+     max-width: none;
+     margin: 0;
+     padding: 0;
+     line-height: 1;
+     text-transform: uppercase;
+}
+
+/* New INK font: Anton. No .71 line-height or cropped glyphs. */
+.ic26 .ic26__titleInk {
+     display: block;
+     margin: 0;
+     padding: 0;
+     font-family: "Anton", Impact, "Arial Narrow", sans-serif;
+     font-style: normal;
+     font-weight: 400;
+     font-size: clamp(135px, 11.4vw, 207px);
+     line-height: 1.02;
+     letter-spacing: -.035em;
+     color: #111;
+     -webkit-text-fill-color: #111;
+}
+
+/* New CONVENTION lettering: bold italic image-filled type. */
+.ic26 .ic26__titleConvention {
+     display: block;
+     position: relative;
+     z-index: 2;
+     margin: -7px 0 0;
+     padding: 0 0 .08em;
+     white-space: nowrap;
+     font-family: "Barlow Condensed", Impact, sans-serif;
+     font-style: italic;
+     font-weight: 900;
+     font-size: clamp(79px, 7.65vw, 138px);
+     line-height: .98;
+     letter-spacing: -.052em;
+     transform: scaleX(.94) skewX(-2deg);
+     transform-origin: left center;
+     background-image: linear-gradient(rgba(15, 15, 15, .17), rgba(15, 15, 15, .36)), var(--ic26-title-photo);
+     background-position: center 43%;
+     background-size: cover;
+     -webkit-background-clip: text;
+     background-clip: text;
+     color: transparent;
+     -webkit-text-fill-color: transparent;
+}
+
+.ic26__year {
      position: absolute;
+     z-index: 3;
+     top: 124px;
+     left: clamp(270px, 20vw, 375px);
+     display: flex;
+     align-items: center;
+     gap: 12px;
+     font-size: 11px;
+     font-weight: 900;
+     color: #111;
+}
 
+.ic26__year i {
+     display: block;
+     width: 85px;
+     height: 1px;
+     background: #aaa8a3;
+}
+
+.ic26__scroll {
+     position: absolute;
+     z-index: 5;
+     top: 0;
+     left: min(490px, 31vw);
+     display: grid;
+     place-items: center;
+     width: 115px;
+     height: 115px;
+     padding: 0;
+     border: 0;
+     background: transparent;
+     color: #111;
+     cursor: pointer;
+}
+
+.ic26__scrollLabel {
+     position: absolute;
      inset: 0;
-
-     z-index: 10;
-
-     pointer-events: none;
-
-     background:
-
-          linear-gradient(90deg,
-               rgba(1, 1, 2, 0.94) 0%,
-               rgba(2, 2, 4, 0.80) 20%,
-               rgba(5, 2, 9, 0.39) 39%,
-               rgba(3, 2, 6, 0.06) 58%,
-               rgba(2, 2, 4, 0.05) 75%,
-               rgba(1, 1, 2, 0.42) 100%),
-
-          linear-gradient(180deg,
-               rgba(0, 0, 0, 0.22) 0%,
-               transparent 34%,
-               rgba(0, 0, 0, 0.04) 60%,
-               rgba(0, 0, 0, 0.25) 100%);
-}
-
-
-/* =========================================================
-   FILM GRAIN
-========================================================= */
-
-.inkHero__noise {
-     position: absolute;
-
-     inset: 0;
-
-     z-index: 40;
-
-     opacity: 0.03;
-
-     pointer-events: none;
-
-     background-image:
-          repeating-radial-gradient(circle at 0 0,
-               rgba(255, 255, 255, 0.50) 0,
-               transparent 1px,
-               transparent 3px);
-
-     background-size: 5px 5px;
-
-     mix-blend-mode: soft-light;
-}
-
-
-/* =========================================================
-   TATTOO ARTIST — BRIGHTER / BIGGER / CLEARER
-========================================================= */
-
-.inkHero__tattooArtist {
-     position: absolute;
-
-     z-index: 11;
-
-     right: -5.5%;
-     top: calc(var(--hero-navbar-safe) + 18px);
-
-     width: 52%;
-     height: 71%;
-
-     opacity: 0.86;
-
-     overflow: hidden;
-
-     pointer-events: none;
-
-     -webkit-mask-image:
-          linear-gradient(to left,
-               black 0%,
-               black 61%,
-               rgba(0, 0, 0, 0.80) 75%,
-               transparent 100%);
-
-     mask-image:
-          linear-gradient(to left,
-               black 0%,
-               black 61%,
-               rgba(0, 0, 0, 0.80) 75%,
-               transparent 100%);
-}
-
-
-.inkHero__tattooArtist img {
      width: 100%;
      height: 100%;
-
-     object-fit: cover;
-     object-position: 56% center;
-
-     filter:
-          brightness(0.68) contrast(1.15) saturate(1.02);
+     overflow: visible;
+     animation: ic26Spin 24s linear infinite;
 }
 
-
-/* =========================================================
-   MAIN GIRL — BIGGER + LOWER + MORE CENTERED
-========================================================= */
-
-.inkHero__girl {
-     position: absolute;
-
-     z-index: 16;
-
-     left: 35.2%;
-     top: calc(var(--hero-navbar-safe) + 12px);
-
-     width: clamp(690px, 49vw, 940px);
-
-     pointer-events: none;
-
-     will-change: transform;
-
-     -webkit-mask-image:
-          linear-gradient(to bottom,
-               black 0%,
-               black 74%,
-               rgba(0, 0, 0, 0.93) 83%,
-               rgba(0, 0, 0, 0.54) 92%,
-               transparent 100%);
-
-     mask-image:
-          linear-gradient(to bottom,
-               black 0%,
-               black 74%,
-               rgba(0, 0, 0, 0.93) 83%,
-               rgba(0, 0, 0, 0.54) 92%,
-               transparent 100%);
+.ic26__scrollLabel text {
+     fill: #232323;
+     font: 800 11px "Manrope", sans-serif;
+     letter-spacing: 3px;
 }
 
-
-.inkHero__girl img {
-     display: block;
-
-     width: 100%;
-     height: auto;
-
-     object-fit: contain;
-
-     filter:
-          brightness(0.98) contrast(1.08) saturate(1.01) drop-shadow(-30px 40px 74px rgba(0, 0, 0, 0.66)) drop-shadow(24px 0 54px rgba(168, 85, 247, 0.18));
+.ic26__scrollCore {
+     position: relative;
+     z-index: 1;
+     display: grid;
+     place-items: center;
+     width: 67px;
+     height: 67px;
+     border: 1.5px solid #151515;
+     border-radius: 50%;
+     background: #faf9f6;
+     transition: background .25s, color .25s, transform .25s;
 }
 
+.ic26__scroll:hover .ic26__scrollCore {
+     background: #111;
+     color: #fff;
+     transform: translateY(4px);
+}
 
-/* =========================================================
-   LEFT CONTENT
-========================================================= */
+@keyframes ic26Spin {
+     to {
+          transform: rotate(360deg);
+     }
+}
 
-.inkHero__content {
-     position: absolute;
-
-     z-index: 25;
-
-     left: 4.55%;
-     top: calc(var(--hero-navbar-safe) + 34px);
-
-     width: min(650px, 38.5vw);
-
+.ic26__categories {
      display: flex;
-     flex-direction: column;
-     align-items: flex-start;
-}
-
-
-/* =========================================================
-   REAL ART / REAL ARTISTS / ONE COMMUNITY
-========================================================= */
-
-.inkHero__eyebrow {
-     display: flex;
-     flex-direction: column;
-
-     gap: 7px;
-
-     margin-bottom: 23px;
-
-     color: rgba(255, 255, 255, 0.79);
-
-     font-family: "Montserrat", sans-serif;
-
-     font-size: 10px;
-     font-weight: 600;
-
-     line-height: 1.5;
-
-     letter-spacing: 0.23em;
-
-     text-transform: uppercase;
-}
-
-
-.inkHero__eyebrow i {
-     display: block;
-
-     width: 44px;
-     height: 2px;
-
-     margin-top: 8px;
-
-     background: #a855f7;
-
-     box-shadow:
-          0 0 12px rgba(168, 85, 247, 0.70);
-}
-
-
-/* =========================================================
-   EXACT BRUSH TITLE PNG — SMALLER THAN PREVIOUS VERSION
-========================================================= */
-
-.inkHero__titleImage {
-     display: block;
-
-     width: min(570px, 36vw);
-     max-width: 100%;
-     height: auto;
-
-     object-fit: contain;
-     object-position: left center;
-
-     pointer-events: none;
-
-     filter:
-          drop-shadow(0 12px 29px rgba(0, 0, 0, 0.62)) drop-shadow(0 0 16px rgba(168, 85, 247, 0.08));
-}
-
-
-/* =========================================================
-   CATEGORY LINE
-========================================================= */
-
-.inkHero__categories {
-     display: flex;
-
+     flex-wrap: wrap;
      align-items: center;
-
-     gap: clamp(17px, 1.75vw, 29px);
-
-     margin-top: 7px;
-
-     color: rgba(255, 255, 255, 0.75);
-
-     font-family: "Montserrat", sans-serif;
-
-     font-size: 9.5px;
-     font-weight: 500;
-
-     letter-spacing: 0.24em;
-
-     text-transform: uppercase;
-
-     white-space: nowrap;
+     gap: 16px;
+     margin: 8px 0 25px;
+     font-size: clamp(10px, .78vw, 13px);
+     line-height: 1.55;
+     font-weight: 900;
+     letter-spacing: .22em;
+     color: #161616 !important;
 }
 
-
-.inkHero__categories b {
-     color: #a855f7;
-
-     font-size: 17px;
-     font-weight: 500;
+/* ================== LUCKNOW EVENT ================== */
+.ic26__event {
+     display: grid;
+     grid-template-columns: minmax(145px, 215px) minmax(0, 1fr) 49px;
+     align-items: center;
+     gap: 17px;
+     width: 100%;
+     max-width: 690px;
+     padding-top: 13px;
+     border-top: 1px solid #d5d1c9;
 }
 
+.ic26__lucknowPhoto {
+     position: relative;
+     display: block;
+     height: 162px;
+     width: 100%;
+     overflow: hidden;
+     border-radius: 5px;
+     background: #a6896c;
+}
 
-/* =========================================================
-   TWO BUTTONS
-========================================================= */
+.ic26__lucknowPhoto img {
+     position: absolute;
+     inset: 0;
+     display: block;
+     width: 100%;
+     height: 100%;
+     object-fit: cover;
+     opacity: 0;
+     transform: scale(1.04);
+     transition: opacity .8s ease, transform 3s ease;
+}
 
-.inkHero__buttons {
+.ic26__lucknowPhoto img.is-active {
+     opacity: 1;
+     transform: scale(1);
+}
+
+.ic26__eventDetails {
+     min-width: 0;
+}
+
+.ic26__nextStop {
+     display: inline-block;
+     padding: 5px 9px;
+     margin-bottom: 9px;
+     color: #fff;
+     background: #141414;
+     font-size: 9px;
+     font-weight: 900;
+     line-height: 1.1;
+     letter-spacing: .08em;
+}
+
+.ic26 .ic26__eventDetails h2 {
+     margin: 0 0 13px;
+     color: #111;
+     font: 900 clamp(33px, 2.7vw, 47px)/.93 "Barlow Condensed", Impact, sans-serif;
+}
+
+.ic26__eventDetails p {
+     display: flex;
+     align-items: flex-start;
+     gap: 10px;
+     margin: 0 0 8px;
+     font-size: clamp(10px, .72vw, 12px);
+     font-weight: 750;
+     line-height: 1.45;
+     color: #252525 !important;
+}
+
+.ic26__eventDetails p strong {
+     font-weight: 900;
+}
+
+.ic26__eventDetails p svg {
+     flex: 0 0 17px;
+     margin-top: 1px;
+}
+
+.ic26__eventGo {
+     display: grid;
+     place-items: center;
+     width: 49px;
+     height: 49px;
+     border: 1px solid #272727;
+     border-radius: 50%;
+     background: #f7f6f1;
+     color: #111;
+     transition: background .2s, color .2s, transform .2s;
+}
+
+.ic26__eventGo:hover {
+     transform: rotate(-45deg);
+     background: #111;
+     color: #fff;
+}
+
+/* ================== DIAGONAL ART PHOTOGRAPH ================== */
+.ic26__photo {
+     position: absolute;
+     z-index: 2;
+     inset: 0 0 0 auto;
+     width: 56%;
+     height: 100%;
+     overflow: hidden;
+     background: #1a1512;
+     clip-path: polygon(16% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.ic26__heroImg {
+     position: absolute;
+     inset: 0;
+     display: block;
+     width: 100%;
+     height: 100%;
+     object-fit: cover;
+     object-position: center 46%;
+     opacity: 0;
+     transform: scale(1.025);
+     filter: saturate(.83) contrast(1.08);
+     transition: opacity .85s ease, transform 3s ease;
+}
+
+.ic26__heroImg.is-active {
+     opacity: 1;
+     transform: scale(1);
+}
+
+.ic26__photoShade {
+     position: absolute;
+     inset: 0;
+     pointer-events: none;
+     background: linear-gradient(0deg, rgba(0, 0, 0, .68), transparent 35%), linear-gradient(90deg, rgba(0, 0, 0, .08), transparent 58%);
+}
+
+.ic26__more {
+     position: absolute;
+     z-index: 4;
+     top: 20%;
+     right: 10%;
      display: flex;
      flex-direction: column;
-     align-items: flex-start;
-     gap: 12px;
-     width: min(360px, 100%);
-
-     margin-top: 34px;
+     align-items: flex-end;
+     font: italic 900 clamp(55px, 5.1vw, 91px)/.79 "Barlow Condensed", Impact, sans-serif;
+     letter-spacing: -.045em;
+     color: #fff;
+     text-shadow: 0 4px 20px rgba(0, 0, 0, .44);
 }
 
+.ic26__photoEdge {
+     position: absolute;
+     z-index: 5;
+     top: 36px;
+     right: 20px;
+     writing-mode: vertical-rl;
+     color: #fff;
+     font-size: 9px;
+     font-weight: 800;
+     letter-spacing: .36em;
+}
 
-.inkHero__button {
+.ic26__carousel {
+     position: absolute;
+     z-index: 5;
+     right: 6%;
+     bottom: 23%;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     gap: 14px;
+     font-size: 12px;
+     font-weight: 900;
+     color: #fff;
+}
+
+.ic26__carousel i {
+     font-style: normal;
+     color: #ccc;
+}
+
+.ic26__carouselButtons {
+     display: flex;
+     gap: 12px;
+}
+
+.ic26__carouselButtons button {
+     display: grid;
+     place-items: center;
+     width: 42px;
+     height: 42px;
+     border: 1px solid rgba(255, 255, 255, .85);
+     border-radius: 50%;
+     background: rgba(0, 0, 0, .32);
+     color: #fff;
+     transition: color .2s, background .2s;
+}
+
+.ic26__carouselButtons button:hover {
+     color: #111;
+     background: #fff;
+}
+
+.ic26__filmstrip {
+     position: absolute;
+     z-index: 5;
+     right: 5%;
+     bottom: 7%;
+     display: flex;
+     align-items: center;
+     gap: 18px;
+     font-size: 10px;
+     line-height: 1.3;
+     font-weight: 800;
+     letter-spacing: .07em;
+     color: #fff;
+}
+
+.ic26__thumbs {
+     display: flex;
+     gap: 6px;
+}
+
+.ic26__thumbs button {
+     display: block;
+     width: 50px;
+     height: 46px;
+     padding: 0;
+     overflow: hidden;
+     border: 2px solid transparent;
+     background: transparent;
+     opacity: .7;
+}
+
+.ic26__thumbs button.is-active {
+     opacity: 1;
+     border-color: #fff;
+}
+
+.ic26__thumbs button:disabled {
+     opacity: .2;
+     cursor: not-allowed;
+}
+
+.ic26__thumbs img {
+     display: block;
      width: 100%;
-     min-width: 218px;
-     height: 55px;
+     height: 100%;
+     object-fit: cover;
+}
 
-     padding: 0 26px;
+/* ================== FOUR ACTION LINKS ================== */
+.ic26__actions {
+     position: absolute;
+     z-index: 10;
+     left: clamp(75px, 6.15vw, 120px);
+     bottom: 7%;
+     display: grid;
+     grid-template-columns: repeat(4, minmax(0, 1fr));
+     gap: 12px;
+     width: min(910px, 80%);
+}
 
-     display: inline-flex;
-
+.ic26__action {
+     display: flex;
      align-items: center;
      justify-content: space-between;
-
-     gap: 19px;
-
-     color: #fff;
-
-     text-decoration: none;
-
-     font-family: "Montserrat", sans-serif;
-
-     font-size: 9.5px;
-     font-weight: 800;
-
-     letter-spacing: 0.14em;
-
-     text-transform: uppercase;
-
-     backdrop-filter: blur(8px);
-
-     position: relative;
-     overflow: hidden;
-     isolation: isolate;
-
-     transition:
-          transform 0.3s ease,
-          background 0.3s ease,
-          border-color 0.3s ease,
-          box-shadow 0.3s ease;
+     gap: 10px;
+     min-width: 0;
+     min-height: 61px;
+     padding: 14px 16px;
+     border: 1px solid #686868;
+     border-radius: 3px;
+     background: #f9f8f5;
+     color: #141414;
+     white-space: nowrap;
+     font-size: clamp(9px, .67vw, 11px);
+     font-weight: 900;
+     transition: color .25s, background .25s, transform .25s;
 }
 
-/* Continuous moving light across both desktop hero buttons */
-.inkHero__button::before {
-     content: "";
-     position: absolute;
-     z-index: -1;
-     top: -45%;
-     left: -45%;
-     width: 34%;
-     height: 190%;
-     pointer-events: none;
-     transform: skewX(-24deg);
-     background: linear-gradient(90deg,
-               transparent,
-               rgba(255, 255, 255, 0.05),
-               rgba(255, 255, 255, 0.34),
-               rgba(255, 255, 255, 0.05),
-               transparent);
-     filter: blur(1px);
-     animation: inkButtonShine 2.7s linear infinite;
-}
-
-.inkHero__button svg {
-     animation: inkArrowMove 1.05s ease-in-out infinite;
-}
-
-.inkHero__button--purple {
-     border:
-          1px solid rgba(168, 85, 247, 0.98);
-
-     background:
-          rgba(168, 85, 247, 0.085);
-
-     animation: inkPurplePulse 1.8s ease-in-out infinite;
-}
-
-
-.inkHero__button--purple:hover {
-     transform: translateY(-4px);
-
-     background: #a855f7;
-
-     box-shadow:
-          0 16px 45px rgba(168, 85, 247, 0.26);
-}
-
-
-.inkHero__button--stall {
-     border: 1px solid rgba(168, 85, 247, 0.92);
-     background:
-          linear-gradient(90deg,
-               rgba(168, 85, 247, 0.24),
-               rgba(74, 20, 111, 0.30));
-     box-shadow:
-          inset 0 0 32px rgba(168, 85, 247, 0.05);
-}
-
-.inkHero__button--stall:hover {
-     transform: translateY(-4px);
-     background: rgba(168, 85, 247, 0.22);
-     box-shadow: 0 16px 45px rgba(168, 85, 247, 0.20);
-}
-
-
-.inkHero__button--dark {
-     border:
-          1px solid rgba(255, 255, 255, 0.31);
-
-     background:
-          rgba(0, 0, 0, 0.32);
-
-     animation: inkDarkPulse 2.2s ease-in-out infinite;
-}
-
-
-.inkHero__button--dark:hover {
-     transform: translateY(-4px);
-
-     border-color:
-          rgba(168, 85, 247, 0.88);
-
-     background:
-          rgba(168, 85, 247, 0.085);
-}
-
-
-/* =========================================================
-   GET ENTRY — FOURTH HERO BUTTON
-   Same shape as the 3 buttons, but more animated/premium.
-========================================================= */
-
-.inkHero__button--entry {
-     border:
-          1px solid rgba(217, 70, 239, 0.98);
-
-     background:
-          linear-gradient(90deg,
-               rgba(126, 34, 206, 0.20) 0%,
-               rgba(168, 85, 247, 0.16) 48%,
-               rgba(15, 6, 24, 0.62) 100%);
-
-     box-shadow:
-          inset 0 0 28px rgba(168, 85, 247, 0.05),
-          0 0 0 rgba(217, 70, 239, 0);
-
-     animation:
-          inkEntryPulse 2s ease-in-out infinite;
-
-     overflow: hidden;
-}
-
-.inkHero__button--entry::after {
-     content: "";
-
-     position: absolute;
-
-     top: -45%;
-     left: -38%;
-
-     width: 28%;
-     height: 190%;
-
-     pointer-events: none;
-
-     transform: skewX(-22deg);
-
-     background:
-          linear-gradient(90deg,
-               transparent,
-               rgba(255, 255, 255, 0.08),
-               rgba(255, 255, 255, 0.46),
-               rgba(255, 255, 255, 0.08),
-               transparent);
-
-     filter: blur(1px);
-
-     animation:
-          inkEntryShine 2.35s linear infinite;
-}
-
-.inkHero__button--entry:hover {
-     transform: translateY(-4px);
-
-     border-color: #f0abfc;
-
-     background:
-          linear-gradient(90deg,
-               rgba(168, 85, 247, 0.38),
-               rgba(126, 34, 206, 0.28));
-
-     box-shadow:
-          0 0 28px rgba(217, 70, 239, 0.38),
-          0 16px 42px rgba(126, 34, 206, 0.20);
-}
-
-.inkHero__entryText {
-     display: flex;
-     flex-direction: column;
-
-     gap: 2px;
-
-     line-height: 1.05;
-}
-
-.inkHero__entryText small {
-     color: #e879f9;
-
-     font-size: 6px;
-     font-weight: 800;
-
-     letter-spacing: 0.20em;
-
-     opacity: 0.85;
-}
-
-.inkHero__entryArrow {
-     display: flex;
-
-     width: 30px;
-     height: 30px;
-
-     align-items: center;
-     justify-content: center;
-
+.ic26__action svg {
      flex: 0 0 auto;
-
-     border:
-          1px solid rgba(232, 121, 249, 0.55);
-
-     border-radius: 50%;
-
-     background:
-          rgba(168, 85, 247, 0.10);
-
-     box-shadow:
-          0 0 12px rgba(217, 70, 239, 0.16);
-
-     transition:
-          background 0.3s ease,
-          box-shadow 0.3s ease;
 }
 
-.inkHero__button--entry:hover .inkHero__entryArrow {
-     background:
-          rgba(217, 70, 239, 0.28);
-
-     box-shadow:
-          0 0 18px rgba(217, 70, 239, 0.32);
+.ic26__action:hover {
+     background: #111;
+     color: #fff;
+     transform: translateY(-3px);
 }
 
-
-
-
-/* Keep the ticket proportional on large-but-short desktop screens. */
-@media (min-width: 1367px) and (max-height: 860px) {
-
-     .inkHero__content {
-          top: calc(var(--hero-navbar-safe) + 20px);
-     }
-
-     .inkHero__eyebrow {
-          gap: 5px;
-          margin-bottom: 14px;
-     }
-
-     .inkHero__titleImage {
-          width: min(520px, 34vw);
-     }
-
-     .inkHero__buttons {
-          gap: 9px;
-          margin-top: 18px;
-     }
-
-     .inkHero__button {
-          height: 50px;
-     }
+.ic26__action--black {
+     background: #111;
+     color: #fff;
+     border-color: #111;
 }
 
-/* =========================================================
-   MORE THAN INK PNG
-========================================================= */
-
-.inkHero__moreInk {
-     position: absolute;
-
-     z-index: 25;
-
-     right: 4.1%;
-     top: calc(var(--hero-navbar-safe) + 48px);
-
-     width: clamp(125px, 9vw, 170px);
-     height: auto;
-
-     object-fit: contain;
-
-     pointer-events: none;
-
-     transform: rotate(-4deg);
-
-     filter:
-          brightness(1.03) drop-shadow(0 0 18px rgba(168, 85, 247, 0.20));
+.ic26__action--black:hover {
+     background: #333;
 }
 
+/* =========== YOUR ORIGINAL HOMEPAGE SECTIONS =========== */
+.inkHomeEditorial .inkEditorialVision {
+     display: grid;
+     grid-template-columns: minmax(0, .9fr) minmax(0, 1.05fr);
+     gap: clamp(38px, 6vw, 120px);
+     align-items: center;
+     width: 100%;
+     padding: clamp(90px, 8vw, 150px) max(5vw, 25px);
+     background: #fff;
+     border-bottom: 1px solid var(--ic-line);
+     text-align: left;
+}
 
-/* =========================================================
-   SCROLL DOWN
-========================================================= */
+.inkEditorialVision__photo {
+     position: relative;
+     overflow: hidden;
+     height: clamp(340px, 34vw, 560px);
+     width: 100%;
+     border-radius: 3px;
+     box-shadow: 14px 15px 0 #e9e8e5;
+}
 
-.inkHero__scroll {
-     position: absolute;
+.inkEditorialVision__photo img {
+     width: 100%;
+     height: 100%;
+     object-fit: cover;
+     object-position: center;
+     filter: saturate(.9);
+}
 
-     z-index: 25;
-
-     left: 3.15%;
-     bottom: 6.4%;
-
+.inkEditorialVision>div:last-child {
      display: flex;
      flex-direction: column;
+     align-items: flex-start;
+     gap: 24px;
+     max-width: 760px;
+     width: 100%;
+     margin: 0;
+     text-align: left;
+}
 
+.inkEditorialVision>div:last-child>h3 {
+     color: #6c6d70;
+     font-size: 12px;
+     font-weight: 800;
+     letter-spacing: .19em;
+}
+
+.inkEditorialVision>div:last-child>h2 {
+     color: #202225;
+     font: 800 clamp(44px, 4.9vw, 82px)/.95 var(--ic-display);
+     letter-spacing: -.02em;
+     margin: 0;
+}
+
+.inkEditorialVision>div:last-child>p {
+     color: #66686c;
+     font: 500 clamp(14px, 1vw, 17px)/1.85 var(--ic-body);
+     max-width: 590px;
+}
+
+.inkEditorialVision>div:last-child>a {
+     display: inline-flex;
      align-items: center;
-
-     gap: 18px;
+     gap: 15px;
+     padding: 18px 24px;
+     border: 1px solid #535558;
+     border-radius: 4px;
+     background: #55575a;
+     color: #fff;
+     font-size: 12px;
+     font-weight: 800;
+     letter-spacing: .09em;
+     transition: background .25s;
 }
 
-
-.inkHero__scroll>span {
-     writing-mode: vertical-rl;
-
-     transform: rotate(180deg);
-
-     color: rgba(255, 255, 255, 0.73);
-
-     font-family: "Montserrat", sans-serif;
-
-     font-size: 8.5px;
-     font-weight: 600;
-
-     letter-spacing: 0.27em;
+.inkEditorialVision>div:last-child>a:hover {
+     background: #202124;
+     color: #fff;
 }
 
-
-.inkHero__scrollLine {
-     position: relative;
-
-     width: 1px;
-     height: 72px;
-
-     background:
-          rgba(255, 255, 255, 0.31);
+.inkHomeEditorial .inkJoinWays {
+     padding: clamp(80px, 7vw, 120px) clamp(20px, 5vw, 90px);
+     background: #f0efec;
+     border-bottom: 1px solid var(--ic-line);
 }
 
-
-.inkHero__scrollLine i {
-     position: absolute;
-
-     left: 50%;
-     bottom: 0;
-
-     width: 13px;
-     height: 13px;
-
-     border: 1px solid #fff;
-
-     border-radius: 50%;
-
-     background: #030305;
-
-     transform:
-          translate(-50%, 50%);
-}
-
-
-/* =========================================================
-   1440–1600 LAPTOP
-========================================================= */
-
-@media (max-width: 1600px) {
-
-     .inkHero__content {
-          left: 4.3%;
-          top: calc(var(--hero-navbar-safe) + 28px);
-
-          width: 40%;
-     }
-
-
-     .inkHero__titleImage {
-          width: 37.5vw;
-     }
-
-
-     .inkHero__girl {
-          left: 37%;
-          top: calc(var(--hero-navbar-safe) + 14px);
-
-          width: 49.5vw;
-     }
-
-
-     .inkHero__tattooArtist {
-          right: -7%;
-          top: calc(var(--hero-navbar-safe) + 20px);
-
-          width: 55%;
-     }
-
-
-     .inkHero__expo {
-          height: 56%;
-     }
-
-
-     .inkHero__moreInk {
-          right: 3.3%;
-          top: calc(var(--hero-navbar-safe) + 46px);
-
-          width: 140px;
-     }
-
-     .inkHero__buttons {
-          margin-top: 20px;
-          gap: 9px;
-     }
-}
-
-
-/* =========================================================
-   1280–1366 LAPTOP
-========================================================= */
-
-@media (max-width: 1366px) {
-
-     .inkHero {
-          min-height: 660px;
-     }
-
-
-     .inkHero__content {
-          left: 3.9%;
-          top: calc(var(--hero-navbar-safe) + 18px);
-
-          width: 43%;
-     }
-
-
-     .inkHero__eyebrow {
-          margin-bottom: 18px;
-
-          font-size: 8.4px;
-     }
-
-
-     .inkHero__titleImage {
-          width: 40.5vw;
-     }
-
-
-     .inkHero__categories {
-          gap: 15px;
-
-          margin-top: 4px;
-
-          font-size: 7.9px;
-     }
-
-
-     .inkHero__buttons {
-          margin-top: 25px;
-     }
-
-
-     .inkHero__button {
-          min-width: 188px;
-          height: 49px;
-
-          padding: 0 18px;
-
-          gap: 14px;
-
-          font-size: 8.1px;
-     }
-
-
-     .inkHero__girl {
-          left: 39%;
-          top: calc(var(--hero-navbar-safe) + 12px);
-
-          width: 53vw;
-     }
-
-
-     .inkHero__tattooArtist {
-          right: -10%;
-          top: calc(var(--hero-navbar-safe) + 20px);
-
-          width: 58%;
-     }
-
-
-     .inkHero__expo {
-          height: 55%;
-     }
-
-
-     .inkHero__moreInk {
-          right: 2.6%;
-          top: calc(var(--hero-navbar-safe) + 40px);
-
-          width: 118px;
-     }
-
-     .inkHero__buttons {
-          margin-top: 16px;
-          gap: 7px;
-     }
-
-     .inkHero__button {
-          height: 45px;
-     }
-}
-
-
-/* =========================================================
-   TABLET
-========================================================= */
-
-@media (max-width: 1050px) {
-
-     .inkHero {
-          --hero-navbar-safe: 76px;
-          min-height: 780px;
-     }
-
-
-     .inkHero__content {
-          left: 32px;
-          top: calc(var(--hero-navbar-safe) + 38px);
-
-          width: 61%;
-     }
-
-
-     .inkHero__titleImage {
-          width: 56vw;
-     }
-
-
-     .inkHero__girl {
-          left: 37%;
-          top: calc(var(--hero-navbar-safe) + 105px);
-
-          width: 73vw;
-
-          opacity: 0.82;
-     }
-
-
-     .inkHero__tattooArtist {
-          right: -22%;
-
-          width: 72%;
-
-          opacity: 0.40;
-     }
-
-
-     .inkHero__moreInk {
-          display: none;
-     }
-
-
-     .inkHero__expo {
-          height: 48%;
-     }
-}
-
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
-@media (max-width: 768px) {
-
-     .inkHero {
-          --hero-navbar-safe: 64px;
-
-          height: auto;
-
-          min-height: 900px;
-     }
-
-
-     .inkHero__content {
-          left: 20px;
-          top: calc(var(--hero-navbar-safe) + 26px);
-
-          width:
-               calc(100% - 40px);
-     }
-
-
-     .inkHero__eyebrow {
-          margin-bottom: 20px;
-
-          font-size: 8px;
-     }
-
-
-     .inkHero__titleImage {
-          width: min(92vw, 590px);
-     }
-
-
-     .inkHero__categories {
-          flex-wrap: wrap;
-
-          gap: 8px 14px;
-
-          margin-top: 3px;
-
-          font-size: 7.5px;
-
-          white-space: normal;
-     }
-
-
-     .inkHero__buttons {
-          width: 100%;
-
-          flex-direction: column;
-
-          align-items: stretch;
-
-          margin-top: 24px;
-     }
-
-
-     .inkHero__button {
-          width: 100%;
-
-          min-width: 0;
-     }
-
-
-     .inkHero__girl {
-          left: 10%;
-          top: 305px;
-
-          width: 114vw;
-
-          opacity: 0.56;
-     }
-
-
-     .inkHero__tattooArtist {
-          display: none;
-     }
-
-
-     .inkHero__expo {
-          bottom: 0;
-
-          height: 46%;
-     }
-
-
-     .inkHero__wall {
-          opacity: 0.28;
-     }
-
-
-     .inkHero__grunge {
-          left: -25%;
-
-          width: 135%;
-
-          opacity: 0.12;
-     }
-
-
-     .inkHero__scroll {
-          display: none;
-     }
-}
-
-/* =========================================================
-   NEW MOBILE HERO
-   This is intentionally separate from the desktop hero.
-
-   WHY:
-   The previous mobile layout used very large fixed pixel
-   coordinates (1455px, 1535px, 1745px etc.). On a real phone
-   those values represent CSS pixels, not screenshot pixels,
-   so the hero became multiple screens tall with large gaps.
-
-   This version uses one dedicated mobile composition whose
-   proportions track the actual viewport.
-========================================================= */
-
-.inkMobileHero {
+.inkJoinWays>div:first-child {
      display: none;
 }
 
-/* =========================================================
-   MOBILE HERO — ONE SCREEN / BUTTONS ABOVE THE FOLD
-   The mobile hero always stays inside the visible viewport.
-   The image area shrinks first, so both CTA buttons remain
-   visible without the user needing to scroll.
-========================================================= */
-@media (max-width: 768px) {
+.inkJoinWays>div:last-child {
+     max-width: 1480px;
+     margin: 0 auto;
+}
 
-     /* Remove the desktop composition completely on phones. */
-     .inkHero--desktop {
-          display: none !important;
+.inkJoinWays>div:last-child>div:first-child {
+     max-width: 780px;
+     margin: 0 auto 54px;
+     text-align: center;
+}
+
+.inkJoinWays>div:last-child>div:first-child h4 {
+     color: #737578;
+     font-size: 12px;
+     font-weight: 800;
+     letter-spacing: .22em;
+}
+
+.inkJoinWays>div:last-child>div:first-child h2 {
+     margin: 12px 0 18px;
+     color: #202124;
+     font: 800 clamp(48px, 5.1vw, 78px)/.95 var(--ic-display);
+}
+
+.inkJoinWays>div:last-child>div:first-child p {
+     margin: 0 auto;
+     max-width: 690px;
+     color: #696b70;
+     font-size: 15px;
+     line-height: 1.85;
+}
+
+.inkJoinWays>div:last-child>div:nth-child(2) {
+     display: grid;
+     grid-template-columns: repeat(2, minmax(0, 1fr));
+     gap: 22px;
+     align-items: stretch;
+}
+
+.inkJoinWays article {
+     display: flex;
+     flex-direction: column;
+     gap: 0;
+     min-height: 0;
+     padding: clamp(24px, 3vw, 42px);
+     border: 1px solid #dedfdd;
+     border-radius: 9px;
+     background: #fff;
+     color: #27292b;
+     box-shadow: 0 10px 40px rgba(24, 25, 27, .035);
+     transition: transform .2s, border-color .2s, box-shadow .2s;
+}
+
+.inkJoinWays article:hover {
+     transform: translateY(-4px);
+     border-color: #aeb0ae;
+     box-shadow: 0 18px 34px rgba(0, 0, 0, .065);
+}
+
+.inkJoinWays article>div:first-child {
+     display: none;
+}
+
+.inkJoinWays article>div:nth-child(2) {
+     display: grid;
+     place-items: center;
+     width: 48px;
+     height: 48px;
+     border: 1px solid #e0e1df;
+     border-radius: 7px;
+     background: #efefee;
+     color: #343638;
+     box-shadow: none;
+}
+
+.inkJoinWays article>div:nth-child(2) svg {
+     width: 22px;
+     height: 22px;
+}
+
+.inkJoinWays article>p:first-of-type {
+     margin-top: 24px;
+     color: #909296;
+     font: 800 11px var(--ic-body);
+     letter-spacing: .18em;
+}
+
+.inkJoinWays article>h3 {
+     margin: 9px 0 14px;
+     color: #212225;
+     font: 800 clamp(27px, 2.65vw, 40px)/1 var(--ic-display);
+}
+
+.inkJoinWays article>p:nth-of-type(2) {
+     margin-bottom: 22px;
+     color: #606266;
+     font: 500 14px/1.8 var(--ic-body);
+}
+
+.inkJoinWays article p {
+     color: #616369;
+     font: 500 13px/1.65 var(--ic-body);
+}
+
+.inkJoinWays article p[class*="text-[8px]"] {
+     font-size: 11px;
+}
+
+.inkJoinWays article p[class*="text-[10px]"] {
+     font-size: 12px;
+}
+
+.inkJoinWays article p[class*="text-[11px]"] {
+     font-size: 13px;
+}
+
+.inkJoinWays article span {
+     color: #56585c;
+     font-size: 13px;
+     line-height: 1.55;
+}
+
+.inkJoinWays article>div[class*="rounded"] {
+     margin-bottom: 18px;
+     padding: 20px;
+     border: 1px solid #e2e3e0;
+     border-radius: 6px;
+     background: #f6f6f5;
+}
+
+.inkJoinWays article>div[class*="rounded"] p:first-child {
+     color: #44474a;
+     font-size: 11px;
+     font-weight: 850;
+     letter-spacing: .13em;
+}
+
+.inkJoinWays article .space-y-1,
+.inkJoinWays article .space-y-2\.5 {
+     display: flex;
+     flex-direction: column;
+     gap: 10px;
+}
+
+.inkJoinWays article .space-y-1>div,
+.inkJoinWays article .space-y-2\.5>div {
+     display: flex;
+     align-items: flex-start;
+     gap: 12px;
+}
+
+.inkJoinWays article .space-y-1 span:first-child {
+     width: 6px;
+     height: 6px;
+     margin-top: 6px;
+     flex-shrink: 0;
+     background: #85878a;
+}
+
+.inkJoinWays article>a {
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     gap: 14px;
+     min-height: 50px;
+     margin-top: auto;
+     padding: 14px 18px;
+     border: 1px solid #5a5c60;
+     border-radius: 4px;
+     background: #55575b;
+     color: #fff;
+     font-size: 12px;
+     font-weight: 800;
+     letter-spacing: .05em;
+}
+
+.inkJoinWays article>a:hover {
+     background: #27292c;
+     border-color: #27292c;
+     color: #fff;
+}
+
+.inkJoinWays article>a svg {
+     color: #fff;
+}
+
+.inkHomeEditorial .inkRankingSection {
+     padding: clamp(85px, 9vw, 150px) clamp(20px, 5vw, 90px);
+     background: #fff;
+}
+
+.inkRankingSection>div {
+     display: grid;
+     grid-template-columns: minmax(0, 1fr) minmax(0, .92fr);
+     gap: clamp(40px, 8vw, 160px);
+     align-items: center;
+     max-width: 1420px;
+     margin: auto;
+}
+
+.inkRankingSection h4 {
+     color: #848689;
+     font-size: 11px;
+     font-weight: 800;
+     letter-spacing: .2em;
+}
+
+.inkRankingSection h2 {
+     margin: 18px 0 20px;
+     color: #202124;
+     font: 800 clamp(44px, 4.9vw, 79px)/.96 var(--ic-display);
+}
+
+.inkRankingSection p {
+     max-width: 550px;
+     color: #686a6e;
+     font-size: 15px;
+     line-height: 1.85;
+}
+
+.inkRankingSection>div>div:nth-child(2) {
+     padding: clamp(20px, 2.3vw, 34px);
+     border: 1px solid #e3e3e2;
+     border-radius: 9px;
+     background: #f7f7f6;
+     box-shadow: 0 15px 42px rgba(40, 40, 40, .05);
+}
+
+.inkRankingSection>div>div:nth-child(2)>div:first-child {
+     margin-bottom: 18px;
+     padding-bottom: 14px;
+     border-color: #dfdfdc;
+}
+
+.inkRankingSection>div>div:nth-child(2) h3 {
+     color: #26282b;
+     font-size: 12px;
+     font-weight: 800;
+     letter-spacing: .15em;
+}
+
+.inkRankingSection>div>div:nth-child(2)>div:nth-child(2) {
+     display: flex;
+     flex-direction: column;
+     gap: 8px;
+}
+
+.inkRankingSection>div>div:nth-child(2)>div:nth-child(2)>div {
+     padding: 14px 18px;
+     border: 1px solid #e9e9e8;
+     border-radius: 5px;
+     background: #fff;
+}
+
+.inkRankingSection>div>div:nth-child(2)>div:nth-child(2)>div span {
+     color: #35373b;
+     font-size: 13px;
+}
+
+.inkRankingSection>div>div:nth-child(2)>div:nth-child(2)>div>span:last-child {
+     color: #76787a;
+     font-size: 11px;
+     font-weight: 700;
+}
+
+.inkHomeEditorial .inkHallSection {
+     padding: 110px 22px;
+     background: #f1f0ed;
+     text-align: center;
+}
+
+.inkHallSection>div {
+     max-width: 800px;
+     margin: auto;
+}
+
+.inkHallSection svg {
+     color: #66696c;
+     margin: auto auto 23px;
+}
+
+.inkHallSection h2 {
+     margin: 0 0 18px;
+     color: #252729;
+     font: 800 clamp(42px, 4.8vw, 74px)/1 var(--ic-display);
+}
+
+.inkHallSection p {
+     color: #67696c;
+     font-size: 15px;
+}
+
+.inkHallSection>div>div {
+     margin-top: 36px;
+     padding: 45px 25px;
+     border: 1px solid #e1e1df;
+     border-radius: 6px;
+     background: #fff;
+}
+
+.inkHallSection h3 {
+     margin-bottom: 12px;
+     font: 800 21px var(--ic-display);
+     letter-spacing: .09em;
+}
+
+.inkHomeEditorial .inkPartnerSection {
+     padding: 105px 22px;
+     background: #fff;
+     text-align: center;
+     border-bottom: 1px solid #e4e4e2;
+}
+
+.inkPartnerSection>div {
+     max-width: 800px;
+     margin: auto;
+}
+
+.inkPartnerSection h2 {
+     margin-bottom: 22px;
+     color: #26282b;
+     font: 800 clamp(42px, 4.8vw, 73px)/1 var(--ic-display);
+}
+
+.inkPartnerSection p {
+     color: #6b6d70;
+     font-size: 15px;
+     line-height: 1.85;
+}
+
+.inkHomeEditorial .inkFAQSection {
+     padding: 100px 22px 125px;
+     background: #f7f6f3;
+}
+
+.inkFAQSection>div {
+     max-width: 900px;
+     margin: 0 auto;
+}
+
+.inkFAQSection h2 {
+     margin: 0 0 45px;
+     color: #242628;
+     font: 800 clamp(42px, 4.7vw, 73px)/1 var(--ic-display);
+     text-align: center;
+}
+
+.inkFAQSection>div>div:last-child {
+     display: flex;
+     flex-direction: column;
+     gap: 12px;
+}
+
+.inkFAQSection>div>div:last-child>div {
+     overflow: hidden;
+     border: 1px solid #e0e1df;
+     border-radius: 6px;
+     background: #fff;
+     transition: border-color .2s;
+}
+
+.inkFAQSection>div>div:last-child>div:hover {
+     border-color: #a3a5a7;
+}
+
+.inkFAQSection button {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     gap: 15px;
+     width: 100%;
+     min-height: 74px;
+     padding: 18px 24px;
+     background: transparent;
+     color: #242629;
+     text-align: left;
+     cursor: pointer;
+}
+
+.inkFAQSection button span {
+     color: #242629;
+     font: 750 14px/1.6 var(--ic-body);
+}
+
+.inkFAQSection button svg {
+     color: #67696d;
+     flex-shrink: 0;
+}
+
+.inkFAQSection button+div {
+     padding: 0 24px 22px;
+     color: #686a6c;
+     font-size: 14px;
+     line-height: 1.9;
+}
+
+/* ================== RESPONSIVE LAYOUT ================== */
+@media (min-width: 1025px) and (max-width: 1450px) {
+     .ic26__content {
+          top: 68px;
+          left: 5.8vw;
+          width: 51%;
      }
 
-     .inkMobileHero {
-          --mobile-nav-clearance: 78px;
-
-          position: relative;
-          display: grid;
-          grid-template-rows: auto minmax(0, 1fr) auto auto auto;
-          grid-template-areas:
-               "title"
-               "scene"
-               "categories"
-               "buttons"
-               "ticket";
-
-          width: 100%;
-
-          /* Keep the hero cinematic, but allow the new ticket to remain visible. */
-          min-height: 100svh;
-          height: auto;
-
-          overflow: hidden;
-
-          padding:
-               var(--mobile-nav-clearance) 16px 28px;
-
-          background: #020203;
-          isolation: isolate;
+     .ic26 .ic26__titleInk {
+          font-size: clamp(130px, 11.2vw, 172px);
      }
 
-     /* Fallback for browsers that do not understand svh. */
-     @supports not (height: 100svh) {
-          .inkMobileHero {
-               min-height: 100vh;
-               height: auto;
-          }
+     .ic26 .ic26__titleConvention {
+          font-size: clamp(75px, 7.45vw, 110px);
      }
 
-     /* =======================================================
-        FULL BACKGROUND
-     ======================================================= */
-
-     .inkMobileHero__wall {
-          position: absolute;
-          inset: 0;
-          z-index: 1;
-          overflow: hidden;
-          opacity: 0.42;
-          pointer-events: none;
+     .ic26__scroll {
+          left: 30vw;
+          width: 102px;
+          height: 102px;
      }
 
-     .inkMobileHero__wall img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center center;
-          filter: brightness(0.40) contrast(1.16) saturate(0.96);
+     .ic26__year {
+          top: 103px;
+          left: clamp(245px, 20vw, 315px);
      }
 
-     .inkMobileHero__grunge {
-          position: absolute;
-          z-index: 2;
-          left: -35%;
-          top: -8%;
-          width: 165%;
-          height: 72%;
-          opacity: 0.12;
-          pointer-events: none;
-          mix-blend-mode: screen;
+     .ic26__event {
+          grid-template-columns: minmax(130px, 180px) minmax(0, 1fr) 44px;
+          gap: 12px;
      }
 
-     .inkMobileHero__grunge img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center top;
+     .ic26__lucknowPhoto {
+          height: 149px;
      }
 
-     .inkMobileHero__glow {
-          position: absolute;
-          z-index: 3;
-          left: -30%;
-          top: 2%;
-          width: 160%;
-          height: 68%;
-          pointer-events: none;
-          background:
-               radial-gradient(ellipse at 60% 44%,
-                    rgba(171, 45, 255, 0.25) 0%,
-                    rgba(95, 23, 151, 0.11) 39%,
-                    transparent 72%);
-          filter: blur(24px);
+     .ic26__eventGo {
+          width: 43px;
+          height: 43px;
      }
 
-     .inkMobileHero__overlay {
-          position: absolute;
-          inset: 0;
-          z-index: 10;
-          pointer-events: none;
-          background:
-               linear-gradient(180deg,
-                    rgba(0, 0, 0, 0.27) 0%,
-                    rgba(0, 0, 0, 0.03) 23%,
-                    rgba(0, 0, 0, 0.03) 55%,
-                    rgba(0, 0, 0, 0.18) 69%,
-                    rgba(0, 0, 0, 0.82) 90%,
-                    #020203 100%);
+     .ic26__actions {
+          left: 5.8vw;
+          width: 86%;
      }
 
-     /* =======================================================
-        TITLE
-     ======================================================= */
-
-     .inkMobileHero__title {
-          grid-area: title;
-
-          position: relative;
-          z-index: 30;
-
-          display: block;
-
-          width: min(88%, 430px);
-          height: auto;
-
-          margin: 0 auto 2px;
-
-          object-fit: contain;
-
-          filter:
-               drop-shadow(0 10px 24px rgba(0, 0, 0, 0.68)) drop-shadow(0 0 15px rgba(168, 85, 247, 0.10));
-
-          animation:
-               inkMobileTitleIn 0.85s cubic-bezier(.2, .8, .2, 1) both;
-     }
-
-     /* =======================================================
-        MAIN VISUAL — THIS AREA SHRINKS TO KEEP BUTTONS VISIBLE
-     ======================================================= */
-
-     .inkMobileHero__scene {
-          grid-area: scene;
-
-          position: relative;
-          z-index: 15;
-
-          width: calc(100% + 32px);
-          min-height: 0;
-
-          margin-left: -16px;
-          margin-right: -16px;
-
-          overflow: hidden;
-     }
-
-     /* Tattoo artist behind the girl */
-     .inkMobileHero__tattooArtist {
-          position: absolute;
-          z-index: 12;
-
-          top: 2%;
-          right: -34%;
-
-          width: 124%;
-          height: 72%;
-
-          opacity: 0.42;
-          overflow: hidden;
-          pointer-events: none;
-
-          -webkit-mask-image:
-               linear-gradient(to left,
-                    black 0%,
-                    black 48%,
-                    rgba(0, 0, 0, 0.65) 70%,
-                    transparent 100%);
-
-          mask-image:
-               linear-gradient(to left,
-                    black 0%,
-                    black 48%,
-                    rgba(0, 0, 0, 0.65) 70%,
-                    transparent 100%);
-     }
-
-     .inkMobileHero__tattooArtist img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: 55% center;
-          filter: brightness(0.56) contrast(1.15) saturate(0.98);
-     }
-
-     /* Main girl */
-     .inkMobileHero__girl {
-          position: absolute;
-          z-index: 18;
-
-          top: -1%;
-          left: 68%;
-
-          width: min(112vw, 510px);
-
-          pointer-events: none;
-
-          transform: translateX(-50%);
-
-          -webkit-mask-image:
-               linear-gradient(to bottom,
-                    black 0%,
-                    black 72%,
-                    rgba(0, 0, 0, 0.90) 82%,
-                    rgba(0, 0, 0, 0.48) 92%,
-                    transparent 100%);
-
-          mask-image:
-               linear-gradient(to bottom,
-                    black 0%,
-                    black 72%,
-                    rgba(0, 0, 0, 0.90) 82%,
-                    rgba(0, 0, 0, 0.48) 92%,
-                    transparent 100%);
-
-          animation:
-               inkMobileGirlIn 1s 0.08s cubic-bezier(.2, .8, .2, 1) both;
-     }
-
-     .inkMobileHero__girl img {
-          display: block;
-          width: 100%;
-          height: auto;
-          filter:
-               brightness(0.98) contrast(1.08) saturate(1.00) drop-shadow(0 24px 48px rgba(0, 0, 0, 0.70)) drop-shadow(16px 0 40px rgba(168, 85, 247, 0.17));
-     }
-
-     /* More Than Ink is intentionally removed on mobile.
-        Desktop still keeps the original image. */
-     .inkMobileHero__moreInk {
-          display: none !important;
-     }
-
-     /* =======================================================
-        MOBILE-ONLY TATTOO COPY — LEFT OF THE WOMAN
-     ======================================================= */
-
-     .inkMobileHero__sideText {
-          position: absolute;
-          z-index: 29;
-
-          left: 16px;
-          top: 15%;
-
-          width: min(51vw, 220px);
-
-          padding-left: 13px;
-
-          border-left: 3px solid #a855f7;
-
-          color: #fff;
-
-          text-align: left;
-
-          pointer-events: auto;
-
-          filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.72));
-
-          transform: translateZ(0);
-     }
-
-     .inkMobileHero__sideKicker {
-          display: block;
-
-          margin-bottom: 7px;
-
-          color: #c084fc;
-
-          font-family: "Montserrat", sans-serif;
-          font-size: clamp(7.5px, 2.15vw, 9.5px);
-          font-weight: 800;
-          line-height: 1.25;
-          letter-spacing: 0.16em;
-
-          text-transform: uppercase;
-     }
-
-     .inkMobileHero__sideHeading {
-          margin: 0;
-
-          color: #fff;
-
-          font-family: "Montserrat", sans-serif;
-          font-size: clamp(21px, 6vw, 28px);
-          font-weight: 900;
-          line-height: 0.97;
-          letter-spacing: -0.045em;
-
-          text-transform: uppercase;
-
-          text-shadow:
-               0 3px 16px rgba(0, 0, 0, 0.95),
-               0 0 26px rgba(0, 0, 0, 0.70);
-     }
-
-     .inkMobileHero__sideHeading em {
-          color: #c084fc;
-          font-style: normal;
-     }
-
-     .inkMobileHero__sideDivider {
-          width: 48px;
-          height: 2px;
-
-          margin-top: 12px;
-
-          background: linear-gradient(90deg, #a855f7, transparent);
-
-          box-shadow: 0 0 10px rgba(168, 85, 247, 0.32);
-     }
-
-     /* =======================================================
-        MOBILE UPCOMING EVENT — TEXT LINK, NOT A BUTTON
-     ======================================================= */
-
-     .inkMobileHero__eventLink {
-          position: relative;
-
-          display: inline-flex;
-          flex-direction: column;
-          align-items: flex-start;
-
-          width: 100%;
-          margin-top: 8px;
-
-          color: #fff;
-          text-decoration: none;
-
-          font-family: "Montserrat", sans-serif;
-
-          cursor: pointer;
-          -webkit-tap-highlight-color: transparent;
-
-          animation:
-               inkMobileEventIn 0.8s 0.32s cubic-bezier(.2, .8, .2, 1) both;
-     }
-
-     .inkMobileHero__eventLabel {
-          display: block;
-
-          color: rgba(255, 255, 255, 0.88);
-
-          font-size: clamp(7.4px, 2.05vw, 9px);
-          font-weight: 800;
-          line-height: 1.25;
-          letter-spacing: 0.16em;
-
-          text-transform: uppercase;
-
-          animation:
-               inkMobileEventLabelPulse 2.4s ease-in-out infinite;
-     }
-
-     .inkMobileHero__eventState {
-          display: block;
-
-          margin-top: 2px;
-
-          color: #c084fc;
-
-          font-size: clamp(15px, 4.6vw, 20px);
-          font-weight: 900;
-          line-height: 1.05;
-          letter-spacing: -0.025em;
-
-          text-transform: uppercase;
-
-          text-shadow:
-               0 0 18px rgba(168, 85, 247, 0.36),
-               0 3px 12px rgba(0, 0, 0, 0.90);
-     }
-
-     .inkMobileHero__eventDetails {
-          position: relative;
-
-          display: inline-flex;
-          align-items: center;
-
-          gap: 5px;
-
-          margin-top: 7px;
-          padding-bottom: 3px;
-
-          color: rgba(255, 255, 255, 0.78);
-
-          font-size: clamp(6.5px, 1.82vw, 8px);
-          font-weight: 800;
-          line-height: 1.3;
-          letter-spacing: 0.08em;
-
-          text-transform: uppercase;
-
-          transition:
-               color 0.25s ease,
-               transform 0.25s ease;
-     }
-
-     .inkMobileHero__eventDetails::after {
-          content: "";
-
-          position: absolute;
-
-          left: 0;
-          bottom: 0;
-
-          width: 46%;
-          height: 1px;
-
-          background:
-               linear-gradient(90deg, #a855f7, rgba(168, 85, 247, 0));
-
-          transform-origin: left center;
-
-          animation:
-               inkMobileEventLine 1.9s ease-in-out infinite;
-     }
-
-     .inkMobileHero__eventDetails svg {
-          flex: 0 0 auto;
-
-          color: #c084fc;
-
-          animation:
-               inkMobileEventArrow 1s ease-in-out infinite;
-     }
-
-     .inkMobileHero__eventLink:active .inkMobileHero__eventDetails {
-          color: #ffffff;
-          transform: translateX(2px);
-     }
-
-     /* Expo crowd at bottom of scene */
-     .inkMobileHero__expo {
-          position: absolute;
-          z-index: 22;
-
-          left: -3%;
-          right: -3%;
-          bottom: -1%;
-
-          width: 106%;
-          height: 42%;
-
-          overflow: hidden;
-          pointer-events: none;
-
-          -webkit-mask-image:
-               linear-gradient(to bottom,
-                    transparent 0%,
-                    rgba(0, 0, 0, 0.74) 13%,
-                    black 29%,
-                    black 100%);
-
-          mask-image:
-               linear-gradient(to bottom,
-                    transparent 0%,
-                    rgba(0, 0, 0, 0.74) 13%,
-                    black 29%,
-                    black 100%);
-     }
-
-     .inkMobileHero__expo img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center 44%;
-          transform: scale(1.03);
-          filter: brightness(0.72) contrast(1.13) saturate(1.15);
-     }
-
-     /* =======================================================
-        CATEGORIES
-     ======================================================= */
-
-     .inkMobileHero__categories {
-          grid-area: categories;
-
-          position: relative;
-          z-index: 30;
-
-          display: flex;
-          width: 100%;
-
-          align-items: center;
-          justify-content: space-between;
-
-          gap: 4px;
-
-          /* Negative top margin intentionally pulls all CTAs higher on phone. */
-          margin: -12px auto 8px;
-
-          color: rgba(255, 255, 255, 0.80);
-
-          font-family: "Montserrat", sans-serif;
-          font-size: clamp(6.8px, 2.05vw, 8.5px);
-          font-weight: 600;
-          letter-spacing: 0.13em;
-          text-transform: uppercase;
-          white-space: nowrap;
-     }
-
-     .inkMobileHero__categories b {
-          color: #a855f7;
-          font-size: 18px;
-          font-weight: 500;
-     }
-
-     /* =======================================================
-        BUTTONS — ALWAYS VISIBLE IN THE FIRST SCREEN
-     ======================================================= */
-
-     .inkMobileHero__buttons {
-          grid-area: buttons;
-
-          position: relative;
-          z-index: 31;
-
-          display: flex;
-          flex-direction: column;
-
-          width: 100%;
-
-          gap: 7px;
-          margin: 0;
-     }
-
-     .inkMobileHero__button {
-          display: flex;
-
-          width: 100%;
-          height: 46px;
-
-          flex: 0 0 auto;
-
-          align-items: center;
-          justify-content: space-between;
-
-          gap: 16px;
-
-          padding: 0 18px;
-
-          color: #fff;
-          text-decoration: none;
-
-          font-family: "Montserrat", sans-serif;
-          font-size: clamp(8px, 2.35vw, 9.5px);
-          font-weight: 800;
-          letter-spacing: 0.13em;
-          text-transform: uppercase;
-
-          backdrop-filter: blur(10px);
-
-          position: relative;
-          overflow: hidden;
-          isolation: isolate;
-     }
-
-     .inkMobileHero__button::before {
-          content: "";
-          position: absolute;
-          z-index: -1;
-          top: -45%;
-          left: -45%;
-          width: 34%;
-          height: 190%;
-          pointer-events: none;
-          transform: skewX(-24deg);
-          background:
-               linear-gradient(90deg,
-                    transparent,
-                    rgba(255, 255, 255, 0.04),
-                    rgba(255, 255, 255, 0.30),
-                    rgba(255, 255, 255, 0.04),
-                    transparent);
-          animation: inkButtonShine 2.7s linear infinite;
-     }
-
-     .inkMobileHero__button svg {
-          flex: 0 0 auto;
-          animation: inkArrowMove 1.05s ease-in-out infinite;
-     }
-
-     .inkMobileHero__button--purple {
-          border: 1px solid rgba(168, 85, 247, 1);
-          background:
-               linear-gradient(90deg,
-                    rgba(168, 85, 247, 0.17),
-                    rgba(19, 8, 30, 0.78));
-          box-shadow:
-               inset 0 0 28px rgba(168, 85, 247, 0.04);
-          animation: inkPurplePulse 1.8s ease-in-out infinite;
-     }
-
-     .inkMobileHero__button--stall {
-          border: 1px solid rgba(168, 85, 247, 0.88);
-          background:
-               linear-gradient(90deg,
-                    rgba(168, 85, 247, 0.22),
-                    rgba(41, 15, 61, 0.76));
-          box-shadow:
-               inset 0 0 26px rgba(168, 85, 247, 0.05);
-     }
-
-     .inkMobileHero__button--dark {
-          border: 1px solid rgba(255, 255, 255, 0.30);
-          background: rgba(0, 0, 0, 0.62);
-          animation: inkDarkPulse 2.2s ease-in-out infinite;
-     }
-
-
-     .inkMobileHero__button--entry {
-          border: 1px solid rgba(217, 70, 239, 0.95);
-
-          background:
-               linear-gradient(90deg,
-                    rgba(126, 34, 206, 0.26),
-                    rgba(30, 9, 44, 0.78));
-
-          box-shadow:
-               inset 0 0 26px rgba(168, 85, 247, 0.06);
-
-          animation:
-               inkEntryPulse 2s ease-in-out infinite;
-     }
-
-     .inkMobileHero__button--entry::after {
-          content: "";
-
-          position: absolute;
-
-          top: -45%;
-          left: -38%;
-
-          width: 30%;
-          height: 190%;
-
-          transform: skewX(-22deg);
-
-          background:
-               linear-gradient(90deg,
-                    transparent,
-                    rgba(255, 255, 255, 0.06),
-                    rgba(255, 255, 255, 0.40),
-                    rgba(255, 255, 255, 0.06),
-                    transparent);
-
-          animation:
-               inkEntryShine 2.35s linear infinite;
-     }
-
-
-     /* =======================================================
-        MOBILE GET ENTRY TICKET
-     ======================================================= */
-
-     /* No scroll indicator on mobile — it wastes valuable first-screen space. */
-     .inkMobileHero__scroll {
-          display: none !important;
-     }
-
-     /* =======================================================
-        MOBILE ENTRANCE ANIMATION
-     ======================================================= */
-
-     @keyframes inkMobileTitleIn {
-          from {
-               opacity: 0;
-               transform: translateY(12px) scale(0.98);
-          }
-
-          to {
-               opacity: 1;
-               transform: translateY(0) scale(1);
-          }
-     }
-
-     @keyframes inkMobileGirlIn {
-          from {
-               opacity: 0;
-               transform:
-                    translateX(-46%) translateY(14px) scale(1.03);
-          }
-
-          to {
-               opacity: 1;
-               transform:
-                    translateX(-50%) translateY(0) scale(1);
-          }
+     .ic26__action {
+          padding: 11px 12px;
      }
 }
 
-/* =========================================================
-   MOBILE EVENT TEXT ANIMATIONS
-========================================================= */
+@media (max-width: 1024px) {
+     .ic26 {
+          display: flex;
+          flex-direction: column;
+          height: auto;
+          min-height: 0;
+          overflow: hidden;
+     }
 
-@keyframes inkMobileEventIn {
+     .ic26::before,
+     .ic26__verticalBrand {
+          display: none;
+     }
+
+     .ic26__content {
+          position: relative;
+          top: auto;
+          left: auto;
+          order: 1;
+          width: 100%;
+          padding: 58px 6% 43px;
+     }
+
+     .ic26 .ic26__titleInk {
+          font-size: clamp(115px, 17vw, 184px);
+     }
+
+     .ic26 .ic26__titleConvention {
+          font-size: clamp(72px, 10.5vw, 116px);
+     }
+
+     .ic26__year {
+          top: 38%;
+          left: 41%;
+     }
+
+     .ic26__scroll {
+          left: auto;
+          right: 4%;
+     }
+
+     .ic26__event {
+          max-width: 725px;
+          grid-template-columns: 195px minmax(0, 1fr) 48px;
+     }
+
+     .ic26__photo {
+          position: relative;
+          inset: auto;
+          order: 2;
+          width: 100%;
+          height: 520px;
+          clip-path: none;
+     }
+
+     .ic26__actions {
+          position: relative;
+          bottom: auto;
+          left: auto;
+          order: 3;
+          width: 100%;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          padding: 22px 6% 34px;
+          background: #f7f5f0;
+     }
+
+     .ic26__action {
+          min-height: 61px;
+          font-size: 11px;
+     }
+
+     .inkHomeEditorial .inkEditorialVision {
+          gap: 40px;
+          padding: 70px 25px;
+     }
+}
+
+@media (max-width: 700px) {
+     .ic26__content {
+          padding: 38px 19px 36px;
+     }
+
+     .ic26__eyebrow {
+          gap: 9px;
+          margin-bottom: 18px;
+          font-size: 8px;
+          letter-spacing: .08em;
+     }
+
+     .ic26 .ic26__titleInk {
+          font-size: clamp(91px, 24vw, 145px);
+          line-height: 1.05;
+     }
+
+     .ic26 .ic26__titleConvention {
+          font-size: clamp(52px, 11.5vw, 80px);
+          margin-top: -2px;
+          transform: scaleX(.87) skewX(-2deg);
+     }
+
+     .ic26__year {
+          right: 0;
+          left: auto;
+          top: 30%;
+          font-size: 9px;
+     }
+
+     .ic26__year i,
+     .ic26__scroll {
+          display: none;
+     }
+
+     .ic26__categories {
+          gap: 9px;
+          margin: 16px 0 25px;
+          font-size: 9px;
+          letter-spacing: .1em;
+     }
+
+     .ic26__event {
+          grid-template-columns: 112px minmax(0, 1fr);
+          gap: 11px;
+          align-items: start;
+     }
+
+     .ic26__lucknowPhoto {
+          height: 134px;
+     }
+
+     .ic26 .ic26__eventDetails h2 {
+          font-size: 34px;
+     }
+
+     .ic26__eventDetails p {
+          gap: 7px;
+          font-size: 9px;
+     }
+
+     .ic26__eventDetails p svg {
+          flex-basis: 14px;
+          width: 14px;
+          height: 14px;
+     }
+
+     .ic26__eventGo {
+          grid-column: 2;
+          width: 38px;
+          height: 38px;
+     }
+
+     .ic26__photo {
+          height: 430px;
+     }
+
+     .ic26__more {
+          top: 19%;
+          right: 12%;
+          font-size: clamp(55px, 13vw, 79px);
+     }
+
+     .ic26__photoEdge {
+          right: 10px;
+          font-size: 7px;
+     }
+
+     .ic26__carousel {
+          right: 18px;
+          bottom: 26%;
+          gap: 9px;
+     }
+
+     .ic26__carouselButtons button {
+          width: 36px;
+          height: 36px;
+     }
+
+     .ic26__filmstrip {
+          right: 17px;
+          bottom: 20px;
+          gap: 10px;
+          font-size: 8px;
+     }
+
+     .ic26__thumbs button {
+          width: 39px;
+          height: 38px;
+     }
+
+     .ic26__actions {
+          gap: 9px;
+          padding: 16px 15px 29px;
+     }
+
+     .ic26__action {
+          min-height: 60px;
+          padding: 12px;
+          font-size: 9px;
+          white-space: normal;
+     }
+
+     .inkHomeEditorial .inkEditorialVision {
+          display: flex;
+          flex-direction: column;
+          gap: 42px;
+          padding: 75px 22px;
+     }
+
+     .inkEditorialVision__photo {
+          height: 320px;
+     }
+
+     .inkEditorialVision>div:last-child>h2 {
+          font-size: clamp(46px, 11vw, 70px);
+     }
+
+     .inkJoinWays>div:last-child>div:nth-child(2) {
+          grid-template-columns: 1fr;
+          gap: 18px;
+     }
+
+     .inkHomeEditorial .inkJoinWays {
+          padding: 76px 18px;
+     }
+
+     .inkJoinWays>div:last-child>div:first-child {
+          margin-bottom: 30px;
+     }
+
+     .inkJoinWays>div:last-child>div:first-child h2 {
+          font-size: clamp(43px, 11vw, 61px);
+     }
+
+     .inkJoinWays article {
+          padding: 25px;
+     }
+
+     .inkHomeEditorial .inkRankingSection {
+          padding: 80px 22px;
+     }
+
+     .inkRankingSection>div {
+          grid-template-columns: 1fr;
+          gap: 38px;
+     }
+
+     .inkRankingSection h2 {
+          font-size: clamp(48px, 11vw, 68px);
+     }
+
+     .inkHomeEditorial .inkHallSection,
+     .inkHomeEditorial .inkPartnerSection,
+     .inkHomeEditorial .inkFAQSection {
+          padding-top: 79px;
+          padding-bottom: 90px;
+     }
+}
+
+@media (max-width: 380px) {
+     .ic26__content {
+          padding-left: 13px;
+          padding-right: 13px;
+     }
+
+     .ic26 .ic26__titleInk {
+          font-size: 89px;
+     }
+
+     .ic26 .ic26__titleConvention {
+          font-size: 50px;
+     }
+
+     .ic26__year {
+          display: none;
+     }
+
+     .ic26__event {
+          grid-template-columns: 98px minmax(0, 1fr);
+     }
+
+     .ic26__lucknowPhoto {
+          height: 120px;
+     }
+
+     .ic26__action {
+          font-size: 8px;
+     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+     .ic26 *,
+     .ic26 *::before,
+     .ic26 *::after {
+          animation-duration: .01ms !important;
+          transition-duration: .01ms !important;
+     }
+}
+
+/* ===========================================================
+   MOBILE ONLY: HERO PHOTO FIRST, EVENT/TEXT SECOND
+   Desktop and tablet layouts remain unchanged.
+   These rules come last so they override the older mobile order.
+   No Home.jsx or additional stylesheet is needed.
+   =========================================================== */
+@media (max-width: 767px) {
+     .inkHomeEditorial .ic26 {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          height: auto;
+          min-height: 0;
+          overflow: hidden;
+     }
+
+     /* The big tattoo image sits immediately below the navbar. */
+     .inkHomeEditorial .ic26__photo {
+          position: relative;
+          inset: auto;
+          order: 1;
+          width: 100%;
+          height: clamp(350px, 108vw, 510px);
+          min-height: 350px;
+          flex: 0 0 auto;
+          margin: 0;
+          clip-path: none;
+          border-radius: 0;
+     }
+
+     .inkHomeEditorial .ic26__heroImg {
+          object-fit: cover;
+          object-position: center 43%;
+     }
+
+     /* INK/CONVENTION, Lucknow photo, date, time and venue below. */
+     .inkHomeEditorial .ic26__content {
+          position: relative;
+          inset: auto;
+          top: auto;
+          left: auto;
+          order: 2;
+          width: 100%;
+          max-width: none;
+          height: auto;
+          min-height: 0;
+          margin: 0;
+          padding: 36px 19px 28px;
+          transform: none;
+          background: #f7f5f0;
+     }
+
+     .inkHomeEditorial .ic26__eyebrow {
+          margin-top: 0;
+     }
+
+     .inkHomeEditorial .ic26__titleArea,
+     .inkHomeEditorial .ic26__title {
+          overflow: visible;
+     }
+
+     .inkHomeEditorial .ic26__categories {
+          margin-bottom: 24px;
+     }
+
+     /* Navigation buttons remain last, underneath the event card. */
+     .inkHomeEditorial .ic26__actions {
+          position: relative;
+          inset: auto;
+          order: 3;
+          width: 100%;
+          max-width: none;
+          margin: 0;
+          padding: 4px 15px 30px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          background: #f7f5f0;
+     }
+
+     /* Rebalance controls so they do not cover the main photo subject. */
+     .inkHomeEditorial .ic26__more {
+          top: 17%;
+          right: 12%;
+     }
+
+     .inkHomeEditorial .ic26__carousel {
+          right: 18px;
+          bottom: 23%;
+     }
+
+     .inkHomeEditorial .ic26__filmstrip {
+          right: 12px;
+          bottom: 14px;
+     }
+}
+
+@media (max-width: 380px) {
+     .inkHomeEditorial .ic26__photo {
+          height: 365px;
+          min-height: 365px;
+     }
+
+     .inkHomeEditorial .ic26__content {
+          padding: 30px 13px 22px;
+     }
+}
+
+/* ===========================================================
+   FIVE-CITY EVENT CARD (AUTO CHANGES EVERY 5 SECONDS)
+   Applies to the existing hero event card only.
+   Keeps the tattoo hero / mobile photo-first layout unchanged.
+   =========================================================== */
+.ic26__event {
+     position: relative;
+     padding-bottom: 9px;
+     animation: ic26TourAppear .48s ease both;
+}
+
+.ic26__eventMeta {
+     display: flex;
+     flex-wrap: wrap;
+     align-items: center;
+     gap: 8px;
+     margin-bottom: 7px;
+}
+
+.ic26__eventMeta .ic26__nextStop {
+     margin-bottom: 0;
+}
+
+.ic26__eventCounter {
+     color: #66635f;
+     font-size: 10px;
+     font-weight: 900;
+     letter-spacing: .11em;
+}
+
+.ic26__photoCity {
+     position: absolute;
+     left: 9px;
+     bottom: 9px;
+     z-index: 3;
+     color: white;
+     background: rgba(15, 15, 15, .78);
+     padding: 5px 8px;
+     border-radius: 2px;
+     font-size: 10px;
+     font-weight: 900;
+     letter-spacing: .08em;
+}
+
+.ic26__event .ic26__lucknowPhoto::after {
+     content: "";
+     position: absolute;
+     inset: 40% 0 0;
+     background: linear-gradient(transparent, rgba(0, 0, 0, .42));
+     pointer-events: none;
+}
+
+.ic26__eventDetails {
+     overflow-wrap: anywhere;
+}
+
+.ic26__eventDetails p strong {
+     font-size: .94em;
+     line-height: 1.4;
+}
+
+.ic26__eventGo {
+     cursor: pointer;
+}
+
+.ic26__tourProgress {
+     position: absolute;
+     left: 0;
+     bottom: 0;
+     width: 100%;
+     height: 2px;
+     background: #d8d3cb;
+     pointer-events: none;
+     overflow: hidden;
+}
+
+.ic26__tourProgress::after {
+     content: "";
+     display: block;
+     height: 100%;
+     width: 100%;
+     background: #111;
+     transform-origin: left center;
+     animation: ic26TourFill 5s linear forwards;
+}
+
+@keyframes ic26TourAppear {
      from {
-          opacity: 0;
-          transform: translateY(12px);
+          opacity: .36;
+          transform: translateY(4px);
      }
 
      to {
@@ -1954,329 +1618,51 @@ h4,
      }
 }
 
-@keyframes inkMobileEventLabelPulse {
-
-     0%,
-     100% {
-          color: rgba(255, 255, 255, 0.72);
+@keyframes ic26TourFill {
+     from {
+          transform: scaleX(0);
      }
 
-     50% {
-          color: #ffffff;
+     to {
+          transform: scaleX(1);
      }
 }
 
-@keyframes inkMobileEventLine {
-
-     0%,
-     100% {
-          width: 34%;
-          opacity: 0.55;
+@media (max-width: 767px) {
+     .ic26__event {
+          gap: 11px;
      }
 
-     50% {
-          width: 100%;
-          opacity: 1;
-     }
-}
-
-@keyframes inkMobileEventArrow {
-
-     0%,
-     100% {
-          transform: translateX(0);
-     }
-
-     50% {
-          transform: translateX(4px);
-     }
-}
-
-/* =========================================================
-   SMALL PHONE TUNING
-========================================================= */
-
-@media (max-width: 390px) {
-
-     .inkMobileHero {
-          --mobile-nav-clearance: 74px;
-          padding-left: 13px;
-          padding-right: 13px;
-          padding-bottom: 20px;
-     }
-
-     .inkMobileHero__title {
-          width: 90%;
-     }
-
-     .inkMobileHero__scene {
-          width: calc(100% + 26px);
-          margin-left: -13px;
-          margin-right: -13px;
-     }
-
-     .inkMobileHero__girl {
-          top: 0;
-          left: 65%;
-          width: 116vw;
-     }
-
-     .inkMobileHero__sideText {
-          left: 12px;
-          top: 14%;
-          width: 50vw;
-          padding-left: 11px;
-     }
-
-     .inkMobileHero__sideHeading {
-          font-size: clamp(19px, 5.45vw, 23px);
-     }
-
-     .inkMobileHero__sideDivider {
-          margin-top: 10px;
-          width: 42px;
-          height: 2px;
-     }
-
-     .inkMobileHero__eventLink {
-          margin-top: 7px;
-     }
-
-     .inkMobileHero__eventState {
-          font-size: 15px;
-     }
-
-     .inkMobileHero__eventDetails {
-          margin-top: 6px;
-          font-size: 6.2px;
-          gap: 4px;
-     }
-
-     .inkMobileHero__categories {
-          margin-top: -10px;
-          margin-bottom: 7px;
-          font-size: 6.6px;
-          letter-spacing: 0.10em;
-     }
-
-     .inkMobileHero__button {
-          height: 44px;
-          padding: 0 15px;
-          gap: 12px;
-          font-size: 8px;
-     }
-}
-
-@media (max-width: 360px) {
-
-     .inkMobileHero {
-          --mobile-nav-clearance: 70px;
-          padding-bottom: 16px;
-     }
-
-     .inkMobileHero__title {
-          width: 91%;
-     }
-
-     .inkMobileHero__girl {
-          left: 70%;
-          width: 118vw;
-     }
-
-     .inkMobileHero__sideText {
-          left: 10px;
-          top: 11%;
-          width: 51vw;
-          padding-left: 10px;
-     }
-
-     .inkMobileHero__sideHeading {
-          font-size: 18px;
-     }
-
-     .inkMobileHero__eventState {
-          font-size: 14px;
-     }
-
-     .inkMobileHero__eventDetails {
-          font-size: 5.9px;
-     }
-
-     .inkMobileHero__categories {
-          font-size: 6.2px;
-     }
-
-     .inkMobileHero__button {
-          height: 42px;
-          font-size: 7.7px;
-     }
-}
-
-/* Very short phones / browser UI taking extra vertical space. */
-@media (max-width: 768px) and (max-height: 690px) {
-
-     .inkMobileHero {
-          --mobile-nav-clearance: 64px;
-          padding-bottom: 10px;
-     }
-
-     .inkMobileHero__title {
-          width: 82%;
-     }
-
-     .inkMobileHero__sideText {
-          top: 11%;
-     }
-
-     .inkMobileHero__sideKicker {
-          margin-bottom: 5px;
-     }
-
-     .inkMobileHero__sideHeading {
-          font-size: 17px;
-     }
-
-     .inkMobileHero__sideDivider {
-          margin-top: 6px;
-          width: 26px;
-     }
-
-     .inkMobileHero__eventLink {
-          margin-top: 5px;
-     }
-
-     .inkMobileHero__eventLabel {
-          font-size: 6.6px;
-     }
-
-     .inkMobileHero__eventState {
-          font-size: 13px;
-     }
-
-     .inkMobileHero__eventDetails {
-          margin-top: 5px;
-          font-size: 5.7px;
-          gap: 3px;
-     }
-
-     .inkMobileHero__categories {
-          margin-top: -8px;
-          margin-bottom: 5px;
-          font-size: 6.4px;
-     }
-
-     .inkMobileHero__button {
-          height: 40px;
-          font-size: 7.4px;
-     }
-
-     .inkMobileHero__buttons {
+     .ic26__eventMeta {
           gap: 5px;
-          
-     }
-}
-
-/* =========================================================
-   NEVER-STOP HERO BUTTON ANIMATIONS
-========================================================= */
-@keyframes inkButtonShine {
-     0% {
-          left: -45%;
      }
 
-     100% {
-          left: 125%;
-     }
-}
-
-@keyframes inkPurplePulse {
-
-     0%,
-     100% {
-          box-shadow:
-               0 0 0 rgba(168, 85, 247, 0),
-               inset 0 0 22px rgba(168, 85, 247, 0.04);
+     .ic26__eventCounter {
+          font-size: 9px;
      }
 
-     50% {
-          box-shadow:
-               0 0 24px rgba(168, 85, 247, 0.36),
-               0 0 54px rgba(168, 85, 247, 0.10),
-               inset 0 0 30px rgba(168, 85, 247, 0.10);
-     }
-}
-
-@keyframes inkDarkPulse {
-
-     0%,
-     100% {
-          border-color: rgba(255, 255, 255, 0.30);
-          box-shadow: 0 0 0 rgba(168, 85, 247, 0);
+     .ic26__photoCity {
+          font-size: 8px;
+          left: 5px;
+          bottom: 6px;
+          padding: 4px 5px;
      }
 
-     50% {
-          border-color: rgba(168, 85, 247, 0.70);
-          box-shadow: 0 0 20px rgba(168, 85, 247, 0.16);
-     }
-}
-
-@keyframes inkArrowMove {
-
-     0%,
-     100% {
-          transform: translateX(0);
+     .ic26__eventDetails p strong {
+          font-size: 1em;
      }
 
-     50% {
-          transform: translateX(6px);
-     }
-}
-
-
-@keyframes inkEntryPulse {
-
-     0%,
-     100% {
-          border-color:
-               rgba(217, 70, 239, 0.74);
-
-          box-shadow:
-               0 0 0 rgba(217, 70, 239, 0),
-               inset 0 0 22px rgba(168, 85, 247, 0.04);
-     }
-
-     50% {
-          border-color:
-               rgba(240, 171, 252, 1);
-
-          box-shadow:
-               0 0 24px rgba(217, 70, 239, 0.34),
-               0 0 48px rgba(126, 34, 206, 0.10),
-               inset 0 0 30px rgba(168, 85, 247, 0.10);
-     }
-}
-
-@keyframes inkEntryShine {
-     0% {
-          left: -38%;
-     }
-
-     100% {
-          left: 125%;
+     .ic26__event .ic26__eventGo {
+          justify-self: start;
      }
 }
 
 @media (prefers-reduced-motion: reduce) {
+     .ic26__event {
+          animation: none !important;
+     }
 
-     .inkHero__button,
-     .inkHero__button::before,
-     .inkHero__button svg,
-     .inkHero__ticket,
-     .inkMobileHero__button,
-     .inkMobileHero__button::before,
-     .inkMobileHero__button svg,
-     .inkMobileHero__button--entry,
-     .inkMobileHero__button--entry::after {
+     .ic26__tourProgress::after {
           animation: none !important;
      }
 }

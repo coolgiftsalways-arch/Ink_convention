@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ArrowUpRight, MessageCircle, Mail } from "lucide-react";
 import gsap from "gsap";
+
 import "../Style/Navbar.css";
 
-/* =========================================================
-   NAVIGATION LINKS
-========================================================= */
+// =====================================================
+// NAVIGATION LINKS
+// =====================================================
 
 const navLinks = [
   {
@@ -14,52 +15,96 @@ const navLinks = [
     path: "/",
     end: true,
   },
-
   {
     label: "About",
     path: "/about",
   },
-
   {
     label: "Expo 2026",
     path: "/upcoming",
   },
-
   {
     label: "Gallery",
     path: "/gallery",
   },
-
   {
     label: "Artists",
     path: "/artists",
   },
-
   {
     label: "Hall Of Fame",
     path: "/hall-of-fame",
   },
-
   {
     label: "Sponsors",
     path: "/sponsors",
   },
 ];
 
-/* =========================================================
-   NAVBAR COMPONENT
-========================================================= */
+// =====================================================
+// SOCIAL LINKS
+// =====================================================
 
-function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+const socialLinks = [
+  {
+    label: "WhatsApp",
+    href: "https://wa.me/message/U536VCYKIRWMA1",
+    icon: MessageCircle,
+    external: true,
+  },
+  {
+    label: "Email",
+    href: "mailto:ink.convention.expo@gmail.com",
+    icon: Mail,
+    external: false,
+  },
+];
 
+// =====================================================
+// LOGO
+// =====================================================
+
+function NavbarLogo({ onClick }) {
+  return (
+    <Link
+      to="/"
+      onClick={onClick}
+      className="inkNav-logo"
+      aria-label="Ink Convention Home"
+    >
+      <span className="inkNav-logoMain">
+        INKCONVENTION<span>.</span>
+      </span>
+
+      <span className="inkNav-logoSub">
+        REAL ART
+        <i />
+        REAL ARTISTS
+        <i />
+        ONE COMMUNITY
+      </span>
+    </Link>
+  );
+}
+
+// =====================================================
+// NAVBAR
+// =====================================================
+
+function NavbarContent() {
   const location = useLocation();
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const [scrolled, setScrolled] = useState(
+    () => typeof window !== "undefined" && window.scrollY > 24,
+  );
+
   const mobileMenuRef = useRef(null);
 
-  /* =========================================================
-     EXPO 2026 ACTIVE ROUTE
-  ========================================================= */
+  // ===================================================
+  // EXPO ACTIVE ROUTE
+  // ===================================================
 
   const isExpoRoute =
     location.pathname === "/upcoming" ||
@@ -67,108 +112,14 @@ function Navbar() {
     location.pathname === "/competition" ||
     location.pathname.startsWith("/competition/");
 
-  /* =========================================================
-     MENU FUNCTIONS
-  ========================================================= */
-
-  const toggleMenu = () => {
-    setIsOpen((prev) => !prev);
-  };
-
-  const closeMenu = () => {
-    setIsOpen(false);
-  };
-
-  /* =========================================================
-     CLOSE MOBILE MENU ON ROUTE CHANGE
-  ========================================================= */
-
-  useEffect(() => {
-    setIsOpen(false);
-  }, [location.pathname]);
-
-  /* =========================================================
-     ACTIVE LINK CHECK
-  ========================================================= */
-
-  const checkActive = (path, isActive) => {
-    if (path === "/upcoming") {
-      return isExpoRoute;
-    }
-
-    return isActive;
-  };
-
-  /* =========================================================
-     DESKTOP NAV LINK STYLE
-  ========================================================= */
-
-  const desktopNavClass = (isActive) => `
-    relative
-    shrink-0
-    whitespace-nowrap
-    py-2
-
-    transition-all
-    duration-300
-
-    after:content-['']
-    after:absolute
-    after:left-0
-    after:-bottom-1
-    after:h-[2px]
-    after:rounded-full
-    after:bg-[#a855f7]
-    after:transition-all
-    after:duration-300
-
-    hover:text-white
-    hover:after:w-full
-
-    ${isActive ? "text-white after:w-full" : "text-gray-300 after:w-0"}
-  `;
-
-  /* =========================================================
-     MOBILE NAV LINK STYLE
-  ========================================================= */
-
-  const mobileNavClass = (isActive) => `
-    relative
-    py-3
-
-    flex
-    items-center
-    justify-between
-
-    transition-all
-    duration-300
-
-    after:content-['']
-    after:absolute
-    after:left-0
-    after:bottom-0
-    after:h-[2px]
-    after:bg-[#a855f7]
-    after:transition-all
-    after:duration-300
-
-    ${
-      isActive
-        ? "text-[#a855f7] after:w-full"
-        : "text-white after:w-0 hover:text-[#a855f7]"
-    }
-  `;
-
-  /* =========================================================
-     SCROLL NAVBAR
-  ========================================================= */
+  // ===================================================
+  // SCROLL DETECTION
+  // ===================================================
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 24);
     };
-
-    handleScroll();
 
     window.addEventListener("scroll", handleScroll, {
       passive: true,
@@ -179,20 +130,18 @@ function Navbar() {
     };
   }, []);
 
-  /* =========================================================
-     MOBILE MENU GSAP ANIMATION
-  ========================================================= */
+  // ===================================================
+  // MOBILE MENU ANIMATION
+  // ===================================================
 
   useEffect(() => {
-    if (!isOpen || !mobileMenuRef.current) {
-      return;
-    }
+    if (!isOpen || !mobileMenuRef.current) return;
 
-    gsap.fromTo(
+    const animation = gsap.fromTo(
       mobileMenuRef.current,
       {
         opacity: 0,
-        y: -15,
+        y: -12,
       },
       {
         opacity: 1,
@@ -201,426 +150,263 @@ function Navbar() {
         ease: "power3.out",
       },
     );
+
+    return () => {
+      animation.kill();
+    };
   }, [isOpen]);
 
-  /* =========================================================
-     NAVBAR JSX
-  ========================================================= */
+  // ===================================================
+  // ESCAPE KEY / BACKGROUND SCROLL
+  // ===================================================
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  // ===================================================
+  // MENU ACTIONS
+  // ===================================================
+
+  const closeMenu = () => setIsOpen(false);
+
+  const toggleMenu = () => {
+    setIsOpen((prev) => !prev);
+  };
+
+  // ===================================================
+  // CHECK ACTIVE LINK
+  // ===================================================
+
+  const checkActive = (path, isActive) => {
+    if (path === "/upcoming") {
+      return isExpoRoute;
+    }
+
+    return isActive;
+  };
+
+  // ===================================================
+  // JSX
+  // ===================================================
 
   return (
-    <nav
-      className={`
-        fixed
-        top-0
-        left-0
-        w-full
-        z-50
-
-        transition-all
-        duration-500
-
-        ${
-          scrolled
-            ? `
-              bg-black/90
-              backdrop-blur-md
-              border-b
-              border-white/10
-              text-white
-              shadow-2xl
-              py-3
-            `
-            : `
-              bg-transparent
-              border-b
-              border-transparent
-              text-white
-              py-5
-            `
-        }
-      `}
-    >
-      {/* =====================================================
-          NAVBAR CONTAINER
-      ===================================================== */}
-
-      <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
-        <div className="flex items-center justify-between gap-3 min-h-10">
-          {/* =================================================
+    <>
+      <header className={`inkNav ${scrolled ? "inkNav--scrolled" : ""}`}>
+        <div className="inkNav-container">
+          {/* =======================================
               WEBSITE LOGO
-          ================================================= */}
+          ======================================= */}
 
-          <div className="shrink-0">
-            <Link
-              to="/"
-              onClick={closeMenu}
-              className="
-                text-base
-                lg:text-lg
-                font-black
-                tracking-tighter
-                uppercase
-                text-white
-                hover:opacity-70
-                transition
-                whitespace-nowrap
-              "
-            >
-              INKCONVENTION
-              <span className="text-[#a855f7]">.</span>
-            </Link>
-          </div>
+          <NavbarLogo onClick={closeMenu} />
 
-          {/* =================================================
+          {/* =======================================
               DESKTOP NAVIGATION
-          ================================================= */}
+          ======================================= */}
 
-          <div
-            className="
-              hidden
-              lg:flex
-
-              min-w-0
-              flex-1
-
-              items-center
-              justify-center
-
-              gap-2
-              xl:gap-4
-              2xl:gap-6
-
-              font-medium
-
-              text-[9px]
-              xl:text-[10px]
-              2xl:text-xs
-
-              uppercase
-
-              tracking-normal
-              xl:tracking-wider
-              2xl:tracking-widest
-
-              whitespace-nowrap
-            "
-          >
+          <nav className="inkNav-desktopLinks" aria-label="Main navigation">
             {navLinks.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
-                state={item.state}
                 end={item.end}
                 className={({ isActive }) =>
-                  desktopNavClass(checkActive(item.path, isActive))
+                  `inkNav-link ${
+                    checkActive(item.path, isActive)
+                      ? "inkNav-link--active"
+                      : ""
+                  }`
                 }
               >
                 {item.label}
               </NavLink>
             ))}
-          </div>
+          </nav>
 
-          {/* =================================================
-              DESKTOP SOCIAL ICONS
-          ================================================= */}
+          {/* =======================================
+              DESKTOP RIGHT ACTIONS
+          ======================================= */}
 
-          <div className="hidden 2xl:flex shrink-0 items-center gap-3">
-            {/* WHATSAPP */}
+          <div className="inkNav-actions">
+            <div className="inkNav-socials">
+              {socialLinks.map((item) => {
+                const Icon = item.icon;
 
-            <a
-              href="https://wa.me/message/U536VCYKIRWMA1"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="WhatsApp"
-              className="
-                w-8
-                h-8
-                rounded-full
-                bg-white/5
-                border
-                border-white/10
-                flex
-                items-center
-                justify-center
-                text-gray-300
-                hover:bg-[#a855f7]
-                hover:border-[#a855f7]
-                hover:text-white
-                transition
-                duration-300
-              "
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-              </svg>
-            </a>
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target={item.external ? "_blank" : undefined}
+                    rel={item.external ? "noopener noreferrer" : undefined}
+                    className="inkNav-socialBtn"
+                    aria-label={item.label}
+                    title={item.label}
+                  >
+                    <Icon size={17} strokeWidth={1.8} />
+                  </a>
+                );
+              })}
+            </div>
 
-            {/* EMAIL */}
+            {/* JOIN FREE */}
 
-            <a
-              href="mailto:ink.convention.expo@gmail.com"
-              aria-label="Email"
-              className="
-                w-8
-                h-8
-                rounded-full
-                bg-white/5
-                border
-                border-white/10
-                flex
-                items-center
-                justify-center
-                text-gray-300
-                hover:bg-[#a855f7]
-                hover:border-[#a855f7]
-                hover:text-white
-                transition
-                duration-300
-              "
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect width="20" height="16" x="2" y="4" rx="2" />
+            <Link to="/Enter" className="inkNav-joinBtn">
+              <span>JOIN FREE</span>
 
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-              </svg>
-            </a>
-          </div>
+              <ArrowUpRight size={16} strokeWidth={1.8} />
+            </Link>
 
-          {/* =================================================
-              MOBILE / TABLET MENU BUTTON
-          ================================================= */}
+            {/* MOBILE MENU BUTTON */}
 
-          <div className="flex lg:hidden items-center ml-auto">
             <button
               type="button"
+              className={`inkNav-menuBtn ${
+                isOpen ? "inkNav-menuBtn--active" : ""
+              }`}
               onClick={toggleMenu}
-              aria-label={isOpen ? "Close Menu" : "Open Menu"}
+              aria-label={
+                isOpen ? "Close navigation menu" : "Open navigation menu"
+              }
               aria-expanded={isOpen}
               aria-controls="inkconvention-mobile-menu"
-              className="
-                text-white
-                focus:outline-none
-                p-2
-                rounded-full
-                bg-white/10
-                hover:bg-white/20
-                transition
-                duration-300
-                cursor-pointer
-              "
             >
-              {isOpen ? <X size={20} /> : <Menu size={20} />}
+              {isOpen ? (
+                <X size={23} strokeWidth={1.8} />
+              ) : (
+                <Menu size={23} strokeWidth={1.8} />
+              )}
             </button>
           </div>
         </div>
-      </div>
 
-      {/* =====================================================
-          MOBILE / TABLET MENU
-      ===================================================== */}
+        {/* =======================================
+            MOBILE DROPDOWN
+        ======================================= */}
 
-      {isOpen && (
-        <div
-          id="inkconvention-mobile-menu"
-          ref={mobileMenuRef}
-          className="
-            lg:hidden
-            absolute
-            inset-x-0
-            top-full
-
-            bg-black/95
-            backdrop-blur-xl
-
-            border-b
-            border-white/10
-
-            px-6
-            py-6
-
-            shadow-2xl
-            z-50
-
-            flex
-            flex-col
-            text-white
-
-            max-h-[85vh]
-            overflow-y-auto
-          "
-        >
-          {/* =================================================
-              MOBILE NAVIGATION LINKS
-          ================================================= */}
-
-          <div className="flex flex-col gap-2 text-xl font-bold tracking-tight">
-            {navLinks.map((item, index) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                state={item.state}
-                end={item.end}
-                onClick={closeMenu}
-                className={({ isActive }) =>
-                  mobileNavClass(checkActive(item.path, isActive))
-                }
-              >
-                <span>{item.label}</span>
-
-                <span className="text-xs font-mono text-gray-500">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-              </NavLink>
-            ))}
-          </div>
-
-          {/* =================================================
-              MOBILE SOCIAL LINKS
-          ================================================= */}
-
+        {isOpen && (
           <div
-            className="
-              pt-5
-              mt-5
-
-              border-t
-              border-white/10
-
-              flex
-              items-center
-              justify-between
-            "
+            id="inkconvention-mobile-menu"
+            ref={mobileMenuRef}
+            className="inkNav-mobileMenu"
           >
-            <span
-              className="
-                text-xs
-                font-mono
-                text-gray-400
-                uppercase
-                tracking-widest
-              "
-            >
-              Connect
-            </span>
+            <div className="inkNav-mobileInner">
+              <div className="inkNav-mobileHeading">
+                <span>EXPLORE INK CONVENTION</span>
+                <span>MENU / 2026</span>
+              </div>
 
-            <div className="flex items-center gap-3">
-              {/* WHATSAPP */}
-
-              <a
-                href="https://wa.me/message/U536VCYKIRWMA1"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="WhatsApp"
-                className="
-                  w-9
-                  h-9
-                  rounded-full
-
-                  bg-white/5
-
-                  border
-                  border-white/10
-
-                  flex
-                  items-center
-                  justify-center
-
-                  text-gray-300
-
-                  hover:bg-[#a855f7]
-                  hover:border-[#a855f7]
-                  hover:text-white
-
-                  transition
-                  duration-300
-                "
+              <nav
+                className="inkNav-mobileLinks"
+                aria-label="Mobile navigation"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-                </svg>
-              </a>
+                {navLinks.map((item, index) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end={item.end}
+                    onClick={closeMenu}
+                    className={({ isActive }) =>
+                      `inkNav-mobileLink ${
+                        checkActive(item.path, isActive)
+                          ? "inkNav-mobileLink--active"
+                          : ""
+                      }`
+                    }
+                  >
+                    <span className="inkNav-mobileLinkIndex">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
 
-              {/* EMAIL */}
+                    <span className="inkNav-mobileLinkName">{item.label}</span>
 
-              <a
-                href="mailto:ink.convention.expo@gmail.com"
-                aria-label="Email"
-                className="
-                  w-9
-                  h-9
-                  rounded-full
+                    <ArrowUpRight size={18} strokeWidth={1.7} />
+                  </NavLink>
+                ))}
+              </nav>
 
-                  bg-white/5
+              {/* MOBILE JOIN FREE */}
 
-                  border
-                  border-white/10
-
-                  flex
-                  items-center
-                  justify-center
-
-                  text-gray-300
-
-                  hover:bg-[#a855f7]
-                  hover:border-[#a855f7]
-                  hover:text-white
-
-                  transition
-                  duration-300
-                "
+              <Link
+                to="/Enter"
+                onClick={closeMenu}
+                className="inkNav-mobileJoin"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect width="20" height="16" x="2" y="4" rx="2" />
+                <span>JOIN DIRECTORY FREE</span>
 
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                </svg>
-              </a>
+                <ArrowUpRight size={19} />
+              </Link>
+
+              {/* MOBILE SOCIALS */}
+
+              <div className="inkNav-mobileFooter">
+                <div className="inkNav-mobileFooterText">
+                  <strong>INK CONVENTION</strong>
+                  <span>TATTOO • ART • CULTURE</span>
+                </div>
+
+                <div className="inkNav-mobileSocials">
+                  {socialLinks.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                      <a
+                        key={item.label}
+                        href={item.href}
+                        target={item.external ? "_blank" : undefined}
+                        rel={item.external ? "noopener noreferrer" : undefined}
+                        aria-label={item.label}
+                      >
+                        <Icon size={19} />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+      </header>
+
+      {/* =======================================
+          MOBILE OVERLAY
+      ======================================= */}
+
+      {isOpen && (
+        <button
+          type="button"
+          className="inkNav-overlay"
+          onClick={closeMenu}
+          aria-label="Close mobile navigation"
+        />
       )}
-    </nav>
+    </>
   );
 }
 
-export default Navbar;
+// =====================================================
+// RESET MOBILE MENU WHEN ROUTE CHANGES
+// =====================================================
+
+export default function Navbar() {
+  const location = useLocation();
+
+  return <NavbarContent key={location.pathname} />;
+}

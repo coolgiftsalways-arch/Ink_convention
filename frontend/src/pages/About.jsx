@@ -50,64 +50,6 @@ import expoImage from "../assets/neon_tattoo_expo_after_dark.png";
 ========================================================= */
 
 function About() {
-  const beliefCards = [
-    {
-      icon: PenTool,
-      title: "ART FIRST",
-      desc: "The quality, creativity and execution of the tattoo should remain at the centre of the competition.",
-    },
-
-    {
-      icon: Scale,
-      title: "FAIR COMPETITION",
-      desc: "Artists should understand how their work is evaluated and what standards they are competing against.",
-    },
-
-    {
-      icon: Medal,
-      title: "RECOGNITION MATTERS",
-      desc: "Awards, rankings and documented achievements can help artists build long-term professional credibility.",
-    },
-
-    {
-      icon: Search,
-      title: "TALENT SHOULD BE DISCOVERABLE",
-      desc: "Great artists should be easier to discover regardless of their location, follower count or studio size.",
-    },
-  ];
-
-  const journey = [
-    {
-      step: "COMPETITION",
-      desc: "Artists submit their work.",
-    },
-
-    {
-      step: "JUDGING",
-      desc: "Entries evaluated by criteria.",
-    },
-
-    {
-      step: "RESULTS",
-      desc: "Finalists & winners recognised.",
-    },
-
-    {
-      step: "RANKING",
-      desc: "Results build artist rankings.",
-    },
-
-    {
-      step: "DISCOVERY",
-      desc: "Artists build profiles.",
-    },
-
-    {
-      step: "NEXT COMPETITION",
-      desc: "Artists return to compete.",
-    },
-  ];
-
   const ecosystemCards = [
     {
       icon: PenTool,
@@ -474,7 +416,7 @@ function About() {
   };
 
   return (
-    <div className="about-container w-full bg-[#08080a] text-white select-none overflow-x-hidden font-sans">
+    <div className="about-container about-light-theme w-full select-none overflow-x-hidden font-sans">
       {/* =====================================================
           1. EXPO HERO
       ====================================================== */}
@@ -533,7 +475,7 @@ function About() {
             <div className="expo-showcase__stat">
               <Award size={25} />
               <div>
-                <strong>500+</strong>
+                <strong>15500+</strong>
                 <span>TATTOO ARTISTS</span>
               </div>
             </div>
@@ -547,12 +489,7 @@ function About() {
             </div>
           </div>
 
-          <div className="expo-showcase__actions">
-            <Link to="/stall-booking" className="expo-showcase__primary">
-              BOOK YOUR STALL
-              <ArrowUpRight size={17} />
-            </Link>
-          </div>
+        
         </div>
       </section>
 
@@ -796,119 +733,10 @@ function About() {
       </section>
 
       {/* =====================================================
-          4. WHAT WE BELIEVE
+          4. ECOSYSTEM
       ====================================================== */}
 
-      <section className="w-full py-24 px-6 sm:px-10 lg:px-12 bg-[#050507] border-y border-white/5">
-        <div className="max-w-7xl mx-auto space-y-16">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight uppercase">
-              WHAT WE BELIEVE
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {beliefCards.map((card, index) => {
-              const Icon = card.icon;
-
-              return (
-                <div
-                  key={index}
-                  className="glass-card bg-[#0b0b0f] border border-white/5 p-8 space-y-6"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-[#a855f7]/10 flex items-center justify-center text-[#a855f7]">
-                    <Icon size={24} />
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-bold mb-2 uppercase">
-                      {card.title}
-                    </h3>
-
-                    <p className="text-sm text-gray-400 leading-relaxed font-light">
-                      {card.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          5. MORE THAN A ONE-TIME CONTEST
-      ====================================================== */}
-
-      <section className="w-full py-24 px-6 sm:px-10 lg:px-12 bg-[#08080a]">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-16 items-center">
-          {/* IMAGE 4 */}
-
-          <div className="relative min-h-[600px] overflow-hidden border border-white/10">
-            <img
-              src={artistImage}
-              alt="Tattoo artist backstage"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent" />
-
-            <div className="absolute left-7 bottom-7 z-10">
-              <span className="text-[#a855f7] font-mono text-[10px] tracking-[0.3em]">
-                THE JOURNEY
-              </span>
-            </div>
-          </div>
-
-          {/* CONTENT */}
-
-          <div className="space-y-12">
-            <div className="space-y-5">
-              <h4 className="text-[#a855f7] font-mono text-xs tracking-[0.3em] uppercase">
-                // MORE THAN A CONTEST
-              </h4>
-
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight uppercase">
-                MORE THAN A ONE-TIME CONTEST.
-              </h2>
-
-              <p className="text-gray-400 text-base sm:text-lg font-light leading-relaxed">
-                Ink Convention is designed to become an ongoing platform rather
-                than a single competition that disappears after the winners are
-                announced.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {journey.map((item, index) => (
-                <React.Fragment key={index}>
-                  <div className="min-h-[140px] border border-white/10 p-5 flex flex-col justify-between bg-white/[0.01]">
-                    <span className="text-[9px] text-[#a855f7] font-mono">
-                      0{index + 1}
-                    </span>
-
-                    <div>
-                      <h3 className="text-xs font-bold text-[#a855f7] tracking-widest uppercase">
-                        {item.step}
-                      </h3>
-
-                      <p className="mt-2 text-[10px] text-gray-500 font-mono">
-                        {item.desc}
-                      </p>
-                    </div>
-                  </div>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================
-          6. ECOSYSTEM
-      ====================================================== */}
-
-      <section className="relative w-full py-24 px-6 sm:px-10 lg:px-12 border-y border-white/5 overflow-hidden bg-[#07070a]">
+      <section className="about-ecosystem relative w-full py-24 px-6 sm:px-10 lg:px-12 border-y border-white/5 overflow-hidden bg-[#07070a]">
         {/* IMAGE 5 BACKGROUND */}
 
         <div className="absolute inset-0 z-0 pointer-events-none">
@@ -919,9 +747,9 @@ function About() {
             className="absolute inset-0 w-full h-full object-cover object-center opacity-50"
           />
 
-          <div className="absolute inset-0 bg-gradient-to-r from-[#050507]/95 via-[#050507]/80 to-[#050507]/55" />
+          <div className="about-ecosystem__veil absolute inset-0 bg-gradient-to-r from-[#050507]/95 via-[#050507]/80 to-[#050507]/55" />
 
-          <div className="absolute inset-0 bg-gradient-to-b from-[#08080a]/60 via-transparent to-[#08080a]/90" />
+          <div className="about-ecosystem__lower-veil absolute inset-0 bg-gradient-to-b from-[#08080a]/60 via-transparent to-[#08080a]/90" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-16 items-center">
@@ -977,36 +805,27 @@ function About() {
       </section>
 
       {/* =====================================================
-          7. COMPETITION STRUCTURE
+          5. COMPETITION STRUCTURE
       ====================================================== */}
 
-      <section className="w-full py-24 px-6 sm:px-10 lg:px-12 bg-[#08080a]">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight uppercase">
-            COMPETITION WITH STRUCTURE, NOT JUST POPULARITY.
-          </h2>
-
-          <p className="text-gray-400 text-base sm:text-lg font-light leading-relaxed">
-            Ink Convention is designed around defined categories, published
-            rules and transparent judging criteria. Popularity can create
-            attention, but it should not be the only measure of artistic
-            quality. Our competition system is intended to give artists a
-            structured environment in which technical ability, creativity,
-            execution and artistic decisions can be evaluated.
-          </p>
-        </div>
-      </section>
 
       {/* =====================================================
-          8. WHO IS INK CONVENTION FOR
+          6. WHO IS INK CONVENTION FOR
       ====================================================== */}
 
-      <section className="w-full py-24 px-6 sm:px-10 lg:px-12 bg-[#050507] border-y border-white/5">
+      <section className="about-audience w-full py-24 px-6 sm:px-10 lg:px-12 bg-[#050507] border-y border-white/5">
         <div className="max-w-7xl mx-auto space-y-12">
-          <div className="text-center max-w-2xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto about-audience__heading">
+            <span className="about-section-eyebrow">
+              ONE CULTURE. MANY VOICES.
+            </span>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight uppercase">
-              WHO IS INK CONVENTION FOR?
+              A COMMUNITY BUILT AROUND TATTOO ART.
             </h2>
+            <p>
+              From artists and studios to tattoo lovers and industry partners,
+              Ink Convention brings the people behind the craft together.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1035,61 +854,10 @@ function About() {
       </section>
 
       {/* =====================================================
-          9. CREDIBILITY + LONG TERM VISION
+          7. CREDIBILITY + LONG TERM VISION
       ====================================================== */}
 
-      <section className="w-full py-24 px-6 sm:px-10 lg:px-12 bg-[#08080a]">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
-          {/* CREDIBILITY */}
-
-          <div className="bg-[#0b0b0f] border border-white/10 p-10 sm:p-12 space-y-6">
-            <ShieldCheck size={32} className="text-[#a855f7]" />
-
-            <h3 className="text-2xl font-black uppercase tracking-tight">
-              BUILT FOR CREDIBILITY
-            </h3>
-
-            <p className="text-gray-400 font-light leading-relaxed">
-              Competition rules, submission requirements and judging methodology
-              should be clearly communicated before artists enter. We believe
-              participants should know what they are submitting, how their work
-              will be evaluated and what recognition they are competing for.
-            </p>
-
-            <div className="pt-4">
-              <Link
-                to="/rules"
-                className="text-xs font-mono tracking-widest text-[#a855f7] hover:text-white uppercase"
-              >
-                VIEW COMPETITION RULES ↗
-              </Link>
-            </div>
-          </div>
-
-          {/* VISION */}
-
-          <div className="bg-gradient-to-br from-[#120a1f] to-[#0b0b0f] border border-[#a855f7]/20 p-10 sm:p-12 space-y-6 shadow-2xl shadow-purple-900/10">
-            <Star size={32} className="text-[#a855f7]" />
-
-            <h3 className="text-2xl font-black uppercase tracking-tight">
-              FROM COMPETITION TO RECOGNITION.
-            </h3>
-
-            <p className="text-gray-300 font-light leading-relaxed">
-              Our long-term vision is to build a trusted digital home for tattoo
-              competitions, artist discovery and professional recognition. We
-              want Ink Convention to become a platform where an artist can
-              compete, build a track record, earn recognition and be discovered
-              over time — rather than being defined by a single post, one
-              contest or the number of followers they have.
-            </p>
-
-            <p className="text-[#a855f7] text-sm font-mono tracking-widest uppercase pt-2">
-              The 2026 championship is the beginning of that journey.
-            </p>
-          </div>
-        </div>
-      </section>
+      
     </div>
   );
 }

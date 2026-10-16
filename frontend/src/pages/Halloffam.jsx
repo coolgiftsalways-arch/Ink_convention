@@ -256,8 +256,8 @@ export default function HallOfFame() {
         w-full
         min-h-screen
         overflow-hidden
-        bg-[#08080a]
-        text-white
+        bg-[#faf9f6]
+        text-[#222326]
         pt-32
         pb-24
         px-4
@@ -277,7 +277,7 @@ export default function HallOfFame() {
           w-[950px]
           h-[600px]
           rounded-full
-          bg-yellow-400/[0.045]
+          bg-[#dedbd6]/40
           blur-[150px]
         "
       />
@@ -297,7 +297,7 @@ export default function HallOfFame() {
         <section
           className="
             border-b
-            border-white/10
+            border-[#dad8d3]
             pb-12
           "
         >
@@ -308,15 +308,15 @@ export default function HallOfFame() {
               gap-2
               rounded-full
               border
-              border-yellow-300/20
-              bg-yellow-400/[0.06]
+              border-[#d6d2cc]
+              bg-[#eae8e5]
               px-4
               py-2
               text-[9px]
               font-mono
               font-black
               tracking-[0.16em]
-              text-yellow-300
+              text-[#424348]
               uppercase
             "
           >
@@ -352,9 +352,9 @@ export default function HallOfFame() {
                     text-transparent
                     bg-clip-text
                     bg-gradient-to-r
-                    from-yellow-100
-                    via-yellow-400
-                    to-amber-600
+                    from-[#dedbd6]
+                    via-[#a2a1a0]
+                    to-[#858587]
                   "
                 >
                   FAME.
@@ -367,7 +367,7 @@ export default function HallOfFame() {
                   max-w-2xl
                   text-sm
                   sm:text-base
-                  text-gray-500
+                  text-[#696a6e]
                   leading-relaxed
                 "
               >
@@ -384,8 +384,8 @@ export default function HallOfFame() {
                 min-w-[220px]
                 rounded-[22px]
                 border
-                border-yellow-300/20
-                bg-yellow-400/[0.035]
+                border-[#d6d2cc]
+                bg-[#f7f5f2]
                 p-6
               "
             >
@@ -394,7 +394,7 @@ export default function HallOfFame() {
                   flex
                   items-center
                   gap-2
-                  text-yellow-400
+                  text-[#55565b]
                 "
               >
                 <Sparkles size={13} />
@@ -430,7 +430,7 @@ export default function HallOfFame() {
                     mb-1
                     text-[8px]
                     font-mono
-                    text-gray-600
+                    text-[#77787c]
                   "
                 >
                   MEMBERS
@@ -483,8 +483,8 @@ export default function HallOfFame() {
               min-h-[300px]
               rounded-[26px]
               border
-              border-white/[0.06]
-              bg-[#0b0b0f]
+              border-[#e3e0db]
+              bg-[#ffffff]
               flex
               items-center
               justify-center
@@ -498,8 +498,8 @@ export default function HallOfFame() {
                   mx-auto
                   rounded-full
                   border-2
-                  border-yellow-400/10
-                  border-t-yellow-400
+                  border-[#e2ded8]
+                  border-t-[#55565a]
                   animate-spin
                 "
               />
@@ -510,7 +510,7 @@ export default function HallOfFame() {
                   text-[9px]
                   font-mono
                   tracking-[0.16em]
-                  text-gray-600
+                  text-[#77787c]
                 "
               >
                 LOADING VERIFIED MEMBERS
@@ -531,8 +531,8 @@ export default function HallOfFame() {
                 mx-auto
                 rounded-[24px]
                 border
-                border-red-500/20
-                bg-red-500/[0.035]
+                border-[#e8cfcc]
+                bg-[#f6f2f0]
                 p-8
                 text-center
               "
@@ -541,7 +541,7 @@ export default function HallOfFame() {
               className="
                   text-lg
                   font-black
-                  text-red-400
+                  text-[#8c5050]
                   uppercase
                 "
             >
@@ -552,7 +552,7 @@ export default function HallOfFame() {
               className="
                   mt-3
                   text-sm
-                  text-gray-500
+                  text-[#696a6e]
                 "
             >
               {error}
@@ -574,8 +574,8 @@ export default function HallOfFame() {
                 overflow-hidden
                 rounded-[26px]
                 border
-                border-yellow-300/10
-                bg-[#0b0b0f]
+                border-[#e3e0dc]
+                bg-[#ffffff]
                 p-10
                 sm:p-14
                 text-center
@@ -591,7 +591,7 @@ export default function HallOfFame() {
                   w-80
                   h-80
                   rounded-full
-                  bg-yellow-400/[0.08]
+                  bg-[#ebe9e5]
                   blur-[90px]
                 "
             />
@@ -604,12 +604,12 @@ export default function HallOfFame() {
                   mx-auto
                   rounded-[18px]
                   border
-                  border-yellow-300/20
-                  bg-yellow-400/[0.07]
+                  border-[#d6d2cc]
+                  bg-[#f1efeb]
                   flex
                   items-center
                   justify-center
-                  text-yellow-400
+                  text-[#55565b]
                 "
             >
               <Trophy size={30} />
@@ -635,7 +635,7 @@ export default function HallOfFame() {
                   max-w-xl
                   mx-auto
                   text-sm
-                  text-gray-500
+                  text-[#696a6e]
                   leading-relaxed
                 "
             >
@@ -668,7 +668,7 @@ export default function HallOfFame() {
                   className="
                       text-[9px]
                       font-mono
-                      text-yellow-400
+                      text-[#55565b]
                       tracking-[0.16em]
                     "
                 >
@@ -694,7 +694,7 @@ export default function HallOfFame() {
                     text-[9px]
                     font-mono
                     tracking-[0.12em]
-                    text-gray-600
+                    text-[#77787c]
                   "
               >
                 {artists.length} PROFILE
@@ -742,20 +742,20 @@ export default function HallOfFame() {
                   }
                   className="
                     rounded-full
-                    border border-white/10
-                    bg-white/[0.03]
+                    border border-[#dad8d3]
+                    bg-[#f5f3f0]
                     px-5 py-2.5
                     text-[8px] font-black tracking-[0.12em]
-                    text-gray-400
-                    hover:border-yellow-300/30
-                    hover:text-yellow-300
+                    text-[#5f6063]
+                    hover:border-[#9b9a9a]
+                    hover:text-[#242528]
                     transition
                   "
                 >
                   PREVIOUS
                 </button>
 
-                <span className="text-[8px] font-mono tracking-[0.12em] text-gray-600">
+                <span className="text-[8px] font-mono tracking-[0.12em] text-[#77787c]">
                   {safePage + 1} / {totalPages}
                 </span>
 
@@ -766,12 +766,12 @@ export default function HallOfFame() {
                   }
                   className="
                     rounded-full
-                    border border-yellow-300/20
-                    bg-yellow-400/[0.05]
+                    border border-[#d6d2cc]
+                    bg-[#eae8e3]
                     px-5 py-2.5
                     text-[8px] font-black tracking-[0.12em]
-                    text-yellow-300
-                    hover:bg-yellow-400/[0.10]
+                    text-[#424348]
+                    hover:bg-[#e1dfdb]
                     transition
                   "
                 >
@@ -799,8 +799,8 @@ export default function HallOfFame() {
         max-h-[90vh]
         overflow-y-auto
         rounded-[28px]
-        border border-yellow-300/20
-        bg-[#0b0b0f]
+        border border-[#d6d2cc]
+        bg-[#ffffff]
         p-6 sm:p-8
       "
             onClick={(e) => e.stopPropagation()}
@@ -813,10 +813,10 @@ export default function HallOfFame() {
           top-4 right-4
           w-10 h-10
           rounded-full
-          bg-white/10
-          text-white
+          bg-[#eeece8]
+          text-[#222326]
           flex items-center justify-center
-          hover:bg-white/20
+          hover:bg-[#e2dfda]
         "
             >
               ✕
@@ -824,7 +824,7 @@ export default function HallOfFame() {
 
             <div className="flex flex-col md:flex-row gap-6">
               <div className="md:w-[280px] shrink-0">
-                <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-[#111]">
+                <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-[#f0eeeb]">
                   {selectedArtist.profileImage ? (
                     <img
                       src={selectedArtist.profileImage}
@@ -833,14 +833,14 @@ export default function HallOfFame() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Users size={50} className="text-yellow-400/30" />
+                      <Users size={50} className="text-[#84858a]/45" />
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="flex-1">
-                <p className="text-[9px] font-black tracking-[0.15em] text-yellow-400">
+                <p className="text-[9px] font-black tracking-[0.15em] text-[#55565b]">
                   GOLD VERIFIED ARTIST
                 </p>
 
@@ -849,7 +849,7 @@ export default function HallOfFame() {
                 </h2>
 
                 {selectedArtist.studio && (
-                  <p className="mt-3 text-gray-400">{selectedArtist.studio}</p>
+                  <p className="mt-3 text-[#5f6063]">{selectedArtist.studio}</p>
                 )}
 
                 <div className="mt-6 space-y-3">
@@ -908,17 +908,17 @@ function VerifiedArtistCard({ artist, index, onClick }) {
         overflow-hidden
 
         bg-gradient-to-br
-        from-yellow-100
-        via-yellow-400
-        to-amber-800
+        from-[#dedbd6]
+        via-[#a2a1a0]
+        to-[#4b4d50]
 
         transition-all
         duration-500
 
         hover:-translate-y-1
 
-        shadow-[0_0_22px_rgba(250,204,21,0.07)]
-        hover:shadow-[0_0_38px_rgba(250,204,21,0.16)]
+        shadow-[0_0_22px_rgba(40,40,43,0.07)]
+        hover:shadow-[0_0_38px_rgba(40,40,43,0.16)]
       "
     >
       {/* MOVING GOLD SHINE */}
@@ -948,7 +948,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
           min-h-[455px]
           rounded-[21px]
           overflow-hidden
-          bg-[#0b0b0f]
+          bg-[#ffffff]
           flex
           flex-col
         "
@@ -965,7 +965,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
             w-[85%]
             h-[180px]
             rounded-full
-            bg-yellow-400/[0.08]
+            bg-[#ebe9e5]
             blur-[65px]
           "
         />
@@ -981,7 +981,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
             justify-between
             gap-2
             border-b
-            border-yellow-300/10
+            border-[#e3e0dc]
             px-4
             py-3
           "
@@ -1005,7 +1005,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
                   absolute
                   inset-0
                   rounded-full
-                  bg-yellow-400
+                  bg-[#57585d]
                   animate-ping
                   opacity-50
                 "
@@ -1018,7 +1018,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
                   w-2
                   h-2
                   rounded-full
-                  bg-yellow-400
+                  bg-[#57585d]
                 "
               />
             </div>
@@ -1028,7 +1028,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
                 text-[7px]
                 font-black
                 tracking-[0.12em]
-                text-yellow-300
+                text-[#424348]
               "
             >
               GOLD VERIFIED
@@ -1042,14 +1042,14 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               gap-1
               rounded-full
               border
-              border-yellow-300/20
-              bg-yellow-400/10
+              border-[#d6d2cc]
+              bg-[#f0efec]
               px-2.5
               py-1
               text-[6px]
               font-black
               tracking-widest
-              text-yellow-300
+              text-[#424348]
             "
           >
             <Trophy size={9} />
@@ -1064,7 +1064,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
             relative
             h-[185px]
             overflow-hidden
-            bg-[#101014]
+            bg-[#f2f0ed]
           "
         >
           {artist.profileImage ? (
@@ -1090,15 +1090,15 @@ function VerifiedArtistCard({ artist, index, onClick }) {
                 items-center
                 justify-center
                 bg-gradient-to-br
-                from-yellow-400/[0.08]
-                via-[#101014]
-                to-[#08080a]
+                from-[#ece9e4]
+                via-[#f2f0ed]
+                to-[#faf9f6]
               "
             >
               <Users
                 size={40}
                 className="
-                  text-yellow-300/25
+                  text-[#9a9b9d]/50
                 "
               />
             </div>
@@ -1109,7 +1109,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               absolute
               inset-0
               bg-gradient-to-t
-              from-[#0b0b0f]
+              from-[#ffffff]
               via-transparent
               to-transparent
             "
@@ -1122,7 +1122,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               right-4
               text-4xl
               font-black
-              text-white/[0.10]
+              text-[#b6b4b0]
             "
           >
             {String(index + 1).padStart(2, "0")}
@@ -1146,7 +1146,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               flex
               items-center
               gap-2
-              text-yellow-400
+              text-[#55565b]
             "
           >
             <Sparkles size={10} />
@@ -1186,7 +1186,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               className="
                 mt-2
                 text-xs
-                text-gray-400
+                text-[#5f6063]
                 truncate
               "
             >
@@ -1203,13 +1203,13 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               items-center
               gap-2
               text-[11px]
-              text-gray-500
+              text-[#696a6e]
             "
           >
             <MapPin
               size={11}
               className="
-                text-yellow-400
+                text-[#55565b]
                 shrink-0
               "
             />
@@ -1231,7 +1231,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
               mt-4
               pt-3
               border-t
-              border-white/[0.07]
+              border-[#e3e0db]
               space-y-1.5
             "
           >
@@ -1269,7 +1269,7 @@ function VerifiedArtistCard({ artist, index, onClick }) {
                 text-[8px]
                 font-black
                 tracking-[0.12em]
-                text-yellow-300
+                text-[#424348]
               "
             >
               VIEW VERIFIED PROFILE
@@ -1281,8 +1281,8 @@ function VerifiedArtistCard({ artist, index, onClick }) {
                 h-9
                 shrink-0
                 rounded-full
-                bg-yellow-400
-                text-black
+                bg-[#57585d]
+                text-white
                 flex
                 items-center
                 justify-center
@@ -1312,8 +1312,8 @@ function InfoBox({ icon, title, text }) {
         gap-4
         rounded-2xl
         border
-        border-white/[0.07]
-        bg-white/[0.02]
+        border-[#e3e0db]
+        bg-[#ffffff]
         p-5
       "
     >
@@ -1324,9 +1324,9 @@ function InfoBox({ icon, title, text }) {
           shrink-0
           rounded-xl
           border
-          border-yellow-300/10
-          bg-yellow-400/[0.07]
-          text-yellow-400
+          border-[#e3e0dc]
+          bg-[#f1efeb]
+          text-[#55565b]
           flex
           items-center
           justify-center
@@ -1350,7 +1350,7 @@ function InfoBox({ icon, title, text }) {
           className="
             mt-1
             text-[11px]
-            text-gray-600
+            text-[#77787c]
           "
         >
           {text}
@@ -1383,7 +1383,7 @@ function ProfileInfo({ label, value }) {
           text-[6px]
           font-mono
           tracking-[0.10em]
-          text-gray-700
+          text-[#8d8e91]
         "
       >
         {label}
@@ -1394,7 +1394,7 @@ function ProfileInfo({ label, value }) {
           max-w-[68%]
           text-right
           text-[9px]
-          text-gray-400
+          text-[#5f6063]
           break-words
         "
       >

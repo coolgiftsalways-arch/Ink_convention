@@ -159,12 +159,12 @@ export default function Sponsors() {
   };
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050506] text-white">
+    <main className="min-h-screen overflow-hidden bg-[#f7f6f2] text-[#202225]">
       {/* =====================================================
           HERO
       ===================================================== */}
 
-      <section className="relative min-h-[95vh] overflow-hidden border-b border-white/10">
+      <section className="relative min-h-[95vh] overflow-hidden border-b border-[#d8d6d0]">
         {/* HERO IMAGE */}
 
         <img
@@ -180,20 +180,20 @@ export default function Sponsors() {
           "
         />
 
-        {/* BLACK OVERLAY */}
+        {/* SOFT LIGHT IMAGE VEIL */}
 
-        <div className="absolute inset-0 bg-black/30" />
+        <div className="absolute inset-0 bg-[#faf9f6]/35" />
 
-        {/* LEFT DARK GRADIENT */}
+        {/* LEFT CREAM GRADIENT FOR READABLE HERO */}
 
         <div
           className="
             absolute
             inset-0
             bg-gradient-to-r
-            from-black
-            via-black/80
-            to-black/10
+            from-[#faf9f6]
+            via-[#faf9f6]/90
+            to-[#faf9f6]/10
           "
         />
 
@@ -204,13 +204,13 @@ export default function Sponsors() {
             absolute
             inset-0
             bg-gradient-to-t
-            from-[#050506]
+            from-[#f7f6f2]
             via-transparent
-            to-black/30
+            to-[#faf9f6]/20
           "
         />
 
-        {/* PURPLE GLOW */}
+        {/* SOFT NEUTRAL GLOW */}
 
         <div
           className="
@@ -220,7 +220,7 @@ export default function Sponsors() {
             h-[500px]
             w-[500px]
             rounded-full
-            bg-purple-600/10
+            bg-[#777b80]/10
             blur-[150px]
           "
         />
@@ -253,7 +253,7 @@ export default function Sponsors() {
             {/* SMALL LABEL */}
 
             <div className="mb-6 flex items-center gap-4">
-              <span className="h-[2px] w-12 bg-purple-500" />
+              <span className="h-[2px] w-12 bg-[#666a70]" />
 
               <span
                 className="
@@ -261,7 +261,7 @@ export default function Sponsors() {
                   font-black
                   uppercase
                   tracking-[0.4em]
-                  text-purple-400
+                  text-[#666a70]
                 "
               >
                 Sponsors / Ink Convention
@@ -281,7 +281,7 @@ export default function Sponsors() {
             >
               GOOD BRANDS
               <br />
-              <span className="text-purple-500">BETTER TATTOOS.</span>
+              <span className="text-[#666a70]">BETTER TATTOOS.</span>
             </h1>
 
             {/* TEXT */}
@@ -292,7 +292,7 @@ export default function Sponsors() {
                 max-w-[700px]
                 text-sm
                 leading-7
-                text-white/60
+                text-[#4c5054]
 
                 sm:text-base
 
@@ -317,7 +317,8 @@ export default function Sponsors() {
                   justify-center
                   gap-3
                   rounded-full
-                  bg-purple-600
+                  bg-[#464a50]
+                  text-white
                   px-7
                   py-4
                   text-[9px]
@@ -327,8 +328,8 @@ export default function Sponsors() {
                   transition-all
                   duration-300
 
-                  hover:bg-purple-500
-                  hover:shadow-[0_0_35px_rgba(168,85,247,0.35)]
+                  hover:bg-[#24282e]
+                  hover:shadow-[0_14px_36px_rgba(45,47,50,0.18)]
                 "
               >
                 Explore Sponsors
@@ -341,7 +342,6 @@ export default function Sponsors() {
                   "
                 />
               </button>
-
             </div>
           </div>
 
@@ -357,8 +357,8 @@ export default function Sponsors() {
               overflow-hidden
               rounded-2xl
               border
-              border-white/10
-              bg-black/35
+              border-[#d8d6d0]
+              bg-white/80
               backdrop-blur-xl
 
               md:grid-cols-4
@@ -408,11 +408,11 @@ export default function Sponsors() {
         >
           <div>
             <div className="mb-6 flex items-center gap-4">
-              <span className="text-[9px] font-black tracking-[0.3em] text-purple-400">
+              <span className="text-[9px] font-black tracking-[0.3em] text-[#666a70]">
                 [ 02 ]
               </span>
 
-              <span className="h-[1px] w-10 bg-purple-500" />
+              <span className="h-[1px] w-10 bg-[#666a70]" />
 
               <span
                 className="
@@ -420,7 +420,7 @@ export default function Sponsors() {
                   font-black
                   uppercase
                   tracking-[0.3em]
-                  text-white/35
+                  text-[#797d80]
                 "
               >
                 Potential Partners
@@ -442,7 +442,7 @@ export default function Sponsors() {
             >
               THE BRANDS
               <br />
-              <span className="text-purple-500">SHAPING OUR</span>
+              <span className="text-[#666a70]">SHAPING OUR</span>
               <br />
               INDUSTRY
             </h2>
@@ -454,7 +454,7 @@ export default function Sponsors() {
                 max-w-xl
                 text-sm
                 leading-7
-                text-white/45
+                text-[#5e6267]
 
                 md:text-base
               "
@@ -474,14 +474,14 @@ export default function Sponsors() {
                     className="
                     rounded-full
                     border
-                    border-white/10
-                    bg-white/[0.025]
+                    border-[#d8d6d0]
+                    bg-white/75
                     px-3
                     py-2
                     text-[7px]
                     font-black
                     tracking-[0.18em]
-                    text-white/40
+                    text-[#73777c]
                   "
                   >
                     {item}
@@ -505,8 +505,8 @@ export default function Sponsors() {
             overflow-hidden
             rounded-[24px]
             border
-            border-white/10
-            bg-white/10
+            border-[#d8d6d0]
+            bg-[#d8d6d0]
 
             sm:grid-cols-2
 
@@ -528,7 +528,7 @@ export default function Sponsors() {
           CTA
       ===================================================== */}
 
-      <section className="border-y border-white/10 bg-[#08080a]">
+      <section className="border-y border-[#d8d6d0] bg-[#eeece7]">
         <div
           className="
             mx-auto
@@ -551,7 +551,7 @@ export default function Sponsors() {
 
           <div>
             <div className="mb-6 flex items-center gap-3">
-              <Sparkles size={15} className="text-purple-500" />
+              <Sparkles size={15} className="text-[#666a70]" />
 
               <span
                 className="
@@ -559,7 +559,7 @@ export default function Sponsors() {
                   font-black
                   uppercase
                   tracking-[0.3em]
-                  text-purple-400
+                  text-[#666a70]
                 "
               >
                 Become A Sponsor
@@ -583,7 +583,7 @@ export default function Sponsors() {
               <br />
               A SPONSOR.
               <br />
-              <span className="text-purple-500">
+              <span className="text-[#666a70]">
                 BE PART OF
                 <br />
                 THE MOVEMENT.
@@ -599,7 +599,7 @@ export default function Sponsors() {
                 max-w-lg
                 text-sm
                 leading-7
-                text-white/45
+                text-[#5e6267]
 
                 md:text-base
               "
@@ -626,12 +626,12 @@ function SponsorCard({ sponsor }) {
         relative
         min-h-[245px]
         overflow-hidden
-        bg-[#09090b]
+        bg-[#ffffff]
         p-6
         transition-all
         duration-500
 
-        hover:bg-[#100b15]
+        hover:bg-[#f2f0eb]
 
         sm:p-7
       "
@@ -646,11 +646,11 @@ function SponsorCard({ sponsor }) {
           text-7xl
           font-black
           tracking-[-0.1em]
-          text-white/[0.025]
+          text-[#e6e3dd]
           transition-all
           duration-500
 
-          group-hover:text-purple-500/[0.07]
+          group-hover:text-[#d0cdc6]
         "
       >
         {sponsor.id}
@@ -665,7 +665,7 @@ function SponsorCard({ sponsor }) {
               text-[9px]
               font-black
               tracking-[0.22em]
-              text-purple-400
+              text-[#666a70]
             "
           >
             {sponsor.id}
@@ -683,8 +683,8 @@ function SponsorCard({ sponsor }) {
                   h-1.5
                   w-1.5
                   rounded-full
-                  bg-purple-500
-                  shadow-[0_0_10px_rgba(168,85,247,0.8)]
+                  bg-[#666a70]
+                  shadow-[0_0_10px_rgba(72,76,80,0.35)]
                 "
               />
             ))}
@@ -705,7 +705,7 @@ function SponsorCard({ sponsor }) {
               transition-colors
               duration-300
 
-              group-hover:text-purple-300
+              group-hover:text-[#464a50]
             "
           >
             {sponsor.name}
@@ -717,7 +717,7 @@ function SponsorCard({ sponsor }) {
               min-h-[38px]
               text-xs
               leading-5
-              text-white/40
+              text-[#73777c]
             "
           >
             {sponsor.category}
@@ -731,7 +731,7 @@ function SponsorCard({ sponsor }) {
               gap-2
               text-[10px]
               leading-5
-              text-white/50
+              text-[#656a6e]
             "
           >
             <MapPin
@@ -739,7 +739,7 @@ function SponsorCard({ sponsor }) {
               className="
                 mt-1
                 shrink-0
-                text-purple-500
+                text-[#666a70]
               "
             />
 
@@ -748,7 +748,7 @@ function SponsorCard({ sponsor }) {
         </div>
       </div>
 
-      {/* BOTTOM PURPLE LINE */}
+      {/* BOTTOM GRAPHITE LINE */}
 
       <div
         className="
@@ -757,7 +757,7 @@ function SponsorCard({ sponsor }) {
           left-0
           h-[2px]
           w-0
-          bg-purple-500
+          bg-[#666a70]
           transition-all
           duration-500
 
@@ -776,12 +776,12 @@ function SponsorCard({ sponsor }) {
           h-56
           w-56
           rounded-full
-          bg-purple-600/0
+          bg-[#777b80]/0
           blur-[70px]
           transition-all
           duration-500
 
-          group-hover:bg-purple-600/10
+          group-hover:bg-[#777b80]/10
         "
       />
     </article>
@@ -798,7 +798,7 @@ function Stat({ number, label }) {
       className="
         border-r
         border-b
-        border-white/10
+        border-[#d8d6d0]
         p-5
         text-center
 
@@ -830,7 +830,7 @@ function Stat({ number, label }) {
           font-black
           uppercase
           tracking-[0.17em]
-          text-white/35
+          text-[#797d80]
 
           sm:text-[8px]
         "

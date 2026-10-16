@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import gsap from "gsap";
+import "../Style/ArtistsLight.css";
 
 /* =========================================================
    SETTINGS
@@ -1765,6 +1766,7 @@ export default function Artists() {
 
       <main
         className="
+          inkArtistsLight
           min-h-screen
           overflow-x-hidden
           bg-[#08080a]
@@ -3102,6 +3104,7 @@ function CommunityMapBox({
               <svg
                 viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
                 className="
+                  inkArtistIndiaMap
                   relative
                   z-10
                   w-full
@@ -4388,7 +4391,7 @@ function ArtistModal({ artist, onClose }) {
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-xl"
+      className="inkArtistsLightModal fixed inset-0 z-[99999] bg-black/90 backdrop-blur-xl"
       style={{
         width: "100vw",
         height: "100dvh",

@@ -1,31 +1,433 @@
-/* Custom Footer Styles */
-footer {
-     text-rendering: optimizeLegibility;
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+/* ============================================================
+   INK CONVENTION — EDITORIAL LIGHT FOOTER
+   Matching the warm-white / cream / graphite-grey navbar & home.
+   All styles are scoped to .inkFooter.
+============================================================ */
+
+.inkFooter {
+     --footer-bg: #f5f3ef;
+     --footer-surface: #eeece7;
+     --footer-text: #1c1c1e;
+     --footer-muted: #69696c;
+     --footer-line: #d9d6d1;
+     --footer-grey: #58585b;
+
+     position: relative;
+     isolation: isolate;
+     overflow: hidden;
+     width: 100%;
+     padding: clamp(62px, 7vw, 108px) 0 0;
+     margin: 0;
+     background: var(--footer-bg);
+     border-top: 1px solid var(--footer-line);
+     color: var(--footer-text);
+     font-family: "Manrope", sans-serif;
      -webkit-font-smoothing: antialiased;
 }
 
-.footer-link {
-     position: relative;
-     display: inline-block;
-     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease-in-out;
+.inkFooter *,
+.inkFooter *::before,
+.inkFooter *::after {
+     box-sizing: border-box;
 }
 
-.footer-link:hover {
-     transform: translateX(4px);
+.inkFooter-container {
+     position: relative;
+     z-index: 1;
+     width: min(100% - 84px, 1420px);
+     margin-inline: auto;
+}
+
+/* ============================================================
+   FOUR-COLUMN LAYOUT
+============================================================ */
+
+.inkFooter-grid {
+     display: grid;
+     grid-template-columns: minmax(0, 1.45fr) minmax(0, 1.03fr) minmax(0, .8fr) minmax(0, 1.2fr);
+     align-items: start;
+     gap: clamp(28px, 3.5vw, 74px);
+     padding-bottom: clamp(54px, 6vw, 88px);
+}
+
+.inkFooter-brandColumn,
+.inkFooter-column {
+     min-width: 0;
+}
+
+/* ============================================================
+   BRAND
+============================================================ */
+
+.inkFooter-logo {
+     display: inline-block;
+     max-width: 100%;
+     font-family: "Manrope", sans-serif;
+     font-size: clamp(23px, 2.35vw, 35px);
+     font-weight: 800;
+     letter-spacing: -0.075em;
+     line-height: 1.15;
+     text-decoration: none;
+     white-space: nowrap;
+     color: #161618;
+     transition: opacity .25s ease;
+}
+
+.inkFooter-logo span {
+     color: #7a7a7d;
+}
+
+.inkFooter-logo:hover {
+     opacity: .62;
+}
+
+.inkFooter-brandDescription {
+     margin: 24px 0 0;
+     max-width: 280px;
+     color: #454447;
+     font-size: 13px;
+     font-weight: 600;
+     line-height: 1.9;
+}
+
+.inkFooter-brandTagline {
+     margin: 25px 0 0;
+     max-width: 320px;
+     color: #858185;
+     font-size: 10px;
+     font-weight: 800;
+     line-height: 1.9;
+     letter-spacing: .1em;
+     text-transform: uppercase;
+}
+
+/* ============================================================
+   SECTION HEADINGS
+============================================================ */
+
+.inkFooter-heading {
+     position: relative;
+     margin: 5px 0 26px;
+     padding-bottom: 17px;
+     font-family: "Manrope", sans-serif;
+     font-size: 11px;
+     font-weight: 800;
+     line-height: 1.5;
+     letter-spacing: .16em;
+     text-transform: uppercase;
+     color: #1e1e20;
+}
+
+.inkFooter-heading::after {
+     content: "";
+     position: absolute;
+     bottom: 0;
+     left: 0;
+     width: 33px;
+     height: 2px;
+     background: #7b7b7d;
+}
+
+/* ============================================================
+   OFFICE
+============================================================ */
+
+.inkFooter-officeAddress {
+     display: flex;
+     flex-direction: column;
+     gap: 7px;
+     max-width: 300px;
+     font-size: 13px;
+     font-weight: 500;
+     font-style: normal;
+     line-height: 1.75;
+     color: #58565a;
+}
+
+.inkFooter-emailLink {
+     display: inline-block;
+     max-width: 100%;
+     margin-top: 17px;
+     font-size: 12px;
+     font-weight: 700;
+     line-height: 1.8;
+     color: #303033;
+     text-decoration: none;
+     overflow-wrap: anywhere;
+     border-bottom: 1px solid #bab6b2;
+     transition: color .25s ease, border-color .25s ease;
+}
+
+.inkFooter-emailLink:hover {
+     color: #77777b;
+     border-color: #77777b;
+}
+
+/* ============================================================
+   FOOTER LINKS
+============================================================ */
+
+.inkFooter-links {
+     display: flex;
+     flex-direction: column;
+     gap: 3px;
+     padding: 0;
+     margin: 0;
+     list-style: none;
+}
+
+.inkFooter-links li {
+     padding: 0;
+     margin: 0;
+}
+
+.inkFooter-links a {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     gap: 10px;
+     min-height: 35px;
+     width: fit-content;
+     max-width: 100%;
+     font-size: 12px;
+     font-weight: 600;
+     line-height: 1.6;
+     color: #5a595c;
+     text-decoration: none;
+     transition: color .25s ease, transform .25s ease;
+}
+
+.inkFooter-links a svg {
+     flex-shrink: 0;
+     color: #989597;
+     opacity: 0;
+     transform: translate(-4px, 4px);
+     transition: opacity .25s ease, transform .25s ease;
+}
+
+.inkFooter-links a:hover {
+     color: #1c1c1e;
+     transform: translateX(3px);
+}
+
+.inkFooter-links a:hover svg {
+     opacity: 1;
+     transform: translate(0, 0);
+}
+
+/* ============================================================
+   ALERTS, SOCIALS & CTA
+============================================================ */
+
+.inkFooter-alertsCopy {
+     max-width: 300px;
+     margin: 0;
+     color: #5a595c;
+     font-size: 13px;
+     font-weight: 500;
+     line-height: 1.85;
+}
+
+.inkFooter-socials {
+     display: flex;
+     align-items: center;
+     gap: 10px;
+     margin-top: 25px;
+}
+
+.inkFooter-socials a {
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     width: 42px;
+     height: 42px;
+     background: #ffffff;
+     border: 1px solid #d7d4d0;
+     border-radius: 50%;
+     color: #343437;
+     text-decoration: none;
+     transition: background .25s ease, color .25s ease, transform .25s ease, border-color .25s ease;
+}
+
+.inkFooter-socials a:hover {
+     transform: translateY(-3px);
+     border-color: #555558;
+     background: #555558;
      color: #ffffff;
 }
 
-.footer-link::after {
-     content: '';
-     position: absolute;
-     width: 0;
-     height: 1px;
-     bottom: -2px;
-     left: 0;
-     background-color: #a855f7;
-     transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+.inkFooter-cta {
+     display: inline-flex;
+     align-items: center;
+     justify-content: space-between;
+     gap: 20px;
+     min-height: 48px;
+     min-width: 176px;
+     margin-top: 24px;
+     padding: 11px 18px;
+     background: #555558;
+     border: 1px solid #555558;
+     border-radius: 5px;
+     color: #ffffff;
+     font-size: 11px;
+     font-weight: 800;
+     letter-spacing: .04em;
+     text-decoration: none;
+     text-transform: uppercase;
+     white-space: nowrap;
+     transition: background .25s ease, transform .25s ease, border-color .25s ease;
 }
 
-.footer-link:hover::after {
-     width: 100%;
+.inkFooter-cta:hover {
+     transform: translateY(-2px);
+     background: #252528;
+     border-color: #252528;
+}
+
+.inkFooter-cta svg {
+     transition: transform .25s ease;
+}
+
+.inkFooter-cta:hover svg {
+     transform: translate(2px, -2px);
+}
+
+/* ============================================================
+   COPYRIGHT / LEGAL
+============================================================ */
+
+.inkFooter-bottom {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     flex-wrap: wrap;
+     gap: 20px 26px;
+     min-height: 81px;
+     padding: 26px 0;
+     border-top: 1px solid var(--footer-line);
+}
+
+.inkFooter-bottom p {
+     margin: 0;
+     font-size: 11px;
+     line-height: 1.65;
+     font-weight: 600;
+     color: #7e7a7d;
+}
+
+.inkFooter-legal {
+     display: flex;
+     align-items: center;
+     flex-wrap: wrap;
+     gap: 13px 26px;
+}
+
+.inkFooter-legal a {
+     font-size: 11px;
+     font-weight: 700;
+     line-height: 1.65;
+     text-decoration: none;
+     color: #69676a;
+     transition: color .25s ease;
+}
+
+.inkFooter-legal a:hover {
+     color: #202022;
+}
+
+/* ============================================================
+   TABLET
+============================================================ */
+
+@media (max-width: 1050px) {
+     .inkFooter-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          column-gap: 55px;
+          row-gap: 48px;
+     }
+
+     .inkFooter-brandDescription {
+          margin-top: 20px;
+     }
+}
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 600px) {
+     .inkFooter {
+          padding-top: 56px;
+     }
+
+     .inkFooter-container {
+          width: calc(100% - 38px);
+     }
+
+     .inkFooter-grid {
+          grid-template-columns: minmax(0, 1fr);
+          row-gap: 35px;
+          padding-bottom: 45px;
+     }
+
+     .inkFooter-logo {
+          font-size: clamp(25px, 6.4vw, 33px);
+     }
+
+     .inkFooter-brandDescription {
+          margin-top: 15px;
+     }
+
+     .inkFooter-brandTagline {
+          margin-top: 12px;
+     }
+
+     .inkFooter-heading {
+          margin-bottom: 17px;
+     }
+
+     .inkFooter-links {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          column-gap: 16px;
+          row-gap: 4px;
+     }
+
+     .inkFooter-links a {
+          font-size: 12px;
+          min-height: 38px;
+          width: fit-content;
+     }
+
+     .inkFooter-bottom {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 17px;
+          padding: 27px 0 32px;
+     }
+
+     .inkFooter-legal {
+          gap: 12px 22px;
+     }
+}
+
+/* ============================================================
+   ACCESSIBILITY
+============================================================ */
+
+.inkFooter a:focus-visible {
+     outline: 2px solid #555558;
+     outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+     .inkFooter *,
+     .inkFooter *::before,
+     .inkFooter *::after {
+          animation: none !important;
+          transition: none !important;
+     }
 }

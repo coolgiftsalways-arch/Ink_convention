@@ -1,22 +1,24 @@
 /* =========================================================
-   CUSTOM CURSOR
+   INK CONVENTION — PREMIUM CUSTOM CURSOR
+   WHITE / CREAM / CHARCOAL GREY THEME
+========================================================= */
+
+/* =========================================================
+   CUSTOM CURSOR RING
 ========================================================= */
 
 .custom-cursor-ring {
      position: fixed;
-
      top: 0;
      left: 0;
 
      width: 54px;
      height: 54px;
 
-     border: 1px solid #a855f7;
-
+     border: 1px solid #5d6063;
      border-radius: 50%;
 
      pointer-events: none;
-
      z-index: 999999;
 
      opacity: 0;
@@ -25,7 +27,9 @@
      align-items: center;
      justify-content: center;
 
-     color: white;
+     color: #25272a;
+
+     background: rgba(245, 243, 239, 0.06);
 
      transition:
           width 0.25s ease,
@@ -50,7 +54,6 @@
 
 .custom-cursor-dot {
      position: fixed;
-
      top: 0;
      left: 0;
 
@@ -59,11 +62,11 @@
 
      border-radius: 50%;
 
-     background: #c084fc;
+     background: #282a2d;
 
      box-shadow:
-          0 0 8px rgba(192, 132, 252, 0.9),
-          0 0 18px rgba(168, 85, 247, 0.6);
+          0 0 6px rgba(40, 42, 45, 0.18),
+          0 0 14px rgba(40, 42, 45, 0.08);
 
      pointer-events: none;
 
@@ -86,66 +89,67 @@
 
 
 /* =========================================================
-   HOVER
+   HOVER EFFECT
 ========================================================= */
 
 .custom-cursor-ring.is-hovering {
      width: 66px;
      height: 66px;
 
-     border-color: #c084fc;
+     border-color: #383a3d;
 
-     background:
-          rgba(168, 85, 247, 0.08);
+     background: rgba(67, 70, 74, 0.09);
 
      box-shadow:
-          0 0 25px rgba(168, 85, 247, 0.15);
+          0 0 25px rgba(67, 70, 74, 0.07);
 }
 
 .custom-cursor-dot.is-hovering {
      width: 5px;
      height: 5px;
 
-     background: white;
+     background: #242629;
 }
 
 
 /* =========================================================
-   CLICK
+   CLICK EFFECT
 ========================================================= */
 
 .custom-cursor-ring.is-clicking {
      width: 42px;
      height: 42px;
 
-     background:
-          rgba(168, 85, 247, 0.18);
+     background: rgba(67, 70, 74, 0.18);
+
+     border-color: #242629;
 }
 
 .custom-cursor-dot.is-clicking {
      width: 10px;
      height: 10px;
+
+     background: #17191b;
 }
 
 
 /* =========================================================
-   ARROW
+   CURSOR ARROW
 ========================================================= */
 
 .cursor-arrow {
      font-size: 15px;
 
-     color: #ffffff;
+     color: #25272a;
 
      line-height: 1;
 
-     transform:
-          translateY(-1px) rotate(0deg);
+     transform: translateY(-1px) rotate(0deg);
 }
 
 
 /* =========================================================
-   CUSTOM TEXT
+   CUSTOM CURSOR TEXT
 ========================================================= */
 
 .custom-cursor-ring.has-text {
@@ -154,12 +158,17 @@
 
      padding: 8px;
 
-     background:
-          rgba(168, 85, 247, 0.14);
+     background: rgba(55, 58, 62, 0.94);
 
      backdrop-filter: blur(8px);
+     -webkit-backdrop-filter: blur(8px);
 
-     border-color: #c084fc;
+     border-color: #45484c;
+
+     box-shadow:
+          0 8px 30px rgba(35, 37, 40, 0.12);
+
+     color: #ffffff;
 }
 
 .cursor-text {
@@ -168,7 +177,6 @@
      text-align: center;
 
      font-size: 8px;
-
      font-weight: 800;
 
      letter-spacing: 0.08em;
@@ -177,6 +185,10 @@
 
      line-height: 1.2;
 
+     color: #ffffff;
+}
+
+.custom-cursor-ring.has-text .cursor-arrow {
      color: #ffffff;
 }
 
@@ -197,11 +209,12 @@
      [role="button"] {
           cursor: none !important;
      }
+
 }
 
 
 /* =========================================================
-   MOBILE / TOUCH
+   MOBILE / TOUCH DEVICES
 ========================================================= */
 
 @media (hover: none) and (pointer: coarse) {
@@ -220,4 +233,5 @@
      select {
           cursor: auto !important;
      }
+
 }
