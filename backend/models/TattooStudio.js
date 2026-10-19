@@ -465,6 +465,14 @@ const tattooStudioSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Duration selected when admin activates/renews a plan.
+    // Existing records remain compatible (null = legacy duration unknown).
+    planDurationMonths: {
+      type: Number,
+      enum: [3, 6, 12, null],
+      default: null,
+    },
+
     /* =====================================================
        IMPORT DATE
     ===================================================== */

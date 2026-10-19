@@ -524,6 +524,13 @@ export default function Enter() {
       ? requestedReturnTo
       : "";
 
+  // A plan choice is navigation context only, never proof of ownership.
+  const requestedPlanId = ["quarterly", "half-yearly", "yearly"].includes(
+    location.state?.selectedPlanId,
+  )
+    ? location.state.selectedPlanId
+    : "";
+
   const entryModeRequested = Boolean(
     location.state?.entryMode || returnTo === "/entry",
   );
@@ -1775,6 +1782,20 @@ export default function Enter() {
 
       if (sessionExpiresAt) {
         writeVerifiedProfileCache(finalProfile, sessionExpiresAt);
+      }
+
+      // Continue only after the authenticated profile update succeeds.
+      // The plans page must recheck the server session before submitting.
+      if (returnTo === "/our-plans") {
+        navigate("/our-plans", {
+          replace: true,
+          state: {
+            selectedPlanId: requestedPlanId || undefined,
+            claimCompleted: true,
+            profileCompleted: true,
+          },
+        });
+        return;
       }
 
       const savedPlan = normalizePlan(finalProfile.plan);

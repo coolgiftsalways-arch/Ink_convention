@@ -32,6 +32,10 @@ const navLinks = [
     path: "/artists",
   },
   {
+    label: "Our Plans",
+    path: "/our-plans",
+  },
+  {
     label: "Hall Of Fame",
     path: "/hall-of-fame",
   },

@@ -565,6 +565,8 @@ router.get(
 
           planExpiresAt: 1,
 
+          planDurationMonths: 1,
+
           paidAt: 1,
 
           whatsappContactCount: 1,

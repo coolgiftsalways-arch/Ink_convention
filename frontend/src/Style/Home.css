@@ -1666,3 +1666,340 @@
           animation: none !important;
      }
 }
+
+/* =============================================================
+   INKCONVENTION — DIWALI SPECIAL (HOMEPAGE)
+   Added above the existing Vision section; original sections kept.
+   Entire gold cards click through to /our-plans. No plan buttons.
+   ============================================================= */
+.inkHomeEditorial .icFestivePlans {
+     width: 100%;
+     background: #f8f6f0;
+     color: #211c13;
+     border-bottom: 1px solid #ded8cb;
+     overflow: hidden;
+}
+
+.inkHomeEditorial .icFestivePlans__banner {
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     gap: clamp(14px, 2vw, 34px);
+     min-height: 105px;
+     padding: 16px 28px;
+     background: #201f18;
+     color: #f1d37a;
+     border-bottom: 1px solid #a9863c;
+}
+
+.inkHomeEditorial .icFestivePlans__banner h2 {
+     margin: 0;
+     flex: 0 1 auto;
+     font-family: Georgia, "Times New Roman", serif;
+     font-size: clamp(24px, 3.2vw, 52px);
+     font-weight: 400;
+     letter-spacing: .095em;
+     line-height: 1.18;
+     text-align: center;
+     white-space: nowrap;
+     color: #f1d37a;
+}
+
+.inkHomeEditorial .icFestivePlans__bannerRule {
+     display: block;
+     flex: 1 1 90px;
+     max-width: 300px;
+     height: 1px;
+     background: linear-gradient(90deg, transparent, #c3a452);
+}
+
+.inkHomeEditorial .icFestivePlans__bannerRule:nth-of-type(2) {
+     background: linear-gradient(90deg, #c3a452, transparent);
+}
+
+.inkHomeEditorial .icFestivePlans__diya {
+     width: clamp(27px, 3.3vw, 52px);
+     height: clamp(27px, 3.3vw, 52px);
+     flex: 0 0 auto;
+}
+
+.inkHomeEditorial .icFestivePlans__inner {
+     max-width: 1800px;
+     margin: 0 auto;
+     padding: 51px clamp(18px, 4.3vw, 78px) 82px;
+}
+
+.inkHomeEditorial .icFestivePlans__description {
+     margin: 0 auto 30px;
+     color: #5e5850;
+     font: 500 clamp(12px, .85vw, 15px)/1.65 "Manrope", Arial, sans-serif;
+     text-align: center;
+}
+
+.inkHomeEditorial .icFestivePlans__grid {
+     display: grid;
+     grid-template-columns: repeat(3, minmax(0, 1fr));
+     gap: clamp(18px, 1.7vw, 30px);
+}
+
+.inkHomeEditorial .icFestivePlans__card {
+     position: relative;
+     display: flex;
+     flex-direction: column;
+     min-width: 0;
+     min-height: 480px;
+     padding: clamp(23px, 2.2vw, 38px);
+     border: 1px solid #b48b32;
+     border-radius: 7px;
+     overflow: hidden;
+     color: #251d0e;
+     background: linear-gradient(133deg, #edc66b 0%, #ffe8a3 35%, #f2d176 64%, #d8a848 100%);
+     box-shadow: inset 0 0 0 4px rgba(255, 250, 224, .35), 0 16px 30px rgba(82, 57, 12, .09);
+     transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+}
+
+.inkHomeEditorial .icFestivePlans__card::after {
+     content: "";
+     position: absolute;
+     inset: 0;
+     pointer-events: none;
+     opacity: .23;
+     background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .23) 0 1px, transparent 1px 5px);
+}
+
+.inkHomeEditorial .icFestivePlans__card:hover {
+     transform: translateY(-7px);
+     border-color: #8e6723;
+     box-shadow: inset 0 0 0 4px rgba(255, 250, 224, .4), 0 25px 42px rgba(82, 57, 12, .2);
+}
+
+.inkHomeEditorial .icFestivePlans__card:focus-visible {
+     outline: 3px solid #1f1e18;
+     outline-offset: 5px;
+}
+
+.inkHomeEditorial .icFestivePlans__top {
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     gap: 12px;
+     padding-bottom: 19px;
+     border-bottom: 1px solid rgba(78, 58, 19, .58);
+}
+
+.inkHomeEditorial .icFestivePlans__term {
+     font: 800 clamp(21px, 1.75vw, 30px)/1.2 "Manrope", Arial, sans-serif;
+     letter-spacing: .08em;
+     white-space: nowrap;
+}
+
+.inkHomeEditorial .icFestivePlans__bestValue {
+     display: inline-flex;
+     padding: 10px 11px;
+     border-radius: 4px;
+     background: #211e14;
+     color: #ffe68c;
+     font: 800 10px/1.1 "Manrope", Arial, sans-serif;
+     letter-spacing: .04em;
+     white-space: nowrap;
+}
+
+.inkHomeEditorial .icFestivePlans__priceBlock {
+     padding: 37px 0 27px;
+     border-bottom: 1px solid rgba(78, 58, 19, .58);
+}
+
+.inkHomeEditorial .icFestivePlans__price {
+     display: flex;
+     align-items: baseline;
+     gap: 2px;
+     color: #1b170f;
+     font-family: "Manrope", Arial, sans-serif;
+     font-size: clamp(47px, 4.35vw, 77px);
+     font-weight: 800;
+     line-height: 1.13;
+     letter-spacing: -.065em;
+     font-variant-numeric: lining-nums tabular-nums;
+}
+
+.inkHomeEditorial .icFestivePlans__rupee {
+     font-family: "Manrope", Arial, sans-serif;
+     font-size: .76em;
+     font-weight: 800;
+     letter-spacing: -.08em;
+}
+
+.inkHomeEditorial .icFestivePlans__priceBlock p {
+     margin: 11px 0 0;
+     color: #30291e;
+     font: 500 clamp(12px, .84vw, 15px)/1.6 "Manrope", Arial, sans-serif;
+}
+
+.inkHomeEditorial .icFestivePlans__benefit {
+     display: flex;
+     flex-direction: column;
+     align-items: flex-start;
+     padding-top: 30px;
+}
+
+.inkHomeEditorial .icFestivePlans__number {
+     color: #3b2c0f;
+     font: 800 clamp(67px, 6vw, 107px)/1 "Manrope", Arial, sans-serif;
+     letter-spacing: -.065em;
+     font-variant-numeric: lining-nums tabular-nums;
+}
+
+.inkHomeEditorial .icFestivePlans__benefitName {
+     margin-top: 5px;
+     color: #241b0f;
+     font: 700 clamp(19px, 1.4vw, 26px)/1.4 "Manrope", Arial, sans-serif;
+}
+
+.inkHomeEditorial .icFestivePlans__benefit small {
+     margin-top: 12px;
+     color: #51432a;
+     font: 500 12px/1.6 "Manrope", Arial, sans-serif;
+}
+
+.inkHomeEditorial .icFestivePlans__cardFoot {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     gap: 10px;
+     margin-top: auto;
+     padding-top: 38px;
+     color: #503e1d;
+     font: 800 10px/1.5 "Manrope", Arial, sans-serif;
+     letter-spacing: .13em;
+}
+
+.inkHomeEditorial .icFestivePlans__cardFoot svg {
+     flex: 0 0 auto;
+     transition: transform .2s ease;
+}
+
+.inkHomeEditorial .icFestivePlans__card:hover .icFestivePlans__cardFoot svg {
+     transform: translateX(5px);
+}
+
+@media (max-width: 1100px) {
+     .inkHomeEditorial .icFestivePlans__card {
+          min-height: 435px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__term {
+          font-size: 19px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__price {
+          font-size: clamp(39px, 4vw, 65px);
+     }
+
+     .inkHomeEditorial .icFestivePlans__number {
+          font-size: 69px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__benefitName {
+          font-size: 18px;
+     }
+}
+
+@media (max-width: 800px) {
+     .inkHomeEditorial .icFestivePlans__grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+     }
+
+     .inkHomeEditorial .icFestivePlans__card:last-child {
+          grid-column: 1 / -1;
+     }
+
+     .inkHomeEditorial .icFestivePlans__price {
+          font-size: clamp(43px, 7vw, 70px);
+     }
+}
+
+@media (max-width: 540px) {
+     .inkHomeEditorial .icFestivePlans__banner {
+          min-height: 76px;
+          gap: 8px;
+          padding: 15px 12px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__banner h2 {
+          font-size: clamp(18px, 5.6vw, 29px);
+          letter-spacing: .055em;
+          white-space: normal;
+     }
+
+     .inkHomeEditorial .icFestivePlans__bannerRule {
+          flex-basis: 8px;
+          min-width: 8px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__diya {
+          width: 27px;
+          height: 27px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__inner {
+          padding: 34px 17px 52px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__description {
+          margin-bottom: 24px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__grid {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 17px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__card:last-child {
+          grid-column: auto;
+     }
+
+     .inkHomeEditorial .icFestivePlans__card {
+          min-height: 390px;
+          padding: 25px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__term {
+          font-size: 22px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__priceBlock {
+          padding: 26px 0 21px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__price {
+          font-size: clamp(49px, 13vw, 72px);
+     }
+
+     .inkHomeEditorial .icFestivePlans__benefit {
+          padding-top: 20px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__number {
+          font-size: 76px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__benefitName {
+          font-size: 20px;
+     }
+
+     .inkHomeEditorial .icFestivePlans__cardFoot {
+          padding-top: 25px;
+     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+     .inkHomeEditorial .icFestivePlans__card,
+     .inkHomeEditorial .icFestivePlans__cardFoot svg {
+          transition: none !important;
+     }
+
+     .inkHomeEditorial .icFestivePlans__card:hover {
+          transform: none;
+     }
+}

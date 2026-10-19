@@ -6,6 +6,7 @@ import {
   Route,
   Navigate,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 
 import Lenis from "lenis";
@@ -31,6 +32,7 @@ import About from "./pages/About";
 import Gallery from "./pages/Gallery";
 import HallOfFame from "./pages/Halloffam";
 import Artists from "./pages/Artists";
+import OurPlans from "./pages/OurPlans";
 import Enter from "./pages/Enter";
 import Get from "./pages/Get";
 import Upload from "./pages/Upload";
@@ -55,6 +57,8 @@ import AdminArtists from "./admin/Adminartists";
 import AdminLogin from "./admin/Login";
 import ArtistBookings from "./admin/ArtistBookings";
 import AdminGets from "./admin/AdminGets.jsx";
+import PlanRequests from "./admin/PlanRequests.jsx";
+import AdminSidebar from "./admin/AdminSidebar.jsx";
 
 // import WhatsAppCampaigns from "./admin/WhatsAppCampaigns";
 
@@ -203,6 +207,16 @@ function Layout() {
               element={
                 <PageTransition>
                   <Artists />
+                </PageTransition>
+              }
+            />
+
+            {/* Our Plans */}
+            <Route
+              path="/our-plans"
+              element={
+                <PageTransition>
+                  <OurPlans />
                 </PageTransition>
               }
             />
@@ -501,6 +515,15 @@ function Layout() {
             />
 
             {/* =================================================
+                ADMIN PLAN / MEMBERSHIP REQUESTS
+            ================================================= */}
+
+            <Route
+              path="/admin/plan-requests"
+              element={<AdminPlanRequestsPage />}
+            />
+
+            {/* =================================================
                 WHATSAPP ADMIN
 
                 Keep disabled until page is ready.
@@ -528,6 +551,37 @@ function Layout() {
         {!isAdminPage && <Footer />}
       </div>
     </>
+  );
+}
+
+/* =========================================================
+   PLAN REQUESTS ADMIN LAYOUT
+   Other admin pages already render their own sidebar.
+   This wrapper adds the existing AdminSidebar ONLY here,
+   avoiding duplicate sidebars elsewhere.
+========================================================= */
+
+function AdminPlanRequestsPage() {
+  const navigate = useNavigate();
+
+  if (sessionStorage.getItem("isLoggedIn") !== "true") {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("isLoggedIn");
+    sessionStorage.removeItem("userEmail");
+    navigate("/admin/login", { replace: true });
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f6f4ee] text-[#25231f]">
+      <AdminSidebar onLogout={handleLogout} />
+
+      <main className="min-w-0 lg:pl-72">
+        <PlanRequests />
+      </main>
+    </div>
   );
 }
 

@@ -33,7 +33,31 @@ function addOneCalendarYear(value = new Date()) {
 
   const expires = new Date(start.getTime());
   expires.setUTCFullYear(expires.getUTCFullYear() + 1);
+  return expires;
+}
 
+// Calculate an expiry at the SAME UTC clock time, 3/6/12 calendar months later.
+// Clamp the day for month-ends, e.g. January 31 + 3 months = April 30.
+function addCalendarMonths(value = new Date(), months = 12) {
+  const count = Number(months);
+  if (![3, 6, 12].includes(count)) {
+    throw new Error("Membership duration must be 3, 6 or 12 months.");
+  }
+
+  const start =
+    value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  if (Number.isNaN(start.getTime())) {
+    throw new Error("Invalid membership start date.");
+  }
+
+  const originalDay = start.getUTCDate();
+  const expires = new Date(start.getTime());
+  expires.setUTCDate(1);
+  expires.setUTCMonth(expires.getUTCMonth() + count);
+  const lastDay = new Date(
+    Date.UTC(expires.getUTCFullYear(), expires.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  expires.setUTCDate(Math.min(originalDay, lastDay));
   return expires;
 }
 
@@ -43,7 +67,6 @@ function applyBasicPlan(studio) {
   studio.verified = false;
   studio.spotlight = false;
   studio.hallOfFameEligible = false;
-
   return studio;
 }
 
@@ -51,12 +74,11 @@ function isPaidMembershipExpired(studio, now = new Date()) {
   if (!studio) return false;
 
   const plan = normalizePlan(studio.plan);
-
   if (!PAID_PLANS.has(plan)) return false;
+
   if (!studio.planExpiresAt) return false;
 
   const expiry = new Date(studio.planExpiresAt);
-
   if (Number.isNaN(expiry.getTime())) return false;
 
   return expiry.getTime() <= now.getTime();
@@ -69,11 +91,9 @@ async function ensureMembershipCurrent(studio) {
 
   if (PAID_PLANS.has(plan) && !studio.planExpiresAt) {
     const start = studio.planStartedAt || studio.paidAt || null;
-
     if (start) {
       studio.planStartedAt = studio.planStartedAt || start;
       studio.planExpiresAt = addOneCalendarYear(start);
-
       await studio.save();
     }
   }
@@ -83,11 +103,8 @@ async function ensureMembershipCurrent(studio) {
   }
 
   applyBasicPlan(studio);
-
   studio.updatedAt = new Date();
-
   await studio.save();
-
   return studio;
 }
 
@@ -100,18 +117,16 @@ async function backfillMissingExpiryDates() {
 
   for (const studio of studios) {
     const start = studio.planStartedAt || studio.paidAt || null;
-
     if (!start) continue;
 
     studio.planStartedAt = studio.planStartedAt || start;
     studio.planExpiresAt = addOneCalendarYear(start);
-
     await studio.save();
   }
 }
 
-async function expireMemberships() {
-  await backfillMissingExpiryDates();
+async function expireMemberships({ backfill = true } = {}) {
+  if (backfill) await backfillMissingExpiryDates();
 
   const now = new Date();
 
@@ -137,7 +152,6 @@ async function expireMemberships() {
 
 function publicLockedMap(plan) {
   const normalized = normalizePlan(plan);
-
   const isBasic = normalized === "basic";
   const isVerified = normalized === "verified";
 
@@ -151,8 +165,7 @@ function publicLockedMap(plan) {
     instagram: !isVerified,
     bio: !isVerified,
     profileLinks: !isVerified,
-    portfolioImages: isBasic,
-    
+    portfolioImages: !isVerified,
   };
 }
 
@@ -168,8 +181,11 @@ function getDisplayName(studio = {}) {
 function serializePublicArtist(source = {}) {
   const studio =
     typeof source.toObject === "function" ? source.toObject() : source;
-
-  const plan = normalizePlan(studio.plan);
+  // Immediately hide Gold/Silver benefits at the exact expiry instant,
+  // even if the scheduled database cleanup has not run yet.
+  const plan = isPaidMembershipExpired(studio)
+    ? "basic"
+    : normalizePlan(studio.plan);
   const locked = publicLockedMap(plan);
 
   const result = {
@@ -187,7 +203,6 @@ function serializePublicArtist(source = {}) {
     spotlight: plan === "verified" && Boolean(studio.spotlight),
     hallOfFameEligible:
       plan === "verified" && Boolean(studio.hallOfFameEligible),
-    silverToGoldUpgradeUsed: Boolean(studio.silverToGoldUpgradeUsed),
     planStartedAt: PAID_PLANS.has(plan) ? studio.planStartedAt || null : null,
     planExpiresAt: PAID_PLANS.has(plan) ? studio.planExpiresAt || null : null,
     locked,
@@ -198,33 +213,23 @@ function serializePublicArtist(source = {}) {
     return result;
   }
 
-  // SILVER / PRO: name + state + city + photo + phone + first 5 images.
+  // SILVER / PRO: name + state + city + photo + phone are public.
   result.city = studio.city || "";
   result.profileImage = studio.profileImage || "";
   result.phone = studio.phone || "";
 
   if (plan === "pro") {
-    result.portfolioImages = Array.isArray(studio.portfolioImages)
-      ? studio.portfolioImages.slice(0, 5)
-      : [];
-
     return result;
   }
 
-  // GOLD / VERIFIED: full public profile + first 10 images.
+  // GOLD / VERIFIED: full public profile.
   result.email = studio.email || "";
   result.studio = studio.studio || studio.studioName || studio.name || "";
   result.experience = studio.experience || "";
   result.instagram = studio.instagram || "";
   result.bio = studio.bio || "";
-  result.profileLinks = Array.isArray(studio.profileLinks)
-  ? studio.profileLinks
-      .map((link) => String(link || "").trim())
-      .filter(Boolean)
-      .slice(0, 3)
-  : [];
   result.portfolioImages = Array.isArray(studio.portfolioImages)
-    ? studio.portfolioImages.slice(0, 10)
+    ? studio.portfolioImages.slice(0, 3)
     : [];
 
   return result;
@@ -234,13 +239,18 @@ let expiryWorkerStarted = false;
 
 function startMembershipExpiryWorker() {
   if (expiryWorkerStarted) return;
-
   expiryWorkerStarted = true;
 
-  const run = async () => {
-    try {
-      const result = await expireMemberships();
+  let running = false;
+  let firstRun = true;
 
+  const run = async () => {
+    if (running) return;
+    running = true;
+    try {
+      // Backfill old records once, not on every one-minute check.
+      const result = await expireMemberships({ backfill: firstRun });
+      firstRun = false;
       if (result?.modifiedCount) {
         console.log(
           `✅ Downgraded ${result.modifiedCount} expired membership(s) to Basic.`,
@@ -248,22 +258,23 @@ function startMembershipExpiryWorker() {
       }
     } catch (error) {
       console.error("❌ Membership expiry worker error:", error.message);
+    } finally {
+      running = false;
     }
   };
 
   void run();
-
-  const timer = setInterval(run, 60 * 60 * 1000);
-
-  if (typeof timer.unref === "function") {
-    timer.unref();
-  }
+  // MongoDB automatically reflects expiry within about one minute while
+  // the backend is online. Public serialization also checks the exact time.
+  const timer = setInterval(run, 60 * 1000);
+  if (typeof timer.unref === "function") timer.unref();
 }
 
 module.exports = {
   PAID_PLANS,
   normalizePlan,
   addOneCalendarYear,
+  addCalendarMonths,
   applyBasicPlan,
   isPaidMembershipExpired,
   ensureMembershipCurrent,

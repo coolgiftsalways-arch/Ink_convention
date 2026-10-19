@@ -296,6 +296,7 @@ const normalizeDirectoryArtist = (source = {}) => ({
 
   planStartedAt: source.planStartedAt || null,
   planExpiresAt: source.planExpiresAt || null,
+  planDurationMonths: source.planDurationMonths || null,
   paidAt: source.paidAt || null,
 
   updatedAt: source.updatedAt || source.createdAt || "",
@@ -385,8 +386,15 @@ const normalizeMembershipRequest = (source = {}) => ({
     (normalizeDirectoryPlan(source.requestedPlan) === "verified"
       ? "GOLD / VERIFIED"
       : "SILVER / PRO"),
-  requestedAmount:
-    normalizeDirectoryPlan(source.requestedPlan) === "verified" ? 5999 : 2999,
+  requestedAmount: Number(
+    source.requestedAmount ??
+      (normalizeDirectoryPlan(source.requestedPlan) === "verified"
+        ? 5999
+        : 2999),
+  ),
+  planOption: source.planOption || null,
+  durationMonths: source.durationMonths ?? null,
+  promisedCustomers: source.promisedCustomers ?? null,
   pricingType: source.pricingType || "standard-membership",
   requestStatus: String(source.requestStatus || "new")
     .trim()
@@ -782,6 +790,7 @@ function AdminArtists() {
   const [membershipRequestError, setMembershipRequestError] = useState("");
   const [membershipRequestBusyId, setMembershipRequestBusyId] = useState("");
   const [directPlanBusyArtistId, setDirectPlanBusyArtistId] = useState("");
+  const [goldDurationArtist, setGoldDurationArtist] = useState(null);
   const [unclaimBusyArtistId, setUnclaimBusyArtistId] = useState("");
   const [whatsappBusyArtistId, setWhatsappBusyArtistId] = useState("");
 
@@ -1713,8 +1722,17 @@ function AdminArtists() {
   // ===================================================
 
   const handleDirectPlanActivation = useCallback(
-    async (artist, targetPlan) => {
+    async (artist, targetPlan, selectedMonths = null) => {
       if (!artist?.id || !["basic", "pro", "verified"].includes(targetPlan)) {
+        return;
+      }
+
+      // Clicking Make Gold / Renew Gold opens a real 3 / 6 / 12-month picker.
+      if (
+        targetPlan === "verified" &&
+        ![3, 6, 12].includes(Number(selectedMonths))
+      ) {
+        setGoldDurationArtist(artist);
         return;
       }
 
@@ -1735,7 +1753,9 @@ function AdminArtists() {
           ? `Make ${artist.name} Free? This will immediately remove the active Silver/Gold public benefits.`
           : isDowngradeToSilver
             ? `Make ${artist.name} Silver? This will downgrade the current Gold membership to Silver.`
-            : `Make ${artist.name} ${planLabel}? Only continue after you have manually confirmed the payment.`,
+            : targetPlan === "verified"
+              ? `Activate ${selectedMonths}-month Gold for ${artist.name}? The membership starts NOW and expires after ${selectedMonths} calendar months. Only continue after you have manually confirmed payment.`
+              : `Make ${artist.name} ${planLabel}? Only continue after you have manually confirmed the payment.`,
       );
 
       if (!confirmed) {
@@ -1757,6 +1777,9 @@ function AdminArtists() {
             body: JSON.stringify({
               profileId: artist.id,
               plan: targetPlan,
+              ...(targetPlan === "verified"
+                ? { durationMonths: Number(selectedMonths) }
+                : {}),
             }),
           },
         );
@@ -1776,6 +1799,21 @@ function AdminArtists() {
               plan: targetPlan,
               paymentStatus: targetPlan === "basic" ? "unpaid" : "paid",
             };
+
+        // Keep open details/search cards in sync with saved dates and plan.
+        setSelectedDirectoryArtist((previous) =>
+          previous && String(previous.id) === String(updatedArtist.id)
+            ? { ...previous, ...updatedArtist }
+            : previous,
+        );
+        setDirectorySearchResults((previous) =>
+          previous.map((item) =>
+            String(item.id) === String(updatedArtist.id)
+              ? { ...item, ...updatedArtist }
+              : item,
+          ),
+        );
+        if (targetPlan === "verified") setGoldDurationArtist(null);
 
         // Update this artist immediately in the UI.
         setDirectoryArtists((previous) => {
@@ -3616,7 +3654,7 @@ function AdminArtists() {
             />
 
             <DashboardStat
-              label="Gold Verified ₹5,999"
+              label="Gold Verified · 3/6/12 months"
               value={
                 directoryStateFilter === "ALL"
                   ? directoryStats.paidGold
@@ -4125,7 +4163,7 @@ function AdminArtists() {
 
                 <p className="text-xs sm:text-sm text-gray-600 mt-2">
                   Free profiles are separated by ownership claim status • Silver
-                  = ₹2,999 • Gold = ₹5,999
+                  = ₹2,999 • Gold = 3/6/12-month plans
                 </p>
               </div>
 
@@ -4809,6 +4847,86 @@ function AdminArtists() {
           }
           onClose={() => setSelectedDirectoryArtist(null)}
         />
+      )}
+
+      {/* ONE GOLD DURATION DIALOG for artist cards and details modal */}
+      {goldDurationArtist && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !directPlanBusyArtistId
+            ) {
+              setGoldDurationArtist(null);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="gold-duration-title"
+            className="w-full max-w-lg rounded-3xl border border-amber-400/25 bg-[#111017] p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-amber-400">
+                  Ink Convention · Membership
+                </p>
+                <h2
+                  id="gold-duration-title"
+                  className="mt-2 text-2xl font-black text-white"
+                >
+                  Activate Gold
+                </h2>
+                <p className="mt-1 text-sm text-gray-400">
+                  {goldDurationArtist.name || "Tattoo Artist"}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close Gold duration"
+                onClick={() => setGoldDurationArtist(null)}
+                disabled={Boolean(directPlanBusyArtistId)}
+                className="rounded-xl border border-white/10 px-3 py-2 text-gray-300 hover:bg-white/10 disabled:opacity-40"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mt-5 text-sm text-gray-300">
+              Choose a validity period. Confirm payment before activation. Gold
+              starts when you confirm and automatically returns to Free when it
+              expires.
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {[3, 6, 12].map((months) => (
+                <button
+                  key={months}
+                  type="button"
+                  disabled={Boolean(directPlanBusyArtistId)}
+                  onClick={() =>
+                    void handleDirectPlanActivation(
+                      goldDurationArtist,
+                      "verified",
+                      months,
+                    )
+                  }
+                  className="rounded-2xl border border-amber-400/30 bg-amber-400/10 px-3 py-5 text-center text-amber-200 transition hover:bg-amber-400/20 disabled:opacity-40"
+                >
+                  <span className="block text-xl font-black">{months}</span>
+                  <span className="mt-1 block text-xs uppercase tracking-widest">
+                    Months
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-gray-500">
+              The start date, expiry date, and Gold duration are saved to
+              MongoDB. Existing Gold members can renew using this same dialog.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -5533,6 +5651,14 @@ function MembershipMemberRow({
               label="Auto Free On"
               value={formatMembershipDateTime(artist.planExpiresAt)}
             />
+            <MembershipInfo
+              label="Gold duration"
+              value={
+                isGold && artist.planDurationMonths
+                  ? `${artist.planDurationMonths} months`
+                  : "—"
+              }
+            />
           </div>
 
           <div className="mt-2 flex items-center gap-2 rounded-lg bg-black/30 px-3 py-2">
@@ -5633,7 +5759,7 @@ function MembershipMemberRow({
 
             <button
               type="button"
-              disabled={busy || isGold}
+              disabled={busy}
               onClick={() => void onAdminPlanChange(artist, "verified")}
               className={`rounded-lg border px-2 py-2.5 text-[8px] font-black uppercase tracking-wider transition ${
                 isGold
@@ -5644,7 +5770,7 @@ function MembershipMemberRow({
               {busy && !isGold
                 ? "Working..."
                 : isGold
-                  ? "GOLD • CURRENT"
+                  ? "RENEW GOLD"
                   : "MAKE GOLD"}
             </button>
           </div>
@@ -6021,6 +6147,16 @@ function DirectoryArtistDetailsModal({
                   label="Expires"
                   value={formatMembershipDateTime(artist?.planExpiresAt)}
                 />
+                {isGold && (
+                  <MembershipInfo
+                    label="Gold Duration"
+                    value={
+                      artist?.planDurationMonths
+                        ? `${artist.planDurationMonths} months`
+                        : "Legacy / Not recorded"
+                    }
+                  />
+                )}
               </div>
 
               <div className="mt-3 flex items-center gap-2 rounded-xl bg-black/30 px-3 py-2">
@@ -6069,16 +6205,14 @@ function DirectoryArtistDetailsModal({
                   </button>
                 )}
 
-                {!isGold && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void onAdminPlanChange(artist, "verified")}
-                    className="rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-amber-300 disabled:opacity-40"
-                  >
-                    {busy ? "Saving..." : "Make Gold"}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void onAdminPlanChange(artist, "verified")}
+                  className="rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-amber-300 disabled:opacity-40"
+                >
+                  {busy ? "Saving..." : isGold ? "Renew Gold" : "Make Gold"}
+                </button>
               </div>
             </div>
           )}

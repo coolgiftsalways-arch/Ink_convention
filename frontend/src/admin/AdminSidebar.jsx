@@ -6,6 +6,7 @@ import {
   Store,
   Trophy,
   CalendarDays,
+  ClipboardList,
   Ticket,
   LogOut,
   Menu,
@@ -150,7 +151,7 @@ function NavItem({ to, active, icon, title, subtitle, count, onNavigate }) {
         </div>
       </div>
 
-      <CountBadge count={count} active={active} />
+      {count !== undefined && <CountBadge count={count} active={active} />}
     </Link>
   );
 }
@@ -167,6 +168,7 @@ export default function AdminSidebar({
   artistCount,
   bookingCount,
   getCount,
+  planRequestCount,
 }) {
   const location = useLocation();
 
@@ -203,6 +205,10 @@ export default function AdminSidebar({
   const isBookingActive =
     location.pathname === "/admin/artist-bookings" ||
     location.pathname.startsWith("/admin/artist-bookings/");
+
+  const isPlanRequestsActive =
+    location.pathname === "/admin/plan-requests" ||
+    location.pathname.startsWith("/admin/plan-requests/");
 
   const isGetActive =
     location.pathname === "/admin/get" ||
@@ -568,6 +574,25 @@ export default function AdminSidebar({
               title="Artist"
               subtitle="DIRECTORY ARTISTS"
               count={finalArtistCount}
+              onNavigate={closeMobileSidebar}
+            />
+
+            <NavItem
+              to="/admin/plan-requests"
+              active={isPlanRequestsActive}
+              icon={
+                <ClipboardList
+                  size={17}
+                  className={
+                    isPlanRequestsActive
+                      ? "text-[#a855f7]"
+                      : "text-gray-500 group-hover:text-[#a855f7]"
+                  }
+                />
+              }
+              title="Plan Requests"
+              subtitle="MEMBERSHIP REQUESTS"
+              count={planRequestCount}
               onNavigate={closeMobileSidebar}
             />
 

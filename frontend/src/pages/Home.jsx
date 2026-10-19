@@ -372,7 +372,7 @@ function CinematicHero() {
         <Link to="/artists" className="ic26__action ic26__action--black">
           FIND YOUR ARTISTS <ArrowRight size={16} />
         </Link>
-       
+
         <Link to="/entry" className="ic26__action">
           GET ENTRY PASS <ArrowRight size={16} />
         </Link>
@@ -380,6 +380,127 @@ function CinematicHero() {
           JOIN DIRECTORY FREE <ArrowRight size={16} />
         </Link>
       </nav>
+    </section>
+  );
+}
+
+/* ============================================================
+   DIWALI SPECIAL — HOME PREVIEW
+   The entire card is one link to /our-plans. No Choose button.
+   Keep membership administration and selection on Our Plans.
+   ============================================================ */
+const DIWALI_HOME_PLANS = [
+  {
+    id: "three-months",
+    term: "3 MONTHS",
+    price: 1999,
+    duration: "Valid for 3 months",
+    confirmedCustomers: 2,
+  },
+  {
+    id: "six-months",
+    term: "6 MONTHS",
+    price: 2999,
+    duration: "Valid for 6 months",
+    confirmedCustomers: 5,
+  },
+  {
+    id: "one-year",
+    term: "1 YEAR",
+    price: 4999,
+    duration: "Valid for 12 months",
+    confirmedCustomers: 12,
+    bestValue: true,
+  },
+];
+
+function FestiveDiya() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="icFestivePlans__diya"
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M32 8c-2 7-8 12-8 19a8 8 0 0 0 16 0c0-7-6-12-8-19Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M14 36h36c-1 11-8 17-18 17S15 47 14 36Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M11 36h42M20 57h24M27 61h10M32 1v4M10 11l5 5M54 11l-5 5M5 29h6M53 29h6M18 4l2 6M46 4l-2 6"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function DiwaliPlansPreview() {
+  const inr = new Intl.NumberFormat("en-IN");
+
+  return (
+    <section className="icFestivePlans" aria-labelledby="icFestivePlansHeading">
+      <div className="icFestivePlans__banner">
+        <FestiveDiya />
+        <span className="icFestivePlans__bannerRule" aria-hidden="true" />
+        <h2 id="icFestivePlansHeading">DIWALI SPECIAL OFFER</h2>
+        <span className="icFestivePlans__bannerRule" aria-hidden="true" />
+        <FestiveDiya />
+      </div>
+
+      <div className="icFestivePlans__inner">
+        <p className="icFestivePlans__description">
+          Choose a plan, claim your artist profile, then submit your request.
+        </p>
+        <div className="icFestivePlans__grid">
+          {DIWALI_HOME_PLANS.map((plan) => (
+            <Link
+              key={plan.id}
+              className="icFestivePlans__card"
+              to="/our-plans"
+              aria-label={`View ${plan.term.toLowerCase()} plan details on Our Plans page`}
+            >
+              <div className="icFestivePlans__top">
+                <span className="icFestivePlans__term">{plan.term}</span>
+                {plan.bestValue && (
+                  <span className="icFestivePlans__bestValue">BEST VALUE</span>
+                )}
+              </div>
+
+              <div className="icFestivePlans__priceBlock">
+                <strong className="icFestivePlans__price">
+                  <span className="icFestivePlans__rupee">₹</span>
+                  {inr.format(plan.price)}
+                </strong>
+                <p>Plan price · {plan.duration}</p>
+              </div>
+
+              <div className="icFestivePlans__benefit">
+                <strong className="icFestivePlans__number">
+                  {plan.confirmedCustomers}
+                </strong>
+                <span className="icFestivePlans__benefitName">
+                  Confirmed customers
+                </span>
+                <small>Within your membership validity.</small>
+              </div>
+
+              <div className="icFestivePlans__cardFoot">
+                <span>INKCONVENTION ARTIST MEMBERSHIP</span>
+                <ArrowRight size={21} aria-hidden="true" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
@@ -428,7 +549,7 @@ function Home() {
       <CinematicHero />
 
       {/* =====================================================
-          2. VISION
+          3. VISION — KEEP EXISTING ABOUT SECTION UNCHANGED
       ===================================================== */}
 
       <section
@@ -533,8 +654,12 @@ function Home() {
         </div>
       </section>
 
+      {/* DIWALI SPECIAL OFFER — DIRECTLY BELOW THE ABOUT SECTION. */}
+      {/* All three cards navigate to /our-plans; no plan-selection buttons. */}
+      <DiwaliPlansPreview />
+
       {/* =====================================================
-          3. FOUR WAYS TO JOIN
+          4. FOUR WAYS TO JOIN
       ===================================================== */}
 
       <section

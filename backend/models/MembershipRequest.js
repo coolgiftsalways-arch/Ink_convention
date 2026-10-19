@@ -46,12 +46,15 @@ const membershipRequestSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Existing membership tier.
     currentPlan: {
       type: String,
       enum: ["basic", "pro", "verified"],
       default: "basic",
     },
 
+    // Keep existing Silver / Gold logic compatible.
+    // The new gold duration plans use "verified".
     requestedPlan: {
       type: String,
       enum: ["pro", "verified"],
@@ -65,14 +68,40 @@ const membershipRequestSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // New Our Plans selection.
+    // Null preserves compatibility with older requests.
+    planOption: {
+      type: String,
+      enum: ["quarterly", "half-yearly", "yearly", null],
+      default: null,
+    },
+
+    durationMonths: {
+      type: Number,
+      enum: [3, 6, 12, null],
+      default: null,
+    },
+
+    promisedCustomers: {
+      type: Number,
+      enum: [2, 5, 12, null],
+      default: null,
+    },
+
+    // Must be determined by the backend plan catalog.
     requestedAmount: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     pricingType: {
       type: String,
-      enum: ["standard-membership", "silver-to-gold-upgrade"],
+      enum: [
+        "standard-membership",
+        "silver-to-gold-upgrade",
+        "diwali-membership",
+      ],
       default: "standard-membership",
     },
 
