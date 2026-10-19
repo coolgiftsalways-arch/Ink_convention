@@ -459,6 +459,11 @@ function DiwaliPlansPreview() {
       <div className="icFestivePlans__inner">
         <p className="icFestivePlans__description">
           Choose a plan, claim your artist profile, then submit your request.
+          <strong className="mt-3 block font-semibold">
+            Refund guarantee: If you don’t receive the promised number of
+            confirmed customers within your plan’s validity period, you’ll get a
+            refund.
+          </strong>
         </p>
         <div className="icFestivePlans__grid">
           {DIWALI_HOME_PLANS.map((plan) => (
