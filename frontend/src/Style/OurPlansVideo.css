@@ -1,0 +1,334 @@
+/*
+  INK CONVENTION — OUR PLANS / FULL-WIDTH CINEMATIC VIDEO
+  Replace src/Style/OurPlansCinematic.css with this ENTIRE file.
+  Uses ONLY src/assets/Event/tattoo-hand.mp4. No cream panel, no smoke image.
+  Keep src/Style/OurPlans.css for the existing membership cards.
+*/
+
+.ink-plans-video-hero,
+.ink-plans-video-hero * {
+     box-sizing: border-box;
+}
+
+.ink-plans-video-hero {
+     --hero-height: clamp(610px, 43vw, 840px);
+     position: relative;
+     isolation: isolate;
+     width: 100%;
+     height: var(--hero-height);
+     overflow: hidden;
+     background: #050608;
+     color: #fff;
+     border-bottom: 1px solid rgba(185, 132, 53, 0.7);
+}
+
+/* ONE video covers the WHOLE width. The original portrait clip is rotated
+   counterclockwise: ring light to the left, tattooing hand to the right. */
+.ink-plans-video-hero__videos {
+     position: absolute;
+     z-index: 0;
+     inset: 0;
+     overflow: hidden;
+     background: #030508;
+     pointer-events: none;
+}
+
+.ink-plans-video-hero__video {
+     position: absolute;
+     display: block;
+     top: 50%;
+     left: 50%;
+     width: var(--hero-height);
+     height: 100vw;
+     min-width: 0;
+     max-width: none;
+     max-height: none;
+     object-fit: cover;
+     object-position: center;
+     transform: translate(-50%, -50%) rotate(-90deg);
+     transform-origin: center;
+     opacity: 1;
+     filter: brightness(0.94) contrast(1.05) saturate(1.02);
+     mix-blend-mode: normal;
+     -webkit-mask-image: none;
+     mask-image: none;
+}
+
+/* Old mirrored copy hidden; no duplicate image behind the text. */
+.ink-plans-video-hero__video--left {
+     display: none !important;
+}
+
+/* Dark BLACK on the left rather than white/gray block.
+   The video itself still extends edge-to-edge behind this fade. */
+.ink-plans-video-hero__overlay {
+     position: absolute;
+     z-index: 1;
+     inset: 0;
+     pointer-events: none;
+     background:
+          linear-gradient(90deg,
+               rgba(2, 3, 5, 0.98) 0%,
+               rgba(2, 3, 5, 0.94) 23%,
+               rgba(2, 3, 5, 0.80) 37%,
+               rgba(2, 3, 5, 0.30) 61%,
+               rgba(2, 3, 5, 0.04) 83%,
+               rgba(2, 3, 5, 0.18) 100%),
+          linear-gradient(0deg, rgba(2, 3, 5, 0.58), transparent 24%);
+}
+
+.ink-plans-video-hero__content {
+     position: relative;
+     z-index: 3;
+     width: min(72%, 1120px);
+     padding: clamp(75px, 6.8vw, 140px) 22px 145px clamp(26px, 3.5vw, 74px);
+     pointer-events: none;
+}
+
+.ink-plans-video-hero__eyebrow {
+     margin: 0 0 26px !important;
+     color: #d2aa6b;
+     font: 700 12px/1.4 "DM Sans", Arial, sans-serif;
+     letter-spacing: 0.26em;
+     text-transform: uppercase;
+}
+
+.ink-plans-video-hero__content h1 {
+     margin: 0;
+     max-width: 1020px;
+     color: #fffaf3;
+     font-family: "Cormorant Garamond", Georgia, serif;
+     font-size: clamp(58px, 5.5vw, 108px);
+     line-height: 0.93;
+     font-weight: 500;
+     letter-spacing: -0.052em;
+     white-space: nowrap;
+     text-shadow: 0 5px 32px rgba(0, 0, 0, 0.36);
+}
+
+.ink-plans-video-hero__content h1 em {
+     font-style: normal;
+     color: #d9ad73;
+}
+
+.ink-plans-video-hero__content h1 span {
+     color: #dda64c;
+}
+
+.ink-plans-video-hero__subtitle {
+     margin: 25px 0 0 !important;
+     color: #f1e9dd;
+     font: 400 clamp(25px, 2.3vw, 37px)/1.15 "Cormorant Garamond", Georgia, serif;
+}
+
+.ink-plans-video-hero__explore {
+     display: inline-flex;
+     align-items: center;
+     justify-content: flex-start;
+     gap: 25px;
+     margin-top: 26px;
+     padding: 3px 1px 12px 0;
+     min-height: 45px;
+     border-bottom: 1px solid #d6a45e;
+     color: #fffaf1;
+     background: transparent;
+     font: 700 14px/1.2 "DM Sans", Arial, sans-serif;
+     text-decoration: none;
+     pointer-events: auto;
+     transition: gap 180ms ease, color 180ms ease;
+}
+
+.ink-plans-video-hero__explore:hover {
+     gap: 32px;
+     color: #f0c78c;
+}
+
+/* Hover on the visible video area: round MUTE / SOUND ON cursor. */
+.ink-plans-video-hero__sound-zone {
+     position: absolute;
+     z-index: 4;
+     top: 0;
+     right: 0;
+     bottom: 0;
+     width: 50%;
+     border: 0;
+     border-radius: 0;
+     padding: 0;
+     background: transparent;
+     cursor: pointer;
+     -webkit-tap-highlight-color: transparent;
+}
+
+.ink-plans-video-hero__cursor {
+     position: absolute;
+     top: 0;
+     left: 0;
+     width: 98px;
+     height: 98px;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     justify-content: center;
+     gap: 8px;
+     padding: 8px;
+     transform: translate(-50%, -50%);
+     border: 1px solid rgba(237, 193, 129, 0.9);
+     border-radius: 50%;
+     color: #fff;
+     background: rgba(5, 7, 10, 0.8);
+     backdrop-filter: blur(12px);
+     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+     opacity: 0;
+     visibility: hidden;
+     pointer-events: none;
+     transition: opacity 150ms ease, visibility 150ms ease;
+}
+
+.ink-plans-video-hero__cursor small {
+     font: 700 10px/1 Arial, sans-serif;
+     letter-spacing: 0.12em;
+}
+
+@media (hover: hover) and (pointer: fine) {
+     .ink-plans-video-hero__sound-zone:hover {
+          cursor: none;
+     }
+
+     .ink-plans-video-hero__cursor.is-visible {
+          opacity: 1;
+          visibility: visible;
+     }
+}
+
+/* Actual buttons remain usable on desktop, touch screens and keyboard. */
+.ink-plans-video-hero__controls {
+     position: absolute;
+     z-index: 6;
+     right: clamp(16px, 2.6vw, 56px);
+     bottom: 27px;
+     display: flex;
+     align-items: center;
+     gap: 12px;
+}
+
+.ink-plans-video-hero__controls button {
+     display: inline-flex;
+     justify-content: center;
+     align-items: center;
+     gap: 9px;
+     min-height: 46px;
+     min-width: 106px;
+     padding: 11px 16px;
+     border: 1px solid rgba(227, 198, 152, 0.75);
+     border-radius: 50px;
+     background: rgba(8, 10, 12, 0.82);
+     color: #fff;
+     font: 700 12px/1.2 "DM Sans", Arial, sans-serif;
+     backdrop-filter: blur(12px);
+     cursor: pointer;
+     transition: background 180ms ease, transform 180ms ease;
+}
+
+.ink-plans-video-hero__controls button:hover {
+     background: #835720;
+     transform: translateY(-2px);
+}
+
+.ink-plans-video-hero :is(a, button):focus-visible {
+     outline: 2px solid #ecc78f;
+     outline-offset: 4px;
+}
+
+.ink-plans-video-hero__error {
+     position: absolute;
+     z-index: 7;
+     right: 25px;
+     bottom: 90px;
+     padding: 12px;
+     background: #48120de6;
+     color: white;
+     font: 12px/1.5 Arial, sans-serif;
+}
+
+@media (max-width: 1100px) {
+     .ink-plans-video-hero__content {
+          width: min(76%, 940px);
+     }
+
+     .ink-plans-video-hero__content h1 {
+          font-size: clamp(54px, 6vw, 82px);
+     }
+}
+
+@media (max-width: 760px) {
+     .ink-plans-video-hero {
+          --hero-height: 670px;
+          height: var(--hero-height);
+     }
+
+     /* For portrait phone screens, keep video upright and cover background. */
+     .ink-plans-video-hero__video {
+          top: 50%;
+          left: 50%;
+          width: 100%;
+          height: 100%;
+          transform: translate(-50%, -50%);
+          object-fit: cover;
+          object-position: center center;
+          filter: brightness(0.82);
+     }
+
+     .ink-plans-video-hero__overlay {
+          background: linear-gradient(90deg, rgba(2, 3, 5, .94), rgba(2, 3, 5, .72) 63%, rgba(2, 3, 5, .38)),
+               linear-gradient(0deg, rgba(2, 3, 5, .68), transparent 35%);
+     }
+
+     .ink-plans-video-hero__content {
+          width: 100%;
+          padding: 105px 22px 145px;
+     }
+
+     .ink-plans-video-hero__content h1 {
+          font-size: clamp(46px, 9.1vw, 72px);
+          line-height: 0.98;
+          white-space: normal;
+     }
+
+     .ink-plans-video-hero__eyebrow {
+          font-size: 10px;
+          letter-spacing: 0.17em;
+     }
+
+     .ink-plans-video-hero__subtitle {
+          font-size: clamp(23px, 5.2vw, 30px);
+     }
+
+     .ink-plans-video-hero__explore {
+          font-size: 13px;
+     }
+
+     .ink-plans-video-hero__sound-zone {
+          width: 30%;
+     }
+
+     .ink-plans-video-hero__controls {
+          bottom: 24px;
+          left: 22px;
+          right: auto;
+          gap: 9px;
+     }
+
+     .ink-plans-video-hero__controls button {
+          min-width: 90px;
+          padding: 10px 12px;
+     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+     .ink-plans-video-hero__cursor,
+     .ink-plans-video-hero__controls button,
+     .ink-plans-video-hero__explore {
+          transition: none;
+     }
+}
